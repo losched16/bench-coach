@@ -256,7 +256,8 @@ export async function DELETE(request: NextRequest) {
         .eq('id', member.team_id)
         .single()
 
-      if (team?.coach?.user_id !== user.id) {
+      const ownerCoach = Array.isArray((team as any)?.coach) ? (team as any)?.coach[0] : (team as any)?.coach
+      if (ownerCoach?.user_id !== user.id) {
         return NextResponse.json({ error: 'Only team owner can remove members' }, { status: 403 })
       }
     }
