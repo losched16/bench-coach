@@ -58,17 +58,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invitation has reached maximum uses' }, { status: 410 })
     }
 
+    // Handle Supabase returning nested relations as arrays
+    const team = Array.isArray(invitation.team) ? invitation.team[0] : invitation.team
+    const coach = Array.isArray((team as any)?.coach) ? (team as any)?.coach[0] : (team as any)?.coach
+
     // Get owner name
     let ownerName = 'Coach'
-    if (invitation.team?.coach?.user_id) {
+    if (coach?.user_id) {
       const { data: ownerProfile } = await supabaseAdmin
         .from('coaches')
-        .select('name')
-        .eq('user_id', invitation.team.coach.user_id)
+        .select('display_name')
+        .eq('user_id', coach.user_id)
         .single()
       
-      if (ownerProfile?.name) {
-        ownerName = ownerProfile.name
+      if (ownerProfile?.display_name) {
+        ownerName = ownerProfile.display_name
       }
     }
 
@@ -76,8 +80,8 @@ export async function GET(request: NextRequest) {
       invitation: {
         id: invitation.id,
         role: invitation.role,
-        teamName: invitation.team?.name,
-        teamAgeGroup: invitation.team?.age_group,
+        teamName: (team as any)?.name,
+        teamAgeGroup: (team as any)?.age_group,
         ownerName,
       }
     })
@@ -118,6 +122,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invitation not found' }, { status: 404 })
     }
 
+    // Handle Supabase returning nested relations as arrays
+    const team = Array.isArray(invitation.team) ? invitation.team[0] : invitation.team
+
     // Validate invitation
     if (new Date(invitation.expires_at) < new Date()) {
       return NextResponse.json({ error: 'Invitation has expired' }, { status: 410 })
@@ -135,7 +142,7 @@ export async function POST(request: NextRequest) {
     const { data: ownerCoach } = await supabaseAdmin
       .from('coaches')
       .select('user_id')
-      .eq('id', invitation.team?.coach_id)
+      .eq('id', (team as any)?.coach_id)
       .single()
 
     // Check if user is the team owner (can't join own team)
@@ -179,7 +186,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       teamId: invitation.team_id,
-      teamName: invitation.team?.name,
+      teamName: (team as any)?.name,
       role: invitation.role,
     })
 
