@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
     const { data: userMsg } = await supabaseAdmin
       .from('chat_messages')
       .insert({
-        thread_id: thread.id,
+        thread_id: thread!.id,
         role: 'user',
         content: message,
       })
