@@ -13,6 +13,16 @@ interface SeoPageLayoutProps {
   page: SeoPage
 }
 
+// Auto-link BenchCoach mentions to homepage (subtle styling)
+function linkifyBenchCoach(html: string): string {
+  // Don't replace if already in an anchor tag or if it's part of a longer word
+  // Replace standalone "BenchCoach" with a subtle link
+  return html.replace(
+    /(?<!<a[^>]*>)(?<![\/\w])BenchCoach(?![^<]*<\/a>)(?!\w)/g,
+    '<a href="/" class="text-red-700 hover:text-red-800 hover:underline font-medium">BenchCoach</a>'
+  )
+}
+
 export function SeoPageLayout({ page }: SeoPageLayoutProps) {
   return (
     <div className="min-h-screen bg-white">
@@ -64,10 +74,10 @@ export function SeoPageLayout({ page }: SeoPageLayoutProps) {
         {/* Author info */}
         <div className="flex items-center gap-3 mb-8 pb-8 border-b border-gray-200">
           <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-lg font-bold text-slate-600">
-            CW
+            CL
           </div>
           <div>
-            <div className="font-medium text-gray-900">Clint Weisbrod</div>
+            <div className="font-medium text-gray-900">Clint Losch</div>
             <div className="text-sm text-gray-500">Youth Baseball Coach & Founder of BenchCoach</div>
           </div>
         </div>
@@ -79,9 +89,10 @@ export function SeoPageLayout({ page }: SeoPageLayoutProps) {
 
         {/* Intro */}
         {page.content.intro && (
-          <div className="text-lg sm:text-xl text-gray-600 mb-10 leading-relaxed">
-            {page.content.intro}
-          </div>
+          <div 
+            className="text-lg sm:text-xl text-gray-600 mb-10 leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: linkifyBenchCoach(page.content.intro) }}
+          />
         )}
 
         {/* For Hub pages: Show all spoke pages */}
@@ -100,7 +111,7 @@ export function SeoPageLayout({ page }: SeoPageLayoutProps) {
               {/* Section body - render HTML */}
               <div 
                 className="text-gray-700 leading-relaxed mb-6 prose-p:mb-4"
-                dangerouslySetInnerHTML={{ __html: section.body }}
+                dangerouslySetInnerHTML={{ __html: linkifyBenchCoach(section.body) }}
               />
 
               {/* List items */}
@@ -201,7 +212,7 @@ export function SeoPageLayout({ page }: SeoPageLayoutProps) {
             description: page.meta_description,
             author: {
               '@type': 'Person',
-              name: 'Clint Weisbrod',
+              name: 'Clint Losch',
               jobTitle: 'Youth Baseball Coach',
             },
             publisher: {
