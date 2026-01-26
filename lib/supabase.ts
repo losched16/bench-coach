@@ -375,3 +375,42 @@ export function createSupabaseServerClient(cookieStore: {
     }
   )
 }
+
+// Simple server client for public pages (no auth needed)
+export function createPublicSupabaseClient() {
+  return createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
+
+// SEO Page types
+export interface SeoPage {
+  id: string
+  slug: string
+  category: 'coaching' | 'drills' | 'practice-plans' | 'problems'
+  type: 'hub' | 'spoke'
+  title: string
+  meta_description: string
+  canonical?: string
+  age_group?: string
+  topic?: string
+  primary_keyword?: string
+  content: {
+    intro?: string
+    sections: Array<{
+      heading: string
+      body: string
+      list_items?: string[]
+      coaching_cues?: string[]
+      common_mistakes?: string[]
+    }>
+  }
+  hub_slug?: string
+  related_slugs?: string[]
+  schema_faq?: Array<{ question: string; answer: string }>
+  priority: number
+  is_published: boolean
+  created_at: string
+  updated_at: string
+}
