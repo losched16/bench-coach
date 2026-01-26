@@ -38,7 +38,7 @@ function SignupForm() {
           .upsert({
             user_id: authData.user.id,
             display_name: displayName,
-          }, {
+          } as any, {
             onConflict: 'user_id',
           })
 
