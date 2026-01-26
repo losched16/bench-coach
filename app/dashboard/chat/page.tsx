@@ -52,7 +52,7 @@ function ChatPageContent() {
       let { data: thread } = await supabase
         .from('chat_threads')
         .select('id')
-        .eq('team_id', teamId)
+        .eq('team_id', teamId!)
         .single()
 
       if (!thread) {
@@ -93,7 +93,7 @@ function ChatPageContent() {
       const { data: notes } = await supabase
         .from('team_notes')
         .select('*')
-        .eq('team_id', teamId)
+        .eq('team_id', teamId!)
         .order('pinned', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(5)
@@ -105,7 +105,7 @@ function ChatPageContent() {
           *,
           player:players(name)
         `)
-        .eq('team_id', teamId)
+        .eq('team_id', teamId!)
         .limit(10)
 
       // Load active playbooks
@@ -123,7 +123,7 @@ function ChatPageContent() {
             skill_category
           )
         `)
-        .eq('team_id', teamId)
+        .eq('team_id', teamId!)
         .eq('status', 'active')
 
       const formattedPlaybooks = playbooks?.map(pb => ({
@@ -182,7 +182,7 @@ function ChatPageContent() {
       const { data: teamPlayers } = await supabase
         .from('team_players')
         .select('player_id, player:players(name)')
-        .eq('team_id', teamId)
+        .eq('team_id', teamId!)
 
       const playerMatch = teamPlayers?.find((tp: any) => 
         tp.player.name.toLowerCase().includes(playerNote.player_name.toLowerCase())
