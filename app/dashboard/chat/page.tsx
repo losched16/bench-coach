@@ -52,7 +52,7 @@ function ChatPageContent() {
       let { data: thread } = await supabase
         .from('chat_threads')
         .select('id')
-        .eq('team_id', teamId!)
+        .eq('team_id', teamId)
         .single()
 
       if (!thread) {
@@ -93,7 +93,7 @@ function ChatPageContent() {
       const { data: notes } = await supabase
         .from('team_notes')
         .select('*')
-        .eq('team_id', teamId!)
+        .eq('team_id', teamId)
         .order('pinned', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(5)
@@ -105,7 +105,7 @@ function ChatPageContent() {
           *,
           player:players(name)
         `)
-        .eq('team_id', teamId!)
+        .eq('team_id', teamId)
         .limit(10)
 
       // Load active playbooks
@@ -123,7 +123,7 @@ function ChatPageContent() {
             skill_category
           )
         `)
-        .eq('team_id', teamId!)
+        .eq('team_id', teamId)
         .eq('status', 'active')
 
       const formattedPlaybooks = playbooks?.map(pb => ({
@@ -182,7 +182,7 @@ function ChatPageContent() {
       const { data: teamPlayers } = await supabase
         .from('team_players')
         .select('player_id, player:players(name)')
-        .eq('team_id', teamId!)
+        .eq('team_id', teamId)
 
       const playerMatch = teamPlayers?.find((tp: any) => 
         tp.player.name.toLowerCase().includes(playerNote.player_name.toLowerCase())
@@ -347,11 +347,11 @@ function ChatPageContent() {
   }
 
   return (
-    <div className="flex space-x-6 h-[calc(100vh-12rem)]">
+    <div className="flex flex-col lg:flex-row lg:space-x-6 h-[calc(100vh-10rem)] sm:h-[calc(100vh-12rem)]">
       {/* Chat Area */}
-      <div className="flex-1 bg-white rounded-lg shadow flex flex-col">
+      <div className="flex-1 bg-white rounded-lg shadow flex flex-col min-h-0">
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
           {messages.length === 0 ? (
             <div className="text-center text-gray-500 mt-12">
               <div className="text-4xl mb-4">⚾</div>
@@ -370,7 +370,7 @@ function ChatPageContent() {
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-3xl px-4 py-3 rounded-lg ${
+                    className={`max-w-[85%] sm:max-w-3xl px-3 sm:px-4 py-2 sm:py-3 rounded-lg ${
                       message.role === 'user'
                         ? 'bg-blue-600 text-white'
                         : 'bg-gray-100 text-gray-900'
@@ -380,7 +380,7 @@ function ChatPageContent() {
                     
                     {/* Save Buttons (assistant messages only) */}
                     {message.role === 'assistant' && (
-                      <div className="mt-3 pt-3 border-t border-gray-300 flex items-center space-x-2">
+                      <div className="mt-3 pt-3 border-t border-gray-300 flex flex-wrap items-center gap-2">
                         {/* Save to Drills */}
                         <button
                           onClick={() => openSaveModal(message)}
@@ -486,21 +486,21 @@ function ChatPageContent() {
         </div>
 
         {/* Input */}
-        <div className="border-t border-gray-200 p-4">
-          <div className="flex space-x-3">
+        <div className="border-t border-gray-200 p-3 sm:p-4">
+          <div className="flex space-x-2 sm:space-x-3">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-              placeholder="Ask me anything about coaching..."
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              placeholder="Ask me anything..."
+              className="flex-1 px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm sm:text-base"
               disabled={loading}
             />
             <button
               onClick={handleSend}
               disabled={loading || !input.trim()}
-              className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              className="px-4 sm:px-6 py-2 sm:py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
               {loading ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}
             </button>
@@ -508,9 +508,9 @@ function ChatPageContent() {
         </div>
       </div>
 
-      {/* Context Sidebar */}
+      {/* Context Sidebar - Hidden on mobile */}
       {teamContext && (
-        <aside className="w-80 bg-white rounded-lg shadow p-6 overflow-y-auto">
+        <aside className="hidden lg:block w-80 bg-white rounded-lg shadow p-6 overflow-y-auto flex-shrink-0">
           <h3 className="font-semibold text-gray-900 mb-4">Team Context</h3>
           
           <div className="space-y-4 text-sm">

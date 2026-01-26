@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import Link from 'next/link'
@@ -13,7 +13,7 @@ interface TeamData {
   topIssues: any[]
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const [data, setData] = useState<TeamData | null>(null)
   const [loading, setLoading] = useState(true)
   const searchParams = useSearchParams()
@@ -79,8 +79,13 @@ export default function DashboardPage() {
     return <div className="text-gray-600">Loading dashboard...</div>
   }
 
-  if (!data) {
-    return <div className="text-gray-600">No data available</div>
+  if (!data || !data.team) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">Unable to load team</h2>
+        <p className="text-gray-600">Please select a team from the sidebar or check your access.</p>
+      </div>
+    )
   }
 
   const quickActions = [
@@ -111,49 +116,49 @@ export default function DashboardPage() {
   ]
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* Welcome */}
       <div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">
-          {data.team?.name || 'Team Dashboard'}
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">
+          {data.team.name}
         </h2>
-        <p className="text-gray-600">
-          {data.team?.season?.name || 'Season'} • {data.team?.age_group || ''} • {data.team?.skill_level || ''}
+        <p className="text-sm sm:text-base text-gray-600">
+          {data.team.season?.name || 'Season'} • {data.team.age_group} • {data.team.skill_level}
         </p>
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm text-gray-600 mb-1">Players</div>
-          <div className="text-3xl font-bold text-gray-900">{data.playerCount}</div>
+      <div className="grid grid-cols-3 gap-3 sm:gap-6">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <div className="text-xs sm:text-sm text-gray-600 mb-1">Players</div>
+          <div className="text-2xl sm:text-3xl font-bold text-gray-900">{data.playerCount}</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm text-gray-600 mb-1">Practice Duration</div>
-          <div className="text-3xl font-bold text-gray-900">{data.team?.practice_duration_minutes || 60} min</div>
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <div className="text-xs sm:text-sm text-gray-600 mb-1">Duration</div>
+          <div className="text-2xl sm:text-3xl font-bold text-gray-900">{data.team.practice_duration_minutes || 60}<span className="text-sm sm:text-base font-normal">m</span></div>
         </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm text-gray-600 mb-1">Practice Plans</div>
-          <div className="text-3xl font-bold text-gray-900">{data.recentPlans.length}</div>
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <div className="text-xs sm:text-sm text-gray-600 mb-1">Plans</div>
+          <div className="text-2xl sm:text-3xl font-bold text-gray-900">{data.recentPlans.length}</div>
         </div>
       </div>
 
       {/* Quick Actions */}
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Quick Actions</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {quickActions.map((action) => {
             const Icon = action.icon
             return (
               <Link
                 key={action.label}
                 href={action.href}
-                className={`bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow flex flex-col items-center text-center space-y-3`}
+                className={`bg-white rounded-lg shadow p-4 sm:p-6 hover:shadow-md transition-shadow flex flex-col items-center text-center space-y-2 sm:space-y-3`}
               >
-                <div className={`w-12 h-12 rounded-full bg-${action.color}-100 flex items-center justify-center`}>
-                  <Icon className={`text-${action.color}-600`} size={24} />
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-${action.color}-100 flex items-center justify-center`}>
+                  <Icon className={`text-${action.color}-600`} size={20} />
                 </div>
-                <span className="font-medium text-gray-900">{action.label}</span>
+                <span className="font-medium text-gray-900 text-sm sm:text-base">{action.label}</span>
               </Link>
             )
           })}
@@ -226,5 +231,13 @@ export default function DashboardPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div className="text-gray-600">Loading dashboard...</div>}>
+      <DashboardContent />
+    </Suspense>
   )
 }
