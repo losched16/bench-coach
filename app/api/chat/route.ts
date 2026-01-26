@@ -150,13 +150,15 @@ export async function POST(request: NextRequest) {
           title: currentSession.title,
           phase: currentSession.phase,
           goal: currentSession.goal,
-          activities: currentSession.activities?.map((a: any) => a.name) || []
-        } : null,
+          activities: currentSession.activities
+        } : undefined,
         previous_session: previousSession ? {
           day: previousSession.day,
           title: previousSession.title,
-          goal: previousSession.goal
-        } : null,
+          phase: previousSession.phase,
+          goal: previousSession.goal,
+          activities: previousSession.activities
+        } : undefined,
         started_at: pb.started_at
       }
     }) || []
