@@ -170,7 +170,10 @@ export async function PATCH(request: NextRequest) {
       .eq('id', member.team_id)
       .single()
 
-    const isOwner = team?.coach?.user_id === user.id
+    .single()
+
+    const coach = Array.isArray((team as any)?.coach) ? (team as any)?.coach[0] : (team as any)?.coach
+    const isOwner = coach?.user_id === user.id
 
     if (!isOwner) {
       const { data: userMembership } = await supabaseAdmin
