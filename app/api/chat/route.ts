@@ -229,14 +229,13 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
-    const { data: assistantMsg } = await supabaseAdmin
+   const { data: assistantMsg } = await supabaseAdmin
       .from('chat_messages')
       .insert({
-        thread_id: thread.id,
+        thread_id: thread!.id,
         role: 'assistant',
         content: response.message,
         memory_suggestions: response.memory_suggestions,
-      })
       .select()
       .single()
 
@@ -255,11 +254,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+  return NextResponse.json({
       message: response.message,
       memory_suggestions: response.memory_suggestions,
-      id: assistantMsg.id,
-      user_message_id: userMsg.id,
+      id: assistantMsg?.id,
+      user_message_id: userMsg?.id,
     })
 
   } catch (error: any) {
