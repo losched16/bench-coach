@@ -236,6 +236,7 @@ export async function POST(request: NextRequest) {
         role: 'assistant',
         content: response.message,
         memory_suggestions: response.memory_suggestions,
+})
       .select()
       .single()
 
