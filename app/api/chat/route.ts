@@ -124,11 +124,14 @@ export async function POST(request: NextRequest) {
       .eq('team_id', teamId)
       .eq('status', 'active')
 
-    // Format playbook context for AI
-    const playbookContext = activePlaybooks?.map(pb => {
+ 
+   // Format playbook context for AI
+    const playbookContext = activePlaybooks?.map((pb: any) => {
       const completedCount = Array.isArray(pb.completed_sessions) ? pb.completed_sessions.length : 0
-      const totalSessions = pb.template?.total_sessions || 0
-      const sessions = pb.template?.sessions || []
+      // Template is returned as array from Supabase join
+      const template = Array.isArray(pb.template) ? pb.template[0] : pb.template
+      const totalSessions = template?.total_sessions || 0
+      const sessions = template?.sessions || []
       
       // Get current session (next incomplete one)
       const currentSessionIndex = completedCount
@@ -136,10 +139,10 @@ export async function POST(request: NextRequest) {
       const previousSession = currentSessionIndex > 0 ? sessions[currentSessionIndex - 1] : null
       
       return {
-        playbook_title: pb.template?.title || pb.title,
-        assigned_to: pb.player?.name || 'Whole Team',
-        skill_category: pb.template?.skill_category,
-        goal: pb.template?.goal,
+        playbook_title: template?.title || pb.title,
+        assigned_to: (pb.player as any)?.name || 'Whole Team',
+        skill_category: template?.skill_category,
+        goal: template?.goal,
         progress: `${completedCount}/${totalSessions} sessions completed`,
         current_day: currentSessionIndex + 1,
         current_session: currentSession ? {
