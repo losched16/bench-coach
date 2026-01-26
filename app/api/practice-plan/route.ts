@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseClient } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import { generatePracticePlan, TeamContext } from '@/lib/anthropic'
+
+// Use service role for server-side operations (bypasses RLS)
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,21 +19,33 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = createSupabaseClient()
+    // Check if Anthropic API key is set
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error('ANTHROPIC_API_KEY is not set')
+      return NextResponse.json(
+        { error: 'API key not configured' },
+        { status: 500 }
+      )
+    }
 
     // Load team context
-    const { data: team } = await supabase
+    const { data: team, error: teamError } = await supabaseAdmin
       .from('teams')
       .select('*')
       .eq('id', teamId)
       .single()
+
+    if (teamError) {
+      console.error('Error loading team:', teamError)
+      return NextResponse.json({ error: 'Failed to load team' }, { status: 500 })
+    }
 
     if (!team) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 })
     }
 
     // Load team notes
-    const { data: teamNotes } = await supabase
+    const { data: teamNotes } = await supabaseAdmin
       .from('team_notes')
       .select('note')
       .eq('team_id', teamId)
@@ -42,6 +60,8 @@ export async function POST(request: NextRequest) {
         skill_level: team.skill_level,
         practice_duration_minutes: team.practice_duration_minutes,
         primary_goals: team.primary_goals || [],
+        improved_areas: team.improved_areas || [],
+        mastered_areas: team.mastered_areas || [],
       },
       coachPreferences: {},
       teamNotes: teamNotes?.map(n => ({ note: n.note, pinned: true })) || [],

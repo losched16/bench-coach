@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseClient } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import { generateChatResponse, TeamContext } from '@/lib/anthropic'
+
+// Use service role for server-side operations (bypasses RLS)
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 export async function POST(request: NextRequest) {
   try {
     const { teamId, message, history } = await request.json()
+
+    console.log('Chat API called with teamId:', teamId)
 
     if (!teamId || !message) {
       return NextResponse.json(
@@ -13,21 +21,35 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = createSupabaseClient()
+    // Check if Anthropic API key is set
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error('ANTHROPIC_API_KEY is not set')
+      return NextResponse.json(
+        { error: 'API key not configured' },
+        { status: 500 }
+      )
+    }
 
     // Load team context
-    const { data: team } = await supabase
+    const { data: team, error: teamError } = await supabaseAdmin
       .from('teams')
       .select('*')
       .eq('id', teamId)
       .single()
 
+    if (teamError) {
+      console.error('Error loading team:', teamError)
+      return NextResponse.json({ error: 'Failed to load team' }, { status: 500 })
+    }
+
     if (!team) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 })
     }
 
+    console.log('Loaded team:', team.name)
+
     // Load coach preferences
-    const { data: preferences } = await supabase
+    const { data: preferences } = await supabaseAdmin
       .from('coach_preferences')
       .select('key, value')
       .eq('coach_id', team.coach_id)
@@ -38,7 +60,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Load team notes (pinned + recent)
-    const { data: teamNotes } = await supabase
+    const { data: teamNotes } = await supabaseAdmin
       .from('team_notes')
       .select('note, pinned')
       .eq('team_id', teamId)
@@ -47,19 +69,19 @@ export async function POST(request: NextRequest) {
       .limit(10)
 
     // Load team memory summary
-    const { data: memorySummary } = await supabase
+    const { data: memorySummary } = await supabaseAdmin
       .from('team_memory_summaries')
       .select('summary')
       .eq('team_id', teamId)
       .single()
 
     // Load players with notes
-    const { data: teamPlayers } = await supabase
+    const { data: teamPlayers } = await supabaseAdmin
       .from('team_players')
       .select(`
         *,
         player:players(name),
-        notes:player_notes(note)
+        notes:player_notes(note, created_at)
       `)
       .eq('team_id', teamId)
 
@@ -70,7 +92,7 @@ export async function POST(request: NextRequest) {
     })) || []
 
     // Load recent practice plans
-    const { data: recentPlans } = await supabase
+    const { data: recentPlans } = await supabaseAdmin
       .from('practice_plans')
       .select('title, content')
       .eq('team_id', teamId)
@@ -78,6 +100,73 @@ export async function POST(request: NextRequest) {
       .limit(3)
 
     const planSummaries = recentPlans?.map(p => p.title) || []
+
+    // Load active playbooks with progress
+    const { data: activePlaybooks } = await supabaseAdmin
+      .from('player_playbooks')
+      .select(`
+        id,
+        title,
+        started_at,
+        completed_sessions,
+        status,
+        player:players(name),
+        template:playbook_templates(
+          title,
+          description,
+          goal,
+          age_group,
+          skill_category,
+          total_sessions,
+          sessions
+        )
+      `)
+      .eq('team_id', teamId)
+      .eq('status', 'active')
+
+    // Format playbook context for AI
+    const playbookContext = activePlaybooks?.map(pb => {
+      const completedCount = Array.isArray(pb.completed_sessions) ? pb.completed_sessions.length : 0
+      const totalSessions = pb.template?.total_sessions || 0
+      const sessions = pb.template?.sessions || []
+      
+      // Get current session (next incomplete one)
+      const currentSessionIndex = completedCount
+      const currentSession = sessions[currentSessionIndex]
+      const previousSession = currentSessionIndex > 0 ? sessions[currentSessionIndex - 1] : null
+      
+      return {
+        playbook_title: pb.template?.title || pb.title,
+        assigned_to: pb.player?.name || 'Whole Team',
+        skill_category: pb.template?.skill_category,
+        goal: pb.template?.goal,
+        progress: `${completedCount}/${totalSessions} sessions completed`,
+        current_day: currentSessionIndex + 1,
+        current_session: currentSession ? {
+          day: currentSession.day,
+          title: currentSession.title,
+          phase: currentSession.phase,
+          goal: currentSession.goal,
+          activities: currentSession.activities?.map((a: any) => a.name) || []
+        } : null,
+        previous_session: previousSession ? {
+          day: previousSession.day,
+          title: previousSession.title,
+          goal: previousSession.goal
+        } : null,
+        started_at: pb.started_at
+      }
+    }) || []
+
+    // Load saved drills
+    const { data: savedDrills } = await supabaseAdmin
+      .from('saved_drills')
+      .select('title, category')
+      .eq('team_id', teamId)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    const drillsSummary = savedDrills?.map(d => `${d.title} (${d.category})`) || []
 
     // Build context
     const context: TeamContext = {
@@ -87,12 +176,16 @@ export async function POST(request: NextRequest) {
         skill_level: team.skill_level,
         practice_duration_minutes: team.practice_duration_minutes,
         primary_goals: team.primary_goals || [],
+        improved_areas: team.improved_areas || [],
+        mastered_areas: team.mastered_areas || [],
       },
       coachPreferences: coachPrefs,
       teamNotes: teamNotes || [],
       players,
       recentPlans: planSummaries,
       memorySummary: memorySummary?.summary,
+      activePlaybooks: playbookContext,
+      savedDrills: drillsSummary,
     }
 
     // Convert history
@@ -105,14 +198,14 @@ export async function POST(request: NextRequest) {
     const response = await generateChatResponse(message, context, conversationHistory)
 
     // Get or create chat thread
-    let { data: thread } = await supabase
+    let { data: thread } = await supabaseAdmin
       .from('chat_threads')
       .select('id')
       .eq('team_id', teamId)
       .single()
 
     if (!thread) {
-      const { data: newThread } = await supabase
+      const { data: newThread } = await supabaseAdmin
         .from('chat_threads')
         .insert({ team_id: teamId })
         .select()
@@ -121,7 +214,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Save messages
-    const { data: userMsg } = await supabase
+    const { data: userMsg } = await supabaseAdmin
       .from('chat_messages')
       .insert({
         thread_id: thread.id,
@@ -131,7 +224,7 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
-    const { data: assistantMsg } = await supabase
+    const { data: assistantMsg } = await supabaseAdmin
       .from('chat_messages')
       .insert({
         thread_id: thread.id,
@@ -146,7 +239,7 @@ export async function POST(request: NextRequest) {
     if (response.memory_suggestions.coach_preferences) {
       for (const pref of response.memory_suggestions.coach_preferences) {
         if (pref.confidence > 0.75) {
-          await supabase
+          await supabaseAdmin
             .from('coach_preferences')
             .upsert({
               coach_id: team.coach_id,

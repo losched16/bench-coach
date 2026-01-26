@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createBrowserClient } from '@supabase/ssr'
 
 export type Database = {
   public: {
@@ -354,5 +354,24 @@ export function createSupabaseClient() {
 }
 
 export function createSupabaseComponentClient() {
-  return createClientComponentClient<Database>()
+  return createBrowserClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
+
+// For use in server components and API routes
+export function createSupabaseServerClient(cookieStore: {
+  get: (name: string) => { value: string } | undefined
+  set: (name: string, value: string, options: any) => void
+}) {
+  return createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        persistSession: false,
+      },
+    }
+  )
 }

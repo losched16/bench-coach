@@ -115,10 +115,10 @@ export default function DashboardPage() {
       {/* Welcome */}
       <div>
         <h2 className="text-3xl font-bold text-gray-900 mb-2">
-          {data.team.name}
+          {data.team?.name || 'Team Dashboard'}
         </h2>
         <p className="text-gray-600">
-          {data.team.season.name} • {data.team.age_group} • {data.team.skill_level}
+          {data.team?.season?.name || 'Season'} • {data.team?.age_group || ''} • {data.team?.skill_level || ''}
         </p>
       </div>
 
@@ -130,7 +130,7 @@ export default function DashboardPage() {
         </div>
         <div className="bg-white rounded-lg shadow p-6">
           <div className="text-sm text-gray-600 mb-1">Practice Duration</div>
-          <div className="text-3xl font-bold text-gray-900">{data.team.practice_duration_minutes} min</div>
+          <div className="text-3xl font-bold text-gray-900">{data.team?.practice_duration_minutes || 60} min</div>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
           <div className="text-sm text-gray-600 mb-1">Practice Plans</div>

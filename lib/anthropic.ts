@@ -11,6 +11,8 @@ export interface TeamContext {
     skill_level: string
     practice_duration_minutes: number
     primary_goals: string[]
+    improved_areas?: string[]
+    mastered_areas?: string[]
   }
   coachPreferences: Record<string, string>
   teamNotes: Array<{ note: string; pinned: boolean }>
@@ -22,6 +24,28 @@ export interface TeamContext {
   }>
   recentPlans?: string[]
   memorySummary?: string
+  activePlaybooks?: Array<{
+    playbook_title: string
+    assigned_to: string
+    skill_category: string
+    goal: string
+    progress: string
+    current_day: number
+    current_session?: {
+      day: number
+      title: string
+      phase?: string
+      goal: string
+      activities: string[]
+    }
+    previous_session?: {
+      day: number
+      title: string
+      goal: string
+    }
+    started_at: string
+  }>
+  savedDrills?: string[]
 }
 
 export interface MemorySuggestion {
@@ -49,6 +73,41 @@ export interface ChatResponse {
 }
 
 function buildSystemPrompt(context: TeamContext): string {
+  // Build playbook section if there are active playbooks
+  let playbookSection = ''
+  if (context.activePlaybooks && context.activePlaybooks.length > 0) {
+    playbookSection = `
+ACTIVE TRAINING PLAYBOOKS:
+${context.activePlaybooks.map(pb => {
+  let pbText = `📚 "${pb.playbook_title}" - ${pb.assigned_to}
+   • Skill: ${pb.skill_category} | Goal: ${pb.goal}
+   • Progress: ${pb.progress} (Currently on Day ${pb.current_day})
+   • Started: ${new Date(pb.started_at).toLocaleDateString()}`
+  
+  if (pb.current_session) {
+    pbText += `
+   • TODAY'S SESSION (Day ${pb.current_session.day}): "${pb.current_session.title}"
+     - Goal: ${pb.current_session.goal}
+     - Activities: ${pb.current_session.activities.join(', ')}`
+  }
+  
+  if (pb.previous_session) {
+    pbText += `
+   • PREVIOUS SESSION (Day ${pb.previous_session.day}): "${pb.previous_session.title}"
+     - Goal: ${pb.previous_session.goal}`
+  }
+  
+  return pbText
+}).join('\n\n')}
+
+PLAYBOOK GUIDANCE:
+- If asked about playbook progress, reference the specific day and activities
+- If a day was missed, suggest reviewing the previous session before continuing
+- Connect playbook work to the player's overall development
+- Encourage consistency but be flexible with timing
+`
+  }
+
   return `You are Bench Coach, an expert youth baseball coaching assistant. You help volunteer coaches plan practices, solve problems, and develop their players.
 
 CRITICAL INSTRUCTIONS:
@@ -58,13 +117,21 @@ CRITICAL INSTRUCTIONS:
 4. Keep answers concise but complete
 5. Speak like an experienced coach, not a textbook
 6. Focus on what matters at this age level
+7. Prioritize current focus areas over mastered skills in practice plans
+8. Build on improved areas to help them become mastered
+9. Reference active playbooks when relevant to the question
+10. Be aware of the team's full context including notes, players, and training programs
 
 CURRENT TEAM CONTEXT:
 - Team: ${context.team.name}
 - Age Group: ${context.team.age_group}
 - Skill Level: ${context.team.skill_level}
 - Practice Duration: ${context.team.practice_duration_minutes} minutes
-- Primary Goals: ${context.team.primary_goals.join(', ')}
+
+SKILL DEVELOPMENT STATUS:
+- Currently Working On: ${context.team.primary_goals.length > 0 ? context.team.primary_goals.join(', ') : 'None set'}
+- Showing Improvement: ${context.team.improved_areas && context.team.improved_areas.length > 0 ? context.team.improved_areas.join(', ') : 'None yet'}
+- Mastered Skills: ${context.team.mastered_areas && context.team.mastered_areas.length > 0 ? context.team.mastered_areas.join(', ') : 'None yet'}
 
 ${context.coachPreferences && Object.keys(context.coachPreferences).length > 0 ? `
 COACH PREFERENCES:
@@ -82,8 +149,24 @@ ${context.memorySummary}
 ` : ''}
 
 ${context.players && context.players.length > 0 ? `
-NOTABLE PLAYERS:
-${context.players.slice(0, 5).map(p => `- ${p.name}${p.positions ? ` (${p.positions.join('/')})` : ''}${p.notes ? `: ${p.notes[0]}` : ''}`).join('\n')}
+ROSTER & PLAYER NOTES (${context.players.length} players):
+${context.players.map(p => {
+  let playerLine = `• ${p.name}${p.positions && p.positions.length > 0 ? ` (${p.positions.join('/')})` : ''}`
+  if (p.notes && p.notes.length > 0) {
+    playerLine += `\n  Notes: ${p.notes.map((n: string) => `"${n}"`).join(' | ')}`
+  }
+  return playerLine
+}).join('\n')}
+` : ''}
+${playbookSection}
+${context.savedDrills && context.savedDrills.length > 0 ? `
+COACH'S SAVED DRILLS:
+${context.savedDrills.slice(0, 5).join(', ')}${context.savedDrills.length > 5 ? `, and ${context.savedDrills.length - 5} more` : ''}
+` : ''}
+
+${context.recentPlans && context.recentPlans.length > 0 ? `
+RECENT PRACTICE PLANS:
+${context.recentPlans.join(', ')}
 ` : ''}
 
 RESPONSE FORMAT:
@@ -160,7 +243,9 @@ Focus areas: ${focus.join(', ')}
 ${constraints ? `Constraints: ${constraints}` : ''}
 
 Team context:
-- ${context.team.primary_goals.join(', ')} are team goals
+- Currently working on: ${context.team.primary_goals.length > 0 ? context.team.primary_goals.join(', ') : 'Not specified'}
+- Areas showing improvement: ${context.team.improved_areas && context.team.improved_areas.length > 0 ? context.team.improved_areas.join(', ') : 'None yet'}
+- Mastered skills (lighter maintenance): ${context.team.mastered_areas && context.team.mastered_areas.length > 0 ? context.team.mastered_areas.join(', ') : 'None yet'}
 ${context.teamNotes.length > 0 ? `- Current issues: ${context.teamNotes.map(n => n.note).join('; ')}` : ''}
 
 Create a practice plan with time blocks that includes:
@@ -168,6 +253,8 @@ Create a practice plan with time blocks that includes:
 2. 3 stations or drills focused on the goals
 3. Game-like activity or competition
 4. Cool-down / reflection
+
+Prioritize the focus areas and current work-on items. For improved areas, include challenging progressions. For mastered areas, only light maintenance if relevant.
 
 For each block, include:
 - Time allocation
