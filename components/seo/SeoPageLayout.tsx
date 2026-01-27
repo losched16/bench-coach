@@ -159,6 +159,26 @@ export function SeoPageLayout({ page }: SeoPageLayoutProps) {
                   </ul>
                 </div>
               )}
+
+              {/* Inline CTA Box */}
+              {section.cta && (
+                <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-xl p-5 sm:p-6 my-6">
+                  {section.cta.title && (
+                    <h3 className="font-bold text-gray-900 mb-2 text-lg">
+                      🎯 {section.cta.title}
+                    </h3>
+                  )}
+                  <p className="text-gray-700 mb-4">{section.cta.body}</p>
+                  {section.cta.link_url && section.cta.link_text && (
+                    <a 
+                      href={section.cta.link_url}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+                    >
+                      {section.cta.link_text} →
+                    </a>
+                  )}
+                </div>
+              )}
             </section>
           ))}
         </div>

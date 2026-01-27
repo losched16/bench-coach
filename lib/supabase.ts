@@ -404,6 +404,12 @@ export interface SeoPage {
       list_items?: string[]
       coaching_cues?: string[]
       common_mistakes?: string[]
+      cta?: {
+        title?: string
+        body: string
+        link_text?: string
+        link_url?: string
+      }
     }>
   }
   hub_slug?: string
