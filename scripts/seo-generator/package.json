@@ -1,0 +1,15 @@
+{
+  "name": "benchcoach-seo-generator",
+  "version": "1.0.0",
+  "description": "Generate SEO pages for BenchCoach using Claude API",
+  "main": "generate.js",
+  "scripts": {
+    "generate": "node generate.js",
+    "generate:hubs": "node generate.js --hub",
+    "generate:spokes": "node generate.js --spoke",
+    "dry-run": "node generate.js --dry-run"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0"
+  }
+}

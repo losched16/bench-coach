@@ -1,0 +1,1215 @@
+{
+  "hubs": [
+    {
+      "slug": "10u-baseball-coaching-guide",
+      "category": "coaching",
+      "title": "10U Baseball Coaching Guide: Building on the Fundamentals",
+      "age_group": "10U",
+      "primary_keyword": "how to coach 10u baseball",
+      "meta_description": "Complete guide to coaching 10U baseball. Real strategies for developing pitchers, position play, competitive situations, and keeping it fun as the game speeds up.",
+      "topics_to_cover": [
+        "What makes 10U different from 8U",
+        "Kids are now comfortable with kid pitch (started in 8U, full transition by 9U)",
+        "Position specialization starting",
+        "Increased competition and game speed",
+        "More complex game situations",
+        "Practice structure for 10U",
+        "Managing playing time fairly",
+        "Developing multiple pitchers",
+        "Parent expectations increase",
+        "Building team chemistry"
+      ]
+    },
+    {
+      "slug": "6u-tball-coaching-guide",
+      "category": "coaching",
+      "title": "6U T-Ball Coaching Guide: Herding Cats and Teaching Baseball",
+      "age_group": "6U",
+      "primary_keyword": "how to coach tball",
+      "meta_description": "Practical t-ball coaching guide for 6U. How to run practices when half the kids are picking dandelions, plus drills that actually work for 5 and 6 year olds.",
+      "topics_to_cover": [
+        "Realistic expectations for 5-6 year olds",
+        "Attention spans measured in seconds",
+        "Making it fun above all else",
+        "Super simple drills",
+        "Keeping parents calm",
+        "Practice structure for t-ball",
+        "Game day management",
+        "Building love of the game"
+      ]
+    },
+    {
+      "slug": "coaching-your-own-kid",
+      "category": "coaching",
+      "title": "Coaching Your Own Kid: How to Do It Without Ruining Everything",
+      "age_group": null,
+      "primary_keyword": "coaching your own child in baseball",
+      "meta_description": "Real talk about coaching your own kid in baseball. How to balance being dad and coach, avoid favoritism accusations, and keep your relationship intact.",
+      "topics_to_cover": [
+        "Setting boundaries between coach and parent",
+        "Avoiding favoritism (or appearance of it)",
+        "Handling criticism from other parents",
+        "When to back off at home",
+        "Car ride conversations",
+        "What to do when your kid struggles",
+        "When your kid is the best player",
+        "When your kid is NOT the best player"
+      ]
+    },
+    {
+      "slug": "first-time-baseball-coach",
+      "category": "coaching",
+      "title": "First-Time Baseball Coach: Everything You Need to Know",
+      "age_group": null,
+      "primary_keyword": "first time baseball coach",
+      "meta_description": "Complete guide for first-time youth baseball coaches. No experience needed. Learn practice planning, basic drills, game management, and parent communication.",
+      "topics_to_cover": [
+        "You don't need to be an expert",
+        "Basic equipment needed",
+        "Planning your first practice",
+        "Essential drills for any age",
+        "Game day basics",
+        "Communicating with parents",
+        "Common mistakes to avoid",
+        "Building confidence as a coach"
+      ]
+    },
+    {
+      "slug": "youth-baseball-practice-planning",
+      "category": "practice-plans",
+      "title": "Youth Baseball Practice Planning: A Complete System",
+      "age_group": null,
+      "primary_keyword": "youth baseball practice plan",
+      "meta_description": "How to plan youth baseball practices that actually work. Station rotations, time management, keeping kids engaged, and building skills progressively.",
+      "topics_to_cover": [
+        "Practice structure fundamentals",
+        "Station rotation system",
+        "Time management",
+        "Balancing skills work and scrimmage",
+        "Progressive skill building",
+        "Adapting to different age groups",
+        "Equipment and space needs",
+        "Building on previous practices"
+      ]
+    },
+    {
+      "slug": "managing-baseball-parents",
+      "category": "coaching",
+      "title": "Managing Baseball Parents: A Coach's Survival Guide",
+      "age_group": null,
+      "primary_keyword": "dealing with baseball parents",
+      "meta_description": "How to handle difficult baseball parents without losing your mind. Playing time complaints, sideline coaching, position disputes, and setting expectations.",
+      "topics_to_cover": [
+        "Setting expectations before the season",
+        "The pre-season parent meeting",
+        "Playing time policies",
+        "Position rotation communication",
+        "Handling sideline coaches",
+        "When parents complain",
+        "The difficult conversation",
+        "Keeping perspective"
+      ]
+    },
+    {
+      "slug": "youth-baseball-tryouts",
+      "category": "coaching",
+      "title": "How to Run Youth Baseball Tryouts That Actually Work",
+      "age_group": null,
+      "primary_keyword": "youth baseball tryout drills",
+      "meta_description": "How to run fair, efficient youth baseball tryouts. Evaluation criteria, tryout drills, rating systems, and making the hard decisions.",
+      "topics_to_cover": [
+        "Tryout structure and flow",
+        "What to evaluate",
+        "Hitting evaluation",
+        "Fielding evaluation",
+        "Throwing evaluation",
+        "Attitude and coachability",
+        "Rating systems",
+        "Making fair decisions"
+      ]
+    },
+    {
+      "slug": "end-of-season-baseball",
+      "category": "coaching",
+      "title": "End of Baseball Season: Evaluations, Awards, and Next Steps",
+      "age_group": null,
+      "primary_keyword": "end of baseball season",
+      "meta_description": "How to wrap up your baseball season right. Player evaluations, end of season party, awards that matter, and keeping kids excited for next year.",
+      "topics_to_cover": [
+        "Season-end player evaluations",
+        "Talking to parents about development",
+        "Awards and recognition",
+        "Team party planning",
+        "Off-season recommendations",
+        "Keeping kids engaged year-round",
+        "Your own reflection as coach",
+        "Planning for next season"
+      ]
+    },
+    {
+      "slug": "backyard-baseball-training",
+      "category": "coaching",
+      "title": "Backyard Baseball Training: A Parent's Guide",
+      "age_group": null,
+      "primary_keyword": "backyard baseball practice",
+      "meta_description": "How to practice baseball at home with your kid. Simple drills, minimal equipment, and how to make backyard training fun and effective.",
+      "topics_to_cover": [
+        "Equipment you actually need",
+        "Space requirements",
+        "Hitting drills for small spaces",
+        "Throwing and catching at home",
+        "Fielding practice solo",
+        "Making it fun not forced",
+        "How often to practice",
+        "When to back off"
+      ]
+    }
+  ],
+  "spokes": [
+    {
+      "slug": "8u-fielding-drills",
+      "category": "drills",
+      "hub_slug": "8u-baseball-coaching-guide",
+      "title": "8U Fielding Drills: Ground Balls, Fly Balls, and Chaos Management",
+      "age_group": "8U",
+      "primary_keyword": "8u fielding drills",
+      "meta_description": "Fielding drills that actually work for 8U baseball. Ground ball basics, tracking fly balls, and keeping kids engaged when the ball isn't hit to them.",
+      "topics_to_cover": [
+        "Ground ball fundamentals for 8U",
+        "Alligator hands technique",
+        "Tracking fly balls",
+        "Ready position",
+        "Throwing after fielding",
+        "Keeping outfielders engaged",
+        "Common fielding mistakes",
+        "Making it competitive"
+      ]
+    },
+    {
+      "slug": "8u-throwing-drills",
+      "category": "drills",
+      "hub_slug": "8u-baseball-coaching-guide",
+      "title": "8U Throwing Drills: Building Arms Without Building Bad Habits",
+      "age_group": "8U",
+      "primary_keyword": "8u throwing drills",
+      "meta_description": "Throwing drills for 8U that build accuracy and arm strength. Simple mechanics cues, partner drills, and fixing common problems like sidearm throwing.",
+      "topics_to_cover": [
+        "Basic throwing mechanics simplified",
+        "Partner throwing progressions",
+        "Accuracy games and competitions",
+        "Fixing sidearm throws",
+        "Building arm strength safely",
+        "Throwing to bases",
+        "Relay throw basics",
+        "Common mistakes to avoid"
+      ]
+    },
+    {
+      "slug": "8u-baserunning-drills",
+      "category": "drills",
+      "hub_slug": "8u-baseball-coaching-guide",
+      "title": "8U Baserunning Drills: Teaching Kids Which Way to Run",
+      "age_group": "8U",
+      "primary_keyword": "8u baserunning drills",
+      "meta_description": "Baserunning drills for 8U baseball. Running through first, rounding bases, when to stop, and making it fun with races and competitions.",
+      "topics_to_cover": [
+        "Running through first base",
+        "Rounding bases properly",
+        "When to stop vs keep going",
+        "Tagging up basics",
+        "Relay races and competitions",
+        "Home to first timing",
+        "Base path awareness",
+        "Common baserunning mistakes"
+      ]
+    },
+    {
+      "slug": "8u-warmup-drills",
+      "category": "drills",
+      "hub_slug": "8u-baseball-coaching-guide",
+      "title": "8U Warmup Routine: Getting Kids Ready Without Losing Them",
+      "age_group": "8U",
+      "primary_keyword": "8u baseball warmup",
+      "meta_description": "Quick warmup routines for 8U baseball. Dynamic stretches, throwing progressions, and getting energy out before practice actually starts.",
+      "topics_to_cover": [
+        "Why warmups matter at 8U",
+        "Dynamic vs static stretching",
+        "5-minute warmup routine",
+        "Throwing warmup progression",
+        "Burning energy productively",
+        "Game day warmups",
+        "Making warmups fun",
+        "Transition to practice"
+      ]
+    },
+    {
+      "slug": "10u-hitting-drills",
+      "category": "drills",
+      "hub_slug": "10u-baseball-coaching-guide",
+      "title": "10U Hitting Drills: Advancing Beyond Tee Work",
+      "age_group": "10U",
+      "primary_keyword": "10u hitting drills",
+      "meta_description": "Hitting drills for 10U baseball. Advancing from tee work to live pitching, timing development, pitch recognition, and building consistent contact.",
+      "topics_to_cover": [
+        "Transitioning from tee to live pitching",
+        "Soft toss progressions",
+        "Front toss drills",
+        "Timing and rhythm",
+        "Pitch recognition basics",
+        "Situational hitting intro",
+        "Power vs contact approach",
+        "Common 10U hitting problems"
+      ]
+    },
+    {
+      "slug": "10u-fielding-drills",
+      "category": "drills",
+      "hub_slug": "10u-baseball-coaching-guide",
+      "title": "10U Fielding Drills: Position-Specific Development",
+      "age_group": "10U",
+      "primary_keyword": "10u fielding drills",
+      "meta_description": "Fielding drills for 10U baseball. Position-specific training, harder hit balls, double play introduction, and building baseball IQ.",
+      "topics_to_cover": [
+        "Position-specific skills",
+        "Infield double play basics",
+        "Outfield cutoff throws",
+        "Harder hit ball reactions",
+        "Backhand and forehand plays",
+        "Communication between fielders",
+        "Game situation fielding",
+        "Building defensive IQ"
+      ]
+    },
+    {
+      "slug": "10u-pitching-drills",
+      "category": "drills",
+      "hub_slug": "10u-baseball-coaching-guide",
+      "title": "10U Pitching Drills: Teaching Kids to Throw Strikes",
+      "age_group": "10U",
+      "primary_keyword": "10u pitching drills",
+      "meta_description": "Pitching drills for 10U that focus on throwing strikes. Basic mechanics, building consistency, pitch counts, and keeping young arms healthy.",
+      "topics_to_cover": [
+        "Basic pitching mechanics simplified",
+        "Balance and posture",
+        "Throwing strikes consistently",
+        "Pitch count guidelines",
+        "Arm care basics",
+        "Building confidence on the mound",
+        "When to pull a struggling pitcher",
+        "Practice routines for pitchers"
+      ]
+    },
+    {
+      "slug": "10u-throwing-drills",
+      "category": "drills",
+      "hub_slug": "10u-baseball-coaching-guide",
+      "title": "10U Throwing Drills: Building Arm Strength and Accuracy",
+      "age_group": "10U",
+      "primary_keyword": "10u throwing drills",
+      "meta_description": "Throwing drills for 10U baseball. Long toss progressions, accuracy challenges, throwing on the run, and building arm strength safely.",
+      "topics_to_cover": [
+        "Long toss progression",
+        "Accuracy at distance",
+        "Throwing on the move",
+        "Quick release drills",
+        "Crow hop technique",
+        "Throwing from different positions",
+        "Arm strengthening safely",
+        "Throwing mechanics refinement"
+      ]
+    },
+    {
+      "slug": "10u-baserunning-drills",
+      "category": "drills",
+      "hub_slug": "10u-baseball-coaching-guide",
+      "title": "10U Baserunning Drills: Reading Plays and Taking Extra Bases",
+      "age_group": "10U",
+      "primary_keyword": "10u baserunning drills",
+      "meta_description": "Baserunning drills for 10U baseball. Lead-offs, stealing basics, reading the ball off the bat, and aggressive but smart base running.",
+      "topics_to_cover": [
+        "Lead-offs and timing",
+        "Stealing second base",
+        "Reading ball off the bat",
+        "First to third reads",
+        "Tag up situations",
+        "Sliding basics",
+        "Avoiding rundowns",
+        "Aggressive baserunning mindset"
+      ]
+    },
+    {
+      "slug": "10u-infield-drills",
+      "category": "drills",
+      "hub_slug": "10u-baseball-coaching-guide",
+      "title": "10U Infield Drills: Building a Solid Defense",
+      "age_group": "10U",
+      "primary_keyword": "10u infield drills",
+      "meta_description": "Infield drills for 10U baseball. Footwork, double play feeds, positioning, and building a cohesive infield that makes routine plays.",
+      "topics_to_cover": [
+        "Infield positioning basics",
+        "Footwork for each position",
+        "Double play feeds and turns",
+        "Slow roller charges",
+        "Backhand plays",
+        "Communication systems",
+        "Situational positioning",
+        "Infield practice routines"
+      ]
+    },
+    {
+      "slug": "10u-outfield-drills",
+      "category": "drills",
+      "hub_slug": "10u-baseball-coaching-guide",
+      "title": "10U Outfield Drills: Tracking, Catching, and Throwing",
+      "age_group": "10U",
+      "primary_keyword": "10u outfield drills",
+      "meta_description": "Outfield drills for 10U baseball. Drop step technique, tracking fly balls, crow hop throws, and hitting the cutoff man consistently.",
+      "topics_to_cover": [
+        "Drop step and route running",
+        "Reading ball off the bat",
+        "Over the shoulder catches",
+        "Crow hop and throwing home",
+        "Hitting the cutoff",
+        "Communication with other outfielders",
+        "Ground balls in the outfield",
+        "Keeping focus between plays"
+      ]
+    },
+    {
+      "slug": "6u-tball-hitting-drills",
+      "category": "drills",
+      "hub_slug": "6u-tball-coaching-guide",
+      "title": "6U T-Ball Hitting Drills: Making Contact Fun",
+      "age_group": "6U",
+      "primary_keyword": "tball hitting drills",
+      "meta_description": "T-ball hitting drills for 5 and 6 year olds. Super simple, super fun, focused on making contact and building love for hitting.",
+      "topics_to_cover": [
+        "Stance basics for tiny humans",
+        "Watching the ball on the tee",
+        "Level swing concept",
+        "Making it a game",
+        "Rotation and reps",
+        "Common t-ball swing issues",
+        "Keeping it positive",
+        "Celebrating contact"
+      ]
+    },
+    {
+      "slug": "6u-tball-fielding-drills",
+      "category": "drills",
+      "hub_slug": "6u-tball-coaching-guide",
+      "title": "6U T-Ball Fielding Drills: Chasing Balls and Having Fun",
+      "age_group": "6U",
+      "primary_keyword": "tball fielding drills",
+      "meta_description": "T-ball fielding drills that work for 5-6 year olds. Simple ground balls, not getting hit by the ball, and keeping everyone moving.",
+      "topics_to_cover": [
+        "Getting in front of the ball",
+        "Using two hands",
+        "Not being afraid of the ball",
+        "Super slow rollers",
+        "What to do after you catch it",
+        "Everyone wants the ball problem",
+        "Keeping non-fielders engaged",
+        "Making it fun"
+      ]
+    },
+    {
+      "slug": "6u-tball-throwing-drills",
+      "category": "drills",
+      "hub_slug": "6u-tball-coaching-guide",
+      "title": "6U T-Ball Throwing Drills: Building the Basics",
+      "age_group": "6U",
+      "primary_keyword": "tball throwing drills",
+      "meta_description": "Throwing drills for t-ball age kids. Very basic mechanics, short distances, and making throwing practice feel like a game.",
+      "topics_to_cover": [
+        "Grip basics",
+        "Pointing at target",
+        "Very short distances",
+        "Partner activities",
+        "Targets and games",
+        "Not worrying about mechanics",
+        "Building confidence",
+        "Celebrating throws"
+      ]
+    },
+    {
+      "slug": "soft-toss-drills",
+      "category": "drills",
+      "hub_slug": "youth-baseball-practice-planning",
+      "title": "Soft Toss Drills for Youth Baseball: A Complete Guide",
+      "age_group": null,
+      "primary_keyword": "soft toss drills baseball",
+      "meta_description": "Complete guide to soft toss drills for youth baseball. Setup, technique, variations, and how to run soft toss stations that actually improve hitting.",
+      "topics_to_cover": [
+        "Soft toss setup and positioning",
+        "Proper toss technique",
+        "Front toss vs side toss",
+        "Common soft toss variations",
+        "Running a soft toss station",
+        "Fixing timing issues",
+        "Soft toss for different ages",
+        "Equipment needed"
+      ]
+    },
+    {
+      "slug": "ground-ball-drills",
+      "category": "drills",
+      "hub_slug": "youth-baseball-practice-planning",
+      "title": "Ground Ball Drills for Youth Baseball: Fundamentals That Stick",
+      "age_group": null,
+      "primary_keyword": "ground ball drills youth baseball",
+      "meta_description": "Ground ball drills that work for any youth baseball age. Ready position, fielding technique, throwing after the catch, and building confidence.",
+      "topics_to_cover": [
+        "Ready position fundamentals",
+        "Getting in front of the ball",
+        "Fielding technique by age",
+        "Slow rollers",
+        "Backhand basics",
+        "Throwing after fielding",
+        "Ground ball games",
+        "Common mistakes and fixes"
+      ]
+    },
+    {
+      "slug": "fly-ball-drills",
+      "category": "drills",
+      "hub_slug": "youth-baseball-practice-planning",
+      "title": "Fly Ball Drills for Youth Baseball: Teaching Kids to Track and Catch",
+      "age_group": null,
+      "primary_keyword": "fly ball drills youth baseball",
+      "meta_description": "Fly ball drills for youth baseball players. How to track the ball, get under it, make the catch, and overcome fear of fly balls.",
+      "topics_to_cover": [
+        "Tracking the ball basics",
+        "Drop step technique",
+        "Getting under the ball",
+        "Two hands vs one hand",
+        "Overcoming fear of fly balls",
+        "Pop flies vs deep flies",
+        "Communication on fly balls",
+        "Progressive fly ball drills"
+      ]
+    },
+    {
+      "slug": "batting-tee-drills",
+      "category": "drills",
+      "hub_slug": "youth-baseball-practice-planning",
+      "title": "Batting Tee Drills: Beyond Basic Tee Work",
+      "age_group": null,
+      "primary_keyword": "batting tee drills",
+      "meta_description": "Batting tee drills that go beyond just swinging. Tee height variations, location work, swing fixes, and running an effective tee station.",
+      "topics_to_cover": [
+        "Basic tee setup",
+        "Tee height for different purposes",
+        "Inside and outside locations",
+        "Fixing uppercut swings",
+        "Freeze drills on the tee",
+        "Tee station rotation",
+        "Making tee work competitive",
+        "Advancing beyond the tee"
+      ]
+    },
+    {
+      "slug": "backyard-hitting-drills",
+      "category": "drills",
+      "hub_slug": "backyard-baseball-training",
+      "title": "Backyard Hitting Drills: Train at Home with Minimal Space",
+      "age_group": null,
+      "primary_keyword": "backyard hitting drills",
+      "meta_description": "Hitting drills you can do in your backyard with limited space. Tee work, soft toss alternatives, and drills that won't break windows.",
+      "topics_to_cover": [
+        "Space requirements",
+        "Net and tee setup",
+        "Wiffle ball drills",
+        "Soft toss in small spaces",
+        "Dry swing work",
+        "Backyard batting games",
+        "Protecting windows and neighbors",
+        "Practice without a partner"
+      ]
+    },
+    {
+      "slug": "backyard-fielding-drills",
+      "category": "drills",
+      "hub_slug": "backyard-baseball-training",
+      "title": "Backyard Fielding Drills: Ground Balls and Fly Balls at Home",
+      "age_group": null,
+      "primary_keyword": "backyard fielding drills",
+      "meta_description": "Fielding drills for your backyard. Solo drills, parent-kid activities, and how to practice fielding without a full field.",
+      "topics_to_cover": [
+        "Wall ball drills",
+        "Self-toss ground balls",
+        "Pop fly practice at home",
+        "Reaction drills",
+        "Bare hand drills",
+        "Fielding with limited space",
+        "Solo practice options",
+        "Parent-kid fielding games"
+      ]
+    },
+    {
+      "slug": "backyard-throwing-drills",
+      "category": "drills",
+      "hub_slug": "backyard-baseball-training",
+      "title": "Backyard Throwing Drills: Build an Arm at Home",
+      "age_group": null,
+      "primary_keyword": "backyard throwing drills",
+      "meta_description": "Throwing drills for your backyard. Target practice, wall work, and how to build arm strength and accuracy without a partner.",
+      "topics_to_cover": [
+        "Target throwing setup",
+        "Wall drills for throwing",
+        "Long toss in limited space",
+        "Throwing with a parent",
+        "Solo throwing options",
+        "Accuracy games",
+        "Building arm strength at home",
+        "Maintaining good mechanics"
+      ]
+    },
+    {
+      "slug": "indoor-baseball-drills",
+      "category": "drills",
+      "hub_slug": "backyard-baseball-training",
+      "title": "Indoor Baseball Drills: Practice When You Can't Get Outside",
+      "age_group": null,
+      "primary_keyword": "indoor baseball drills",
+      "meta_description": "Baseball drills for indoors. Rainy day practice, off-season training, and how to work on skills when you're stuck inside.",
+      "topics_to_cover": [
+        "Soft ball options",
+        "Swing work indoors",
+        "Fielding fundamentals inside",
+        "Throwing into pillows or nets",
+        "Footwork drills",
+        "Baseball IQ training",
+        "Video review with kids",
+        "Keeping it safe indoors"
+      ]
+    },
+    {
+      "slug": "two-player-baseball-drills",
+      "category": "drills",
+      "hub_slug": "backyard-baseball-training",
+      "title": "Two Player Baseball Drills: Parent and Kid Training",
+      "age_group": null,
+      "primary_keyword": "baseball drills for two people",
+      "meta_description": "Baseball drills designed for just two people. Perfect for parent-kid practice sessions that are productive and fun.",
+      "topics_to_cover": [
+        "Throwing and catching games",
+        "Soft toss hitting",
+        "Ground ball rolls",
+        "Fly ball practice",
+        "Baserunning practice",
+        "Competition and games",
+        "Keeping it fun",
+        "Session structure"
+      ]
+    },
+    {
+      "slug": "fun-baseball-drills",
+      "category": "drills",
+      "hub_slug": "first-time-baseball-coach",
+      "title": "Fun Baseball Drills: Games That Teach Skills",
+      "age_group": null,
+      "primary_keyword": "fun baseball drills for kids",
+      "meta_description": "Baseball drills disguised as games. How to teach skills while kids think they're just playing. Perfect for keeping practice energy high.",
+      "topics_to_cover": [
+        "Relay race variations",
+        "Knockout and elimination games",
+        "Target competitions",
+        "Pickle and rundowns",
+        "Skill challenges",
+        "Team competitions",
+        "Ending practice right",
+        "When to use fun drills"
+      ]
+    },
+    {
+      "slug": "baseball-drills-short-attention-span",
+      "category": "drills",
+      "hub_slug": "first-time-baseball-coach",
+      "title": "Baseball Drills for Short Attention Spans",
+      "age_group": null,
+      "primary_keyword": "baseball drills short attention span",
+      "meta_description": "Baseball drills designed for kids who can't focus. Quick rotations, constant movement, and keeping practice flowing when attention wanders.",
+      "topics_to_cover": [
+        "Why attention wanders",
+        "Station rotation systems",
+        "Maximum time per drill",
+        "Transition speed",
+        "Competition as focus tool",
+        "Recognizing lost attention",
+        "Recovery strategies",
+        "Practice structure for ADHD"
+      ]
+    },
+    {
+      "slug": "8u-practice-plan-60-minutes",
+      "category": "practice-plans",
+      "hub_slug": "8u-baseball-coaching-guide",
+      "title": "8U Practice Plan: 60-Minute Template That Works",
+      "age_group": "8U",
+      "primary_keyword": "8u baseball practice plan",
+      "meta_description": "Ready-to-use 60-minute practice plan for 8U baseball. Warm-up, stations, and competition all timed out. Just show up and run it.",
+      "topics_to_cover": [
+        "Minute-by-minute breakdown",
+        "Three station setup",
+        "Equipment needed",
+        "Parent helper instructions",
+        "Adaptations for fewer helpers",
+        "Alternative drills",
+        "Competition to end",
+        "Making adjustments"
+      ]
+    },
+    {
+      "slug": "8u-practice-plan-90-minutes",
+      "category": "practice-plans",
+      "hub_slug": "8u-baseball-coaching-guide",
+      "title": "8U Practice Plan: 90-Minute Template with Scrimmage",
+      "age_group": "8U",
+      "primary_keyword": "8u baseball practice plan 90 minutes",
+      "meta_description": "90-minute practice plan for 8U with stations and scrimmage. How to use the extra time effectively without losing focus.",
+      "topics_to_cover": [
+        "Minute-by-minute breakdown",
+        "Extended station time",
+        "Scrimmage setup",
+        "Scrimmage rules for 8U",
+        "Managing energy over 90 minutes",
+        "Water break timing",
+        "When to cut it short",
+        "Making scrimmage productive"
+      ]
+    },
+    {
+      "slug": "8u-first-practice-season",
+      "category": "practice-plans",
+      "hub_slug": "8u-baseball-coaching-guide",
+      "title": "8U First Practice of the Season: Complete Plan",
+      "age_group": "8U",
+      "primary_keyword": "first baseball practice of season",
+      "meta_description": "How to run your first 8U practice of the season. Setting the tone, assessing skills, and making kids excited to come back.",
+      "topics_to_cover": [
+        "Before practice preparation",
+        "Meeting the team",
+        "Setting expectations",
+        "Skill assessment activities",
+        "Getting to know players",
+        "Parent communication",
+        "Ending on a high note",
+        "Planning based on what you learned"
+      ]
+    },
+    {
+      "slug": "10u-practice-plan-60-minutes",
+      "category": "practice-plans",
+      "hub_slug": "10u-baseball-coaching-guide",
+      "title": "10U Practice Plan: 60-Minute Template",
+      "age_group": "10U",
+      "primary_keyword": "10u baseball practice plan",
+      "meta_description": "60-minute practice plan for 10U baseball. More advanced drills, position work, and efficient use of limited time.",
+      "topics_to_cover": [
+        "Minute-by-minute breakdown",
+        "Warm-up with throwing",
+        "Position-specific stations",
+        "Live reps and situations",
+        "Pitching practice integration",
+        "Competition elements",
+        "Adjusting for skill levels",
+        "Focus areas by week"
+      ]
+    },
+    {
+      "slug": "10u-practice-plan-90-minutes",
+      "category": "practice-plans",
+      "hub_slug": "10u-baseball-coaching-guide",
+      "title": "10U Practice Plan: 90-Minute Template",
+      "age_group": "10U",
+      "primary_keyword": "10u baseball practice plan 90 minutes",
+      "meta_description": "90-minute practice plan for 10U baseball with scrimmage. Advanced stations, situation work, and game simulation.",
+      "topics_to_cover": [
+        "Full practice breakdown",
+        "Extended skill work",
+        "Situation drills",
+        "Batting practice rotation",
+        "Live scrimmage setup",
+        "Pitching and catching work",
+        "Defensive situations",
+        "Time management"
+      ]
+    },
+    {
+      "slug": "10u-first-practice-season",
+      "category": "practice-plans",
+      "hub_slug": "10u-baseball-coaching-guide",
+      "title": "10U First Practice: Setting the Tone for the Season",
+      "age_group": "10U",
+      "primary_keyword": "10u first practice",
+      "meta_description": "First practice plan for 10U baseball. Assessing returning players, integrating new ones, and establishing expectations.",
+      "topics_to_cover": [
+        "Pre-practice preparation",
+        "Team meeting structure",
+        "Skill assessment drills",
+        "Evaluating new players",
+        "Position interest survey",
+        "Setting team expectations",
+        "Parent communication",
+        "Building team chemistry"
+      ]
+    },
+    {
+      "slug": "6u-tball-practice-plan",
+      "category": "practice-plans",
+      "hub_slug": "6u-tball-coaching-guide",
+      "title": "T-Ball Practice Plan: 45-Minute Template for 6U",
+      "age_group": "6U",
+      "primary_keyword": "tball practice plan",
+      "meta_description": "Simple t-ball practice plan for 5-6 year olds. Short activities, constant movement, and keeping everyone happy for 45 minutes.",
+      "topics_to_cover": [
+        "Why 45 minutes is plenty",
+        "Activity-by-activity breakdown",
+        "Super short rotations",
+        "Handling chaos",
+        "Parent helper roles",
+        "Snack time strategy",
+        "Ending with fun",
+        "Realistic expectations"
+      ]
+    },
+    {
+      "slug": "pre-game-warmup-routine",
+      "category": "practice-plans",
+      "hub_slug": "youth-baseball-practice-planning",
+      "title": "Pre-Game Warmup Routine for Youth Baseball",
+      "age_group": null,
+      "primary_keyword": "youth baseball pregame warmup",
+      "meta_description": "Complete pre-game warmup routine for youth baseball. Get your team ready to play without wasting time or energy.",
+      "topics_to_cover": [
+        "Arrival and setup",
+        "Dynamic stretching routine",
+        "Throwing progression",
+        "Infield/outfield time",
+        "Batting practice if available",
+        "Final team huddle",
+        "Timing everything right",
+        "When field time is limited"
+      ]
+    },
+    {
+      "slug": "rainy-day-practice-plan",
+      "category": "practice-plans",
+      "hub_slug": "youth-baseball-practice-planning",
+      "title": "Rainy Day Baseball Practice: Indoor Alternatives",
+      "age_group": null,
+      "primary_keyword": "indoor baseball practice plan",
+      "meta_description": "What to do when baseball practice gets rained out. Indoor alternatives, covered space options, and making the most of bad weather.",
+      "topics_to_cover": [
+        "Indoor space options",
+        "Modified hitting work",
+        "Fielding fundamentals inside",
+        "Baseball IQ sessions",
+        "Video review activities",
+        "Team building games",
+        "Strength and agility work",
+        "When to just cancel"
+      ]
+    },
+    {
+      "slug": "hitting-focused-practice",
+      "category": "practice-plans",
+      "hub_slug": "youth-baseball-practice-planning",
+      "title": "Hitting-Focused Practice Plan: All Offense",
+      "age_group": null,
+      "primary_keyword": "hitting practice plan baseball",
+      "meta_description": "Practice plan focused entirely on hitting. When your team needs extra work at the plate, here's how to structure an all-offense practice.",
+      "topics_to_cover": [
+        "When to run hitting-only practice",
+        "Station setup for max reps",
+        "Tee, soft toss, and live rotation",
+        "Batting practice structure",
+        "Situational hitting work",
+        "Competition and games",
+        "Managing non-hitters",
+        "Sample 60-minute plan"
+      ]
+    },
+    {
+      "slug": "fielding-focused-practice",
+      "category": "practice-plans",
+      "hub_slug": "youth-baseball-practice-planning",
+      "title": "Fielding-Focused Practice Plan: All Defense",
+      "age_group": null,
+      "primary_keyword": "fielding practice plan baseball",
+      "meta_description": "Practice plan focused on defense. Ground balls, fly balls, throwing, and situation work when your team needs to shore up fielding.",
+      "topics_to_cover": [
+        "When to focus on defense",
+        "Infield station setup",
+        "Outfield drill rotation",
+        "Situation fielding",
+        "Cutoffs and relays",
+        "Communication drills",
+        "Competition elements",
+        "Sample 60-minute plan"
+      ]
+    },
+    {
+      "slug": "15-minute-backyard-practice",
+      "category": "practice-plans",
+      "hub_slug": "backyard-baseball-training",
+      "title": "15-Minute Backyard Baseball Practice",
+      "age_group": null,
+      "primary_keyword": "quick baseball practice",
+      "meta_description": "A focused 15-minute backyard practice plan. Quick, effective, and easy to fit in before dinner or homework.",
+      "topics_to_cover": [
+        "Why 15 minutes works",
+        "Pick one focus area",
+        "Sample hitting session",
+        "Sample throwing session",
+        "Sample fielding session",
+        "Keeping it consistent",
+        "Building habits",
+        "When to do more"
+      ]
+    },
+    {
+      "slug": "30-minute-backyard-practice",
+      "category": "practice-plans",
+      "hub_slug": "backyard-baseball-training",
+      "title": "30-Minute Backyard Baseball Practice",
+      "age_group": null,
+      "primary_keyword": "30 minute baseball practice",
+      "meta_description": "Complete 30-minute backyard practice that covers hitting, throwing, and fielding. Perfect for weekend skill work.",
+      "topics_to_cover": [
+        "Balanced practice structure",
+        "10 minutes hitting",
+        "10 minutes throwing",
+        "10 minutes fielding",
+        "Equipment needed",
+        "Parent involvement",
+        "Making it fun",
+        "Weekly schedule"
+      ]
+    },
+    {
+      "slug": "kid-afraid-of-baseball",
+      "category": "problems",
+      "hub_slug": "first-time-baseball-coach",
+      "title": "Kid Afraid of the Ball: How to Build Confidence",
+      "age_group": null,
+      "primary_keyword": "kid afraid of baseball",
+      "meta_description": "How to help a kid who's scared of the baseball. Building confidence gradually, the right drills, and when fear is actually protecting them.",
+      "topics_to_cover": [
+        "Understanding the fear",
+        "Starting with softer balls",
+        "Progressive exposure",
+        "Drills that build confidence",
+        "What not to do",
+        "When fear is reasonable",
+        "Involving parents",
+        "Celebrating small wins"
+      ]
+    },
+    {
+      "slug": "kid-wont-pay-attention",
+      "category": "problems",
+      "hub_slug": "first-time-baseball-coach",
+      "title": "Kid Won't Pay Attention at Baseball Practice",
+      "age_group": null,
+      "primary_keyword": "kid won't pay attention baseball",
+      "meta_description": "What to do when a kid won't focus at baseball practice. Usually it's a practice design problem, not a kid problem. Here's how to fix it.",
+      "topics_to_cover": [
+        "Why kids lose focus",
+        "Practice design issues",
+        "Too much standing around",
+        "Age-appropriate expectations",
+        "Individual attention strategies",
+        "When it's a real issue",
+        "Talking to parents",
+        "Making practice engaging"
+      ]
+    },
+    {
+      "slug": "strikeout-meltdowns",
+      "category": "problems",
+      "hub_slug": "first-time-baseball-coach",
+      "title": "Handling Strikeout Meltdowns in Youth Baseball",
+      "age_group": null,
+      "primary_keyword": "kid cries after strikeout",
+      "meta_description": "How to handle kids who melt down after striking out. In-the-moment strategies, building resilience, and helping kids handle failure.",
+      "topics_to_cover": [
+        "Why strikeouts feel so big",
+        "In-the-moment response",
+        "What not to say",
+        "Building failure tolerance",
+        "Practice strategies",
+        "Talking to parents",
+        "When it's more than baseball",
+        "Modeling good responses"
+      ]
+    },
+    {
+      "slug": "kid-doesnt-want-to-play",
+      "category": "problems",
+      "hub_slug": "coaching-your-own-kid",
+      "title": "My Kid Doesn't Want to Play Baseball Anymore",
+      "age_group": null,
+      "primary_keyword": "kid doesn't want to play baseball",
+      "meta_description": "What to do when your kid says they don't want to play baseball. How to tell if it's temporary, coach-related, or time to let go.",
+      "topics_to_cover": [
+        "Figuring out why",
+        "Temporary vs permanent",
+        "Is it the coach",
+        "Is it the pressure",
+        "Is it the sport",
+        "Taking a break",
+        "Finishing commitments",
+        "When to let them quit"
+      ]
+    },
+    {
+      "slug": "outfielders-not-paying-attention",
+      "category": "problems",
+      "hub_slug": "youth-baseball-practice-planning",
+      "title": "Outfielders Not Paying Attention: How to Keep Them Engaged",
+      "age_group": null,
+      "primary_keyword": "outfielders not paying attention",
+      "meta_description": "How to keep outfielders engaged when nothing is hit to them. Practice strategies, game-day tricks, and making outfield feel important.",
+      "topics_to_cover": [
+        "Why outfield is boring",
+        "Ready position reminders",
+        "Counting pitches",
+        "Backup responsibilities",
+        "Practice engagement",
+        "Rotating positions",
+        "Making outfield cool",
+        "In-game reminders"
+      ]
+    },
+    {
+      "slug": "kids-throwing-sidearm",
+      "category": "problems",
+      "hub_slug": "youth-baseball-practice-planning",
+      "title": "Kids Throwing Sidearm: When to Fix It, When to Leave It",
+      "age_group": null,
+      "primary_keyword": "kid throws sidearm baseball",
+      "meta_description": "Should you fix a kid's sidearm throw? How to correct it if needed, when it's actually fine, and drills that help naturally.",
+      "topics_to_cover": [
+        "Why kids throw sidearm",
+        "When it's a problem",
+        "When it's actually fine",
+        "Drills to encourage overhand",
+        "The fence drill",
+        "Knee throwing",
+        "Not over-correcting",
+        "Patience with mechanics"
+      ]
+    },
+    {
+      "slug": "kids-stepping-in-bucket",
+      "category": "problems",
+      "hub_slug": "youth-baseball-practice-planning",
+      "title": "Stepping in the Bucket: Fixing the Most Common Hitting Flaw",
+      "age_group": null,
+      "primary_keyword": "stepping in the bucket baseball",
+      "meta_description": "How to fix stepping in the bucket - when hitters step away from the plate instead of toward the pitcher. Simple drills that work.",
+      "topics_to_cover": [
+        "What stepping in the bucket means",
+        "Why kids do it",
+        "The fear connection",
+        "Cone drill fix",
+        "Barrier drills",
+        "Soft toss positioning",
+        "Building confidence",
+        "When fear is the real issue"
+      ]
+    },
+    {
+      "slug": "kids-afraid-to-catch",
+      "category": "problems",
+      "hub_slug": "first-time-baseball-coach",
+      "title": "Kids Afraid to Catch: Building Glove Confidence",
+      "age_group": null,
+      "primary_keyword": "kid afraid to catch baseball",
+      "meta_description": "How to help kids who are scared to catch the ball. Progressive drills, softer balls, and building confidence one catch at a time.",
+      "topics_to_cover": [
+        "Understanding catching fear",
+        "Starting with soft balls",
+        "Self-toss catches",
+        "Very short distances",
+        "Building up gradually",
+        "Two hands emphasis",
+        "Celebrating catches",
+        "When to back off"
+      ]
+    },
+    {
+      "slug": "too-many-walks-8u",
+      "category": "problems",
+      "hub_slug": "8u-baseball-coaching-guide",
+      "title": "Too Many Walks in 8U: When Games Take Forever",
+      "age_group": "8U",
+      "primary_keyword": "8u baseball too many walks",
+      "meta_description": "How to handle 8U games with endless walks. Pitching development, rule modifications, and keeping everyone engaged during walk-fests.",
+      "topics_to_cover": [
+        "Why 8U has so many walks",
+        "Pitching development focus",
+        "League rule modifications",
+        "Keeping batters engaged",
+        "Keeping fielders engaged",
+        "Pitch count realities",
+        "When to pull pitchers",
+        "Making it better over time"
+      ]
+    },
+    {
+      "slug": "games-taking-too-long",
+      "category": "problems",
+      "hub_slug": "8u-baseball-coaching-guide",
+      "title": "Youth Baseball Games Taking Too Long: How to Speed Things Up",
+      "age_group": null,
+      "primary_keyword": "youth baseball games too long",
+      "meta_description": "Why youth baseball games drag on forever and what you can do about it. Rule suggestions, pace of play tips, and keeping kids engaged.",
+      "topics_to_cover": [
+        "Why games take so long",
+        "Between-pitch delays",
+        "Between-inning delays",
+        "Rule modifications to suggest",
+        "Run limits per inning",
+        "Time limits",
+        "Keeping your team ready",
+        "Working with the other coach"
+      ]
+    },
+    {
+      "slug": "uneven-skill-levels",
+      "category": "problems",
+      "hub_slug": "first-time-baseball-coach",
+      "title": "Uneven Skill Levels on Your Team: How to Handle It",
+      "age_group": null,
+      "primary_keyword": "different skill levels baseball team",
+      "meta_description": "How to coach a team with wildly different skill levels. Keeping advanced kids challenged while helping beginners catch up.",
+      "topics_to_cover": [
+        "Assessing skill spread",
+        "Station modifications",
+        "Pairing strategies",
+        "Challenging advanced players",
+        "Supporting beginners",
+        "Playing time fairness",
+        "Position assignments",
+        "Building team unity"
+      ]
+    },
+    {
+      "slug": "parent-yelling-from-stands",
+      "category": "problems",
+      "hub_slug": "managing-baseball-parents",
+      "title": "Parents Yelling from the Stands: How to Handle It",
+      "age_group": null,
+      "primary_keyword": "parents yelling at baseball games",
+      "meta_description": "How to handle parents who yell from the stands. Setting expectations, addressing problems, and keeping games positive for kids.",
+      "topics_to_cover": [
+        "Types of yelling parents",
+        "Coaching from stands",
+        "Negative comments",
+        "Yelling at umpires",
+        "Pre-season expectations",
+        "In-the-moment responses",
+        "Private conversations",
+        "When to involve the league"
+      ]
+    },
+    {
+      "slug": "parent-wants-kid-to-pitch",
+      "category": "problems",
+      "hub_slug": "managing-baseball-parents",
+      "title": "Every Parent Wants Their Kid to Pitch: Managing the Pressure",
+      "age_group": null,
+      "primary_keyword": "parent wants kid to pitch",
+      "meta_description": "How to handle parents who want their kid to pitch. Setting criteria, communicating decisions, and being fair while being competitive.",
+      "topics_to_cover": [
+        "Why pitching is coveted",
+        "Setting clear criteria",
+        "Communicating your policy",
+        "Tryouts for pitching",
+        "Developing pitchers fairly",
+        "When kids aren't ready",
+        "The difficult conversation",
+        "Arm safety as priority"
+      ]
+    },
+    {
+      "slug": "playing-time-complaints",
+      "category": "problems",
+      "hub_slug": "managing-baseball-parents",
+      "title": "Playing Time Complaints: How to Handle Them",
+      "age_group": null,
+      "primary_keyword": "youth baseball playing time",
+      "meta_description": "How to handle playing time complaints from parents. Setting policies, tracking time, and having productive conversations.",
+      "topics_to_cover": [
+        "Setting playing time policy",
+        "Rec vs competitive expectations",
+        "Tracking playing time",
+        "League minimums",
+        "Position vs playing time",
+        "When complaints are valid",
+        "The conversation framework",
+        "Documentation importance"
+      ]
+    },
+    {
+      "slug": "handling-blowout-losses",
+      "category": "problems",
+      "hub_slug": "first-time-baseball-coach",
+      "title": "Handling Blowout Losses in Youth Baseball",
+      "age_group": null,
+      "primary_keyword": "youth baseball blowout loss",
+      "meta_description": "How to handle getting blown out in youth baseball. Keeping kids positive, what to say after, and turning losses into growth.",
+      "topics_to_cover": [
+        "In-game management",
+        "Keeping kids engaged",
+        "What not to do",
+        "Post-game talk",
+        "Finding positives",
+        "Parent communication",
+        "Moving forward",
+        "Building resilience"
+      ]
+    },
+    {
+      "slug": "keeping-bench-engaged",
+      "category": "problems",
+      "hub_slug": "youth-baseball-practice-planning",
+      "title": "Keeping the Bench Engaged During Games",
+      "age_group": null,
+      "primary_keyword": "keeping bench engaged baseball",
+      "meta_description": "How to keep kids on the bench engaged during games. Roles, responsibilities, and making dugout time productive.",
+      "topics_to_cover": [
+        "Why bench engagement matters",
+        "Dugout roles and jobs",
+        "Cheering systems",
+        "Watching the game",
+        "Ready to substitute",
+        "No phones or distractions",
+        "Rotating responsibilities",
+        "Making it fun"
+      ]
+    },
+    {
+      "slug": "when-to-teach-sliding",
+      "category": "problems",
+      "hub_slug": "10u-baseball-coaching-guide",
+      "title": "When to Teach Sliding in Youth Baseball",
+      "age_group": null,
+      "primary_keyword": "when to teach sliding baseball",
+      "meta_description": "When and how to teach sliding in youth baseball. Safety considerations, age-appropriate introduction, and proper technique.",
+      "topics_to_cover": [
+        "Age recommendations",
+        "Safety first",
+        "Grass vs dirt",
+        "Basic slide technique",
+        "Pop-up slide",
+        "Head-first debate",
+        "Practice progressions",
+        "Game situations"
+      ]
+    }
+  ]
+}
