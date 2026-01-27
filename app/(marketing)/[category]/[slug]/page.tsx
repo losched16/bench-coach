@@ -6,6 +6,9 @@ import { SeoPageLayout } from '@/components/seo/SeoPageLayout'
 // Revalidate every hour
 export const revalidate = 3600
 
+// Allow pages not generated at build time
+export const dynamicParams = true
+
 // Generate static params for all published pages
 export async function generateStaticParams() {
   const supabase = createPublicSupabaseClient()
