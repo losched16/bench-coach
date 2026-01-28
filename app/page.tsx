@@ -44,7 +44,7 @@ export default function LandingPage() {
               </h1>
               
               <p className="text-xl text-slate-600 leading-relaxed max-w-xl">
-                Whether you&apos;re coaching a full team or just helping your own kid get better, Bench Coach gives you practice plans, drills, and AI guidance—even if you&apos;ve never coached before.
+                Personalized practice plans and AI coaching that adapt to your players—so kids actually improve, not just stay busy. Whether you&apos;re running a team or training in the backyard.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
