@@ -44,7 +44,7 @@ export default function LandingPage() {
               </h1>
               
               <p className="text-xl text-slate-600 leading-relaxed max-w-xl">
-                Personalized practice plans and AI coaching that adapt to your players—so kids actually improve, not just stay busy. Whether you&apos;re running a team or training in the backyard.
+                No more guessing what to work on or Googling drills at 10pm. Bench Coach gives you personalized practice plans based on your team&apos;s age, skill level, and goals—so every rep counts and kids actually get better, faster.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
