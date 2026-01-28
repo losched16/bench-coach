@@ -16,7 +16,6 @@ export default function LandingPage() {
               <a href="#features" className="text-slate-300 hover:text-white font-medium transition-colors">Features</a>
               <a href="#how-it-works" className="text-slate-300 hover:text-white font-medium transition-colors">How It Works</a>
               <a href="#pricing" className="text-slate-300 hover:text-white font-medium transition-colors">Pricing</a>
-              <Link href="/coaching/8u-baseball-coaching-guide" className="text-slate-300 hover:text-white font-medium transition-colors">Coaching Guides</Link>
             </nav>
 
             <div className="flex items-center gap-4">
@@ -600,7 +599,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="bg-slate-900 text-slate-400 py-12 px-4 border-t border-slate-800">
         <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
+          <div className="grid md:grid-cols-3 gap-8 mb-8">
             <div>
               <Image src="/Bench_Coach_Logo.png" alt="Bench Coach" width={150} height={40} className="h-10 w-auto mb-4" />
               <p className="text-sm">AI-powered coaching for youth baseball teams and parents.</p>
@@ -611,14 +610,6 @@ export default function LandingPage() {
                 <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
                 <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
                 <li><a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-white mb-4">Resources</h4>
-              <ul className="space-y-2 text-sm">
-                <li><Link href="/coaching/8u-baseball-coaching-guide" className="hover:text-white transition-colors">8U Coaching Guide</Link></li>
-                <li><Link href="/coaching/10u-baseball-coaching-guide" className="hover:text-white transition-colors">10U Coaching Guide</Link></li>
-                <li><Link href="/drills/8u-hitting-drills" className="hover:text-white transition-colors">Hitting Drills</Link></li>
               </ul>
             </div>
             <div>
