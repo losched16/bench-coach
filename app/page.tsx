@@ -16,6 +16,7 @@ export default function LandingPage() {
               <a href="#features" className="text-slate-300 hover:text-white font-medium transition-colors">Features</a>
               <a href="#how-it-works" className="text-slate-300 hover:text-white font-medium transition-colors">How It Works</a>
               <a href="#pricing" className="text-slate-300 hover:text-white font-medium transition-colors">Pricing</a>
+              <Link href="/coaching/8u-baseball-coaching-guide" className="text-slate-300 hover:text-white font-medium transition-colors">Coaching Guides</Link>
             </nav>
 
             <div className="flex items-center gap-4">
@@ -75,17 +76,37 @@ export default function LandingPage() {
               </div>
             </div>
 
+            {/* Hero Dashboard Screenshot */}
             <div className="relative">
-              <div className="relative rounded-2xl overflow-hidden shadow-2xl border-8 border-white bg-gradient-to-br from-slate-100 to-slate-200 min-h-[400px] flex items-center justify-center">
-                <div className="text-center p-8">
-                  <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
-                    <svg className="w-12 h-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
+              <div className="relative">
+                {/* Browser Frame */}
+                <div className="bg-slate-800 rounded-t-xl px-4 py-3 flex items-center gap-2">
+                  <div className="flex gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
                   </div>
-                  <p className="text-slate-600 font-medium">Dashboard Preview</p>
+                  <div className="flex-1 mx-4">
+                    <div className="bg-slate-700 rounded-md px-3 py-1 text-xs text-slate-400 text-center">
+                      mybenchcoach.com/dashboard
+                    </div>
+                  </div>
+                </div>
+                {/* Screenshot */}
+                <div className="rounded-b-xl overflow-hidden shadow-2xl border-x-4 border-b-4 border-slate-800">
+                  <Image 
+                    src="/screenshots/dashboard.png" 
+                    alt="Bench Coach Dashboard" 
+                    width={800} 
+                    height={600}
+                    className="w-full h-auto"
+                    priority
+                  />
                 </div>
               </div>
+              {/* Decorative elements */}
+              <div className="absolute -z-10 -top-4 -right-4 w-72 h-72 bg-red-200 rounded-full blur-3xl opacity-30"></div>
+              <div className="absolute -z-10 -bottom-8 -left-8 w-64 h-64 bg-blue-200 rounded-full blur-3xl opacity-30"></div>
             </div>
           </div>
         </div>
@@ -125,13 +146,19 @@ export default function LandingPage() {
                   <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
-                  <span>Create practice plans that keep everyone engaged</span>
+                  <span>AI generates practice plans for your age group</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
-                  <span>Track progress for every player</span>
+                  <span>Track team-wide progress and notes</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span>Invite assistant coaches to collaborate</span>
                 </li>
               </ul>
             </div>
@@ -139,31 +166,37 @@ export default function LandingPage() {
             <div className="bg-slate-800/50 rounded-2xl p-8 border border-slate-700">
               <div className="w-16 h-16 rounded-xl bg-red-600/20 flex items-center justify-center mb-6">
                 <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
               </div>
-              <h3 className="text-2xl font-bold text-white mb-4">For Parents</h3>
+              <h3 className="text-2xl font-bold text-white mb-4">For Parents at Home</h3>
               <p className="text-slate-300 mb-6">
-                Your kid loves baseball, and you want to help them improve. But you need a structured approach—not just throwing the ball around in the backyard hoping something sticks.
+                Your kid wants extra practice. You want to help, but you&apos;re not sure what to work on or how to make it productive. No team required—just you and your player.
               </p>
               <ul className="space-y-3 text-slate-300">
                 <li className="flex items-start gap-3">
                   <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
-                  <span>Focus on your child&apos;s individual development</span>
+                  <span>Step-by-step skill progressions</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
-                  <span>Get progressive skill-building drills</span>
+                  <span>Backyard-friendly drills</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
-                  <span>Track what&apos;s working and what needs work</span>
+                  <span>Track your child&apos;s development</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span>Ask the AI anything about coaching</span>
                 </li>
               </ul>
             </div>
@@ -171,252 +204,290 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Problem Section */}
-      <section className="py-20 px-4 bg-white">
+      {/* Features Section with Screenshots */}
+      <section id="features" className="py-24 px-4 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6">
+              Everything You Need to Coach Better
+            </h2>
+            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
+              Real tools for real coaches. No fluff, no gimmicks—just practical features that make your life easier.
+            </p>
+          </div>
+
+          {/* Feature 1: AI Chat */}
+          <div className="grid lg:grid-cols-2 gap-16 items-center mb-32">
+            <div className="order-2 lg:order-1">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm font-medium mb-4">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                AI Coaching Assistant
+              </div>
+              <h3 className="text-3xl font-bold text-slate-900 mb-4">
+                Ask Anything About Coaching
+              </h3>
+              <p className="text-lg text-slate-600 mb-6">
+                Stuck on how to handle a player who&apos;s afraid of the ball? Not sure what to work on this week? The AI assistant knows your team—your players, your goals, your challenges—and gives advice that actually fits your situation.
+              </p>
+              <ul className="space-y-3">
+                <li className="flex items-center gap-3 text-slate-700">
+                  <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Remembers your team&apos;s context
+                </li>
+                <li className="flex items-center gap-3 text-slate-700">
+                  <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Age-appropriate recommendations
+                </li>
+                <li className="flex items-center gap-3 text-slate-700">
+                  <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Save drills directly to your library
+                </li>
+              </ul>
+            </div>
+            <div className="order-1 lg:order-2">
+              <div className="relative">
+                <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+                  <Image 
+                    src="/screenshots/aichat.png" 
+                    alt="AI Coaching Chat" 
+                    width={700} 
+                    height={500}
+                    className="w-full h-auto"
+                  />
+                </div>
+                <div className="absolute -z-10 -top-6 -right-6 w-full h-full bg-blue-100 rounded-2xl"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Feature 2: Practice Plan Library */}
+          <div className="grid lg:grid-cols-2 gap-16 items-center mb-32">
+            <div>
+              <div className="relative">
+                <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+                  <Image 
+                    src="/screenshots/practiceplanlibrary.png" 
+                    alt="Practice Plan Library" 
+                    width={700} 
+                    height={500}
+                    className="w-full h-auto"
+                  />
+                </div>
+                <div className="absolute -z-10 -top-6 -left-6 w-full h-full bg-red-100 rounded-2xl"></div>
+              </div>
+            </div>
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100 text-red-700 text-sm font-medium mb-4">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Practice Plan Library
+              </div>
+              <h3 className="text-3xl font-bold text-slate-900 mb-4">
+                Ready-to-Use Practice Plans
+              </h3>
+              <p className="text-lg text-slate-600 mb-6">
+                Stop spending hours figuring out what to do at practice. Pick a plan for your age group, customize it if you want, and show up ready to go. From first practice of the season to focused skill work.
+              </p>
+              <ul className="space-y-3">
+                <li className="flex items-center gap-3 text-slate-700">
+                  <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Organized by age (6U to 12U)
+                </li>
+                <li className="flex items-center gap-3 text-slate-700">
+                  <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  30, 60, and 90 minute options
+                </li>
+                <li className="flex items-center gap-3 text-slate-700">
+                  <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Copy and customize any plan
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Feature 3: Progression Playbooks */}
+          <div className="grid lg:grid-cols-2 gap-16 items-center mb-32">
+            <div className="order-2 lg:order-1">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-sm font-medium mb-4">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+                Progression Playbooks
+              </div>
+              <h3 className="text-3xl font-bold text-slate-900 mb-4">
+                Step-by-Step Skill Development
+              </h3>
+              <p className="text-lg text-slate-600 mb-6">
+                Multi-week programs that take a player from struggling to confident. Perfect for parents working with one kid or coaches focusing on a specific skill with the whole team.
+              </p>
+              <ul className="space-y-3">
+                <li className="flex items-center gap-3 text-slate-700">
+                  <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  14-30 day structured programs
+                </li>
+                <li className="flex items-center gap-3 text-slate-700">
+                  <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Track progress session by session
+                </li>
+                <li className="flex items-center gap-3 text-slate-700">
+                  <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Hitting, fielding, catching confidence
+                </li>
+              </ul>
+            </div>
+            <div className="order-1 lg:order-2">
+              <div className="relative">
+                <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+                  <Image 
+                    src="/screenshots/progressionplaybooks.png" 
+                    alt="Progression Playbooks" 
+                    width={700} 
+                    height={500}
+                    className="w-full h-auto"
+                  />
+                </div>
+                <div className="absolute -z-10 -top-6 -right-6 w-full h-full bg-amber-100 rounded-2xl"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Feature 4: Team Notes */}
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <div className="relative">
+                <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+                  <Image 
+                    src="/screenshots/benchcoachnotes.png" 
+                    alt="Team Notes" 
+                    width={700} 
+                    height={500}
+                    className="w-full h-auto"
+                  />
+                </div>
+                <div className="absolute -z-10 -top-6 -left-6 w-full h-full bg-green-100 rounded-2xl"></div>
+              </div>
+            </div>
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm font-medium mb-4">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Team Notes
+              </div>
+              <h3 className="text-3xl font-bold text-slate-900 mb-4">
+                Remember Everything Important
+              </h3>
+              <p className="text-lg text-slate-600 mb-6">
+                That kid who&apos;s scared of fly balls. The player transitioning to kid pitch. Notes you take become context for the AI, so your advice gets more personalized over time.
+              </p>
+              <ul className="space-y-3">
+                <li className="flex items-center gap-3 text-slate-700">
+                  <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Team and player-level notes
+                </li>
+                <li className="flex items-center gap-3 text-slate-700">
+                  <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  AI uses notes for better advice
+                </li>
+                <li className="flex items-center gap-3 text-slate-700">
+                  <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Share with assistant coaches
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section id="how-it-works" className="py-24 px-4 bg-gradient-to-br from-slate-50 to-slate-100">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6">
-              Sound Familiar?
+              Up and Running in Minutes
             </h2>
             <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              You said yes because you love baseball and want to help. But the reality hits fast.
+              No complicated setup. No training required. Just sign up and start coaching better.
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-slate-50 rounded-2xl p-8 border border-slate-200">
-              <div className="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+            <div className="bg-white rounded-2xl p-8 shadow-lg border border-slate-200 relative">
+              <div className="absolute -top-4 -left-4 w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                1
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">Practice is in 2 hours...</h3>
-              <p className="text-slate-600">
-                And you have no idea what to work on. What drills are age-appropriate? How long should each take? Where do you even start with kids who can barely catch a pop fly?
-              </p>
-            </div>
-
-            <div className="bg-slate-50 rounded-2xl p-8 border border-slate-200">
-              <div className="w-12 h-12 rounded-lg bg-orange-100 flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">YouTube isn&apos;t cutting it</h3>
-              <p className="text-slate-600">
-                You spend hours watching random drill videos, but none of them fit your team&apos;s skill level. You&apos;re piecing things together and hoping it works.
-              </p>
-            </div>
-
-            <div className="bg-slate-50 rounded-2xl p-8 border border-slate-200">
-              <div className="w-12 h-12 rounded-lg bg-yellow-100 flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">No system for progress</h3>
-              <p className="text-slate-600">
-                Every practice feels like starting from scratch. You have no way to track what worked, what didn&apos;t, or how to build on last week&apos;s session.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-12 p-8 bg-gradient-to-br from-[#1a202c] to-slate-800 rounded-2xl text-center">
-            <p className="text-xl text-slate-200 italic max-w-3xl mx-auto">
-              &quot;I want to help my kid (or my team) get better, but I&apos;m terrified I&apos;m wasting their time—or worse, teaching them the wrong fundamentals.&quot;
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Solution Section */}
-      <section id="how-it-works" className="py-20 px-4 bg-gradient-to-br from-slate-50 to-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6">
-              What If You Had a Coaching Assistant Who Actually Gets It?
-            </h2>
-            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              Bench Coach is like having an experienced coach in your pocket. One who knows your team (or your kid), remembers what you worked on last time, and helps you build skills week after week.
-            </p>
-          </div>
-
-          <div className="grid lg:grid-cols-2 gap-12 items-center mb-16">
-            <div className="space-y-6">
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center font-bold">1</div>
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">Add Your Players</h3>
-                  <p className="text-slate-600">Quick setup. Add your team roster or just your own child, their skill levels, and what you want them to work on.</p>
-                </div>
-              </div>
-
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center font-bold">2</div>
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">Get AI-Powered Practice Plans</h3>
-                  <p className="text-slate-600">Tell Bench Coach what you want to focus on, and get a complete practice plan with age-appropriate drills, timing, and coaching tips.</p>
-                </div>
-              </div>
-
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center font-bold">3</div>
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">Track Progress &amp; Build Skills</h3>
-                  <p className="text-slate-600">Take notes after practice. Bench Coach remembers what worked, what didn&apos;t, and adjusts future plans to build on your progress.</p>
-                </div>
-              </div>
-
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center font-bold">4</div>
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">Ask Questions Anytime</h3>
-                  <p className="text-slate-600">Stuck on how to teach something? Not sure how to handle a specific situation? Ask the AI coach and get instant guidance based on your context.</p>
-                </div>
+              <div className="pt-4">
+                <h3 className="text-xl font-bold text-slate-900 mb-3">Create Your Team</h3>
+                <p className="text-slate-600">
+                  Add your team name, age group, and what skills you want to focus on this season. Takes about 2 minutes.
+                </p>
               </div>
             </div>
 
-            <div className="relative">
-              <div className="rounded-2xl border-8 border-white shadow-2xl overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 min-h-[500px] flex items-center justify-center">
-                <div className="text-center p-8">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-100 flex items-center justify-center">
-                    <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                    </svg>
-                  </div>
-                  <p className="text-slate-600 font-medium">AI Chat Preview</p>
-                </div>
+            <div className="bg-white rounded-2xl p-8 shadow-lg border border-slate-200 relative">
+              <div className="absolute -top-4 -left-4 w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                2
+              </div>
+              <div className="pt-4">
+                <h3 className="text-xl font-bold text-slate-900 mb-3">Add Your Players</h3>
+                <p className="text-slate-600">
+                  Add your roster (or just your kid if that&apos;s your setup). Add notes about what each player needs to work on.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-8 shadow-lg border border-slate-200 relative">
+              <div className="absolute -top-4 -left-4 w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                3
+              </div>
+              <div className="pt-4">
+                <h3 className="text-xl font-bold text-slate-900 mb-3">Start Coaching</h3>
+                <p className="text-slate-600">
+                  Pick a practice plan, ask the AI for help, or start a progression playbook. Everything adapts to your team.
+                </p>
               </div>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* Personal Story Section */}
-      <section className="py-20 px-4 bg-white">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-gradient-to-br from-slate-50 to-red-50 rounded-3xl p-12 border-2 border-red-100">
-            <div className="flex items-start gap-6 mb-8">
-              <div className="flex-shrink-0">
-                <div className="w-20 h-20 rounded-full bg-slate-300 flex items-center justify-center text-2xl font-bold text-slate-700">
-                  CW
-                </div>
+          {/* Team Settings Screenshot */}
+          <div className="mt-16">
+            <div className="max-w-2xl mx-auto">
+              <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+                <Image 
+                  src="/screenshots/team_settings.png" 
+                  alt="Team Setup" 
+                  width={600} 
+                  height={400}
+                  className="w-full h-auto"
+                />
               </div>
-              <div>
-                <h2 className="text-3xl font-bold text-slate-900 mb-2">Why I Built This</h2>
-                <p className="text-red-700 font-medium">— Clint, Founder</p>
-              </div>
-            </div>
-
-            <div className="space-y-4 text-slate-700 leading-relaxed text-lg">
-              <p>
-                I played baseball through college. Coached high school teams. Spent years as an instructor at All Star Baseball Academy. I&apos;ve been around the game my whole life.
-              </p>
-              
-              <p>
-                But when I signed up to coach my 8-year-old son Charlie and his rec team? That was different.
-              </p>
-
-              <p>
-                Six, seven, and eight-year-olds are... a lot. The attention spans are short. The skill levels are all over the place. And you&apos;re trying to keep twelve kids engaged while also teaching fundamentals and—oh yeah—making sure nobody gets hit in the face with a baseball.
-              </p>
-
-              <p>
-                I&apos;d spend hours the night before practice searching for drills, trying to piece together a plan, worrying if I was even doing it right. And I had the advantage of actually knowing how to coach. I couldn&apos;t imagine what it was like for the other parent-coaches who&apos;d never played past Little League themselves.
-              </p>
-
-              <p>
-                But here&apos;s the thing—I also wanted a better way to work with Charlie individually. Team practice is great, but as a parent, you want to help your own kid progress too. I needed something that could work for both: planning team practices AND tracking Charlie&apos;s personal development with drills we could do in the backyard.
-              </p>
-
-              <p>
-                My day job is building software. So I thought: what if there was a tool that could help with this? Not some generic drill database, but something that actually understands your situation—whether that&apos;s a full team or just your own kid—and builds on what you worked on last time.
-              </p>
-
-              <p>
-                I built Bench Coach for me first. To help with Charlie&apos;s team AND to help Charlie get better. To have a way to plan practices, track progress, and always have a next step ready to go.
-              </p>
-
-              <p>
-                But then I realized—if this makes my life easier, it&apos;ll help every other parent and coach out there who&apos;s just trying to do right by their kids.
-              </p>
-
-              <p className="text-slate-900 font-semibold text-xl mt-6">
-                You don&apos;t need to be an expert. You just need the right tools. Let me help you be the coach—or parent—your team or your child deserves.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Grid Section */}
-      <section id="features" className="py-20 px-4 bg-gradient-to-br from-slate-50 to-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6">
-              Everything You Need to Coach with Confidence
-            </h2>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-white rounded-xl p-6 border-2 border-slate-200 hover:border-red-300 transition-all hover:shadow-lg">
-              <div className="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Custom Practice Plans</h3>
-              <p className="text-slate-600 text-sm">Generate complete practice plans in seconds based on your team&apos;s needs and skill level</p>
-            </div>
-
-            <div className="bg-white rounded-xl p-6 border-2 border-slate-200 hover:border-red-300 transition-all hover:shadow-lg">
-              <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-2">AI Coaching Assistant</h3>
-              <p className="text-slate-600 text-sm">Ask questions, get drill suggestions, and receive coaching advice tailored to your situation</p>
-            </div>
-
-            <div className="bg-white rounded-xl p-6 border-2 border-slate-200 hover:border-red-300 transition-all hover:shadow-lg">
-              <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Team &amp; Player Management</h3>
-              <p className="text-slate-600 text-sm">Track every player&apos;s progress, skills, and what they need to work on next</p>
-            </div>
-
-            <div className="bg-white rounded-xl p-6 border-2 border-slate-200 hover:border-red-300 transition-all hover:shadow-lg">
-              <div className="w-12 h-12 rounded-lg bg-yellow-100 flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Progressive Skill Building</h3>
-              <p className="text-slate-600 text-sm">Create development playbooks that build skills systematically over weeks and months</p>
-            </div>
-
-            <div className="bg-white rounded-xl p-6 border-2 border-slate-200 hover:border-red-300 transition-all hover:shadow-lg">
-              <div className="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Practice Notes &amp; History</h3>
-              <p className="text-slate-600 text-sm">Document what worked, what didn&apos;t, and build on your progress week after week</p>
-            </div>
-
-            <div className="bg-white rounded-xl p-6 border-2 border-slate-200 hover:border-red-300 transition-all hover:shadow-lg">
-              <div className="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Coaching Library</h3>
-              <p className="text-slate-600 text-sm">Access guides on practice structure, parent communication, and age-appropriate fundamentals</p>
             </div>
           </div>
         </div>
@@ -478,13 +549,13 @@ export default function LandingPage() {
                     <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    <span className="text-slate-700">Coaching library access</span>
+                    <span className="text-slate-700">Progression playbooks</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    <span className="text-slate-700">Development playbooks</span>
+                    <span className="text-slate-700">Invite assistant coaches free</span>
                   </li>
                 </ul>
 
@@ -528,8 +599,39 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="bg-slate-900 text-slate-400 py-12 px-4 border-t border-slate-800">
-        <div className="max-w-6xl mx-auto text-center">
-          <p className="text-sm">&copy; 2025 Bench Coach. Built by coaches, for coaches and parents.</p>
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <Image src="/Bench_Coach_Logo.png" alt="Bench Coach" width={150} height={40} className="h-10 w-auto mb-4" />
+              <p className="text-sm">AI-powered coaching for youth baseball teams and parents.</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-white mb-4">Product</h4>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
+                <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
+                <li><a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-white mb-4">Resources</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/coaching/8u-baseball-coaching-guide" className="hover:text-white transition-colors">8U Coaching Guide</Link></li>
+                <li><Link href="/coaching/10u-baseball-coaching-guide" className="hover:text-white transition-colors">10U Coaching Guide</Link></li>
+                <li><Link href="/drills/8u-hitting-drills" className="hover:text-white transition-colors">Hitting Drills</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-white mb-4">Account</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/auth/login" className="hover:text-white transition-colors">Log In</Link></li>
+                <li><Link href="/auth/signup" className="hover:text-white transition-colors">Sign Up</Link></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-slate-800 pt-8 text-center text-sm">
+            <p>&copy; 2025 Bench Coach. Built by coaches, for coaches and parents.</p>
+          </div>
         </div>
       </footer>
     </div>
