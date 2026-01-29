@@ -38,11 +38,22 @@ function SignupForm() {
           .upsert({
             user_id: authData.user.id,
             display_name: displayName,
-          } as any, {
+          }, {
             onConflict: 'user_id',
           })
 
         if (coachError) throw coachError
+
+        // Track signup in GoHighLevel (fire and forget - don't block user flow)
+        fetch('/api/ghl/track-signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            firstName: displayName.split(' ')[0] || displayName,
+            lastName: displayName.split(' ').slice(1).join(' ') || '',
+          }),
+        }).catch(err => console.error('GHL tracking error:', err))
 
         // Check for pending invite - go there instead of paywall
         const pendingInvite = sessionStorage.getItem('pendingInviteToken')
