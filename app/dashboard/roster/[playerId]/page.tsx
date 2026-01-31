@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState, useRef, Suspense } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { 
   ArrowLeft, User, Plus, Trash2, Pencil, StickyNote, 
   Target, TrendingUp, Calendar, BookOpen, 
-  Clock, CheckCircle, AlertCircle, Home
+  Clock, CheckCircle, AlertCircle, Home, Upload, X, Play, Image as ImageIcon
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -41,6 +41,13 @@ interface ActivePlaybook {
   }
 }
 
+interface MediaItem {
+  url: string
+  type: 'image' | 'video'
+  filename: string
+  path: string
+}
+
 interface JournalEntry {
   id: string
   session_date: string
@@ -53,6 +60,7 @@ interface JournalEntry {
   home_drills: string | null
   notes: string | null
   skills: string[]
+  media: MediaItem[]
   created_at: string
 }
 
@@ -74,6 +82,7 @@ function PlayerDetailContent() {
   const playerId = params.playerId as string
   const teamId = searchParams.get('teamId')
   const supabase = createSupabaseComponentClient()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [activeTab, setActiveTab] = useState<'overview' | 'journal'>('overview')
   const [player, setPlayer] = useState<PlayerData | null>(null)
@@ -95,6 +104,16 @@ function PlayerDetailContent() {
   const [journalToEdit, setJournalToEdit] = useState<JournalEntry | null>(null)
   const [showDeleteJournalModal, setShowDeleteJournalModal] = useState(false)
   const [journalToDelete, setJournalToDelete] = useState<JournalEntry | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  
+  // Media state
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [existingMedia, setExistingMedia] = useState<MediaItem[]>([])
+  const [mediaToDelete, setMediaToDelete] = useState<string[]>([])
+  
+  // Media viewer
+  const [viewingMedia, setViewingMedia] = useState<MediaItem | null>(null)
   
   const [journalForm, setJournalForm] = useState({
     session_date: new Date().toISOString().split('T')[0],
@@ -138,7 +157,20 @@ function PlayerDetailContent() {
       setPlaybooks(playbooksData || [])
 
       const { data: journalData } = await supabase.from('player_journal_entries').select('*').eq('player_id', playerId).eq('team_id', teamId).order('session_date', { ascending: false })
-      setJournalEntries(journalData || [])
+      
+      // Process journal entries to get signed URLs for media
+      const processedEntries = await Promise.all((journalData || []).map(async (entry) => {
+        if (entry.media && entry.media.length > 0) {
+          const mediaWithUrls = await Promise.all(entry.media.map(async (m: MediaItem) => {
+            const { data } = await supabase.storage.from('journal-media').createSignedUrl(m.path, 3600)
+            return { ...m, url: data?.signedUrl || m.url }
+          }))
+          return { ...entry, media: mediaWithUrls }
+        }
+        return { ...entry, media: entry.media || [] }
+      }))
+      
+      setJournalEntries(processedEntries)
     } catch (error) {
       console.error('Error loading player data:', error)
     } finally {
@@ -175,28 +207,157 @@ function PlayerDetailContent() {
     } catch (error) { console.error('Error deleting note:', error) }
   }
 
-  const resetJournalForm = () => setJournalForm({ session_date: new Date().toISOString().split('T')[0], session_type: 'lesson', duration_minutes: 60, instructor_name: '', focus_areas: '', went_well: '', needs_work: '', home_drills: '', notes: '', skills: [] })
+  const resetJournalForm = () => {
+    setJournalForm({ session_date: new Date().toISOString().split('T')[0], session_type: 'lesson', duration_minutes: 60, instructor_name: '', focus_areas: '', went_well: '', needs_work: '', home_drills: '', notes: '', skills: [] })
+    setPendingFiles([])
+    setExistingMedia([])
+    setMediaToDelete([])
+  }
+  
   const openAddJournalModal = () => { resetJournalForm(); setJournalToEdit(null); setShowJournalModal(true) }
+  
   const openEditJournalModal = (entry: JournalEntry) => {
     setJournalToEdit(entry)
     setJournalForm({ session_date: entry.session_date, session_type: entry.session_type, duration_minutes: entry.duration_minutes || 60, instructor_name: entry.instructor_name || '', focus_areas: entry.focus_areas || '', went_well: entry.went_well || '', needs_work: entry.needs_work || '', home_drills: entry.home_drills || '', notes: entry.notes || '', skills: entry.skills || [] })
+    setExistingMedia(entry.media || [])
+    setPendingFiles([])
+    setMediaToDelete([])
     setShowJournalModal(true)
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    const validFiles = files.filter(f => {
+      const isImage = f.type.startsWith('image/')
+      const isVideo = f.type.startsWith('video/')
+      const isValidSize = f.size <= 100 * 1024 * 1024 // 100MB limit
+      return (isImage || isVideo) && isValidSize
+    })
+    setPendingFiles(prev => [...prev, ...validFiles])
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const removePendingFile = (index: number) => {
+    setPendingFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const markMediaForDelete = (path: string) => {
+    setMediaToDelete(prev => [...prev, path])
+    setExistingMedia(prev => prev.filter(m => m.path !== path))
+  }
+
+  const uploadMedia = async (entryId: string): Promise<MediaItem[]> => {
+    const uploadedMedia: MediaItem[] = []
+    
+    for (const file of pendingFiles) {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${playerId}/${entryId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+      
+      const { error } = await supabase.storage
+        .from('journal-media')
+        .upload(fileName, file)
+      
+      if (!error) {
+        uploadedMedia.push({
+          url: '', // Will be populated with signed URL when viewing
+          type: file.type.startsWith('image/') ? 'image' : 'video',
+          filename: file.name,
+          path: fileName,
+        })
+      } else {
+        console.error('Upload error:', error)
+      }
+    }
+    
+    return uploadedMedia
+  }
+
+  const deleteMedia = async (paths: string[]) => {
+    if (paths.length === 0) return
+    await supabase.storage.from('journal-media').remove(paths)
   }
 
   const handleSaveJournalEntry = async () => {
     if (!teamId || !playerId || !coachId) return
+    setSaving(true)
+    
     try {
-      const entryData = { player_id: playerId, team_id: teamId, coach_id: coachId, session_date: journalForm.session_date, session_type: journalForm.session_type, duration_minutes: journalForm.duration_minutes || null, instructor_name: journalForm.instructor_name || null, focus_areas: journalForm.focus_areas || null, went_well: journalForm.went_well || null, needs_work: journalForm.needs_work || null, home_drills: journalForm.home_drills || null, notes: journalForm.notes || null, skills: journalForm.skills }
-      if (journalToEdit) await supabase.from('player_journal_entries').update(entryData).eq('id', journalToEdit.id)
-      else await supabase.from('player_journal_entries').insert(entryData)
-      setShowJournalModal(false); resetJournalForm(); setJournalToEdit(null); loadPlayerData()
-    } catch (error) { console.error('Error saving journal entry:', error) }
+      let entryId = journalToEdit?.id
+      
+      // If editing, delete marked media first
+      if (journalToEdit && mediaToDelete.length > 0) {
+        await deleteMedia(mediaToDelete)
+      }
+      
+      const baseData = { 
+        player_id: playerId, 
+        team_id: teamId, 
+        coach_id: coachId, 
+        session_date: journalForm.session_date, 
+        session_type: journalForm.session_type, 
+        duration_minutes: journalForm.duration_minutes || null, 
+        instructor_name: journalForm.instructor_name || null, 
+        focus_areas: journalForm.focus_areas || null, 
+        went_well: journalForm.went_well || null, 
+        needs_work: journalForm.needs_work || null, 
+        home_drills: journalForm.home_drills || null, 
+        notes: journalForm.notes || null, 
+        skills: journalForm.skills 
+      }
+      
+      if (journalToEdit) {
+        // Update existing entry
+        await supabase.from('player_journal_entries').update(baseData).eq('id', journalToEdit.id)
+      } else {
+        // Create new entry
+        const { data } = await supabase.from('player_journal_entries').insert(baseData).select('id').single()
+        entryId = data?.id
+      }
+      
+      // Upload new media
+      if (entryId && pendingFiles.length > 0) {
+        setUploading(true)
+        const newMedia = await uploadMedia(entryId)
+        
+        // Combine existing (minus deleted) with new media
+        const allMedia = [...existingMedia, ...newMedia]
+        
+        // Update entry with media
+        await supabase.from('player_journal_entries')
+          .update({ media: allMedia })
+          .eq('id', entryId)
+        
+        setUploading(false)
+      } else if (journalToEdit && mediaToDelete.length > 0) {
+        // Just update with remaining existing media
+        await supabase.from('player_journal_entries')
+          .update({ media: existingMedia })
+          .eq('id', journalToEdit.id)
+      }
+      
+      setShowJournalModal(false)
+      resetJournalForm()
+      setJournalToEdit(null)
+      loadPlayerData()
+    } catch (error) { 
+      console.error('Error saving journal entry:', error) 
+    } finally {
+      setSaving(false)
+      setUploading(false)
+    }
   }
 
   const confirmDeleteJournal = (entry: JournalEntry) => { setJournalToDelete(entry); setShowDeleteJournalModal(true) }
+  
   const handleDeleteJournal = async () => {
     if (!journalToDelete) return
     try {
+      // Delete all media files for this entry
+      if (journalToDelete.media && journalToDelete.media.length > 0) {
+        const paths = journalToDelete.media.map(m => m.path)
+        await deleteMedia(paths)
+      }
+      
       await supabase.from('player_journal_entries').delete().eq('id', journalToDelete.id)
       setShowDeleteJournalModal(false); setJournalToDelete(null); loadPlayerData()
     } catch (error) { console.error('Error deleting journal entry:', error) }
@@ -330,11 +491,12 @@ function PlayerDetailContent() {
                           <div className="flex items-center space-x-3 text-sm text-gray-500">
                             <span className="flex items-center space-x-1"><Calendar size={14} /><span>{new Date(entry.session_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span></span>
                             {entry.duration_minutes && <span className="flex items-center space-x-1"><Clock size={14} /><span>{entry.duration_minutes} min</span></span>}
+                            {entry.media && entry.media.length > 0 && <span className="flex items-center space-x-1"><ImageIcon size={14} /><span>{entry.media.length} media</span></span>}
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        {entry.skills?.length > 0 && <div className="flex flex-wrap gap-1">{entry.skills.map(skill => <span key={skill} className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">{skill}</span>)}</div>}
+                        {entry.skills?.length > 0 && <div className="hidden sm:flex flex-wrap gap-1">{entry.skills.map(skill => <span key={skill} className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">{skill}</span>)}</div>}
                         <button onClick={() => openEditJournalModal(entry)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"><Pencil size={16} /></button>
                         <button onClick={() => confirmDeleteJournal(entry)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
                       </div>
@@ -346,6 +508,33 @@ function PlayerDetailContent() {
                       {entry.home_drills && <div className="space-y-1"><div className="flex items-center space-x-2 text-sm font-medium text-gray-700"><Home size={14} className="text-purple-600" /><span>At-Home Drills</span></div><p className="text-gray-600 text-sm whitespace-pre-wrap pl-5">{entry.home_drills}</p></div>}
                       {entry.notes && <div className="space-y-1 md:col-span-2"><div className="flex items-center space-x-2 text-sm font-medium text-gray-700"><StickyNote size={14} className="text-gray-600" /><span>Notes</span></div><p className="text-gray-600 text-sm whitespace-pre-wrap pl-5">{entry.notes}</p></div>}
                     </div>
+                    
+                    {/* Media Gallery */}
+                    {entry.media && entry.media.length > 0 && (
+                      <div className="px-4 pb-4">
+                        <div className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
+                          <ImageIcon size={14} className="text-indigo-600" />
+                          <span>Photos & Videos</span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                          {entry.media.map((media, idx) => (
+                            <div 
+                              key={idx} 
+                              className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={() => setViewingMedia(media)}
+                            >
+                              {media.type === 'image' ? (
+                                <img src={media.url} alt={media.filename} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                                  <Play className="text-white" size={32} />
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -354,10 +543,12 @@ function PlayerDetailContent() {
         </div>
       )}
 
+      {/* Note Modals */}
       {showAddNoteModal && <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"><div className="bg-white rounded-lg p-6 max-w-md w-full mx-4"><h3 className="text-xl font-bold text-gray-900 mb-4">Add Note</h3><textarea value={newNote} onChange={(e) => setNewNote(e.target.value)} rows={4} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500" placeholder="Add a note..." autoFocus /><div className="flex space-x-3 mt-4"><button onClick={() => { setShowAddNoteModal(false); setNewNote('') }} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button><button onClick={handleAddNote} disabled={!newNote.trim()} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">Add Note</button></div></div></div>}
       {showEditNoteModal && noteToEdit && <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"><div className="bg-white rounded-lg p-6 max-w-md w-full mx-4"><h3 className="text-xl font-bold text-gray-900 mb-4">Edit Note</h3><textarea value={editNote} onChange={(e) => setEditNote(e.target.value)} rows={4} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500" autoFocus /><div className="flex space-x-3 mt-4"><button onClick={() => { setShowEditNoteModal(false); setNoteToEdit(null); setEditNote('') }} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button><button onClick={handleEditNote} disabled={!editNote.trim()} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">Save</button></div></div></div>}
       {showDeleteNoteModal && noteToDelete && <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"><div className="bg-white rounded-lg p-6 max-w-md w-full mx-4"><h3 className="text-xl font-bold text-gray-900 mb-2">Delete Note</h3><p className="text-gray-600 mb-6">Are you sure? This cannot be undone.</p><div className="flex space-x-3"><button onClick={() => { setShowDeleteNoteModal(false); setNoteToDelete(null) }} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button><button onClick={handleDeleteNote} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button></div></div></div>}
 
+      {/* Journal Modal */}
       {showJournalModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -375,13 +566,119 @@ function PlayerDetailContent() {
               <div><label className="block text-sm font-medium text-gray-700 mb-2"><AlertCircle size={14} className="inline text-orange-600 mr-1" />Needs Work</label><textarea value={journalForm.needs_work} onChange={(e) => setJournalForm(prev => ({ ...prev, needs_work: e.target.value }))} rows={3} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500" placeholder="Areas to improve..." /></div>
               <div><label className="block text-sm font-medium text-gray-700 mb-2"><Home size={14} className="inline text-purple-600 mr-1" />At-Home Drills</label><textarea value={journalForm.home_drills} onChange={(e) => setJournalForm(prev => ({ ...prev, home_drills: e.target.value }))} rows={3} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500" placeholder="Drills to practice at home..." /></div>
               <div><label className="block text-sm font-medium text-gray-700 mb-2"><StickyNote size={14} className="inline text-gray-600 mr-1" />Additional Notes</label><textarea value={journalForm.notes} onChange={(e) => setJournalForm(prev => ({ ...prev, notes: e.target.value }))} rows={2} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500" placeholder="Other observations..." /></div>
+              
+              {/* Media Upload Section */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <ImageIcon size={14} className="inline text-indigo-600 mr-1" />
+                  Photos & Videos
+                </label>
+                
+                {/* Existing Media */}
+                {existingMedia.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-xs text-gray-500 mb-2">Existing media:</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {existingMedia.map((media, idx) => (
+                        <div key={idx} className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                          {media.type === 'image' ? (
+                            <img src={media.url} alt={media.filename} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                              <Play className="text-white" size={24} />
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => markMediaForDelete(media.path)}
+                            className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full hover:bg-red-700"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Pending Files Preview */}
+                {pendingFiles.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-xs text-gray-500 mb-2">New files to upload:</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {pendingFiles.map((file, idx) => (
+                        <div key={idx} className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                          {file.type.startsWith('image/') ? (
+                            <img src={URL.createObjectURL(file)} alt={file.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                              <Play className="text-white" size={24} />
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removePendingFile(idx)}
+                            className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full hover:bg-red-700"
+                          >
+                            <X size={14} />
+                          </button>
+                          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 truncate">
+                            {file.name}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Upload Button */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,video/*"
+                  multiple
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center space-x-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 text-gray-600 w-full justify-center"
+                >
+                  <Upload size={18} />
+                  <span>Add Photos or Videos</span>
+                </button>
+                <p className="text-xs text-gray-500 mt-1">Max 100MB per file. Supports images and videos.</p>
+              </div>
             </div>
-            <div className="p-6 border-t border-gray-200 flex space-x-3 sticky bottom-0 bg-white"><button onClick={() => { setShowJournalModal(false); resetJournalForm(); setJournalToEdit(null) }} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button><button onClick={handleSaveJournalEntry} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">{journalToEdit ? 'Save Changes' : 'Add Entry'}</button></div>
+            <div className="p-6 border-t border-gray-200 flex space-x-3 sticky bottom-0 bg-white">
+              <button onClick={() => { setShowJournalModal(false); resetJournalForm(); setJournalToEdit(null) }} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50" disabled={saving}>Cancel</button>
+              <button onClick={handleSaveJournalEntry} disabled={saving} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">
+                {saving ? (uploading ? 'Uploading...' : 'Saving...') : (journalToEdit ? 'Save Changes' : 'Add Entry')}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {showDeleteJournalModal && journalToDelete && <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"><div className="bg-white rounded-lg p-6 max-w-md w-full mx-4"><h3 className="text-xl font-bold text-gray-900 mb-2">Delete Journal Entry</h3><p className="text-gray-600 mb-6">Are you sure? This cannot be undone.</p><div className="flex space-x-3"><button onClick={() => { setShowDeleteJournalModal(false); setJournalToDelete(null) }} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button><button onClick={handleDeleteJournal} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button></div></div></div>}
+      {/* Delete Journal Modal */}
+      {showDeleteJournalModal && journalToDelete && <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"><div className="bg-white rounded-lg p-6 max-w-md w-full mx-4"><h3 className="text-xl font-bold text-gray-900 mb-2">Delete Journal Entry</h3><p className="text-gray-600 mb-6">Are you sure? This will also delete all photos and videos. This cannot be undone.</p><div className="flex space-x-3"><button onClick={() => { setShowDeleteJournalModal(false); setJournalToDelete(null) }} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button><button onClick={handleDeleteJournal} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button></div></div></div>}
+
+      {/* Media Viewer Modal */}
+      {viewingMedia && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4" onClick={() => setViewingMedia(null)}>
+          <button className="absolute top-4 right-4 text-white hover:text-gray-300" onClick={() => setViewingMedia(null)}>
+            <X size={32} />
+          </button>
+          <div className="max-w-4xl max-h-[90vh] w-full" onClick={e => e.stopPropagation()}>
+            {viewingMedia.type === 'image' ? (
+              <img src={viewingMedia.url} alt={viewingMedia.filename} className="w-full h-full object-contain" />
+            ) : (
+              <video src={viewingMedia.url} controls autoPlay className="w-full h-full" />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
