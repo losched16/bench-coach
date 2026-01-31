@@ -80,16 +80,66 @@ export async function POST(request: NextRequest) {
       .from('team_players')
       .select(`
         *,
-        player:players(name),
+        player:players(id, name),
         notes:player_notes(note, created_at)
       `)
       .eq('team_id', teamId)
 
-    const players = teamPlayers?.map(tp => ({
-      name: tp.player.name,
-      positions: tp.positions || [],
-      notes: tp.notes?.map((n: any) => n.note) || [],
-    })) || []
+    // Load player journal entries (recent entries for each player)
+    const { data: journalEntries } = await supabaseAdmin
+      .from('player_journal_entries')
+      .select(`
+        id,
+        player_id,
+        session_date,
+        session_type,
+        duration_minutes,
+        instructor_name,
+        focus_areas,
+        went_well,
+        needs_work,
+        home_drills,
+        notes,
+        skills,
+        player:players(name)
+      `)
+      .eq('team_id', teamId)
+      .order('session_date', { ascending: false })
+      .limit(20) // Last 20 entries across all players
+
+    // Group journal entries by player
+    const journalByPlayer: Record<string, any[]> = {}
+    journalEntries?.forEach(entry => {
+      const playerName = (entry.player as any)?.name || 'Unknown'
+      if (!journalByPlayer[playerName]) {
+        journalByPlayer[playerName] = []
+      }
+      journalByPlayer[playerName].push(entry)
+    })
+
+    const players = teamPlayers?.map(tp => {
+      const playerName = tp.player.name
+      const playerJournal = journalByPlayer[playerName] || []
+      
+      return {
+        name: playerName,
+        positions: tp.positions || [],
+        hitting_level: tp.hitting_level,
+        throwing_level: tp.throwing_level,
+        fielding_level: tp.fielding_level,
+        notes: tp.notes?.map((n: any) => n.note) || [],
+        journal: playerJournal.slice(0, 5).map((j: any) => ({
+          date: j.session_date,
+          type: j.session_type,
+          instructor: j.instructor_name,
+          focus: j.focus_areas,
+          went_well: j.went_well,
+          needs_work: j.needs_work,
+          home_drills: j.home_drills,
+          skills: j.skills,
+        })),
+      }
+    }) || []
 
     // Load recent practice plans
     const { data: recentPlans } = await supabaseAdmin
@@ -124,9 +174,8 @@ export async function POST(request: NextRequest) {
       .eq('team_id', teamId)
       .eq('status', 'active')
 
- 
-   // Format playbook context for AI
-    const playbookContext = activePlaybooks?.map((pb: any) => {
+    // Format playbook context for AI
+    const playbookContext = activePlaybooks?.map(pb => {
       const completedCount = Array.isArray(pb.completed_sessions) ? pb.completed_sessions.length : 0
       // Template is returned as array from Supabase join
       const template = Array.isArray(pb.template) ? pb.template[0] : pb.template
@@ -150,15 +199,13 @@ export async function POST(request: NextRequest) {
           title: currentSession.title,
           phase: currentSession.phase,
           goal: currentSession.goal,
-          activities: currentSession.activities
-        } : undefined,
+          activities: currentSession.activities?.map((a: any) => a.name) || []
+        } : null,
         previous_session: previousSession ? {
           day: previousSession.day,
           title: previousSession.title,
-          phase: previousSession.phase,
-          goal: previousSession.goal,
-          activities: previousSession.activities
-        } : undefined,
+          goal: previousSession.goal
+        } : null,
         started_at: pb.started_at
       }
     }) || []
@@ -222,21 +269,21 @@ export async function POST(request: NextRequest) {
     const { data: userMsg } = await supabaseAdmin
       .from('chat_messages')
       .insert({
-        thread_id: thread!.id,
+        thread_id: thread.id,
         role: 'user',
         content: message,
       })
       .select()
       .single()
 
-   const { data: assistantMsg } = await supabaseAdmin
+    const { data: assistantMsg } = await supabaseAdmin
       .from('chat_messages')
       .insert({
-        thread_id: thread!.id,
+        thread_id: thread.id,
         role: 'assistant',
         content: response.message,
         memory_suggestions: response.memory_suggestions,
-})
+      })
       .select()
       .single()
 
@@ -255,11 +302,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-  return NextResponse.json({
+    return NextResponse.json({
       message: response.message,
       memory_suggestions: response.memory_suggestions,
-      id: assistantMsg?.id,
-      user_message_id: userMsg?.id,
+      id: assistantMsg.id,
+      user_message_id: userMsg.id,
     })
 
   } catch (error: any) {

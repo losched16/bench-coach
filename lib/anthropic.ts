@@ -4,6 +4,17 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
 })
 
+export interface JournalEntry {
+  date: string
+  type: string // lesson, practice, game, backyard, camp, other
+  instructor?: string
+  focus?: string
+  went_well?: string
+  needs_work?: string
+  home_drills?: string
+  skills?: string[]
+}
+
 export interface TeamContext {
   team: {
     name: string
@@ -19,8 +30,12 @@ export interface TeamContext {
   players: Array<{
     name: string
     positions?: string[]
+    hitting_level?: number
+    throwing_level?: number
+    fielding_level?: number
     notes?: string[]
     traits?: string[]
+    journal?: JournalEntry[]
   }>
   recentPlans?: string[]
   memorySummary?: string
@@ -72,6 +87,46 @@ export interface ChatResponse {
   memory_suggestions: MemorySuggestion
 }
 
+function getSkillLevelLabel(level: number | undefined): string {
+  if (!level) return 'Not rated'
+  const labels = ['', 'Beginner', 'Developing', 'Intermediate', 'Advanced', 'Expert']
+  return labels[level] || 'Not rated'
+}
+
+function formatJournalEntry(entry: JournalEntry): string {
+  const parts = []
+  const date = new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const typeLabels: Record<string, string> = {
+    lesson: 'Lesson',
+    practice: 'Practice',
+    game: 'Game',
+    backyard: 'Backyard',
+    camp: 'Camp',
+    other: 'Session',
+  }
+  const typeLabel = typeLabels[entry.type] || typeLabels.other
+  
+  parts.push(`${date} - ${typeLabel}${entry.instructor ? ` with ${entry.instructor}` : ''}`)
+  
+  if (entry.skills && entry.skills.length > 0) {
+    parts.push(`  Skills: ${entry.skills.join(', ')}`)
+  }
+  if (entry.focus) {
+    parts.push(`  Worked on: ${entry.focus}`)
+  }
+  if (entry.went_well) {
+    parts.push(`  Went well: ${entry.went_well}`)
+  }
+  if (entry.needs_work) {
+    parts.push(`  Needs work: ${entry.needs_work}`)
+  }
+  if (entry.home_drills) {
+    parts.push(`  Home drills: ${entry.home_drills}`)
+  }
+  
+  return parts.join('\n')
+}
+
 function buildSystemPrompt(context: TeamContext): string {
   // Build playbook section if there are active playbooks
   let playbookSection = ''
@@ -79,21 +134,21 @@ function buildSystemPrompt(context: TeamContext): string {
     playbookSection = `
 ACTIVE TRAINING PLAYBOOKS:
 ${context.activePlaybooks.map(pb => {
-  let pbText = `📚 "${pb.playbook_title}" - ${pb.assigned_to}
-   • Skill: ${pb.skill_category} | Goal: ${pb.goal}
-   • Progress: ${pb.progress} (Currently on Day ${pb.current_day})
-   • Started: ${new Date(pb.started_at).toLocaleDateString()}`
+  let pbText = `"${pb.playbook_title}" - ${pb.assigned_to}
+   Skill: ${pb.skill_category} | Goal: ${pb.goal}
+   Progress: ${pb.progress} (Currently on Day ${pb.current_day})
+   Started: ${new Date(pb.started_at).toLocaleDateString()}`
   
   if (pb.current_session) {
     pbText += `
-   • TODAY'S SESSION (Day ${pb.current_session.day}): "${pb.current_session.title}"
+   TODAY'S SESSION (Day ${pb.current_session.day}): "${pb.current_session.title}"
      - Goal: ${pb.current_session.goal}
      - Activities: ${pb.current_session.activities.join(', ')}`
   }
   
   if (pb.previous_session) {
     pbText += `
-   • PREVIOUS SESSION (Day ${pb.previous_session.day}): "${pb.previous_session.title}"
+   PREVIOUS SESSION (Day ${pb.previous_session.day}): "${pb.previous_session.title}"
      - Goal: ${pb.previous_session.goal}`
   }
   
@@ -105,6 +160,41 @@ PLAYBOOK GUIDANCE:
 - If a day was missed, suggest reviewing the previous session before continuing
 - Connect playbook work to the player's overall development
 - Encourage consistency but be flexible with timing
+`
+  }
+
+  // Build player section with journal entries
+  let playerSection = ''
+  if (context.players && context.players.length > 0) {
+    playerSection = `
+ROSTER & PLAYER DEVELOPMENT (${context.players.length} players):
+${context.players.map(p => {
+  let playerText = `\n${p.name}${p.positions && p.positions.length > 0 ? ` (${p.positions.join('/')})` : ''}`
+  
+  // Add skill levels if available
+  const skillLevels = []
+  if (p.hitting_level) skillLevels.push(`Hitting: ${getSkillLevelLabel(p.hitting_level)}`)
+  if (p.throwing_level) skillLevels.push(`Throwing: ${getSkillLevelLabel(p.throwing_level)}`)
+  if (p.fielding_level) skillLevels.push(`Fielding: ${getSkillLevelLabel(p.fielding_level)}`)
+  if (skillLevels.length > 0) {
+    playerText += `\n   Skill Levels: ${skillLevels.join(' | ')}`
+  }
+  
+  // Add notes if available
+  if (p.notes && p.notes.length > 0) {
+    playerText += `\n   Coach Notes: ${p.notes.map((n: string) => `"${n}"`).join(' | ')}`
+  }
+  
+  // Add journal entries if available - THIS IS THE KEY ADDITION
+  if (p.journal && p.journal.length > 0) {
+    playerText += `\n   DEVELOPMENT JOURNAL (${p.journal.length} recent entries):`
+    p.journal.forEach(entry => {
+      playerText += `\n${formatJournalEntry(entry).split('\n').map(line => '      ' + line).join('\n')}`
+    })
+  }
+  
+  return playerText
+}).join('\n')}
 `
   }
 
@@ -121,6 +211,8 @@ CRITICAL INSTRUCTIONS:
 8. Build on improved areas to help them become mastered
 9. Reference active playbooks when relevant to the question
 10. Be aware of the team's full context including notes, players, and training programs
+11. USE THE DEVELOPMENT JOURNAL DATA - when asked about a player, reference their recent lessons, what went well, what needs work, and suggested home drills
+12. Connect advice to what instructors have been working on with the player
 
 CURRENT TEAM CONTEXT:
 - Team: ${context.team.name}
@@ -147,17 +239,7 @@ ${context.memorySummary ? `
 TEAM MEMORY SUMMARY:
 ${context.memorySummary}
 ` : ''}
-
-${context.players && context.players.length > 0 ? `
-ROSTER & PLAYER NOTES (${context.players.length} players):
-${context.players.map(p => {
-  let playerLine = `• ${p.name}${p.positions && p.positions.length > 0 ? ` (${p.positions.join('/')})` : ''}`
-  if (p.notes && p.notes.length > 0) {
-    playerLine += `\n  Notes: ${p.notes.map((n: string) => `"${n}"`).join(' | ')}`
-  }
-  return playerLine
-}).join('\n')}
-` : ''}
+${playerSection}
 ${playbookSection}
 ${context.savedDrills && context.savedDrills.length > 0 ? `
 COACH'S SAVED DRILLS:
@@ -168,6 +250,18 @@ ${context.recentPlans && context.recentPlans.length > 0 ? `
 RECENT PRACTICE PLANS:
 ${context.recentPlans.join(', ')}
 ` : ''}
+
+USING DEVELOPMENT JOURNAL DATA:
+When the coach asks about a specific player:
+- Reference their recent lessons and training sessions
+- Note what instructors have been working on with them
+- Highlight what's going well (celebrate wins!)
+- Focus advice on areas that still need work
+- Suggest home drills that reinforce recent lessons
+- Track patterns across multiple sessions (e.g., "I see throwing mechanics has been a focus in the last 3 lessons")
+
+Example: If asked "What should Charlie work on this week?", look at his journal entries and say something like:
+"Based on Charlie's recent lesson with Coach Smith, he's making good progress on his load timing but still needs work on keeping his head still through contact. I'd suggest continuing the tee work focusing on contact point that was assigned as homework."
 
 RESPONSE FORMAT:
 Provide your coaching advice in natural prose. At the end of your response, include a JSON object in this exact format:
