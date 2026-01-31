@@ -75,13 +75,12 @@ export async function POST(request: NextRequest) {
       .eq('team_id', teamId)
       .single()
 
-    // Load players with notes
+    // Load players
     const { data: teamPlayers } = await supabaseAdmin
       .from('team_players')
       .select(`
         *,
-        player:players(id, name),
-        notes:player_notes(note, created_at)
+        player:players(id, name)
       `)
       .eq('team_id', teamId)
 
