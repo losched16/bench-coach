@@ -99,7 +99,6 @@ function SkillRating({
   onChange: (level: number | null) => void
 }) {
   const handleClick = (level: number) => {
-    // If clicking the same level, clear it
     if (value === level) {
       onChange(null)
     } else {
@@ -107,34 +106,39 @@ function SkillRating({
     }
   }
 
+  const getLabel = () => {
+    if (!value) return 'Not rated'
+    return SKILL_LABELS[value]
+  }
+
   return (
-    <div className="flex items-center justify-between py-2">
-      <div className="flex items-center space-x-2">
-        <span className="text-lg">{skill.icon}</span>
-        <span className="text-gray-700 font-medium">{skill.label}</span>
-      </div>
-      <div className="flex items-center space-x-3">
-        <div className="flex space-x-1">
-          {[1, 2, 3, 4, 5].map((level) => (
-            <button
-              key={level}
-              onClick={() => handleClick(level)}
-              className={`w-6 h-6 rounded-full border-2 transition-all ${
-                value && value >= level
-                  ? level <= 1 ? 'bg-red-500 border-red-500' :
-                    level <= 2 ? 'bg-orange-500 border-orange-500' :
-                    level <= 3 ? 'bg-yellow-500 border-yellow-500' :
-                    level <= 4 ? 'bg-green-500 border-green-500' :
-                    'bg-blue-500 border-blue-500'
-                  : 'bg-white border-gray-300 hover:border-gray-400'
-              }`}
-              title={SKILL_LABELS[level]}
-            />
-          ))}
+    <div className="py-2">
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center space-x-2">
+          <span className="text-base">{skill.icon}</span>
+          <span className="text-gray-700 font-medium text-sm">{skill.label}</span>
         </div>
-        <span className="text-sm text-gray-500 w-24 text-right">
-          {value ? SKILL_LABELS[value] : 'Not rated'}
+        <span className={`text-xs ${value ? 'text-gray-700' : 'text-gray-400'}`}>
+          {getLabel()}
         </span>
+      </div>
+      <div className="flex space-x-1.5">
+        {[1, 2, 3, 4, 5].map((level) => (
+          <button
+            key={level}
+            onClick={() => handleClick(level)}
+            className={`w-7 h-7 rounded-full border-2 transition-all ${
+              value && value >= level
+                ? level <= 1 ? 'bg-red-500 border-red-500' :
+                  level <= 2 ? 'bg-orange-500 border-orange-500' :
+                  level <= 3 ? 'bg-yellow-500 border-yellow-500' :
+                  level <= 4 ? 'bg-green-500 border-green-500' :
+                  'bg-blue-500 border-blue-500'
+                : 'bg-white border-gray-300 hover:border-gray-400'
+            }`}
+            title={SKILL_LABELS[level]}
+          />
+        ))}
       </div>
     </div>
   )

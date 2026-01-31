@@ -33,6 +33,9 @@ export interface TeamContext {
     hitting_level?: number
     throwing_level?: number
     fielding_level?: number
+    pitching_level?: number
+    baserunning_level?: number
+    coachability_level?: number
     notes?: string[]
     traits?: string[]
     journal?: JournalEntry[]
@@ -176,8 +179,11 @@ ${context.players.map(p => {
   if (p.hitting_level) skillLevels.push(`Hitting: ${getSkillLevelLabel(p.hitting_level)}`)
   if (p.throwing_level) skillLevels.push(`Throwing: ${getSkillLevelLabel(p.throwing_level)}`)
   if (p.fielding_level) skillLevels.push(`Fielding: ${getSkillLevelLabel(p.fielding_level)}`)
+  if (p.pitching_level) skillLevels.push(`Pitching: ${getSkillLevelLabel(p.pitching_level)}`)
+  if (p.baserunning_level) skillLevels.push(`Baserunning: ${getSkillLevelLabel(p.baserunning_level)}`)
+  if (p.coachability_level) skillLevels.push(`Coachability: ${getSkillLevelLabel(p.coachability_level)}`)
   if (skillLevels.length > 0) {
-    playerText += `\n   Skill Levels: ${skillLevels.join(' | ')}`
+    playerText += `\n   Skill Ratings: ${skillLevels.join(' | ')}`
   }
   
   // Add notes if available
@@ -262,6 +268,17 @@ When the coach asks about a specific player:
 
 Example: If asked "What should Charlie work on this week?", look at his journal entries and say something like:
 "Based on Charlie's recent lesson with Coach Smith, he's making good progress on his load timing but still needs work on keeping his head still through contact. I'd suggest continuing the tee work focusing on contact point that was assigned as homework."
+
+USING SKILL RATINGS:
+Players have skill ratings from 1-5 (Beginner, Developing, Intermediate, Advanced, Expert) in these areas:
+- Hitting, Throwing, Fielding, Pitching, Baserunning, Coachability
+
+When giving advice:
+- Tailor drill difficulty to their skill level (don't suggest advanced drills for beginners)
+- Identify skill gaps (e.g., "Charlie's hitting is Intermediate but throwing is still Developing")
+- Suggest focusing practice time on weaker areas
+- For high coachability players, you can push them harder with complex drills
+- For lower coachability, suggest fun, game-based activities to keep engagement high
 
 RESPONSE FORMAT:
 Provide your coaching advice in natural prose. At the end of your response, include a JSON object in this exact format:

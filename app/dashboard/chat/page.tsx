@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
-import { Send, Loader2, Bookmark, Check, Brain } from 'lucide-react'
+import { Send, Loader2, Bookmark, Check, Brain, Plus, Trash2 } from 'lucide-react'
 
 interface Message {
   id: string
@@ -30,6 +30,9 @@ function ChatPageContent() {
   const [memoryTitle, setMemoryTitle] = useState('')
   const [savingMemory, setSavingMemory] = useState(false)
   const [savedToMemory, setSavedToMemory] = useState<Set<string>>(new Set())
+  // New chat state
+  const [currentThreadId, setCurrentThreadId] = useState<string | null>(null)
+  const [showNewChatConfirm, setShowNewChatConfirm] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const searchParams = useSearchParams()
   const teamId = searchParams.get('teamId')
@@ -65,6 +68,7 @@ function ChatPageContent() {
       }
 
       if (thread) {
+        setCurrentThreadId(thread.id)
         const { data: msgs } = await supabase
           .from('chat_messages')
           .select('*')
@@ -77,6 +81,26 @@ function ChatPageContent() {
       }
     } catch (error) {
       console.error('Error loading chat:', error)
+    }
+  }
+
+  const handleNewChat = async () => {
+    if (!currentThreadId) return
+    
+    try {
+      // Delete all messages in current thread
+      await supabase
+        .from('chat_messages')
+        .delete()
+        .eq('thread_id', currentThreadId)
+      
+      // Clear local state
+      setMessages([])
+      setSavedDrills(new Set())
+      setSavedToMemory(new Set())
+      setShowNewChatConfirm(false)
+    } catch (error) {
+      console.error('Error starting new chat:', error)
     }
   }
 
@@ -350,6 +374,22 @@ function ChatPageContent() {
     <div className="flex flex-col lg:flex-row lg:space-x-6 h-[calc(100vh-10rem)] sm:h-[calc(100vh-12rem)]">
       {/* Chat Area */}
       <div className="flex-1 bg-white rounded-lg shadow flex flex-col min-h-0">
+        {/* Chat Header */}
+        {messages.length > 0 && (
+          <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+            <div className="text-sm text-gray-500">
+              {messages.length} message{messages.length !== 1 ? 's' : ''}
+            </div>
+            <button
+              onClick={() => setShowNewChatConfirm(true)}
+              className="flex items-center space-x-1 text-sm text-gray-600 hover:text-red-600 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <Plus size={16} />
+              <span>New Chat</span>
+            </button>
+          </div>
+        )}
+        
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
           {messages.length === 0 ? (
@@ -696,6 +736,33 @@ function ChatPageContent() {
                   {savingMemory ? 'Saving...' : 'Save to Memory'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Chat Confirmation Modal */}
+      {showNewChatConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Start New Chat?</h3>
+            <p className="text-gray-600 mb-6">
+              This will clear your current conversation. Make sure you've saved any important drills or information to memory first.
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowNewChatConfirm(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleNewChat}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
+              >
+                <Trash2 size={16} />
+                <span>Clear & Start New</span>
+              </button>
             </div>
           </div>
         </div>

@@ -127,6 +127,9 @@ export async function POST(request: NextRequest) {
         hitting_level: tp.hitting_level,
         throwing_level: tp.throwing_level,
         fielding_level: tp.fielding_level,
+        pitching_level: tp.pitching_level,
+        baserunning_level: tp.baserunning_level,
+        coachability_level: tp.coachability_level,
         notes: tp.notes?.map((n: any) => n.note) || [],
         journal: playerJournal.slice(0, 5).map((j: any) => ({
           date: j.session_date,
