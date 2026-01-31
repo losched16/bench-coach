@@ -20,6 +20,9 @@ interface PlayerData {
     hitting_level: number | null
     throwing_level: number | null
     fielding_level: number | null
+    pitching_level: number | null
+    baserunning_level: number | null
+    coachability_level: number | null
   }
 }
 
@@ -75,6 +78,68 @@ const SESSION_TYPES = [
 
 const SKILL_OPTIONS = ['Hitting', 'Fielding', 'Throwing', 'Catching', 'Baserunning', 'Pitching']
 
+const SKILL_CATEGORIES = [
+  { key: 'hitting', label: 'Hitting', icon: '🏏' },
+  { key: 'fielding', label: 'Fielding', icon: '🧤' },
+  { key: 'throwing', label: 'Throwing', icon: '💪' },
+  { key: 'pitching', label: 'Pitching', icon: '⚾' },
+  { key: 'baserunning', label: 'Baserunning', icon: '🏃' },
+  { key: 'coachability', label: 'Coachability', icon: '⭐' },
+]
+
+const SKILL_LABELS = ['', 'Beginner', 'Developing', 'Intermediate', 'Advanced', 'Expert']
+
+function SkillRating({ 
+  skill, 
+  value, 
+  onChange 
+}: { 
+  skill: { key: string; label: string; icon: string }
+  value: number | null
+  onChange: (level: number | null) => void
+}) {
+  const handleClick = (level: number) => {
+    // If clicking the same level, clear it
+    if (value === level) {
+      onChange(null)
+    } else {
+      onChange(level)
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-between py-2">
+      <div className="flex items-center space-x-2">
+        <span className="text-lg">{skill.icon}</span>
+        <span className="text-gray-700 font-medium">{skill.label}</span>
+      </div>
+      <div className="flex items-center space-x-3">
+        <div className="flex space-x-1">
+          {[1, 2, 3, 4, 5].map((level) => (
+            <button
+              key={level}
+              onClick={() => handleClick(level)}
+              className={`w-6 h-6 rounded-full border-2 transition-all ${
+                value && value >= level
+                  ? level <= 1 ? 'bg-red-500 border-red-500' :
+                    level <= 2 ? 'bg-orange-500 border-orange-500' :
+                    level <= 3 ? 'bg-yellow-500 border-yellow-500' :
+                    level <= 4 ? 'bg-green-500 border-green-500' :
+                    'bg-blue-500 border-blue-500'
+                  : 'bg-white border-gray-300 hover:border-gray-400'
+              }`}
+              title={SKILL_LABELS[level]}
+            />
+          ))}
+        </div>
+        <span className="text-sm text-gray-500 w-24 text-right">
+          {value ? SKILL_LABELS[value] : 'Not rated'}
+        </span>
+      </div>
+    </div>
+  )
+}
+
 function PlayerDetailContent() {
   const params = useParams()
   const searchParams = useSearchParams()
@@ -91,6 +156,7 @@ function PlayerDetailContent() {
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [coachId, setCoachId] = useState<string | null>(null)
+  const [savingSkill, setSavingSkill] = useState(false)
   
   const [showAddNoteModal, setShowAddNoteModal] = useState(false)
   const [showEditNoteModal, setShowEditNoteModal] = useState(false)
@@ -147,7 +213,7 @@ function PlayerDetailContent() {
     setLoading(true)
     try {
       const { data: playerData } = await supabase.from('players').select('id, name, jersey_number').eq('id', playerId).single()
-      const { data: teamPlayerData } = await supabase.from('team_players').select('id, positions, hitting_level, throwing_level, fielding_level').eq('player_id', playerId).eq('team_id', teamId).single()
+      const { data: teamPlayerData } = await supabase.from('team_players').select('id, positions, hitting_level, throwing_level, fielding_level, pitching_level, baserunning_level, coachability_level').eq('player_id', playerId).eq('team_id', teamId).single()
       if (playerData && teamPlayerData) setPlayer({ ...playerData, team_player: teamPlayerData })
 
       const { data: notesData } = await supabase.from('player_notes').select('*').eq('player_id', playerId).eq('team_id', teamId).order('created_at', { ascending: false })
@@ -175,6 +241,32 @@ function PlayerDetailContent() {
       console.error('Error loading player data:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSkillChange = async (skillKey: string, level: number | null) => {
+    if (!player) return
+    
+    setSavingSkill(true)
+    try {
+      const updateData = { [`${skillKey}_level`]: level }
+      await supabase
+        .from('team_players')
+        .update(updateData)
+        .eq('id', player.team_player.id)
+      
+      // Update local state immediately for responsiveness
+      setPlayer(prev => prev ? {
+        ...prev,
+        team_player: {
+          ...prev.team_player,
+          [`${skillKey}_level`]: level
+        }
+      } : null)
+    } catch (error) {
+      console.error('Error updating skill level:', error)
+    } finally {
+      setSavingSkill(false)
     }
   }
 
@@ -259,7 +351,7 @@ function PlayerDetailContent() {
       
       if (!error) {
         uploadedMedia.push({
-          url: '', // Will be populated with signed URL when viewing
+          url: '',
           type: file.type.startsWith('image/') ? 'image' : 'video',
           filename: file.name,
           path: fileName,
@@ -284,7 +376,6 @@ function PlayerDetailContent() {
     try {
       let entryId = journalToEdit?.id
       
-      // If editing, delete marked media first
       if (journalToEdit && mediaToDelete.length > 0) {
         await deleteMedia(mediaToDelete)
       }
@@ -306,30 +397,21 @@ function PlayerDetailContent() {
       }
       
       if (journalToEdit) {
-        // Update existing entry
         await supabase.from('player_journal_entries').update(baseData).eq('id', journalToEdit.id)
       } else {
-        // Create new entry
         const { data } = await supabase.from('player_journal_entries').insert(baseData).select('id').single()
         entryId = data?.id
       }
       
-      // Upload new media
       if (entryId && pendingFiles.length > 0) {
         setUploading(true)
         const newMedia = await uploadMedia(entryId)
-        
-        // Combine existing (minus deleted) with new media
         const allMedia = [...existingMedia, ...newMedia]
-        
-        // Update entry with media
         await supabase.from('player_journal_entries')
           .update({ media: allMedia })
           .eq('id', entryId)
-        
         setUploading(false)
       } else if (journalToEdit && mediaToDelete.length > 0) {
-        // Just update with remaining existing media
         await supabase.from('player_journal_entries')
           .update({ media: existingMedia })
           .eq('id', journalToEdit.id)
@@ -352,7 +434,6 @@ function PlayerDetailContent() {
   const handleDeleteJournal = async () => {
     if (!journalToDelete) return
     try {
-      // Delete all media files for this entry
       if (journalToDelete.media && journalToDelete.media.length > 0) {
         const paths = journalToDelete.media.map(m => m.path)
         await deleteMedia(paths)
@@ -364,8 +445,6 @@ function PlayerDetailContent() {
   }
 
   const toggleSkill = (skill: string) => setJournalForm(prev => ({ ...prev, skills: prev.skills.includes(skill) ? prev.skills.filter(s => s !== skill) : [...prev.skills, skill] }))
-  const getSkillLevelLabel = (level: number | null) => { if (!level) return 'Not rated'; return ['', 'Beginner', 'Developing', 'Intermediate', 'Advanced', 'Expert'][level] || 'Not rated' }
-  const getSkillLevelColor = (level: number | null) => { if (!level) return 'bg-gray-100 text-gray-600'; return ['', 'bg-red-100 text-red-700', 'bg-orange-100 text-orange-700', 'bg-yellow-100 text-yellow-700', 'bg-green-100 text-green-700', 'bg-blue-100 text-blue-700'][level] || 'bg-gray-100 text-gray-600' }
   const getSessionTypeInfo = (type: string) => SESSION_TYPES.find(t => t.value === type) || SESSION_TYPES[5]
 
   if (loading) return <div className="text-gray-600">Loading player...</div>
@@ -401,15 +480,22 @@ function PlayerDetailContent() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow p-6">
-              <h4 className="font-semibold text-gray-900 mb-4 flex items-center space-x-2"><Target size={18} className="text-red-600" /><span>Skill Levels</span></h4>
-              <div className="space-y-3">
-                {['hitting', 'throwing', 'fielding'].map(skill => (
-                  <div key={skill} className="flex items-center justify-between">
-                    <span className="text-gray-600 capitalize">{skill}</span>
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${getSkillLevelColor(player.team_player[`${skill}_level` as keyof typeof player.team_player] as number | null)}`}>
-                      {getSkillLevelLabel(player.team_player[`${skill}_level` as keyof typeof player.team_player] as number | null)}
-                    </span>
-                  </div>
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-semibold text-gray-900 flex items-center space-x-2">
+                  <Target size={18} className="text-red-600" />
+                  <span>Skill Levels</span>
+                </h4>
+                {savingSkill && <span className="text-xs text-gray-400">Saving...</span>}
+              </div>
+              <p className="text-xs text-gray-500 mb-4">Click dots to rate (click again to clear)</p>
+              <div className="divide-y divide-gray-100">
+                {SKILL_CATEGORIES.map(skill => (
+                  <SkillRating
+                    key={skill.key}
+                    skill={skill}
+                    value={player.team_player[`${skill.key}_level` as keyof typeof player.team_player] as number | null}
+                    onChange={(level) => handleSkillChange(skill.key, level)}
+                  />
                 ))}
               </div>
             </div>
@@ -574,7 +660,6 @@ function PlayerDetailContent() {
                   Photos & Videos
                 </label>
                 
-                {/* Existing Media */}
                 {existingMedia.length > 0 && (
                   <div className="mb-3">
                     <p className="text-xs text-gray-500 mb-2">Existing media:</p>
@@ -601,7 +686,6 @@ function PlayerDetailContent() {
                   </div>
                 )}
                 
-                {/* Pending Files Preview */}
                 {pendingFiles.length > 0 && (
                   <div className="mb-3">
                     <p className="text-xs text-gray-500 mb-2">New files to upload:</p>
@@ -631,7 +715,6 @@ function PlayerDetailContent() {
                   </div>
                 )}
                 
-                {/* Upload Button */}
                 <input
                   ref={fileInputRef}
                   type="file"
