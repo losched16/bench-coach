@@ -51,34 +51,13 @@ function ChatPageContent() {
 
   const loadChat = async () => {
     try {
-      // Get or create chat thread for this team
-      let { data: thread } = await supabase
-        .from('chat_threads')
-        .select('id')
-        .eq('team_id', teamId)
-        .single()
-
-      if (!thread) {
-        const { data: newThread } = await supabase
-          .from('chat_threads')
-          .insert({ team_id: teamId })
-          .select()
-          .single()
-        thread = newThread
-      }
-
-      if (thread) {
-        setCurrentThreadId(thread.id)
-        const { data: msgs } = await supabase
-          .from('chat_messages')
-          .select('*')
-          .eq('thread_id', thread.id)
-          .order('created_at', { ascending: true })
-
-        if (msgs) {
-          setMessages(msgs as any)
-        }
-      }
+      // Load chat via API (bypasses RLS)
+      const response = await fetch(`/api/chat?teamId=${teamId}`)
+      if (!response.ok) throw new Error('Failed to load chat')
+      
+      const data = await response.json()
+      setCurrentThreadId(data.threadId)
+      setMessages(data.messages || [])
     } catch (error) {
       console.error('Error loading chat:', error)
     }
@@ -88,11 +67,12 @@ function ChatPageContent() {
     if (!currentThreadId) return
     
     try {
-      // Delete all messages in current thread
-      await supabase
-        .from('chat_messages')
-        .delete()
-        .eq('thread_id', currentThreadId)
+      // Delete all messages via API (bypasses RLS)
+      const response = await fetch(`/api/chat?threadId=${currentThreadId}`, {
+        method: 'DELETE'
+      })
+      
+      if (!response.ok) throw new Error('Failed to clear chat')
       
       // Clear local state
       setMessages([])

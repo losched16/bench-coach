@@ -320,3 +320,83 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
+// GET endpoint to load chat history (bypasses RLS)
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const teamId = searchParams.get('teamId')
+
+    if (!teamId) {
+      return NextResponse.json({ error: 'Missing teamId' }, { status: 400 })
+    }
+
+    // Get or create chat thread for this team (use oldest if multiple exist)
+    let { data: thread } = await supabaseAdmin
+      .from('chat_threads')
+      .select('id')
+      .eq('team_id', teamId)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .single()
+
+    if (!thread) {
+      const { data: newThread } = await supabaseAdmin
+        .from('chat_threads')
+        .insert({ team_id: teamId })
+        .select()
+        .single()
+      thread = newThread
+    }
+
+    if (!thread) {
+      return NextResponse.json({ error: 'Failed to get/create thread' }, { status: 500 })
+    }
+
+    // Load messages for this thread
+    const { data: messages } = await supabaseAdmin
+      .from('chat_messages')
+      .select('id, role, content, memory_suggestions, created_at')
+      .eq('thread_id', thread.id)
+      .order('created_at', { ascending: true })
+
+    return NextResponse.json({
+      threadId: thread.id,
+      messages: messages || []
+    })
+
+  } catch (error: any) {
+    console.error('Chat GET error:', error)
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE endpoint to clear chat history (bypasses RLS)
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const threadId = searchParams.get('threadId')
+
+    if (!threadId) {
+      return NextResponse.json({ error: 'Missing threadId' }, { status: 400 })
+    }
+
+    // Delete all messages in the thread
+    await supabaseAdmin
+      .from('chat_messages')
+      .delete()
+      .eq('thread_id', threadId)
+
+    return NextResponse.json({ success: true })
+
+  } catch (error: any) {
+    console.error('Chat DELETE error:', error)
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
