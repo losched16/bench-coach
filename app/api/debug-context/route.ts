@@ -11,16 +11,11 @@ export async function GET(request: NextRequest) {
   
   const { data: teamPlayers, error } = await supabaseAdmin
     .from('team_players')
-    .select(`
-      *,
-      player:players(name),
-      notes:player_notes(note, created_at)
-    `)
+    .select('*, player:players(name)')
     .eq('team_id', teamId)
 
   return NextResponse.json({
     error,
-    raw: teamPlayers,
     mapped: teamPlayers?.map(tp => ({
       name: tp.player?.name,
       hitting_level: tp.hitting_level,
