@@ -15,6 +15,7 @@ export default function LandingPage() {
             <nav className="hidden md:flex items-center gap-8">
               <a href="#features" className="text-slate-300 hover:text-white font-medium transition-colors">Features</a>
               <a href="#how-it-works" className="text-slate-300 hover:text-white font-medium transition-colors">How It Works</a>
+<Link href="/use-cases" className="text-slate-300 hover:text-white font-medium transition-colors">Use Cases</Link>
               <a href="#pricing" className="text-slate-300 hover:text-white font-medium transition-colors">Pricing</a>
             </nav>
 
