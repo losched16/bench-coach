@@ -3,26 +3,19 @@ import Image from 'next/image'
 
 export default function UseCasesPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
+    <div className="min-h-screen bg-slate-50">
       {/* Navigation Header */}
-      <header className="sticky top-0 z-50 bg-[#1a202c] border-b border-slate-800 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+      <header className="sticky top-0 z-50 bg-[#0f172a] border-b border-white/8 shadow-lg">
+        <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
+            <Link href="/" className="hover:opacity-90 transition-opacity">
               <Image src="/Bench_Coach_Logo.png" alt="BenchCoach" width={180} height={48} className="h-12 w-auto" />
             </Link>
             
-            <nav className="hidden md:flex items-center gap-8">
-              <a href="/#features" className="text-slate-300 hover:text-white font-medium transition-colors">Features</a>
-              <a href="/#how-it-works" className="text-slate-300 hover:text-white font-medium transition-colors">How It Works</a>
-              <Link href="/use-cases" className="text-white font-medium transition-colors">Use Cases</Link>
-              <a href="/#pricing" className="text-slate-300 hover:text-white font-medium transition-colors">Pricing</a>
-            </nav>
-
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-6">
               <Link href="/auth/login" className="text-slate-300 hover:text-white font-semibold transition-colors">Log In</Link>
-              <Link href="/auth/signup" className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all hover:scale-105">
-                Get Started
+              <Link href="/auth/signup" className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all">
+                Start Free Trial
               </Link>
             </div>
           </div>
@@ -31,38 +24,35 @@ export default function UseCasesPage() {
 
       {/* Hero */}
       <section className="relative bg-[#0f172a] py-20 px-6 text-center overflow-hidden">
-        <div className="absolute top-[-200px] right-[-200px] w-[600px] h-[600px] bg-red-500/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-[-200px] left-[-200px] w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
-        
         <div className="max-w-4xl mx-auto relative z-10">
-          <div className="inline-block bg-red-600/20 text-red-400 px-4 py-2 rounded-full text-sm font-semibold mb-6 border border-red-500/30">
+          <div className="inline-block bg-red-600/12 text-red-500 px-4 py-2 rounded-full text-sm font-semibold mb-6 border border-red-500/20">
             ⚾ Real Ways Real People Use BenchCoach
           </div>
-          <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 leading-tight">
+          <h1 className="text-4xl md:text-[3.4rem] font-extrabold text-white mb-5 leading-tight tracking-tight">
             See Yourself <span className="text-red-500">In Action</span>
           </h1>
-          <p className="text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl text-slate-400 max-w-[620px] mx-auto leading-relaxed">
             Practice plans, skill tracking, drill libraries, player journals, and AI coaching — here&apos;s exactly how BenchCoach fits into your routine.
           </p>
         </div>
       </section>
 
       {/* Persona Quick Nav */}
-      <div className="max-w-7xl mx-auto px-6 -mt-12 relative z-20">
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="max-w-7xl mx-auto px-6 -mt-12 relative z-20 mb-20">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
           {[
             { emoji: '📋', label: 'Practice Plans', id: 'practice-plans' },
             { emoji: '📈', label: 'Player Development', id: 'player-dev' },
-            { emoji: '👨‍👦', label: 'Parent at Home', id: 'parent-home' },
+            { emoji: '🏡', label: 'Parent at Home', id: 'parent-home' },
             { emoji: '🎯', label: 'Private Lessons', id: 'private-lessons' },
-            { emoji: '🙋‍♂️', label: 'First-Time Coach', id: 'first-time' },
+            { emoji: '🆕', label: 'First-Time Coach', id: 'first-time' },
             { emoji: '🏆', label: 'Travel Ball', id: 'travel-ball' },
             { emoji: '🤝', label: 'Assistant Coach', id: 'assistant' },
           ].map((persona) => (
             <a
               key={persona.id}
               href={`#${persona.id}`}
-              className="bg-white rounded-xl p-4 text-center hover:shadow-lg hover:-translate-y-1 transition-all border-2 border-slate-200 hover:border-red-400"
+              className="bg-white rounded-xl p-4 text-center hover:shadow-lg hover:-translate-y-1 transition-all duration-200 border-2 border-slate-200 hover:border-red-400"
             >
               <div className="text-3xl mb-2">{persona.emoji}</div>
               <div className="text-xs font-semibold text-slate-700 leading-tight">{persona.label}</div>
@@ -71,417 +61,316 @@ export default function UseCasesPage() {
         </div>
       </div>
 
-      {/* Use Cases */}
-      <div className="max-w-7xl mx-auto px-6 py-20">
+      {/* Use Cases Container */}
+      <div className="max-w-7xl mx-auto px-6 pb-20">
         
-        {/* Use Case 1: Practice Plans */}
-        <section id="practice-plans" className="mb-24 scroll-mt-24">
+        {/* ====== USE CASE 1: PRACTICE PLANS ====== */}
+        <section id="practice-plans" className="mb-20 scroll-mt-24">
           <div className="flex items-start gap-6 mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center text-3xl flex-shrink-0">📋</div>
+            <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center text-3xl flex-shrink-0">📋</div>
             <div>
               <div className="text-sm font-bold text-blue-600 uppercase tracking-wide mb-2">Coach</div>
-              <h2 className="text-3xl font-bold text-slate-900">Generate Practice Plans in Seconds</h2>
+              <h2 className="text-3xl font-bold text-slate-900 leading-tight">Build Better Practice Plans in 2 Minutes</h2>
             </div>
           </div>
           
           <div className="grid lg:grid-cols-2 gap-8">
             <div className="bg-white rounded-2xl p-8 border border-slate-200">
               <div className="border-l-4 border-red-500 pl-4 mb-6">
-                <p className="text-lg italic text-slate-600">
-                  &quot;Practice is in 2 hours and I have no plan. I don&apos;t have time to piece together YouTube videos and hope they work for my 8U team.&quot;
+                <p className="text-lg italic text-slate-600 leading-relaxed">
+                  &quot;I used to spend Sunday nights Googling drills and scribbling on notecards. Now I tell BenchCoach what we need to work on and I have a full plan before my coffee gets cold.&quot;
                 </p>
-                <p className="text-sm font-semibold text-slate-500 mt-3">— Mike, 8U Rec League Coach</p>
+                <p className="text-sm font-semibold text-slate-500 mt-3">— Mike, 10U Rec League Head Coach</p>
               </div>
               
-              <h3 className="font-bold text-slate-900 mb-3">The Problem</h3>
-              <p className="text-slate-600 mb-6">
-                You&apos;re scrambling to find drills that fit your team&apos;s age and skill level. You waste 30 minutes Googling, another 20 minutes watching videos, and you still don&apos;t have a coherent plan.
+              <h3 className="font-bold text-slate-900 mb-3 text-lg">The Problem</h3>
+              <p className="text-slate-600 mb-6 leading-relaxed">
+                You have 75 minutes of field time, 14 kids at different skill levels, and no idea what to do after warmups. You end up running the same three drills every practice because they&apos;re the only ones you remember.
               </p>
               
-              <h3 className="font-bold text-slate-900 mb-3">How BenchCoach Helps</h3>
-              <p className="text-slate-600 mb-4">
-                Input your team&apos;s details once (age, skill level, practice length). Generate a complete, age-appropriate practice plan in 10 seconds. Save it, tweak it, or regenerate if you want something different.
+              <h3 className="font-bold text-slate-900 mb-3 text-lg">How BenchCoach Helps</h3>
+              <p className="text-slate-600 leading-relaxed">
+                Open the Practice Plan Generator, set your duration, pick your focus areas, and hit generate. In seconds you get a timed, structured plan with setup instructions, coaching cues to say out loud, and what to watch for. Every drill is age-appropriate and tailored to your team. Save it to your library so you never lose it — and your assistant coaches can access it too.
               </p>
-              
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mt-4">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Feature Path</div>
-                <div className="flex flex-wrap gap-2 items-center text-sm">
-                  <span className="bg-white border border-slate-200 px-3 py-1 rounded-lg font-semibold text-slate-900">Dashboard</span>
-                  <span className="text-slate-300">→</span>
-                  <span className="bg-white border border-slate-200 px-3 py-1 rounded-lg font-semibold text-slate-900">Practice Planner</span>
-                  <span className="text-slate-300">→</span>
-                  <span className="bg-white border border-slate-200 px-3 py-1 rounded-lg font-semibold text-slate-900">Generate Plan</span>
-                  <span className="text-slate-300">→</span>
-                  <span className="bg-white border border-slate-200 px-3 py-1 rounded-lg font-semibold text-slate-900">Save & Use</span>
-                </div>
-              </div>
             </div>
 
-            <div className="bg-[#0f172a] rounded-2xl overflow-hidden shadow-2xl">
-              <div className="bg-white/5 px-4 py-3 flex items-center gap-3 border-b border-white/10">
-                <div className="flex gap-2">
-                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                  <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                </div>
-                <div className="text-slate-400 text-xs font-semibold">Practice Plan Generator</div>
-                <div className="ml-auto bg-red-600/20 text-red-400 px-2 py-1 rounded-full text-[10px] font-bold">AI Powered</div>
-              </div>
-              <div className="p-4">
-                <p className="text-slate-400 text-sm mb-4">Complete practice plan generated based on your team settings:</p>
-                <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                  <h4 className="text-white font-bold mb-3 text-sm">90-Minute Practice: Catching & Throwing Fundamentals</h4>
-                  <div className="space-y-3">
-                    <div className="flex gap-3">
-                      <span className="px-2 py-1 bg-amber-500/20 text-amber-400 text-xs font-bold rounded flex-shrink-0">10m</span>
-                      <div>
-                        <h5 className="text-white text-sm font-semibold">Warm-Up: Partner Catch</h5>
-                        <p className="text-slate-400 text-xs">Start 15 feet apart, focus on &quot;alligator hands&quot; for receiving</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-3">
-                      <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs font-bold rounded flex-shrink-0">20m</span>
-                      <div>
-                        <h5 className="text-white text-sm font-semibold">Station 1: Ground Balls</h5>
-                        <p className="text-slate-400 text-xs">Roll, field, throw to coach. Max 4 kids per line.</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-3">
-                      <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs font-bold rounded flex-shrink-0">20m</span>
-                      <div>
-                        <h5 className="text-white text-sm font-semibold">Station 2: Tee Hitting</h5>
-                        <p className="text-slate-400 text-xs">Focus on contact, not power. 10 swings each.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="px-4 py-3 border-t border-white/10 flex flex-wrap gap-2">
-                <span className="bg-red-600/20 text-red-400 px-3 py-1 rounded-full text-xs font-semibold border border-red-500/30">Practice Planner</span>
-                <span className="bg-red-600/20 text-red-400 px-3 py-1 rounded-full text-xs font-semibold border border-red-500/30">AI Generation</span>
-                <span className="bg-red-600/20 text-red-400 px-3 py-1 rounded-full text-xs font-semibold border border-red-500/30">Team Settings</span>
+            <div className="bg-slate-100 rounded-2xl border-2 border-dashed border-slate-300 p-8 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-6xl mb-4">📸</div>
+                <p className="text-slate-500 font-semibold">Screenshot: Practice Plan Generator</p>
+                <p className="text-slate-400 text-sm mt-2">App mockup showing generated practice plan</p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Use Case 2: Player Development */}
-        <section id="player-dev" className="mb-24 scroll-mt-24">
+        {/* ====== USE CASE 2: PLAYER DEVELOPMENT ====== */}
+        <section id="player-dev" className="mb-20 scroll-mt-24">
           <div className="flex items-start gap-6 mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center text-3xl flex-shrink-0">📈</div>
+            <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center text-3xl flex-shrink-0">📈</div>
             <div>
               <div className="text-sm font-bold text-blue-600 uppercase tracking-wide mb-2">Coach</div>
-              <h2 className="text-3xl font-bold text-slate-900">Track Every Player&apos;s Progress</h2>
+              <h2 className="text-3xl font-bold text-slate-900 leading-tight">Track Every Player&apos;s Growth Over the Season</h2>
             </div>
           </div>
           
           <div className="grid lg:grid-cols-2 gap-8">
             <div className="bg-white rounded-2xl p-8 border border-slate-200">
               <div className="border-l-4 border-red-500 pl-4 mb-6">
-                <p className="text-lg italic text-slate-600">
-                  &quot;I have 12 kids on my team. I can&apos;t remember who&apos;s working on what, who&apos;s improving, and who needs extra help. I need a system.&quot;
+                <p className="text-lg italic text-slate-600 leading-relaxed">
+                  &quot;At the end of last season, a parent asked me how their son improved. I had nothing to show them. This year, I can pull up a player&apos;s whole development history in seconds.&quot;
                 </p>
-                <p className="text-sm font-semibold text-slate-500 mt-3">— Sarah, 10U Travel Coach</p>
+                <p className="text-sm font-semibold text-slate-500 mt-3">— Sarah, 8U Coach & Mom of Two Players</p>
               </div>
               
-              <h3 className="font-bold text-slate-900 mb-3">The Problem</h3>
-              <p className="text-slate-600 mb-6">
-                You&apos;re trying to develop 12 different players at different speeds. You forget who struggled with fly balls last week. You can&apos;t show parents concrete progress.
+              <h3 className="font-bold text-slate-900 mb-3 text-lg">The Problem</h3>
+              <p className="text-slate-600 mb-6 leading-relaxed">
+                You notice things during practice — Jake is dropping his elbow, Emma finally made a throw to first — but by the time you get home, you&apos;ve forgotten the details. There&apos;s no record of what each kid is working on or how far they&apos;ve come.
               </p>
               
-              <h3 className="font-bold text-slate-900 mb-3">How BenchCoach Helps</h3>
-              <p className="text-slate-600 mb-4">
-                Every player has a profile with skill ratings (1-5 scale). Track progress over time. Add notes after practice. The AI reads these notes and suggests targeted drills for each player.
+              <h3 className="font-bold text-slate-900 mb-3 text-lg">How BenchCoach Helps</h3>
+              <p className="text-slate-600 leading-relaxed">
+                Every player on your roster has a profile with six skill ratings you set with a single click — hitting, throwing, fielding, pitching, baserunning, and coachability. After practice, add a journal entry with notes and photos. The AI reads all of this, so when you ask &quot;What should Jake work on?&quot; it gives advice based on his actual skill levels and history — not generic tips.
               </p>
-              
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mt-4">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Feature Path</div>
-                <div className="flex flex-wrap gap-2 items-center text-sm">
-                  <span className="bg-white border border-slate-200 px-3 py-1 rounded-lg font-semibold text-slate-900">Dashboard</span>
-                  <span className="text-slate-300">→</span>
-                  <span className="bg-white border border-slate-200 px-3 py-1 rounded-lg font-semibold text-slate-900">Team Roster</span>
-                  <span className="text-slate-300">→</span>
-                  <span className="bg-white border border-slate-200 px-3 py-1 rounded-lg font-semibold text-slate-900">Player Profile</span>
-                  <span className="text-slate-300">→</span>
-                  <span className="bg-white border border-slate-200 px-3 py-1 rounded-lg font-semibold text-slate-900">Update Skills</span>
-                </div>
-              </div>
             </div>
 
-            <div className="bg-[#0f172a] rounded-2xl overflow-hidden shadow-2xl">
-              <div className="bg-white/5 px-4 py-3 flex items-center gap-3 border-b border-white/10">
-                <div className="flex gap-2">
-                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                  <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                </div>
-                <div className="text-slate-400 text-xs font-semibold">Player Profile: Jake Martinez</div>
-              </div>
-              <div className="p-4">
-                <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700 mb-4">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-sm">JM</div>
-                    <div>
-                      <h4 className="text-white font-bold text-sm">Jake Martinez</h4>
-                      <p className="text-slate-400 text-xs">SS / 2B • Right-handed</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-400">Catching:</span>
-                      <div className="flex gap-1">
-                        {[1,2,3,4].map(i => (
-                          <div key={i} className="w-3 h-3 rounded-full bg-green-500"></div>
-                        ))}
-                        <div className="w-3 h-3 rounded-full border-2 border-slate-600"></div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-400">Throwing:</span>
-                      <div className="flex gap-1">
-                        {[1,2,3].map(i => (
-                          <div key={i} className="w-3 h-3 rounded-full bg-amber-500"></div>
-                        ))}
-                        {[1,2].map(i => (
-                          <div key={i} className="w-3 h-3 rounded-full border-2 border-slate-600"></div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
-                  <p className="text-slate-400 text-xs mb-2"><strong className="text-slate-300">Latest Note (3/15):</strong></p>
-                  <p className="text-slate-300 text-xs">Struggled with balls hit to his backhand. Footwork needs work. Set up extra station next practice.</p>
-                </div>
-              </div>
-              <div className="px-4 py-3 border-t border-white/10 flex flex-wrap gap-2">
-                <span className="bg-red-600/20 text-red-400 px-3 py-1 rounded-full text-xs font-semibold border border-red-500/30">Player Profiles</span>
-                <span className="bg-red-600/20 text-red-400 px-3 py-1 rounded-full text-xs font-semibold border border-red-500/30">Skill Ratings</span>
-                <span className="bg-red-600/20 text-red-400 px-3 py-1 rounded-full text-xs font-semibold border border-red-500/30">Progress Notes</span>
+            <div className="bg-slate-100 rounded-2xl border-2 border-dashed border-slate-300 p-8 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-6xl mb-4">📸</div>
+                <p className="text-slate-500 font-semibold">Screenshot: Player Profile</p>
+                <p className="text-slate-400 text-sm mt-2">Skill ratings and development journal</p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Use Case 3: Parent at Home */}
-        <section id="parent-home" className="mb-24 scroll-mt-24">
+        {/* ====== USE CASE 3: PARENT AT HOME ====== */}
+        <section id="parent-home" className="mb-20 scroll-mt-24">
           <div className="flex items-start gap-6 mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-green-100 flex items-center justify-center text-3xl flex-shrink-0">👨‍👦</div>
+            <div className="w-16 h-16 rounded-2xl bg-green-500/10 flex items-center justify-center text-3xl flex-shrink-0">🏡</div>
             <div>
               <div className="text-sm font-bold text-green-600 uppercase tracking-wide mb-2">Parent</div>
-              <h2 className="text-3xl font-bold text-slate-900">Work on Skills at Home</h2>
+              <h2 className="text-3xl font-bold text-slate-900 leading-tight">Make Backyard Practice Actually Productive</h2>
             </div>
           </div>
           
           <div className="grid lg:grid-cols-2 gap-8">
             <div className="bg-white rounded-2xl p-8 border border-slate-200">
               <div className="border-l-4 border-red-500 pl-4 mb-6">
-                <p className="text-lg italic text-slate-600">
-                  &quot;My son wants extra practice, but I don&apos;t know what to work on. I don&apos;t want to teach him bad habits.&quot;
+                <p className="text-lg italic text-slate-600 leading-relaxed">
+                  &quot;My son wants to practice every day after school. I played softball in high school but I&apos;m not sure what to work on with an 8-year-old. I don&apos;t want to teach him bad habits.&quot;
                 </p>
-                <p className="text-sm font-semibold text-slate-500 mt-3">— Danielle, Mom of 9-Year-Old Player</p>
+                <p className="text-sm font-semibold text-slate-500 mt-3">— Danielle, Mom of an 8-Year-Old Outfielder</p>
               </div>
               
-              <h3 className="font-bold text-slate-900 mb-3">The Problem</h3>
-              <p className="text-slate-600 mb-6">
-                You want to help your kid improve, but you&apos;re not a coach. You don&apos;t know what drills are age-appropriate or how to structure 30-minute backyard sessions.
+              <h3 className="font-bold text-slate-900 mb-3 text-lg">The Problem</h3>
+              <p className="text-slate-600 mb-6 leading-relaxed">
+                You want to help your kid get better, but you&apos;re not sure what drills are age-appropriate, what mechanics to look for, or whether you&apos;re doing more harm than good. You end up just playing catch or doing the same soft toss over and over.
               </p>
               
-              <h3 className="font-bold text-slate-900 mb-3">How BenchCoach Helps</h3>
-              <p className="text-slate-600 mb-4">
-                Add your child as a &quot;player.&quot; Get personalized drill recommendations based on their skill level. Track their progress just like a team coach would. All drills include video links and step-by-step instructions.
+              <h3 className="font-bold text-slate-900 mb-3 text-lg">How BenchCoach Helps</h3>
+              <p className="text-slate-600 leading-relaxed">
+                Open the Drill Library and search for exactly what you need — &quot;throwing drills for 8U&quot; or &quot;backyard hitting with a tee.&quot; Every drill comes with step-by-step setup, coaching cues you can say out loud, common mistakes to watch for, and how long it takes. Need a full session? Ask the AI to build a 20-minute backyard plan with just the equipment you have.
               </p>
-              
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mt-4">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Feature Path</div>
-                <div className="flex flex-wrap gap-2 items-center text-sm">
-                  <span className="bg-white border border-slate-200 px-3 py-1 rounded-lg font-semibold text-slate-900">Add Child</span>
-                  <span className="text-slate-300">→</span>
-                  <span className="bg-white border border-slate-200 px-3 py-1 rounded-lg font-semibold text-slate-900">Set Skill Levels</span>
-                  <span className="text-slate-300">→</span>
-                  <span className="bg-white border border-slate-200 px-3 py-1 rounded-lg font-semibold text-slate-900">Ask AI for Drills</span>
-                  <span className="text-slate-300">→</span>
-                  <span className="bg-white border border-slate-200 px-3 py-1 rounded-lg font-semibold text-slate-900">Save & Track</span>
-                </div>
-              </div>
             </div>
 
-            <div className="bg-[#0f172a] rounded-2xl overflow-hidden shadow-2xl">
-              <div className="bg-white/5 px-4 py-3 flex items-center gap-3 border-b border-white/10">
-                <div className="flex gap-2">
-                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                  <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                </div>
-                <div className="text-slate-400 text-xs font-semibold">Chat with AI Coach</div>
-              </div>
-              <div className="p-4">
-                <div className="space-y-3">
-                  <div className="bg-red-600 text-white text-sm p-3 rounded-lg ml-auto max-w-[85%]">
-                    My 9-year-old wants to work on hitting. We have 30 minutes in the backyard. What should we do?
-                  </div>
-                  <div className="bg-slate-700/50 text-slate-300 text-sm p-3 rounded-lg mr-auto max-w-[85%]">
-                    Perfect! Here&apos;s a 30-minute hitting session for a 9-year-old:<br/><br/>
-                    <strong className="text-white">Tee Work (15 min):</strong> Focus on &quot;load and explode.&quot; 20 swings total.<br/><br/>
-                    <strong className="text-white">Soft Toss (10 min):</strong> You toss from the side. Focus on timing.<br/><br/>
-                    <strong className="text-white">Cool Down (5 min):</strong> Light catch to end the session.
-                  </div>
-                </div>
-              </div>
-              <div className="px-4 py-3 border-t border-white/10 flex flex-wrap gap-2">
-                <span className="bg-red-600/20 text-red-400 px-3 py-1 rounded-full text-xs font-semibold border border-red-500/30">AI Chat</span>
-                <span className="bg-red-600/20 text-red-400 px-3 py-1 rounded-full text-xs font-semibold border border-red-500/30">Individual Training</span>
-                <span className="bg-red-600/20 text-red-400 px-3 py-1 rounded-full text-xs font-semibold border border-red-500/30">Drill Library</span>
+            <div className="bg-slate-100 rounded-2xl border-2 border-dashed border-slate-300 p-8 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-6xl mb-4">📸</div>
+                <p className="text-slate-500 font-semibold">Screenshot: Drill Library</p>
+                <p className="text-slate-400 text-sm mt-2">Search results with drill instructions</p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* More use cases following same pattern... I'll add 2 more for space */}
-
-        {/* Use Case 4: Private Lessons */}
-        <section id="private-lessons" className="mb-24 scroll-mt-24">
+        {/* ====== USE CASE 4: PRIVATE LESSONS ====== */}
+        <section id="private-lessons" className="mb-20 scroll-mt-24">
           <div className="flex items-start gap-6 mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-purple-100 flex items-center justify-center text-3xl flex-shrink-0">🎯</div>
+            <div className="w-16 h-16 rounded-2xl bg-green-500/10 flex items-center justify-center text-3xl flex-shrink-0">🎯</div>
             <div>
-              <div className="text-sm font-bold text-purple-600 uppercase tracking-wide mb-2">Coach + Business</div>
-              <h2 className="text-3xl font-bold text-slate-900">Manage Private Lesson Students</h2>
+              <div className="text-sm font-bold text-green-600 uppercase tracking-wide mb-2">Parent</div>
+              <h2 className="text-3xl font-bold text-slate-900 leading-tight">Get More From Every Private Lesson Dollar</h2>
             </div>
           </div>
           
           <div className="grid lg:grid-cols-2 gap-8">
             <div className="bg-white rounded-2xl p-8 border border-slate-200">
               <div className="border-l-4 border-red-500 pl-4 mb-6">
-                <p className="text-lg italic text-slate-600">
-                  &quot;I teach 15 private lesson students. I need to remember what each kid worked on last session and what we&apos;re building toward.&quot;
+                <p className="text-lg italic text-slate-600 leading-relaxed">
+                  &quot;We&apos;re paying $75 a session for hitting lessons. The instructor is great, but by the time we get home, my daughter can&apos;t remember what they worked on. I started taking notes in BenchCoach after each lesson — game changer.&quot;
                 </p>
-                <p className="text-sm font-semibold text-slate-500 mt-3">— Tom, Private Hitting Instructor</p>
+                <p className="text-sm font-semibold text-slate-500 mt-3">— Tom, Dad of a 10-Year-Old Travel Ball Player</p>
               </div>
               
-              <h3 className="font-bold text-slate-900 mb-3">The Problem</h3>
-              <p className="text-slate-600 mb-6">
-                You&apos;re teaching multiple students per week. You can&apos;t remember who&apos;s working on what. Parents ask about progress and you&apos;re scrambling to recall.
+              <h3 className="font-bold text-slate-900 mb-3 text-lg">The Problem</h3>
+              <p className="text-slate-600 mb-6 leading-relaxed">
+                Private lessons are expensive. The instructor gives great feedback during the session, but kids forget 80% of it by the next day. You&apos;re paying for knowledge that evaporates. Between lessons, you don&apos;t know what to practice to reinforce what they learned.
               </p>
               
-              <h3 className="font-bold text-slate-900 mb-3">How BenchCoach Helps</h3>
-              <p className="text-slate-600">
-                Each student gets a profile. After every lesson, add notes on what you worked on. Track skill progression over weeks/months. Pull up their profile before the lesson to remember exactly where you left off.
+              <h3 className="font-bold text-slate-900 mb-3 text-lg">How BenchCoach Helps</h3>
+              <p className="text-slate-600 leading-relaxed">
+                After each lesson, open your child&apos;s player journal and log what the instructor worked on — the cues, the drills, any homework. Upload a video clip from the session. The AI connects the dots across entries, so when you ask &quot;What should Sophia practice this week?&quot; it knows she&apos;s been working on keeping her hands inside because of a casting issue the instructor flagged three lessons ago.
               </p>
             </div>
 
-            <div className="bg-[#0f172a] rounded-2xl overflow-hidden shadow-2xl">
-              <div className="bg-white/5 px-4 py-3 flex items-center gap-3 border-b border-white/10">
-                <div className="flex gap-2">
-                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                  <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                </div>
-                <div className="text-slate-400 text-xs font-semibold">Student Roster</div>
-              </div>
-              <div className="p-4">
-                <div className="space-y-2">
-                  {['Emma S.', 'Noah P.', 'Sophia M.'].map((name, idx) => (
-                    <div key={idx} className="bg-slate-800/50 rounded-lg p-3 border border-slate-700 flex items-center justify-between">
-                      <div>
-                        <h5 className="text-white text-sm font-semibold">{name}</h5>
-                        <p className="text-slate-400 text-xs">Last session: 3 days ago</p>
-                      </div>
-                      <button className="px-3 py-1 bg-red-600/20 text-red-400 text-xs font-semibold rounded border border-red-500/30">
-                        View Profile
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="px-4 py-3 border-t border-white/10 flex flex-wrap gap-2">
-                <span className="bg-red-600/20 text-red-400 px-3 py-1 rounded-full text-xs font-semibold border border-red-500/30">Student Management</span>
-                <span className="bg-red-600/20 text-red-400 px-3 py-1 rounded-full text-xs font-semibold border border-red-500/30">Lesson Notes</span>
+            <div className="bg-slate-100 rounded-2xl border-2 border-dashed border-slate-300 p-8 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-6xl mb-4">📸</div>
+                <p className="text-slate-500 font-semibold">Screenshot: Lesson Journal</p>
+                <p className="text-slate-400 text-sm mt-2">Journal entries with video uploads</p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Use Case 5: First-Time Coach - Shortened for space */}
-        <section id="first-time" className="mb-24 scroll-mt-24">
+        {/* ====== USE CASE 5: FIRST-TIME COACH ====== */}
+        <section id="first-time" className="mb-20 scroll-mt-24">
           <div className="flex items-start gap-6 mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center text-3xl flex-shrink-0">🙋‍♂️</div>
+            <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center text-3xl flex-shrink-0">🆕</div>
+            <div>
+              <div className="text-sm font-bold text-purple-600 uppercase tracking-wide mb-2">Volunteer Coach</div>
+              <h2 className="text-3xl font-bold text-slate-900 leading-tight">&quot;I Don&apos;t Know Baseball — But I Said I&apos;d Coach&quot;</h2>
+            </div>
+          </div>
+          
+          <div className="grid lg:grid-cols-2 gap-8">
+            <div className="bg-white rounded-2xl p-8 border border-slate-200">
+              <div className="border-l-4 border-red-500 pl-4 mb-6">
+                <p className="text-lg italic text-slate-600 leading-relaxed">
+                  &quot;No one else volunteered, so here I am coaching 6U t-ball. I played soccer growing up. I literally Googled &apos;how to run a baseball practice&apos; the night before our first one.&quot;
+                </p>
+                <p className="text-sm font-semibold text-slate-500 mt-3">— Kevin, First-Time 6U T-Ball Coach</p>
+              </div>
+              
+              <h3 className="font-bold text-slate-900 mb-3 text-lg">The Problem</h3>
+              <p className="text-slate-600 mb-6 leading-relaxed">
+                Millions of youth sports teams are coached by volunteer parents who may have never played the sport. You want to give these kids a great experience, but you&apos;re learning along with them. Every question feels embarrassing to ask another coach.
+              </p>
+              
+              <h3 className="font-bold text-slate-900 mb-3 text-lg">How BenchCoach Helps</h3>
+              <p className="text-slate-600 leading-relaxed">
+                Ask anything with zero judgment. The AI gives clear, age-appropriate answers for someone who isn&apos;t a baseball expert. But Kevin also uses the Practice Plan Generator to get ready-made plans, and the Drill Library to find drills he can run with zero prior experience. It&apos;s like having a patient, knowledgeable co-coach who never makes you feel dumb.
+              </p>
+            </div>
+
+            <div className="bg-slate-100 rounded-2xl border-2 border-dashed border-slate-300 p-8 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-6xl mb-4">📸</div>
+                <p className="text-slate-500 font-semibold">Screenshot: AI Chat</p>
+                <p className="text-slate-400 text-sm mt-2">First practice plan conversation</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ====== USE CASE 6: TRAVEL BALL ====== */}
+        <section id="travel-ball" className="mb-20 scroll-mt-24">
+          <div className="flex items-start gap-6 mb-8">
+            <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center text-3xl flex-shrink-0">🏆</div>
             <div>
               <div className="text-sm font-bold text-blue-600 uppercase tracking-wide mb-2">Coach</div>
-              <h2 className="text-3xl font-bold text-slate-900">Coach Your First Team Ever</h2>
+              <h2 className="text-3xl font-bold text-slate-900 leading-tight">Run a Competitive Travel Ball Program</h2>
             </div>
           </div>
           
-          <div className="bg-white rounded-2xl p-8 border border-slate-200 max-w-3xl">
-            <div className="border-l-4 border-red-500 pl-4 mb-6">
-              <p className="text-lg italic text-slate-600">
-                &quot;I never played past Little League. I don&apos;t know the first thing about running a practice. But no other parents volunteered, so here I am.&quot;
+          <div className="grid lg:grid-cols-2 gap-8">
+            <div className="bg-white rounded-2xl p-8 border border-slate-200">
+              <div className="border-l-4 border-red-500 pl-4 mb-6">
+                <p className="text-lg italic text-slate-600 leading-relaxed">
+                  &quot;I&apos;m managing 13 kids on a 12U travel roster. Parents are paying tournament fees and expecting results. I need to track who&apos;s improving, who needs extra work, and keep practices sharp between tournaments.&quot;
+                </p>
+                <p className="text-sm font-semibold text-slate-500 mt-3">— Derek, 12U Travel Ball Head Coach</p>
+              </div>
+              
+              <h3 className="font-bold text-slate-900 mb-3 text-lg">The Problem</h3>
+              <p className="text-slate-600 mb-6 leading-relaxed">
+                Travel ball is a different animal. Parents are invested — financially and emotionally. You&apos;re preparing for specific opponents, managing playing time conversations, and trying to develop 13 players at different speeds. You need data, not hunches.
               </p>
-              <p className="text-sm font-semibold text-slate-500 mt-3">— Kevin, First-Time 6U Coach</p>
+              
+              <h3 className="font-bold text-slate-900 mb-3 text-lg">How BenchCoach Helps</h3>
+              <p className="text-slate-600 leading-relaxed">
+                Your full roster lives in BenchCoach with skill ratings across all six categories. Sort by weakest area to find your biggest team gaps. The AI analyzes your entire roster to recommend what practices should focus on. Use the player journal to track individual progress so when parents ask &quot;How&apos;s my son doing?&quot; you pull up a profile with concrete evidence — not a vague &quot;he&apos;s doing great.&quot;
+              </p>
             </div>
-            
-            <p className="text-slate-600 mb-4">
-              The AI coach walks you through everything step-by-step. Ask basic questions like &quot;What do I need for first practice?&quot; Get beginner-friendly explanations with no jargon. Generate practice plans designed for first-time coaches.
-            </p>
+
+            <div className="bg-slate-100 rounded-2xl border-2 border-dashed border-slate-300 p-8 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-6xl mb-4">📸</div>
+                <p className="text-slate-500 font-semibold">Screenshot: Team Roster</p>
+                <p className="text-slate-400 text-sm mt-2">Skill ratings grid with team insights</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ====== USE CASE 7: ASSISTANT COACH ====== */}
+        <section id="assistant" className="mb-20 scroll-mt-24">
+          <div className="flex items-start gap-6 mb-8">
+            <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center text-3xl flex-shrink-0">🤝</div>
+            <div>
+              <div className="text-sm font-bold text-blue-600 uppercase tracking-wide mb-2">Assistant Coach</div>
+              <h2 className="text-3xl font-bold text-slate-900 leading-tight">Run Practice When the Head Coach Can&apos;t Make It</h2>
+            </div>
+          </div>
+          
+          <div className="grid lg:grid-cols-2 gap-8">
+            <div className="bg-white rounded-2xl p-8 border border-slate-200">
+              <div className="border-l-4 border-red-500 pl-4 mb-6">
+                <p className="text-lg italic text-slate-600 leading-relaxed">
+                  &quot;Coach Dave texted me at 2pm — &apos;Can you run practice tonight? I&apos;m stuck at work.&apos; I panicked. Then I opened BenchCoach and had a plan ready by the time I got to the field.&quot;
+                </p>
+                <p className="text-sm font-semibold text-slate-500 mt-3">— Chris, Assistant Coach for 8U Rec League</p>
+              </div>
+              
+              <h3 className="font-bold text-slate-900 mb-3 text-lg">The Problem</h3>
+              <p className="text-slate-600 mb-6 leading-relaxed">
+                The head coach can&apos;t make it. You&apos;re on your own with 12 kids, anxious parents watching, and no plan. You know the basics, but you don&apos;t know what the team has been working on or what&apos;s next.
+              </p>
+              
+              <h3 className="font-bold text-slate-900 mb-3 text-lg">How BenchCoach Helps</h3>
+              <p className="text-slate-600 leading-relaxed">
+                Assistant coaches get free access to the team&apos;s BenchCoach account. You can see every practice plan the head coach has run this season, the team&apos;s skill focus areas, and notes on each player. Browse the Practice Plan Library to see recent plans, then generate a new one that continues those themes — or just re-run a recent plan. No guessing, no disruption.
+              </p>
+            </div>
+
+            <div className="bg-slate-100 rounded-2xl border-2 border-dashed border-slate-300 p-8 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-6xl mb-4">📸</div>
+                <p className="text-slate-500 font-semibold">Screenshot: Plan Library</p>
+                <p className="text-slate-400 text-sm mt-2">Shared practice plans from head coach</p>
+              </div>
+            </div>
           </div>
         </section>
 
       </div>
 
-      {/* CTA */}
+      {/* CTA Section */}
       <section className="bg-[#0f172a] py-20 px-6 text-center">
-        <div className="max-w-2xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Ready to Coach Like This?
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 leading-tight tracking-tight">
+            Which One Sounds Like You?
           </h2>
-          <p className="text-xl text-slate-400 mb-8 leading-relaxed">
-            Whether you&apos;re a first-time coach or a seasoned veteran, BenchCoach gives you the tools to plan better practices, develop players faster, and coach with confidence.
+          <p className="text-xl text-slate-400 mb-10 leading-relaxed">
+            Whether you&apos;re a seasoned travel ball coach tracking 13 players or a parent learning alongside your kid in the backyard — BenchCoach meets you where you are. Try it free.
           </p>
           <Link 
             href="/auth/signup"
-            className="inline-block px-10 py-5 bg-red-600 text-white text-lg font-bold rounded-lg hover:bg-red-700 transition-all hover:scale-105 shadow-2xl"
+            className="inline-block px-10 py-5 bg-red-600 text-white text-lg font-bold rounded-xl hover:bg-red-700 transition-all hover:scale-105 shadow-2xl"
           >
             Start Your Free Trial →
           </Link>
-          <p className="text-slate-500 text-sm mt-6">
+          <div className="text-slate-500 text-sm mt-6">
             $10/month after trial • Unlimited assistant coaches included
-          </p>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-900 text-slate-400 py-12 px-4 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h3 className="text-white font-bold mb-4">BenchCoach</h3>
-              <p className="text-sm">AI-powered coaching tools for youth baseball coaches and parents.</p>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Product</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="/#features" className="hover:text-white transition-colors">Features</a></li>
-                <li><Link href="/use-cases" className="hover:text-white transition-colors">Use Cases</Link></li>
-                <li><a href="/#pricing" className="hover:text-white transition-colors">Pricing</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="/about" className="hover:text-white transition-colors">About</a></li>
-                <li><a href="/contact" className="hover:text-white transition-colors">Contact</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Legal</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="/privacy" className="hover:text-white transition-colors">Privacy</a></li>
-                <li><a href="/terms" className="hover:text-white transition-colors">Terms</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-slate-800 pt-8 text-center text-sm">
-            © 2026 BenchCoach. Built by a coach, for coaches and parents.
-          </div>
+      <footer className="bg-slate-900 text-slate-400 py-12 px-6 border-t border-slate-800">
+        <div className="max-w-7xl mx-auto text-center text-sm">
+          © 2026 BenchCoach. Built by a coach, for coaches and parents.
         </div>
       </footer>
     </div>
