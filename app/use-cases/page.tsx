@@ -1,10 +1,15 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
+import { useState } from 'react'
 
 export default function UseCasesPage() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Navigation Header - MATCHES HOMEPAGE */}
+      {/* Navigation Header */}
       <header className="sticky top-0 z-50 bg-[#1a202c] border-b border-slate-800 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -12,6 +17,7 @@ export default function UseCasesPage() {
               <Image src="/Bench_Coach_Logo.png" alt="Bench Coach" width={180} height={48} className="h-12 w-auto" />
             </Link>
             
+            {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-8">
               <a href="/#features" className="text-slate-300 hover:text-white font-medium transition-colors">Features</a>
               <a href="/#how-it-works" className="text-slate-300 hover:text-white font-medium transition-colors">How It Works</a>
@@ -19,16 +25,51 @@ export default function UseCasesPage() {
               <a href="/#pricing" className="text-slate-300 hover:text-white font-medium transition-colors">Pricing</a>
             </nav>
 
-            <div className="flex items-center gap-4">
+            {/* Desktop Auth Buttons */}
+            <div className="hidden md:flex items-center gap-4">
               <Link href="/auth/login" className="text-slate-300 hover:text-white font-semibold transition-colors">Log In</Link>
               <Link href="/auth/signup" className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all hover:scale-105">
                 Get Started
               </Link>
             </div>
+
+            {/* Mobile Menu Button */}
+            <button 
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden text-slate-300 hover:text-white p-2"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
           </div>
+
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <div className="md:hidden mt-4 pb-4 border-t border-slate-700 pt-4">
+              <nav className="flex flex-col gap-4">
+                <a href="/#features" className="text-slate-300 hover:text-white font-medium transition-colors">Features</a>
+                <a href="/#how-it-works" className="text-slate-300 hover:text-white font-medium transition-colors">How It Works</a>
+                <Link href="/use-cases" className="text-slate-300 hover:text-white font-medium transition-colors">Use Cases</Link>
+                <a href="/#pricing" className="text-slate-300 hover:text-white font-medium transition-colors">Pricing</a>
+                <div className="border-t border-slate-700 pt-4 mt-2 flex flex-col gap-3">
+                  <Link href="/auth/login" className="text-slate-300 hover:text-white font-semibold transition-colors">Log In</Link>
+                  <Link href="/auth/signup" className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all text-center">
+                    Get Started
+                  </Link>
+                </div>
+              </nav>
+            </div>
+          )}
         </div>
       </header>
-
       {/* Hero */}
       <section className="relative bg-[#0f172a] py-20 px-6 text-center overflow-hidden">
         <div className="max-w-4xl mx-auto relative z-10">
