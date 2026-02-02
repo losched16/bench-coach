@@ -346,6 +346,103 @@ export type Database = {
   }
 }
 
+position_eligibility: {
+  Row: {
+    id: string
+    team_player_id: string
+    position: string
+    eligible: boolean
+    created_at: string
+  }
+  Insert: {
+    id?: string
+    team_player_id: string
+    position: string
+    eligible?: boolean
+    created_at?: string
+  }
+  Update: {
+    id?: string
+    team_player_id?: string
+    position?: string
+    eligible?: boolean
+    created_at?: string
+  }
+}
+game_lineups: {
+  Row: {
+    id: string
+    team_id: string
+    game_date: string
+    opponent: string | null
+    innings: number
+    pitching_type: string
+    field_positions: number
+    everyone_bats: boolean
+    notes: string | null
+    status: string
+    created_at: string
+    updated_at: string
+  }
+  Insert: {
+    id?: string
+    team_id: string
+    game_date: string
+    opponent?: string | null
+    innings?: number
+    pitching_type?: string
+    field_positions?: number
+    everyone_bats?: boolean
+    notes?: string | null
+    status?: string
+    created_at?: string
+    updated_at?: string
+  }
+  Update: {
+    id?: string
+    team_id?: string
+    game_date?: string
+    opponent?: string | null
+    innings?: number
+    pitching_type?: string
+    field_positions?: number
+    everyone_bats?: boolean
+    notes?: string | null
+    status?: string
+    created_at?: string
+    updated_at?: string
+  }
+}
+lineup_assignments: {
+  Row: {
+    id: string
+    lineup_id: string
+    team_player_id: string
+    inning: number
+    position: string
+    batting_order: number | null
+    created_at: string
+  }
+  Insert: {
+    id?: string
+    lineup_id: string
+    team_player_id: string
+    inning: number
+    position: string
+    batting_order?: number | null
+    created_at?: string
+  }
+  Update: {
+    id?: string
+    lineup_id?: string
+    team_player_id?: string
+    inning?: number
+    position?: string
+    batting_order?: number | null
+    created_at?: string
+  }
+}
+
 export function createSupabaseClient() {
   return createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
