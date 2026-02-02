@@ -57,15 +57,26 @@ export async function POST(request: NextRequest) {
       .eq('team_id', teamId)
       .single()
 
-    // Load players with notes and skill ratings
+    // Load players
     const { data: teamPlayers } = await supabaseAdmin
       .from('team_players')
       .select(`
         *,
-        player:players(name),
-        notes:player_notes(note)
+        player:players(name)
       `)
       .eq('team_id', teamId)
+
+    const players = teamPlayers?.map(tp => ({
+      name: tp.player.name,
+      positions: tp.positions || [],
+      hitting_level: tp.hitting_level,
+      throwing_level: tp.throwing_level,
+      fielding_level: tp.fielding_level,
+      pitching_level: tp.pitching_level,
+      baserunning_level: tp.baserunning_level,
+      coachability_level: tp.coachability_level,
+      notes: [],
+    })) || []
 
     // Load player journal entries (recent entries for each player)
     let journalEntries: any[] = []
