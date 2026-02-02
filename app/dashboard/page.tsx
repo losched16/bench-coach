@@ -4,7 +4,8 @@ import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import Link from 'next/link'
-import { MessageSquare, ClipboardList, Users, FileText } from 'lucide-react'
+
+import { MessageSquare, ClipboardList, Users, FileText, Calendar } from 'lucide-react'
 
 interface TeamData {
   team: any
@@ -160,6 +161,13 @@ function DashboardContent() {
                 </div>
                 <span className="font-medium text-gray-900 text-sm sm:text-base">{action.label}</span>
               </Link>
+
+{
+      label: 'Game Day',
+      icon: Calendar,
+      href: `/dashboard/lineup?teamId=${teamId}`,
+      color: 'red',
+    },
             )
           })}
         </div>
