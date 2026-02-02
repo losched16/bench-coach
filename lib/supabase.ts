@@ -409,6 +409,56 @@ export type Database = {
           updated_at?: string
         }
       }
+      practice_sessions: {
+        Row: {
+          id: string
+          team_id: string
+          practice_plan_id: string | null
+          date: string | null
+          recap_note: string | null
+          what_worked: string[]
+          what_didnt_work: string[]
+          player_callouts: any[]
+          energy_level: string | null
+          attendance_count: number | null
+          weather: string | null
+          next_focus: string[]
+          ai_suggestions: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          team_id: string
+          practice_plan_id?: string | null
+          date?: string | null
+          recap_note?: string | null
+          what_worked?: string[]
+          what_didnt_work?: string[]
+          player_callouts?: any[]
+          energy_level?: string | null
+          attendance_count?: number | null
+          weather?: string | null
+          next_focus?: string[]
+          ai_suggestions?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          team_id?: string
+          practice_plan_id?: string | null
+          date?: string | null
+          recap_note?: string | null
+          what_worked?: string[]
+          what_didnt_work?: string[]
+          player_callouts?: any[]
+          energy_level?: string | null
+          attendance_count?: number | null
+          weather?: string | null
+          next_focus?: string[]
+          ai_suggestions?: string | null
+          created_at?: string
+        }
+      }
       lineup_assignments: {
         Row: {
           id: string
