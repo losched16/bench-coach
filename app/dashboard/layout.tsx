@@ -5,8 +5,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
-import { MessageSquare, Users, StickyNote, ClipboardList, Home, LogOut, Plus, UserPlus, Trash2, Settings, Bookmark, Library, BookOpen, HelpCircle, Brain, UsersRound, UserCircle, Menu, X } from 'lucide-react'
-import { MessageSquare, ClipboardList, Users, FileText, Calendar } from 'lucide-react'
+import { MessageSquare, Users, StickyNote, ClipboardList, Home, LogOut, Plus, UserPlus, Trash2, Settings, Bookmark, Library, BookOpen, HelpCircle, Brain, UsersRound, UserCircle, Menu, X, Calendar, FileText } from 'lucide-react'
 
 
 interface Team {
@@ -214,12 +213,7 @@ function DashboardContent({
     { label: 'Roster', href: '/dashboard/roster', icon: Users },
     { label: 'Notes', href: '/dashboard/notes', icon: StickyNote },
     { label: 'Practice Plans', href: '/dashboard/practice', icon: ClipboardList },
-// Then in your navigation links array, add this entry:
-{
-  label: 'Game Day',
-  icon: Calendar,
-  href: `/dashboard/lineup?teamId=${selectedTeamId}`,
-}
+    { label: 'Game Day', href: '/dashboard/lineup', icon: Calendar },
     { label: 'Practice Library', href: '/dashboard/templates', icon: Library },
     { label: 'Playbooks', href: '/dashboard/playbooks', icon: BookOpen },
     { label: 'Saved Drills', href: '/dashboard/drills', icon: Bookmark },
@@ -239,94 +233,80 @@ function DashboardContent({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-[#0f172a] sticky top-0 z-40">
-        <div className="px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-14 sm:h-16">
-            {/* Left side - Hamburger and Logo */}
+    <div className="min-h-screen bg-gray-100">
+      {/* Top Navigation */}
+      <header className="bg-slate-900 text-white sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14 sm:h-16">
+            {/* Left side - Hamburger + Logo */}
             <div className="flex items-center space-x-3">
-              {/* Mobile menu button */}
+              {/* Mobile hamburger */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="lg:hidden p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
               >
-                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                <Menu size={24} />
               </button>
-              
-              <Image 
-                src="/logo.png" 
-                alt="Bench Coach" 
-                width={140} 
-                height={40}
-                className="h-8 sm:h-10 w-auto"
-                priority
-              />
+
+              <Link href={`/dashboard?teamId=${selectedTeamId}`} className="flex items-center space-x-2">
+                <Image 
+                  src="/logo.png" 
+                  alt="Bench Coach" 
+                  width={140} 
+                  height={40}
+                  className="h-8 sm:h-9 w-auto"
+                />
+              </Link>
             </div>
 
-            {/* Center - Team Selector (hidden on small screens, shown in mobile bar) */}
-            <div className="hidden sm:flex items-center space-x-2">
+            {/* Center - Team Selector (Desktop) */}
+            <div className="hidden sm:flex items-center space-x-3">
               {teams.length > 0 && (
                 <>
                   <select
                     value={selectedTeamId}
                     onChange={(e) => handleTeamChange(e.target.value)}
-                    className="px-3 py-1.5 border border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-slate-800 text-white text-sm max-w-[220px]"
+                    className="px-3 py-2 border border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-slate-800 text-white text-sm"
                   >
                     {teams.map((team) => (
                       <option key={team.id} value={team.id}>
                         {team.season.name === 'Personal' 
-                          ? `${team.name} (Personal)`
-                          : `${team.season.name} - ${team.name} (${team.age_group})`
+                          ? `${team.name}`
+                          : `${team.name} (${team.age_group})`
                         }
                       </option>
                     ))}
                   </select>
                   
-                  {/* New Button - Desktop only */}
                   {canCreate && (
-                    <div className="relative hidden md:block">
+                    <div className="relative">
                       <button
                         onClick={() => setShowNewMenu(!showNewMenu)}
-                        className="flex items-center space-x-1 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                        className="flex items-center space-x-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
                       >
                         <Plus size={16} />
                         <span>New</span>
                       </button>
                       
                       {showNewMenu && (
-                        <>
-                          <div 
-                            className="fixed inset-0 z-10" 
+                        <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-50">
+                          <Link
+                            href="/dashboard/new-team"
+                            className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-100"
                             onClick={() => setShowNewMenu(false)}
-                          />
-                          <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
-                            <div className="p-2">
-                              <Link
-                                href="/dashboard/new-team"
-                                onClick={() => setShowNewMenu(false)}
-                                className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors"
-                              >
-                                <Users size={20} className="text-red-600" />
-                                <div>
-                                  <div className="font-medium text-gray-900">New Team</div>
-                                  <div className="text-sm text-gray-500">Create a new team</div>
-                                </div>
-                              </Link>
-                              <Link
-                                href="/dashboard/new-player"
-                                onClick={() => setShowNewMenu(false)}
-                                className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors"
-                              >
-                                <UserPlus size={20} className="text-green-600" />
-                                <div>
-                                  <div className="font-medium text-gray-900">New Player</div>
-                                  <div className="text-sm text-gray-500">Personal training</div>
-                                </div>
-                              </Link>
-                            </div>
-                          </div>
-                        </>
+                          >
+                            <Users size={16} />
+                            <span>New Team</span>
+                          </Link>
+                          <Link
+                            href="/dashboard/new-player"
+                            className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-100"
+                            onClick={() => setShowNewMenu(false)}
+                          >
+                            <UserPlus size={16} />
+                            <span>New Player</span>
+                          </Link>
+                        </div>
                       )}
                     </div>
                   )}
