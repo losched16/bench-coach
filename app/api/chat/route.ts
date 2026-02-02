@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
+import { generateChatResponse, TeamContext, JournalEntry } from '@/lib/anthropic'
 
 // Use service role for server-side operations (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -8,225 +8,281 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-})
-
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { teamId, innings, pitchingType, fieldPositions, everyoneBats, opponent, gameDate } = body
+    const { teamId, message, history } = await request.json()
 
-    console.log('Lineup API called with teamId:', teamId)
-
-    if (!teamId) {
-      return NextResponse.json({ error: 'Missing teamId' }, { status: 400 })
+    if (!teamId || !message) {
+      return NextResponse.json(
+        { error: 'Missing teamId or message' },
+        { status: 400 }
+      )
     }
 
-    // Check if Anthropic API key is set
-    if (!process.env.ANTHROPIC_API_KEY) {
-      console.error('ANTHROPIC_API_KEY is not set')
-      return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
-    }
-
-    // Get team info
-    const { data: team, error: teamError } = await supabaseAdmin
+    // Load team context
+    const { data: team } = await supabaseAdmin
       .from('teams')
-      .select('*, season:seasons(name)')
+      .select('*')
       .eq('id', teamId)
       .single()
-
-    if (teamError) {
-      console.error('Error loading team:', teamError)
-      return NextResponse.json({ error: 'Failed to load team' }, { status: 500 })
-    }
 
     if (!team) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 })
     }
 
-    console.log('Loaded team:', team.name)
+    // Load coach preferences
+    const { data: preferences } = await supabaseAdmin
+      .from('coach_preferences')
+      .select('key, value')
+      .eq('coach_id', team.coach_id)
 
-    // Get roster with player details
-    const { data: roster, error: rosterError } = await supabaseAdmin
+    const coachPrefs: Record<string, string> = {}
+    preferences?.forEach(p => {
+      coachPrefs[p.key] = p.value
+    })
+
+    // Load team notes (pinned + recent)
+    const { data: teamNotes } = await supabaseAdmin
+      .from('team_notes')
+      .select('note, pinned')
+      .eq('team_id', teamId)
+      .order('pinned', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    // Load team memory summary
+    const { data: memorySummary } = await supabaseAdmin
+      .from('team_memory_summaries')
+      .select('summary')
+      .eq('team_id', teamId)
+      .single()
+
+    // Load players with notes and skill ratings
+    const { data: teamPlayers } = await supabaseAdmin
       .from('team_players')
       .select(`
         *,
-        player:players(name, jersey_number)
+        player:players(name),
+        notes:player_notes(note)
       `)
       .eq('team_id', teamId)
 
-    if (rosterError) {
-      console.error('Error loading roster:', rosterError)
-      return NextResponse.json({ error: 'Failed to load roster' }, { status: 500 })
-    }
-
-    if (!roster || roster.length === 0) {
-      return NextResponse.json({ error: 'No players on roster' }, { status: 400 })
-    }
-
-    console.log('Loaded roster:', roster.length, 'players')
-
-    // Get position eligibility
-    const playerIds = roster.map(r => r.id)
-    const { data: eligibility } = await supabaseAdmin
-      .from('position_eligibility')
-      .select('*')
-      .in('team_player_id', playerIds)
-
-    // Get past lineups for fairness tracking (last 5 games)
-    const { data: pastLineups } = await supabaseAdmin
-      .from('game_lineups')
-      .select('id, game_date')
-      .eq('team_id', teamId)
-      .order('game_date', { ascending: false })
-      .limit(5)
-
-    let pastAssignments: any[] = []
-    if (pastLineups && pastLineups.length > 0) {
-      const lineupIds = pastLineups.map(l => l.id)
-      const { data: assignments } = await supabaseAdmin
-        .from('lineup_assignments')
+    // Load player journal entries (recent entries for each player)
+    let journalEntries: any[] = []
+    try {
+      const { data: journals } = await supabaseAdmin
+        .from('player_journal_entries')
         .select('*')
-        .in('lineup_id', lineupIds)
+        .eq('team_id', teamId)
+        .order('session_date', { ascending: false })
+        .limit(20)
 
-      pastAssignments = assignments || []
+      journalEntries = journals || []
+    } catch (e) {
+      console.warn('Could not load journal entries (table may not exist yet)')
     }
 
-    // Build position history summary for fairness
-    const positionHistory: Record<string, Record<string, number>> = {}
-    for (const player of roster) {
-      positionHistory[player.id] = {}
-      const playerAssignments = pastAssignments.filter(a => a.team_player_id === player.id)
-      for (const assignment of playerAssignments) {
-        positionHistory[player.id][assignment.position] = 
-          (positionHistory[player.id][assignment.position] || 0) + 1
+    // Group journal entries by player
+    const journalByPlayer: Record<string, JournalEntry[]> = {}
+    for (const entry of journalEntries) {
+      const playerId = entry.player_id
+      if (!journalByPlayer[playerId]) {
+        journalByPlayer[playerId] = []
+      }
+      if (journalByPlayer[playerId].length < 5) {
+        journalByPlayer[playerId].push({
+          date: entry.session_date,
+          type: entry.session_type,
+          instructor: entry.instructor_name,
+          focus: entry.focus_area,
+          went_well: entry.went_well,
+          needs_work: entry.needs_work,
+          home_drills: entry.home_drills,
+          skills: entry.skills || [],
+        })
       }
     }
 
-    // Build eligibility map
-    const eligibilityMap: Record<string, string[]> = {}
-    for (const player of roster) {
-      eligibilityMap[player.id] = []
+    const players = teamPlayers?.map(tp => {
+      const playerData = tp.player as any
+      return {
+        name: playerData?.name || 'Unknown',
+        positions: tp.positions || [],
+        hitting_level: tp.hitting_level,
+        throwing_level: tp.throwing_level,
+        fielding_level: tp.fielding_level,
+        pitching_level: tp.pitching_level,
+        baserunning_level: tp.baserunning_level,
+        coachability_level: tp.coachability_level,
+        notes: tp.notes?.map((n: any) => n.note) || [],
+        journal: journalByPlayer[tp.player_id] || [],
+      }
+    }) || []
+
+    // Load recent practice plans
+    const { data: recentPlans } = await supabaseAdmin
+      .from('practice_plans')
+      .select('title, content')
+      .eq('team_id', teamId)
+      .order('created_at', { ascending: false })
+      .limit(3)
+
+    const planSummaries = recentPlans?.map(p => p.title) || []
+
+    // Load active playbooks
+    let activePlaybooks: any[] = []
+    try {
+      const { data: playbooks } = await supabaseAdmin
+        .from('assigned_playbooks')
+        .select(`
+          *,
+          playbook:playbooks(title, skill_category, content)
+        `)
+        .eq('team_id', teamId)
+        .eq('status', 'active')
+
+      if (playbooks) {
+        activePlaybooks = playbooks.map(ap => {
+          const pb = ap.playbook as any
+          const sessions = pb?.content?.sessions || []
+          const currentDay = ap.current_day || 1
+          const currentSession = sessions.find((s: any) => s.day === currentDay)
+          const previousSession = currentDay > 1 ? sessions.find((s: any) => s.day === currentDay - 1) : null
+
+          return {
+            playbook_title: pb?.title || 'Unknown Playbook',
+            assigned_to: ap.assigned_to_name || 'Team',
+            skill_category: pb?.skill_category || 'General',
+            goal: pb?.content?.goal || '',
+            progress: `Day ${currentDay} of ${sessions.length}`,
+            current_day: currentDay,
+            current_session: currentSession ? {
+              day: currentSession.day,
+              title: currentSession.title,
+              phase: currentSession.phase,
+              goal: currentSession.goal,
+              activities: currentSession.activities?.map((a: any) => a.name || a.title || a) || [],
+            } : undefined,
+            previous_session: previousSession ? {
+              day: previousSession.day,
+              title: previousSession.title,
+              goal: previousSession.goal,
+            } : undefined,
+            started_at: ap.started_at,
+          }
+        })
+      }
+    } catch (e) {
+      console.warn('Could not load playbooks (table may not exist yet)')
     }
-    if (eligibility) {
-      for (const e of eligibility) {
-        if (e.eligible) {
-          eligibilityMap[e.team_player_id]?.push(e.position)
+
+    // Load saved drills
+    let savedDrills: string[] = []
+    try {
+      const { data: drills } = await supabaseAdmin
+        .from('saved_drills')
+        .select('title')
+        .eq('team_id', teamId)
+        .limit(10)
+
+      savedDrills = drills?.map(d => d.title) || []
+    } catch (e) {
+      console.warn('Could not load saved drills (table may not exist yet)')
+    }
+
+    // Build context
+    const context: TeamContext = {
+      team: {
+        name: team.name,
+        age_group: team.age_group,
+        skill_level: team.skill_level,
+        practice_duration_minutes: team.practice_duration_minutes,
+        primary_goals: team.primary_goals || [],
+        improved_areas: team.improved_areas || [],
+        mastered_areas: team.mastered_areas || [],
+      },
+      coachPreferences: coachPrefs,
+      teamNotes: teamNotes || [],
+      players,
+      recentPlans: planSummaries,
+      memorySummary: memorySummary?.summary,
+      activePlaybooks: activePlaybooks.length > 0 ? activePlaybooks : undefined,
+      savedDrills: savedDrills.length > 0 ? savedDrills : undefined,
+    }
+
+    // Convert history
+    const conversationHistory = history?.map((h: any) => ({
+      role: h.role,
+      content: h.content,
+    })) || []
+
+    // Generate response
+    const response = await generateChatResponse(message, context, conversationHistory)
+
+    // Get or create chat thread
+    let { data: thread } = await supabaseAdmin
+      .from('chat_threads')
+      .select('id')
+      .eq('team_id', teamId)
+      .single()
+
+    if (!thread) {
+      const { data: newThread } = await supabaseAdmin
+        .from('chat_threads')
+        .insert({ team_id: teamId })
+        .select()
+        .single()
+      thread = newThread
+    }
+
+    // Save messages
+    const { data: userMsg } = await supabaseAdmin
+      .from('chat_messages')
+      .insert({
+        thread_id: thread!.id,
+        role: 'user',
+        content: message,
+      })
+      .select()
+      .single()
+
+    const { data: assistantMsg } = await supabaseAdmin
+      .from('chat_messages')
+      .insert({
+        thread_id: thread!.id,
+        role: 'assistant',
+        content: response.message,
+        memory_suggestions: response.memory_suggestions,
+      })
+      .select()
+      .single()
+
+    // Auto-save high-confidence coach preferences
+    if (response.memory_suggestions.coach_preferences) {
+      for (const pref of response.memory_suggestions.coach_preferences) {
+        if (pref.confidence > 0.75) {
+          await supabaseAdmin
+            .from('coach_preferences')
+            .upsert({
+              coach_id: team.coach_id,
+              key: pref.key,
+              value: pref.value,
+            })
         }
       }
     }
 
-    // Build the prompt
-    const rosterInfo = roster.map(p => {
-      const eligible = eligibilityMap[p.id] || []
-      const history = positionHistory[p.id] || {}
-      const historyStr = Object.entries(history)
-        .map(([pos, count]) => `${pos}:${count}`)
-        .join(', ')
-
-      return `- ${p.player.name} (#${p.player.jersey_number || '?'}) [ID: ${p.id}]
-  Skill: Hit ${p.hitting_level || '?'}/5, Throw ${p.throwing_level || '?'}/5, Field ${p.fielding_level || '?'}/5
-  Key position eligible: ${eligible.length > 0 ? eligible.join(', ') : 'none flagged'}
-  Recent position history (last 5 games): ${historyStr || 'no history'}`
-    }).join('\n')
-
-    const allPositions = fieldPositions === 10
-      ? ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'LCF', 'RCF', 'RF']
-      : fieldPositions === 9
-        ? ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF']
-        : Array.from({ length: fieldPositions }, (_, i) => `POS${i + 1}`)
-
-    const systemPrompt = `You are Bench Coach's lineup generator for youth baseball. You create fair, smart game-day lineups.
-
-RULES FOR ${team.age_group || '8U'} BASEBALL:
-1. ${everyoneBats ? 'EVERYONE BATS every inning - continuous batting order' : 'Standard batting lineup'}
-2. ${innings} innings
-3. ${fieldPositions} fielding positions per inning
-4. Pitching type: ${pitchingType === 'coach_pitch' ? 'Coach pitch (no player pitcher needed)' : pitchingType === 'machine_pitch' ? 'Machine pitch (no player pitcher needed)' : 'Live pitch (need eligible pitcher)'}
-5. Players rotate positions each inning for development
-6. KEY POSITIONS (C, P if live pitch, 1B) should ONLY be assigned to players flagged as eligible
-7. Every player should get roughly equal innings in the field
-8. Rotate infield/outfield — don't stick a kid in RF every inning
-9. Use position history to ensure fairness across games
-10. If there are more players than field positions, rotate bench innings fairly
-
-AVAILABLE POSITIONS: ${allPositions.join(', ')}
-${pitchingType === 'coach_pitch' || pitchingType === 'machine_pitch' ? 'NOTE: No player pitcher needed. Skip P position or use it as an extra fielder near the mound if the league allows.' : ''}
-
-ROSTER (${roster.length} players):
-${rosterInfo}
-
-Generate a lineup for ${innings} innings. Return ONLY a JSON object in this exact format:
-{
-  "batting_order": [
-    {"team_player_id": "...", "name": "...", "order": 1},
-    ...
-  ],
-  "field_assignments": {
-    "1": [
-      {"team_player_id": "...", "name": "...", "position": "..."},
-      ...
-    ],
-    "2": [...],
-    ...
-  },
-  "bench_by_inning": {
-    "1": [{"team_player_id": "...", "name": "..."}],
-    ...
-  },
-  "notes": "Brief explanation of key decisions"
-}
-
-IMPORTANT:
-- Every player must appear in EVERY inning, either in field_assignments or bench_by_inning
-- Only assign C, P, 1B to eligible players
-- Distribute bench time as equally as possible
-- Vary positions across innings — maximum development
-- The batting_order is the continuous order for the whole game
-- Return ONLY valid JSON, no markdown, no backticks, no explanation outside the JSON`
-
-    console.log('Calling Claude for lineup generation...')
-
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: `Generate the game day lineup for our game${opponent ? ` against ${opponent}` : ''}${gameDate ? ` on ${gameDate}` : ''}. Make it fair and smart.`,
-        },
-      ],
+    return NextResponse.json({
+      message: response.message,
+      memory_suggestions: response.memory_suggestions,
+      id: assistantMsg?.id,
+      user_message_id: userMsg?.id,
     })
 
-    // Parse the response
-    const textContent = response.content.find(c => c.type === 'text')
-    if (!textContent || textContent.type !== 'text') {
-      throw new Error('No text response from AI')
-    }
-
-    console.log('Claude responded, parsing JSON...')
-
-    // Extract JSON from the response
-    let lineupData
-    try {
-      const jsonMatch = textContent.text.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        lineupData = JSON.parse(jsonMatch[0])
-      } else {
-        throw new Error('No JSON found in response')
-      }
-    } catch (parseError) {
-      console.error('Failed to parse lineup JSON:', textContent.text)
-      throw new Error('Failed to parse lineup response')
-    }
-
-    return NextResponse.json(lineupData)
   } catch (error: any) {
-    console.error('Lineup generation error:', error)
+    console.error('Chat API error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to generate lineup' },
+      { error: error.message || 'Internal server error' },
       { status: 500 }
     )
   }
