@@ -103,6 +103,12 @@ function DashboardContent() {
       color: 'green',
     },
     {
+      label: 'Game Day',
+      icon: Calendar,
+      href: `/dashboard/lineup?teamId=${teamId}`,
+      color: 'red',
+    },
+    {
       label: 'View Roster',
       icon: Users,
       href: `/dashboard/roster?teamId=${teamId}`,
@@ -147,7 +153,7 @@ function DashboardContent() {
       {/* Quick Actions */}
       <div>
         <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
           {quickActions.map((action) => {
             const Icon = action.icon
             return (
@@ -161,13 +167,6 @@ function DashboardContent() {
                 </div>
                 <span className="font-medium text-gray-900 text-sm sm:text-base">{action.label}</span>
               </Link>
-
-{
-      label: 'Game Day',
-      icon: Calendar,
-      href: `/dashboard/lineup?teamId=${teamId}`,
-      color: 'red',
-    },
             )
           })}
         </div>
