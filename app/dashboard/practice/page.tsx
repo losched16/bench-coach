@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
-import { Plus, Clock, ChevronDown, ChevronUp, Trash2, Pencil, Sparkles } from 'lucide-react'
+import { Plus, Clock, ChevronDown, ChevronUp, Trash2, Pencil, Sparkles, ClipboardCheck } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import Link from 'next/link'
+
 
 interface PracticePlan {
   id: string
@@ -220,8 +222,18 @@ export default function PracticePage() {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Practice Plans</h2>
         
-        {/* New Plan Dropdown */}
-        <div className="relative">
+        <div className="flex items-center space-x-3">
+          {/* Log Recap Button */}
+          <Link
+            href={`/dashboard/recap?teamId=${teamId}`}
+            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <ClipboardCheck size={18} />
+            <span>Log Recap</span>
+          </Link>
+
+          {/* New Plan Dropdown */}
+          <div className="relative">
           <button
             onClick={() => setShowNewMenu(!showNewMenu)}
             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -270,7 +282,7 @@ export default function PracticePage() {
             </>
           )}
         </div>
-      </div>
+        </div>
 
       {plans.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
@@ -319,22 +331,31 @@ export default function PracticePage() {
                     ))}
                   </div>
                 )}
-                <button
-                  onClick={() => setExpandedPlan(expandedPlan === plan.id ? null : plan.id)}
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center"
-                >
-                  {expandedPlan === plan.id ? (
-                    <>
-                      <ChevronUp size={16} className="mr-1" />
-                      Hide Details
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown size={16} className="mr-1" />
-                      View Details
-                    </>
-                  )}
-                </button>
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={() => setExpandedPlan(expandedPlan === plan.id ? null : plan.id)}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center"
+                  >
+                    {expandedPlan === plan.id ? (
+                      <>
+                        <ChevronUp size={16} className="mr-1" />
+                        Hide Details
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown size={16} className="mr-1" />
+                        View Details
+                      </>
+                    )}
+                  </button>
+                  <Link
+                    href={`/dashboard/recap?teamId=${teamId}&planId=${plan.id}`}
+                    className="text-sm text-green-600 hover:text-green-700 font-medium flex items-center"
+                  >
+                    <ClipboardCheck size={16} className="mr-1" />
+                    Log Recap
+                  </Link>
+                </div>
               </div>
               
               {/* Expanded Content */}
