@@ -64,6 +64,17 @@ export interface TeamContext {
     started_at: string
   }>
   savedDrills?: string[]
+  practiceRecaps?: Array<{
+    date: string
+    energy_level?: string
+    attendance_count?: number
+    weather?: string
+    what_worked: string[]
+    what_didnt_work: string[]
+    player_callouts: Array<{ player_name: string; note: string; type: string }>
+    next_focus: string[]
+    notes?: string
+  }>
 }
 
 export interface MemorySuggestion {
@@ -256,6 +267,34 @@ ${context.recentPlans && context.recentPlans.length > 0 ? `
 RECENT PRACTICE PLANS:
 ${context.recentPlans.join(', ')}
 ` : ''}
+
+${context.practiceRecaps && context.practiceRecaps.length > 0 ? `
+RECENT PRACTICE RECAPS (Coach's notes from recent practices):
+${context.practiceRecaps.map(r => {
+  const date = new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const parts = [`${date}:`]
+  if (r.energy_level) parts.push(`Energy: ${r.energy_level}`)
+  if (r.attendance_count) parts.push(`Attendance: ${r.attendance_count}`)
+  if (r.weather) parts.push(`Weather: ${r.weather}`)
+  if (r.what_worked.length > 0) parts.push(`What worked: ${r.what_worked.join(', ')}`)
+  if (r.what_didnt_work.length > 0) parts.push(`What didn't work: ${r.what_didnt_work.join(', ')}`)
+  if (r.player_callouts.length > 0) {
+    parts.push(`Player notes: ${r.player_callouts.map(pc => `${pc.player_name} (${pc.type}): ${pc.note}`).join('; ')}`)
+  }
+  if (r.next_focus.length > 0) parts.push(`Coach wants to focus on next: ${r.next_focus.join(', ')}`)
+  if (r.notes) parts.push(`Additional notes: ${r.notes}`)
+  return parts.join('\n  ')
+}).join('\n\n')}
+` : ''}
+
+USING PRACTICE RECAPS:
+When the coach asks about what to work on, what went well, or how practice is going:
+- Reference recent practice recaps to give informed advice
+- Repeat and build on what worked well
+- Avoid or modify drills/activities that didn't work
+- Honor the coach's stated "next focus" areas
+- Note player callouts — celebrate positives, address concerns
+- Factor in energy levels and attendance patterns
 
 USING DEVELOPMENT JOURNAL DATA:
 When the coach asks about a specific player:
