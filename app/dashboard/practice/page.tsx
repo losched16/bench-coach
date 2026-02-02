@@ -283,6 +283,7 @@ export default function PracticePage() {
           )}
         </div>
         </div>
+      </div>
 
       {plans.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
