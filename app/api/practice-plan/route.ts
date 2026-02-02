@@ -19,26 +19,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if Anthropic API key is set
-    if (!process.env.ANTHROPIC_API_KEY) {
-      console.error('ANTHROPIC_API_KEY is not set')
-      return NextResponse.json(
-        { error: 'API key not configured' },
-        { status: 500 }
-      )
-    }
-
     // Load team context
-    const { data: team, error: teamError } = await supabaseAdmin
+    const { data: team } = await supabaseAdmin
       .from('teams')
       .select('*')
       .eq('id', teamId)
       .single()
-
-    if (teamError) {
-      console.error('Error loading team:', teamError)
-      return NextResponse.json({ error: 'Failed to load team' }, { status: 500 })
-    }
 
     if (!team) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 })
@@ -52,6 +38,53 @@ export async function POST(request: NextRequest) {
       .eq('pinned', true)
       .limit(3)
 
+    // Load recent practice recaps (last 3) to feed into the next plan
+    let recapContext = ''
+    try {
+      const { data: recentRecaps } = await supabaseAdmin
+        .from('practice_sessions')
+        .select('date, recap_note, what_worked, what_didnt_work, player_callouts, energy_level, next_focus, attendance_count')
+        .eq('team_id', teamId)
+        .order('date', { ascending: false })
+        .limit(3)
+
+      if (recentRecaps && recentRecaps.length > 0) {
+        const recapLines = recentRecaps.map(r => {
+          const parts: string[] = []
+          parts.push(`Practice on ${r.date}:`)
+          if (r.energy_level) parts.push(`  Energy: ${r.energy_level}`)
+          if (r.attendance_count) parts.push(`  Attendance: ${r.attendance_count} players`)
+          if (r.what_worked && (r.what_worked as string[]).length > 0) {
+            parts.push(`  ✅ What worked: ${(r.what_worked as string[]).join(', ')}`)
+          }
+          if (r.what_didnt_work && (r.what_didnt_work as string[]).length > 0) {
+            parts.push(`  ⚠️ What didn't work: ${(r.what_didnt_work as string[]).join(', ')}`)
+          }
+          if (r.player_callouts && (r.player_callouts as any[]).length > 0) {
+            const callouts = (r.player_callouts as any[])
+              .map(c => `${c.player_name}: ${c.note} (${c.type})`)
+              .join('; ')
+            parts.push(`  Player notes: ${callouts}`)
+          }
+          if (r.next_focus && (r.next_focus as string[]).length > 0) {
+            parts.push(`  Coach wants next practice to focus on: ${(r.next_focus as string[]).join(', ')}`)
+          }
+          if (r.recap_note) parts.push(`  Notes: ${r.recap_note}`)
+          return parts.join('\n')
+        })
+
+        recapContext = recapLines.join('\n\n')
+      }
+    } catch (e) {
+      console.warn('Could not load practice recaps (table may not have new columns yet)')
+    }
+
+    // Build constraints string that includes recaps
+    let fullConstraints = constraints || ''
+    if (recapContext) {
+      fullConstraints += `\n\nRECENT PRACTICE RECAPS (use these to make this plan better):\n${recapContext}`
+    }
+
     // Build context
     const context: TeamContext = {
       team: {
@@ -60,8 +93,6 @@ export async function POST(request: NextRequest) {
         skill_level: team.skill_level,
         practice_duration_minutes: team.practice_duration_minutes,
         primary_goals: team.primary_goals || [],
-        improved_areas: team.improved_areas || [],
-        mastered_areas: team.mastered_areas || [],
       },
       coachPreferences: {},
       teamNotes: teamNotes?.map(n => ({ note: n.note, pinned: true })) || [],
@@ -69,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate practice plan
-    const plan = await generatePracticePlan(duration, focus, context, constraints)
+    const plan = await generatePracticePlan(duration, focus, context, fullConstraints)
 
     return NextResponse.json(plan)
 
