@@ -6,6 +6,8 @@ import { createSupabaseComponentClient } from '@/lib/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MessageSquare, Users, StickyNote, ClipboardList, Home, LogOut, Plus, UserPlus, Trash2, Settings, Bookmark, Library, BookOpen, HelpCircle, Brain, UsersRound, UserCircle, Menu, X } from 'lucide-react'
+import { MessageSquare, ClipboardList, Users, FileText, Calendar } from 'lucide-react'
+
 
 interface Team {
   id: string
@@ -212,6 +214,12 @@ function DashboardContent({
     { label: 'Roster', href: '/dashboard/roster', icon: Users },
     { label: 'Notes', href: '/dashboard/notes', icon: StickyNote },
     { label: 'Practice Plans', href: '/dashboard/practice', icon: ClipboardList },
+// Then in your navigation links array, add this entry:
+{
+  label: 'Game Day',
+  icon: Calendar,
+  href: `/dashboard/lineup?teamId=${selectedTeamId}`,
+}
     { label: 'Practice Library', href: '/dashboard/templates', icon: Library },
     { label: 'Playbooks', href: '/dashboard/playbooks', icon: BookOpen },
     { label: 'Saved Drills', href: '/dashboard/drills', icon: Bookmark },
