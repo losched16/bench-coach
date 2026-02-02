@@ -222,6 +222,35 @@ export async function POST(request: NextRequest) {
 
     const drillsSummary = savedDrills?.map(d => `${d.title} (${d.category})`) || []
 
+    // Load recent practice recaps
+    let practiceRecaps: any[] = []
+    try {
+      const { data: recaps } = await supabaseAdmin
+        .from('practice_sessions')
+        .select('*')
+        .eq('team_id', teamId)
+        .order('date', { ascending: false })
+        .limit(5)
+
+      if (recaps) {
+        practiceRecaps = recaps
+          .filter(r => r.what_worked || r.what_didnt_work || r.next_focus)
+          .map(r => ({
+            date: r.date,
+            energy_level: r.energy_level,
+            attendance_count: r.attendance_count,
+            weather: r.weather,
+            what_worked: r.what_worked || [],
+            what_didnt_work: r.what_didnt_work || [],
+            player_callouts: r.player_callouts || [],
+            next_focus: r.next_focus || [],
+            notes: r.notes,
+          }))
+      }
+    } catch (e) {
+      console.warn('Could not load practice recaps (columns may not exist yet)')
+    }
+
     // Build context
     const context: TeamContext = {
       team: {
@@ -240,6 +269,7 @@ export async function POST(request: NextRequest) {
       memorySummary: memorySummary?.summary,
       activePlaybooks: playbookContext,
       savedDrills: drillsSummary,
+      practiceRecaps: practiceRecaps.length > 0 ? practiceRecaps : undefined,
     }
 
     // Convert history
