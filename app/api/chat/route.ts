@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { generateChatResponse, TeamContext, JournalEntry } from '@/lib/anthropic'
+import { generateChatResponse, TeamContext } from '@/lib/anthropic'
 
 // Use service role for server-side operations (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -12,6 +12,8 @@ export async function POST(request: NextRequest) {
   try {
     const { teamId, message, history } = await request.json()
 
+    console.log('Chat API called with teamId:', teamId)
+
     if (!teamId || !message) {
       return NextResponse.json(
         { error: 'Missing teamId or message' },
@@ -19,16 +21,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if Anthropic API key is set
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error('ANTHROPIC_API_KEY is not set')
+      return NextResponse.json(
+        { error: 'API key not configured' },
+        { status: 500 }
+      )
+    }
+
     // Load team context
-    const { data: team } = await supabaseAdmin
+    const { data: team, error: teamError } = await supabaseAdmin
       .from('teams')
       .select('*')
       .eq('id', teamId)
       .single()
 
+    if (teamError) {
+      console.error('Error loading team:', teamError)
+      return NextResponse.json({ error: 'Failed to load team' }, { status: 500 })
+    }
+
     if (!team) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 })
     }
+
+    console.log('Loaded team:', team.name)
 
     // Load coach preferences
     const { data: preferences } = await supabaseAdmin
@@ -57,67 +75,53 @@ export async function POST(request: NextRequest) {
       .eq('team_id', teamId)
       .single()
 
-    // Load players
+    // Load players (NO player_notes join - it breaks the query)
     const { data: teamPlayers } = await supabaseAdmin
       .from('team_players')
       .select(`
         *,
-        player:players(name)
+        player:players(id, name)
       `)
       .eq('team_id', teamId)
 
-    const players = teamPlayers?.map(tp => ({
-      name: tp.player.name,
-      positions: tp.positions || [],
-      hitting_level: tp.hitting_level,
-      throwing_level: tp.throwing_level,
-      fielding_level: tp.fielding_level,
-      pitching_level: tp.pitching_level,
-      baserunning_level: tp.baserunning_level,
-      coachability_level: tp.coachability_level,
-      notes: [],
-    })) || []
-
     // Load player journal entries (recent entries for each player)
-    let journalEntries: any[] = []
-    try {
-      const { data: journals } = await supabaseAdmin
-        .from('player_journal_entries')
-        .select('*')
-        .eq('team_id', teamId)
-        .order('session_date', { ascending: false })
-        .limit(20)
-
-      journalEntries = journals || []
-    } catch (e) {
-      console.warn('Could not load journal entries (table may not exist yet)')
-    }
+    const { data: journalEntries } = await supabaseAdmin
+      .from('player_journal_entries')
+      .select(`
+        id,
+        player_id,
+        session_date,
+        session_type,
+        duration_minutes,
+        instructor_name,
+        focus_areas,
+        went_well,
+        needs_work,
+        home_drills,
+        notes,
+        skills,
+        player:players(name)
+      `)
+      .eq('team_id', teamId)
+      .order('session_date', { ascending: false })
+      .limit(20) // Last 20 entries across all players
 
     // Group journal entries by player
-    const journalByPlayer: Record<string, JournalEntry[]> = {}
-    for (const entry of journalEntries) {
-      const playerId = entry.player_id
-      if (!journalByPlayer[playerId]) {
-        journalByPlayer[playerId] = []
+    const journalByPlayer: Record<string, any[]> = {}
+    journalEntries?.forEach(entry => {
+      const playerName = (entry.player as any)?.name || 'Unknown'
+      if (!journalByPlayer[playerName]) {
+        journalByPlayer[playerName] = []
       }
-      if (journalByPlayer[playerId].length < 5) {
-        journalByPlayer[playerId].push({
-          date: entry.session_date,
-          type: entry.session_type,
-          instructor: entry.instructor_name,
-          focus: entry.focus_area,
-          went_well: entry.went_well,
-          needs_work: entry.needs_work,
-          home_drills: entry.home_drills,
-          skills: entry.skills || [],
-        })
-      }
-    }
+      journalByPlayer[playerName].push(entry)
+    })
 
     const players = teamPlayers?.map(tp => {
-      const playerData = tp.player as any
+      const playerName = tp.player.name
+      const playerJournal = journalByPlayer[playerName] || []
+      
       return {
-        name: playerData?.name || 'Unknown',
+        name: playerName,
         positions: tp.positions || [],
         hitting_level: tp.hitting_level,
         throwing_level: tp.throwing_level,
@@ -125,8 +129,17 @@ export async function POST(request: NextRequest) {
         pitching_level: tp.pitching_level,
         baserunning_level: tp.baserunning_level,
         coachability_level: tp.coachability_level,
-        notes: tp.notes?.map((n: any) => n.note) || [],
-        journal: journalByPlayer[tp.player_id] || [],
+        notes: [],
+        journal: playerJournal.slice(0, 5).map((j: any) => ({
+          date: j.session_date,
+          type: j.session_type,
+          instructor: j.instructor_name,
+          focus: j.focus_areas,
+          went_well: j.went_well,
+          needs_work: j.needs_work,
+          home_drills: j.home_drills,
+          skills: j.skills,
+        })),
       }
     }) || []
 
@@ -140,66 +153,74 @@ export async function POST(request: NextRequest) {
 
     const planSummaries = recentPlans?.map(p => p.title) || []
 
-    // Load active playbooks
-    let activePlaybooks: any[] = []
-    try {
-      const { data: playbooks } = await supabaseAdmin
-        .from('assigned_playbooks')
-        .select(`
-          *,
-          playbook:playbooks(title, skill_category, content)
-        `)
-        .eq('team_id', teamId)
-        .eq('status', 'active')
+    // Load active playbooks with progress
+    const { data: activePlaybooks } = await supabaseAdmin
+      .from('player_playbooks')
+      .select(`
+        id,
+        title,
+        started_at,
+        completed_sessions,
+        status,
+        player:players(name),
+        template:playbook_templates(
+          title,
+          description,
+          goal,
+          age_group,
+          skill_category,
+          total_sessions,
+          sessions
+        )
+      `)
+      .eq('team_id', teamId)
+      .eq('status', 'active')
 
-      if (playbooks) {
-        activePlaybooks = playbooks.map(ap => {
-          const pb = ap.playbook as any
-          const sessions = pb?.content?.sessions || []
-          const currentDay = ap.current_day || 1
-          const currentSession = sessions.find((s: any) => s.day === currentDay)
-          const previousSession = currentDay > 1 ? sessions.find((s: any) => s.day === currentDay - 1) : null
-
-          return {
-            playbook_title: pb?.title || 'Unknown Playbook',
-            assigned_to: ap.assigned_to_name || 'Team',
-            skill_category: pb?.skill_category || 'General',
-            goal: pb?.content?.goal || '',
-            progress: `Day ${currentDay} of ${sessions.length}`,
-            current_day: currentDay,
-            current_session: currentSession ? {
-              day: currentSession.day,
-              title: currentSession.title,
-              phase: currentSession.phase,
-              goal: currentSession.goal,
-              activities: currentSession.activities?.map((a: any) => a.name || a.title || a) || [],
-            } : undefined,
-            previous_session: previousSession ? {
-              day: previousSession.day,
-              title: previousSession.title,
-              goal: previousSession.goal,
-            } : undefined,
-            started_at: ap.started_at,
-          }
-        })
+    // Format playbook context for AI
+    const playbookContext = activePlaybooks?.map(pb => {
+      const completedCount = Array.isArray(pb.completed_sessions) ? pb.completed_sessions.length : 0
+      // Template is returned as array from Supabase join
+      const template = Array.isArray(pb.template) ? pb.template[0] : pb.template
+      const totalSessions = template?.total_sessions || 0
+      const sessions = template?.sessions || []
+      
+      // Get current session (next incomplete one)
+      const currentSessionIndex = completedCount
+      const currentSession = sessions[currentSessionIndex]
+      const previousSession = currentSessionIndex > 0 ? sessions[currentSessionIndex - 1] : null
+      
+      return {
+        playbook_title: template?.title || pb.title,
+        assigned_to: (pb.player as any)?.name || 'Whole Team',
+        skill_category: template?.skill_category,
+        goal: template?.goal,
+        progress: `${completedCount}/${totalSessions} sessions completed`,
+        current_day: currentSessionIndex + 1,
+        current_session: currentSession ? {
+          day: currentSession.day,
+          title: currentSession.title,
+          phase: currentSession.phase,
+          goal: currentSession.goal,
+          activities: currentSession.activities?.map((a: any) => a.name) || []
+        } : null,
+        previous_session: previousSession ? {
+          day: previousSession.day,
+          title: previousSession.title,
+          goal: previousSession.goal
+        } : null,
+        started_at: pb.started_at
       }
-    } catch (e) {
-      console.warn('Could not load playbooks (table may not exist yet)')
-    }
+    }) || []
 
     // Load saved drills
-    let savedDrills: string[] = []
-    try {
-      const { data: drills } = await supabaseAdmin
-        .from('saved_drills')
-        .select('title')
-        .eq('team_id', teamId)
-        .limit(10)
+    const { data: savedDrills } = await supabaseAdmin
+      .from('saved_drills')
+      .select('title, category')
+      .eq('team_id', teamId)
+      .order('created_at', { ascending: false })
+      .limit(10)
 
-      savedDrills = drills?.map(d => d.title) || []
-    } catch (e) {
-      console.warn('Could not load saved drills (table may not exist yet)')
-    }
+    const drillsSummary = savedDrills?.map(d => `${d.title} (${d.category})`) || []
 
     // Build context
     const context: TeamContext = {
@@ -217,8 +238,8 @@ export async function POST(request: NextRequest) {
       players,
       recentPlans: planSummaries,
       memorySummary: memorySummary?.summary,
-      activePlaybooks: activePlaybooks.length > 0 ? activePlaybooks : undefined,
-      savedDrills: savedDrills.length > 0 ? savedDrills : undefined,
+      activePlaybooks: playbookContext,
+      savedDrills: drillsSummary,
     }
 
     // Convert history
@@ -250,7 +271,7 @@ export async function POST(request: NextRequest) {
     const { data: userMsg } = await supabaseAdmin
       .from('chat_messages')
       .insert({
-        thread_id: thread!.id,
+        thread_id: thread.id,
         role: 'user',
         content: message,
       })
@@ -260,7 +281,7 @@ export async function POST(request: NextRequest) {
     const { data: assistantMsg } = await supabaseAdmin
       .from('chat_messages')
       .insert({
-        thread_id: thread!.id,
+        thread_id: thread.id,
         role: 'assistant',
         content: response.message,
         memory_suggestions: response.memory_suggestions,
@@ -286,12 +307,92 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       message: response.message,
       memory_suggestions: response.memory_suggestions,
-      id: assistantMsg?.id,
-      user_message_id: userMsg?.id,
+      id: assistantMsg.id,
+      user_message_id: userMsg.id,
     })
 
   } catch (error: any) {
     console.error('Chat API error:', error)
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+// GET endpoint to load chat history (bypasses RLS)
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const teamId = searchParams.get('teamId')
+
+    if (!teamId) {
+      return NextResponse.json({ error: 'Missing teamId' }, { status: 400 })
+    }
+
+    // Get or create chat thread for this team (use oldest if multiple exist)
+    let { data: thread } = await supabaseAdmin
+      .from('chat_threads')
+      .select('id')
+      .eq('team_id', teamId)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .single()
+
+    if (!thread) {
+      const { data: newThread } = await supabaseAdmin
+        .from('chat_threads')
+        .insert({ team_id: teamId })
+        .select()
+        .single()
+      thread = newThread
+    }
+
+    if (!thread) {
+      return NextResponse.json({ error: 'Failed to get/create thread' }, { status: 500 })
+    }
+
+    // Load messages for this thread
+    const { data: messages } = await supabaseAdmin
+      .from('chat_messages')
+      .select('id, role, content, memory_suggestions, created_at')
+      .eq('thread_id', thread.id)
+      .order('created_at', { ascending: true })
+
+    return NextResponse.json({
+      threadId: thread.id,
+      messages: messages || []
+    })
+
+  } catch (error: any) {
+    console.error('Chat GET error:', error)
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE endpoint to clear chat history (bypasses RLS)
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const threadId = searchParams.get('threadId')
+
+    if (!threadId) {
+      return NextResponse.json({ error: 'Missing threadId' }, { status: 400 })
+    }
+
+    // Delete all messages in the thread
+    await supabaseAdmin
+      .from('chat_messages')
+      .delete()
+      .eq('thread_id', threadId)
+
+    return NextResponse.json({ success: true })
+
+  } catch (error: any) {
+    console.error('Chat DELETE error:', error)
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }
