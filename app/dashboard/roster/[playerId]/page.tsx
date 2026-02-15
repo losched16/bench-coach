@@ -185,6 +185,7 @@ function PlayerDetailContent() {
   
   // Media viewer
   const [viewingMedia, setViewingMedia] = useState<MediaItem | null>(null)
+  const [showSwingUpload, setShowSwingUpload] = useState(false)
   
   const [journalForm, setJournalForm] = useState({
     session_date: new Date().toISOString().split('T')[0],
