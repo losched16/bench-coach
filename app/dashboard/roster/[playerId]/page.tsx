@@ -6,7 +6,7 @@ import { createSupabaseComponentClient } from '@/lib/supabase'
 import { 
   ArrowLeft, User, Plus, Trash2, Pencil, StickyNote, 
   Target, TrendingUp, Calendar, BookOpen, 
-  Clock, CheckCircle, AlertCircle, Home, Upload, X, Play, Image as ImageIcon
+  Clock, CheckCircle, AlertCircle, Home, Upload, X, Play, Image as ImageIcon, Video
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -213,7 +213,6 @@ function PlayerDetailContent() {
       if (coach) setCoachId(coach.id)
     }
   }
-
 
   const loadSwingAnalyses = async () => {
     if (!playerId || !teamId) return
