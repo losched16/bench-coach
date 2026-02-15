@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { createBrowserClient } from '@supabase/ssr'
 
 interface SwingAnalysisUploadProps {
   playerId: string
@@ -32,10 +33,10 @@ export default function SwingAnalysisUpload({
       return
     }
 
-    // Validate file size (max 100MB)
-    const maxSize = 100 * 1024 * 1024 // 100MB
+    // Validate file size (max 50MB for Supabase free tier)
+    const maxSize = 50 * 1024 * 1024 // 50MB
     if (file.size > maxSize) {
-      setError('Video file is too large. Maximum size is 100MB.')
+      setError('Video file is too large. Maximum size is 50MB.')
       return
     }
 
@@ -57,14 +58,39 @@ export default function SwingAnalysisUpload({
     setError(null)
 
     try {
-      const formData = new FormData()
-      formData.append('video', videoFile)
-      formData.append('player_id', playerId)
-      formData.append('team_id', teamId)
+      // Upload directly to Supabase Storage (bypasses Vercel limits)
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      )
 
+      const fileName = `${playerId}/${Date.now()}_${videoFile.name}`
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('swing-videos')
+        .upload(fileName, videoFile, {
+          contentType: videoFile.type,
+          upsert: false
+        })
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError)
+        throw new Error('Failed to upload video')
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('swing-videos')
+        .getPublicUrl(fileName)
+
+      // Now call API with just the URL (not the file)
       const response = await fetch('/api/swing-analysis', {
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          video_url: publicUrl,
+          player_id: playerId,
+          team_id: teamId
+        })
       })
 
       const data = await response.json()
@@ -136,7 +162,7 @@ export default function SwingAnalysisUpload({
               Click to upload video
             </span>
             <span className="text-xs text-gray-500">
-              MP4, MOV up to 100MB
+              MP4, MOV up to 50MB (keep videos under 30 seconds)
             </span>
           </label>
         </div>
