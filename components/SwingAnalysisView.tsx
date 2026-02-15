@@ -11,6 +11,8 @@ interface SwingAnalysis {
   error_message?: string
   video_duration_seconds?: number
   metrics?: any
+  pose_data?: any[]
+  video_fps?: number
   analysis_summary?: string
   identified_issues?: string[]
   recommended_drills?: Array<{
@@ -19,17 +21,82 @@ interface SwingAnalysis {
     description: string
     coaching_cues: string[]
   }>
+  comparison_data?: ComparisonData | null
+  comparison_status?: string | null
   players: {
     id: string
     name: string
     jersey_number?: string
   }
+  teams?: {
+    age_group?: string
+  }
   created_at: string
+}
+
+// ─── Comparison Types ───────────────────────────────────────────────────────
+
+interface Correction {
+  joint: string
+  problem: string
+  fix: string
+  severity: 'high' | 'medium' | 'low'
+}
+
+interface ComparisonPhase {
+  name: string
+  display_name: string
+  timestamp: number
+  corrections: Correction[]
+  image_url: string
+}
+
+interface ComparisonData {
+  summary: string
+  correction_priority: string[]
+  phases: ComparisonPhase[]
+  summary_image_url: string
+  camera_angle?: 'side' | 'front' | 'unknown'
+  camera_angle_confidence?: number
 }
 
 interface SwingAnalysisViewProps {
   analysisId: string
 }
+
+// ─── Severity Styling ───────────────────────────────────────────────────────
+
+const severityConfig = {
+  high: {
+    bg: 'bg-red-50',
+    border: 'border-red-200',
+    badge: 'bg-red-600 text-white',
+    text: 'text-red-800',
+    fixText: 'text-red-700',
+    dot: 'bg-red-500',
+    label: 'HIGH',
+  },
+  medium: {
+    bg: 'bg-amber-50',
+    border: 'border-amber-200',
+    badge: 'bg-amber-500 text-white',
+    text: 'text-amber-800',
+    fixText: 'text-amber-700',
+    dot: 'bg-amber-500',
+    label: 'MED',
+  },
+  low: {
+    bg: 'bg-green-50',
+    border: 'border-green-200',
+    badge: 'bg-green-600 text-white',
+    text: 'text-green-800',
+    fixText: 'text-green-700',
+    dot: 'bg-green-500',
+    label: 'LOW',
+  },
+}
+
+// ─── Main Component ─────────────────────────────────────────────────────────
 
 export default function SwingAnalysisView({ analysisId }: SwingAnalysisViewProps) {
   const router = useRouter()
@@ -37,6 +104,14 @@ export default function SwingAnalysisView({ analysisId }: SwingAnalysisViewProps
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showOriginal, setShowOriginal] = useState(false)
+
+  // Comparison state
+  const [comparison, setComparison] = useState<ComparisonData | null>(null)
+  const [generatingComparison, setGeneratingComparison] = useState(false)
+  const [comparisonError, setComparisonError] = useState<string | null>(null)
+  const [activePhase, setActivePhase] = useState(0)
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null)
+  const [comparisonView, setComparisonView] = useState<'phases' | 'summary'>('phases')
 
   useEffect(() => {
     loadAnalysis()
@@ -46,10 +121,38 @@ export default function SwingAnalysisView({ analysisId }: SwingAnalysisViewProps
       if (analysis?.status === 'processing') {
         loadAnalysis()
       }
-    }, 3000) // Poll every 3 seconds
+    }, 3000)
 
     return () => clearInterval(interval)
   }, [analysisId])
+
+  // Load comparison data when analysis loads
+  useEffect(() => {
+    if (analysis?.comparison_data) {
+      const parsed = typeof analysis.comparison_data === 'string'
+        ? JSON.parse(analysis.comparison_data)
+        : analysis.comparison_data
+      setComparison(parsed)
+    }
+  }, [analysis])
+
+  // Keyboard navigation for comparison phases
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (fullscreenImage) {
+        if (e.key === 'Escape') setFullscreenImage(null)
+        return
+      }
+      if (!comparison) return
+      if (e.key === 'ArrowLeft') {
+        setActivePhase(p => Math.max(0, p - 1))
+      } else if (e.key === 'ArrowRight') {
+        setActivePhase(p => Math.min(comparison.phases.length - 1, p + 1))
+      }
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [fullscreenImage, comparison])
 
   const loadAnalysis = async () => {
     try {
@@ -67,6 +170,52 @@ export default function SwingAnalysisView({ analysisId }: SwingAnalysisViewProps
       setLoading(false)
     }
   }
+
+  const generateComparison = async () => {
+    if (!analysis) return
+
+    try {
+      setGeneratingComparison(true)
+      setComparisonError(null)
+
+      const serviceUrl = process.env.NEXT_PUBLIC_SWING_ANALYZER_URL
+      if (!serviceUrl) throw new Error('Swing analyzer service URL not configured')
+
+      const response = await fetch(`${serviceUrl}/analyze-comparison`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          analysis_id: analysis.id,
+          frames_data: analysis.pose_data || [],
+          fps: analysis.video_fps || 30,
+          player_info: {
+            name: analysis.players?.name || 'Player',
+            age_group: analysis.teams?.age_group || 'youth',
+            experience: 'beginner',
+            batting_side: 'right',
+          },
+          swing_metrics: analysis.metrics || {},
+          video_url: analysis.video_url,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Comparison generation failed')
+      }
+
+      const result = await response.json()
+      if (result.success && result.comparison) {
+        setComparison(result.comparison)
+      }
+    } catch (err: any) {
+      setComparisonError(err.message)
+    } finally {
+      setGeneratingComparison(false)
+    }
+  }
+
+  // ─── Loading State ──────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -97,6 +246,8 @@ export default function SwingAnalysisView({ analysisId }: SwingAnalysisViewProps
     )
   }
 
+  // ─── Error State ────────────────────────────────────────────────────────
+
   if (error || !analysis) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-6">
@@ -111,6 +262,12 @@ export default function SwingAnalysisView({ analysisId }: SwingAnalysisViewProps
       </div>
     )
   }
+
+  // ─── Current comparison phase ───────────────────────────────────────────
+
+  const currentPhase = comparison?.phases?.[activePhase] || null
+
+  // ─── Render ─────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
@@ -231,6 +388,298 @@ export default function SwingAnalysisView({ analysisId }: SwingAnalysisViewProps
             </div>
           )}
 
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          {/* FRAME-BY-FRAME COMPARISON SECTION                              */}
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            {!comparison ? (
+              /* ── Generate Button ── */
+              <div className="text-center py-6">
+                <div className="mx-auto w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-4">
+                  <svg className="w-7 h-7 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Frame-by-Frame Comparison
+                </h3>
+                <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                  See how this swing compares to ideal mechanics at each key phase — 
+                  stance, load, contact, and follow-through.
+                </p>
+
+                {comparisonError && (
+                  <div className="mb-4 mx-auto max-w-md p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+                    {comparisonError}
+                  </div>
+                )}
+
+                <button
+                  onClick={generateComparison}
+                  disabled={generatingComparison}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-lg
+                             bg-blue-600 hover:bg-blue-700 text-white font-medium
+                             transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {generatingComparison ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Generating Comparison...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      Generate Swing Comparison
+                    </>
+                  )}
+                </button>
+
+                {generatingComparison && (
+                  <p className="mt-3 text-gray-400 text-sm">
+                    This takes 15-30 seconds. AI is analyzing your swing mechanics...
+                  </p>
+                )}
+              </div>
+            ) : (
+              /* ── Comparison Results ── */
+              <div className="space-y-5">
+                {/* Comparison Header */}
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="font-semibold text-lg flex items-center gap-2">
+                      <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      Swing Comparison
+                    </h3>
+                    <p className="text-gray-500 text-sm mt-1">{comparison.summary}</p>
+                  </div>
+
+                  {/* View toggle */}
+                  <div className="flex rounded-lg overflow-hidden border border-gray-200">
+                    <button
+                      onClick={() => setComparisonView('phases')}
+                      className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                        comparisonView === 'phases'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      Phase View
+                    </button>
+                    <button
+                      onClick={() => setComparisonView('summary')}
+                      className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                        comparisonView === 'summary'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      Summary Strip
+                    </button>
+                  </div>
+                </div>
+
+                {/* Front view warning */}
+                {comparison.camera_angle === 'front' && (
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                    <svg className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <div>
+                      <p className="text-sm font-medium text-blue-800">
+                        Front view detected
+                      </p>
+                      <p className="text-sm text-blue-600 mt-0.5">
+                        This video was filmed from the front. The analysis focuses on stance width, rotation, 
+                        and balance. For bat path and stride analysis, try filming from the side 
+                        (3rd base side for right-handed batters).
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Summary Strip View */}
+                {comparisonView === 'summary' && comparison.summary_image_url && (
+                  <div
+                    className="relative rounded-lg overflow-hidden border border-gray-200 cursor-pointer group"
+                    onClick={() => setFullscreenImage(comparison.summary_image_url)}
+                  >
+                    <img
+                      src={comparison.summary_image_url}
+                      alt="Swing comparison summary - all phases"
+                      className="w-full h-auto"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                      <span className="bg-black/60 text-white text-xs px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                        Click to enlarge
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Phase-by-Phase View */}
+                {comparisonView === 'phases' && (
+                  <>
+                    {/* Phase selector tabs */}
+                    <div className="flex gap-2">
+                      {comparison.phases.map((phase, idx) => {
+                        const isActive = idx === activePhase
+                        const hasHigh = phase.corrections?.some(c => c.severity === 'high')
+                        const hasMed = phase.corrections?.some(c => c.severity === 'medium')
+
+                        return (
+                          <button
+                            key={phase.name}
+                            onClick={() => setActivePhase(idx)}
+                            className={`flex-1 relative px-3 py-2.5 rounded-lg text-sm font-medium
+                                        transition-all border ${
+                              isActive
+                                ? 'bg-blue-50 border-blue-300 text-blue-700'
+                                : 'bg-gray-50 border-gray-200 text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            }`}
+                          >
+                            <span className="text-xs opacity-60 block">{idx + 1}</span>
+                            <span className="block mt-0.5">{phase.display_name}</span>
+
+                            {/* Severity dot */}
+                            {phase.corrections && phase.corrections.length > 0 && (
+                              <span className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${
+                                hasHigh ? 'bg-red-500' :
+                                hasMed ? 'bg-amber-500' : 'bg-green-500'
+                              }`} />
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    {/* Phase comparison image */}
+                    {currentPhase && (
+                      <div className="space-y-4">
+                        {currentPhase.image_url && (
+                          <div
+                            className="relative rounded-lg overflow-hidden border border-gray-200 cursor-pointer group"
+                            onClick={() => setFullscreenImage(currentPhase.image_url)}
+                          >
+                            <img
+                              src={currentPhase.image_url}
+                              alt={`${currentPhase.display_name} comparison`}
+                              className="w-full h-auto"
+                            />
+                            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <span className="bg-black/60 text-white text-xs px-3 py-1.5 rounded-lg">
+                                Click to enlarge
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Corrections for this phase */}
+                        {currentPhase.corrections && currentPhase.corrections.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-medium text-gray-600">
+                              Corrections for {currentPhase.display_name}
+                            </h4>
+                            {currentPhase.corrections.map((correction, idx) => {
+                              const config = severityConfig[correction.severity] || severityConfig.medium
+
+                              return (
+                                <div
+                                  key={idx}
+                                  className={`p-3 rounded-lg border ${config.border} ${config.bg}`}
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${config.badge} whitespace-nowrap mt-0.5`}>
+                                      {config.label}
+                                    </span>
+                                    <div className="flex-1 min-w-0">
+                                      <p className={`text-sm font-medium ${config.text}`}>
+                                        {correction.problem}
+                                      </p>
+                                      {correction.fix && (
+                                        <p className={`text-sm mt-1 ${config.fixText}`}>
+                                          → {correction.fix}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+
+                        {/* Navigation arrows */}
+                        <div className="flex items-center justify-between pt-2">
+                          <button
+                            onClick={() => setActivePhase(p => Math.max(0, p - 1))}
+                            disabled={activePhase === 0}
+                            className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm
+                                       text-gray-500 hover:text-gray-700 hover:bg-gray-50
+                                       disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                            </svg>
+                            Previous
+                          </button>
+
+                          <span className="text-gray-400 text-xs">
+                            {activePhase + 1} / {comparison.phases.length} — Use ← → keys
+                          </span>
+
+                          <button
+                            onClick={() => setActivePhase(p => Math.min(comparison.phases.length - 1, p + 1))}
+                            disabled={activePhase === comparison.phases.length - 1}
+                            className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm
+                                       text-gray-500 hover:text-gray-700 hover:bg-gray-50
+                                       disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          >
+                            Next
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Priority Fixes */}
+                {comparison.correction_priority && comparison.correction_priority.length > 0 && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                    <h4 className="text-sm font-semibold text-amber-800 mb-3 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      Priority Fixes (Most Important First)
+                    </h4>
+                    <ol className="space-y-2">
+                      {comparison.correction_priority.map((fix, idx) => (
+                        <li key={idx} className="flex items-start gap-3 text-sm">
+                          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center text-xs font-medium mt-0.5">
+                            {idx + 1}
+                          </span>
+                          <span className="text-amber-900">{fix}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          {/* END: COMPARISON SECTION                                        */}
+          {/* ═══════════════════════════════════════════════════════════════ */}
+
           {/* Identified Issues */}
           {analysis.identified_issues && analysis.identified_issues.length > 0 && (
             <div className="bg-white rounded-lg shadow-sm border p-6">
@@ -313,6 +762,29 @@ export default function SwingAnalysisView({ analysisId }: SwingAnalysisViewProps
             </details>
           )}
         </>
+      )}
+
+      {/* ── Fullscreen Image Modal ── */}
+      {fullscreenImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setFullscreenImage(null)}
+        >
+          <button
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors z-10"
+            onClick={() => setFullscreenImage(null)}
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <img
+            src={fullscreenImage}
+            alt="Full size comparison"
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
       )}
     </div>
   )
