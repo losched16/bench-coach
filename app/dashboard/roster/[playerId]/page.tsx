@@ -9,7 +9,10 @@ export default function PlayerProfilePage({ params }: { params: { playerId: stri
   const router = useRouter()
   const searchParams = useSearchParams()
   const teamId = searchParams.get('teamId')
-  const supabase = createClientComponentClient()
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
   const [player, setPlayer] = useState<any>(null)
   const [teamPlayer, setTeamPlayer] = useState<any>(null)
