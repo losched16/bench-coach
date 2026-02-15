@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createBrowserClient } from '@supabase/ssr'
 import SwingAnalysisUpload from '@/components/SwingAnalysisUpload'
 
 export default function PlayerProfilePage({ params }: { params: { playerId: string } }) {
