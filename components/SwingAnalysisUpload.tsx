@@ -64,7 +64,10 @@ export default function SwingAnalysisUpload({
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       )
 
-      const fileName = `${playerId}/${Date.now()}_${videoFile.name}`
+      // Sanitize filename - remove special characters
+      const sanitizedName = videoFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+      const fileName = `${playerId}/${Date.now()}_${sanitizedName}`
+      
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('swing-videos')
         .upload(fileName, videoFile, {
