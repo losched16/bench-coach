@@ -2,17 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { createBrowserClient } from '@supabase/ssr'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import SwingAnalysisUpload from '@/components/SwingAnalysisUpload'
 
 export default function PlayerProfilePage({ params }: { params: { playerId: string } }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const teamId = searchParams.get('teamId')
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = createClientComponentClient()
 
   const [player, setPlayer] = useState<any>(null)
   const [teamPlayer, setTeamPlayer] = useState<any>(null)
