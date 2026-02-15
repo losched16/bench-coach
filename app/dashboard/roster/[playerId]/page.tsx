@@ -9,6 +9,7 @@ import {
   Clock, CheckCircle, AlertCircle, Home, Upload, X, Play, Image as ImageIcon, Video
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import SwingAnalysisUpload from '@/components/SwingAnalysisUpload'
 
 interface PlayerData {
   id: string
@@ -184,6 +185,11 @@ function PlayerDetailContent() {
   
   // Media viewer
   const [viewingMedia, setViewingMedia] = useState<MediaItem | null>(null)
+  
+  // Swing analysis states
+  const [showSwingUpload, setShowSwingUpload] = useState(false)
+  const [swingAnalyses, setSwingAnalyses] = useState<any[]>([])
+  const [loadingAnalyses, setLoadingAnalyses] = useState(false)
   
   const [journalForm, setJournalForm] = useState({
     session_date: new Date().toISOString().split('T')[0],
@@ -656,6 +662,34 @@ function PlayerDetailContent() {
               })}
             </div>
           )}
+        </div>
+      )}
+
+
+      {/* Swing Upload Modal */}
+      {showSwingUpload && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Swing Analysis</h2>
+              <button
+                onClick={() => setShowSwingUpload(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            <SwingAnalysisUpload
+              playerId={playerId}
+              playerName={player.name}
+              teamId={teamId!}
+              onSuccess={(analysisId) => {
+                setShowSwingUpload(false)
+                router.push(`/dashboard/swing-analysis/${analysisId}`)
+              }}
+            />
+          </div>
         </div>
       )}
 
