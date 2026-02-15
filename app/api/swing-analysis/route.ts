@@ -6,7 +6,18 @@ const PROCESSING_SERVICE_URL = process.env.SWING_ANALYZER_URL || 'http://localho
 
 export async function POST(request: Request) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const cookieStore = cookies()
+const supabase = createServerClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  {
+    cookies: {
+      get(name: string) {
+        return cookieStore.get(name)?.value
+      },
+    },
+  }
+)
     
     // Check authentication
     const { data: { session } } = await supabase.auth.getSession()
