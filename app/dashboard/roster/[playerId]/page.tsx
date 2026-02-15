@@ -6,10 +6,9 @@ import { createSupabaseComponentClient } from '@/lib/supabase'
 import { 
   ArrowLeft, User, Plus, Trash2, Pencil, StickyNote, 
   Target, TrendingUp, Calendar, BookOpen, 
-  Clock, CheckCircle, AlertCircle, Home, Upload, X, Play, Image as ImageIcon, Video
+  Clock, CheckCircle, AlertCircle, Home, Upload, X, Play, Image as ImageIcon
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
-import SwingAnalysisUpload from '@/components/SwingAnalysisUpload'
 
 interface PlayerData {
   id: string
@@ -154,7 +153,7 @@ function PlayerDetailContent() {
   const supabase = createSupabaseComponentClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'journal'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'journal' | 'swing-analysis'>('overview')
   const [player, setPlayer] = useState<PlayerData | null>(null)
   const [notes, setNotes] = useState<PlayerNote[]>([])
   const [playbooks, setPlaybooks] = useState<ActivePlaybook[]>([])
@@ -185,7 +184,6 @@ function PlayerDetailContent() {
   
   // Media viewer
   const [viewingMedia, setViewingMedia] = useState<MediaItem | null>(null)
-  const [showSwingUpload, setShowSwingUpload] = useState(false)
   
   const [journalForm, setJournalForm] = useState({
     session_date: new Date().toISOString().split('T')[0],
@@ -204,6 +202,7 @@ function PlayerDetailContent() {
     if (playerId && teamId) {
       loadPlayerData()
       loadCoachId()
+      loadSwingAnalyses()
     }
   }, [playerId, teamId])
 
@@ -212,6 +211,29 @@ function PlayerDetailContent() {
     if (user) {
       const { data: coach } = await supabase.from('coaches').select('id').eq('user_id', user.id).single()
       if (coach) setCoachId(coach.id)
+    }
+  }
+
+
+  const loadSwingAnalyses = async () => {
+    if (!playerId || !teamId) return
+    
+    setLoadingAnalyses(true)
+    try {
+      const { data, error } = await supabase
+        .from('swing_analyses')
+        .select('*')
+        .eq('player_id', playerId)
+        .eq('team_id', teamId)
+        .order('created_at', { ascending: false })
+      
+      if (!error && data) {
+        setSwingAnalyses(data)
+      }
+    } catch (error) {
+      console.error('Error loading swing analyses:', error)
+    } finally {
+      setLoadingAnalyses(false)
     }
   }
 
@@ -479,6 +501,9 @@ function PlayerDetailContent() {
           <button onClick={() => setActiveTab('journal')} className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'journal' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
             <div className="flex items-center space-x-2"><BookOpen size={18} /><span>Development Journal</span>{journalEntries.length > 0 && <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">{journalEntries.length}</span>}</div>
           </button>
+          <button onClick={() => setActiveTab('swing-analysis')} className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'swing-analysis' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            <div className="flex items-center space-x-2"><Video size={18} /><span>Swing Analysis</span>{swingAnalyses.length > 0 && <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">{swingAnalyses.length}</span>}</div>
+          </button>
         </nav>
       </div>
 
@@ -504,43 +529,7 @@ function PlayerDetailContent() {
                   />
                 ))}
               </div>
-        
-        {/* Swing Analysis Button */}
-        <button
-          onClick={() => setShowSwingUpload(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-        >
-          <Video size={20} />
-          <span>Analyze Swing</span>
-        </button>
             </div>
-
-      {/* Swing Upload Modal */}
-      {showSwingUpload && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Swing Analysis</h2>
-              <button
-                onClick={() => setShowSwingUpload(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X size={24} />
-              </button>
-            </div>
-            
-            <SwingAnalysisUpload
-              playerId={playerId}
-              playerName={player.name}
-              teamId={teamId!}
-              onSuccess={(analysisId) => {
-                router.push(`/dashboard/swing-analysis/${analysisId}`)
-              }}
-            />
-          </div>
-        </div>
-      )}
-
             {playbooks.length > 0 && (
               <div className="bg-white rounded-lg shadow p-6">
                 <h4 className="font-semibold text-gray-900 mb-4 flex items-center space-x-2"><TrendingUp size={18} className="text-green-600" /><span>Active Playbooks</span></h4>
@@ -666,6 +655,131 @@ function PlayerDetailContent() {
                   </div>
                 )
               })}
+            </div>
+          )}
+        </div>
+      )}
+
+
+      {activeTab === 'swing-analysis' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Swing Analysis History</h2>
+              <p className="text-sm text-gray-500">AI-powered swing mechanics analysis with coaching feedback</p>
+            </div>
+            <button 
+              onClick={() => setShowSwingUpload(true)} 
+              className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
+              <Plus size={18} />
+              <span>New Analysis</span>
+            </button>
+          </div>
+
+          {loadingAnalyses ? (
+            <div className="text-center py-12">
+              <div className="animate-spin h-8 w-8 border-4 border-red-600 border-t-transparent rounded-full mx-auto"></div>
+              <p className="text-gray-600 mt-4">Loading analyses...</p>
+            </div>
+          ) : swingAnalyses.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-12 text-center">
+              <Video className="mx-auto text-gray-300 mb-4" size={64} />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No swing analyses yet</h3>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                Upload a swing video to get AI-powered biomechanical analysis and personalized coaching feedback.
+              </p>
+              <button 
+                onClick={() => setShowSwingUpload(true)}
+                className="inline-flex items-center space-x-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                <Plus size={18} />
+                <span>Upload First Video</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {swingAnalyses.map((analysis) => (
+                <div 
+                  key={analysis.id} 
+                  onClick={() => router.push(`/dashboard/swing-analysis/${analysis.id}`)}
+                  className="bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
+                >
+                  <div className="p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <h3 className="font-semibold text-gray-900">
+                            {new Date(analysis.created_at).toLocaleDateString('en-US', { 
+                              weekday: 'short', 
+                              month: 'short', 
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}
+                          </h3>
+                          <span className="text-sm text-gray-500">
+                            {new Date(analysis.created_at).toLocaleTimeString('en-US', { 
+                              hour: 'numeric', 
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                        
+                        {analysis.analysis_summary && (
+                          <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                            {analysis.analysis_summary}
+                          </p>
+                        )}
+                        
+                        {analysis.identified_issues && analysis.identified_issues.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {analysis.identified_issues.slice(0, 3).map((issue: string, idx: number) => (
+                              <span key={idx} className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
+                                {issue.substring(0, 40)}{issue.length > 40 ? '...' : ''}
+                              </span>
+                            ))}
+                            {analysis.identified_issues.length > 3 && (
+                              <span className="text-xs text-gray-500">
+                                +{analysis.identified_issues.length - 3} more
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="ml-4">
+                        {analysis.status === 'processing' && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            Processing...
+                          </span>
+                        )}
+                        {analysis.status === 'completed' && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            ✓ Complete
+                          </span>
+                        )}
+                        {analysis.status === 'failed' && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            Failed
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {analysis.video_duration_seconds && (
+                      <div className="flex items-center space-x-4 text-xs text-gray-500 mt-2">
+                        <span className="flex items-center space-x-1">
+                          <Clock size={12} />
+                          <span>{analysis.video_duration_seconds.toFixed(1)}s</span>
+                        </span>
+                        {analysis.recommended_drills && analysis.recommended_drills.length > 0 && (
+                          <span>{analysis.recommended_drills.length} recommended drills</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
