@@ -7,17 +7,17 @@ const PROCESSING_SERVICE_URL = process.env.SWING_ANALYZER_URL || 'http://localho
 export async function POST(request: Request) {
   try {
     const cookieStore = cookies()
-const supabase = createServerClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  {
-    cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value
-      },
-    },
-  }
-)
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+        },
+      }
+    )
     
     // Check authentication
     const { data: { session } } = await supabase.auth.getSession()
@@ -36,14 +36,13 @@ const supabase = createServerClient(
       return NextResponse.json({ error: 'Coach not found' }, { status: 404 })
     }
 
-    const formData = await request.formData()
-    const videoFile = formData.get('video') as File
-    const playerId = formData.get('player_id') as string
-    const teamId = formData.get('team_id') as string
+    // Get JSON body (video already uploaded to Supabase from browser)
+    const body = await request.json()
+    const { video_url, player_id, team_id } = body
 
-    if (!videoFile || !playerId || !teamId) {
+    if (!video_url || !player_id || !team_id) {
       return NextResponse.json({ 
-        error: 'Missing required fields: video, player_id, team_id' 
+        error: 'Missing required fields: video_url, player_id, team_id' 
       }, { status: 400 })
     }
 
@@ -51,7 +50,7 @@ const supabase = createServerClient(
     const { data: player } = await supabase
       .from('players')
       .select('id')
-      .eq('id', playerId)
+      .eq('id', player_id)
       .eq('coach_id', coach.id)
       .single()
 
@@ -59,35 +58,14 @@ const supabase = createServerClient(
       return NextResponse.json({ error: 'Player not found' }, { status: 404 })
     }
 
-    // Upload video to Supabase Storage
-    const fileName = `${playerId}/${Date.now()}_${videoFile.name}`
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('swing-videos')
-      .upload(fileName, videoFile, {
-        contentType: videoFile.type,
-        upsert: false
-      })
-
-    if (uploadError) {
-      console.error('Upload error:', uploadError)
-      return NextResponse.json({ 
-        error: 'Failed to upload video' 
-      }, { status: 500 })
-    }
-
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('swing-videos')
-      .getPublicUrl(fileName)
-
     // Create swing_analyses record
     const { data: analysis, error: insertError } = await supabase
       .from('swing_analyses')
       .insert({
-        player_id: playerId,
-        team_id: teamId,
+        player_id: player_id,
+        team_id: team_id,
         coach_id: coach.id,
-        video_url: publicUrl,
+        video_url: video_url,
         status: 'processing'
       })
       .select()
@@ -101,18 +79,16 @@ const supabase = createServerClient(
     }
 
     // Trigger processing service asynchronously
-    // Don't wait for it - let it update the record when done
     fetch(`${PROCESSING_SERVICE_URL}/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        video_url: publicUrl,
+        video_url: video_url,
         analysis_id: analysis.id,
         generate_overlay: true
       })
     }).catch(err => {
       console.error('Failed to trigger processing:', err)
-      // Update record with error
       supabase
         .from('swing_analyses')
         .update({ status: 'failed', error_message: 'Failed to start processing' })
@@ -137,7 +113,18 @@ const supabase = createServerClient(
 // Get analysis by ID
 export async function GET(request: Request) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const cookieStore = cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+        },
+      }
+    )
     
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
