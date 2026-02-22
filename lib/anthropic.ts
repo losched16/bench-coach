@@ -75,6 +75,21 @@ export interface TeamContext {
     next_focus: string[]
     notes?: string
   }>
+  drillResources?: Array<{
+    drill_name: string
+    skill_category: string
+    description: string
+    youtube_url?: string
+    youtube_video_id?: string
+    channel?: string
+    age_range?: string
+    difficulty_level?: string
+    mechanic_focus?: string[]
+    common_flaws_fixed?: string[]
+    equipment_needed?: string[]
+    ai_coaching_notes?: string
+    safety_notes?: string
+  }>
 }
 
 export interface MemorySuggestion {
@@ -295,6 +310,31 @@ When the coach asks about what to work on, what went well, or how practice is go
 - Honor the coach's stated "next focus" areas
 - Note player callouts — celebrate positives, address concerns
 - Factor in energy levels and attendance patterns
+
+${context.drillResources && context.drillResources.length > 0 ? `
+DRILL RESOURCES LIBRARY:
+You have access to a curated library of ${context.drillResources.length} drills with YouTube video demonstrations from trusted channels. When recommending a drill, ALWAYS check this library first and include the YouTube link so the coach can see it demonstrated.
+
+Available drills:
+${context.drillResources.map(d => 
+  `- "${d.drill_name}" (${d.skill_category}, ${d.difficulty_level || 'all levels'})
+     ${d.common_flaws_fixed?.length ? `Fixes: ${d.common_flaws_fixed.join(', ')}` : ''}
+     Ages: ${d.age_range || 'all ages'}
+     ${d.youtube_url ? `📹 Video: ${d.youtube_url}` : ''}
+     ${d.channel ? `Source: ${d.channel}` : ''}
+     ${d.description || ''}`
+).join('\n')}
+
+IMPORTANT INSTRUCTIONS FOR DRILL RECOMMENDATIONS:
+1. When you suggest a drill from the library, ALWAYS include the YouTube link
+2. Credit the source channel (e.g., "Here's a great video from Dominate The Diamond...")
+3. Include the coaching cues if available
+4. Mention safety notes when relevant
+5. Format like this:
+   "I'd recommend the **High Tee Drill** to fix that uppercut. Here's an excellent video demonstration from Dominate The Diamond: https://www.youtube.com/watch?v=..."
+
+This helps coaches who may not know the drill see exactly how it's done with proper form.
+` : ''}
 
 USING DEVELOPMENT JOURNAL DATA:
 When the coach asks about a specific player:
