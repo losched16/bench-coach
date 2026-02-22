@@ -6,6 +6,8 @@ import { createSupabaseComponentClient } from '@/lib/supabase'
 import { Plus, Clock, ChevronDown, ChevronUp, Trash2, Pencil, Sparkles, ClipboardCheck } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import Link from 'next/link'
+import { DrillVideoLookup } from '@/components/DrillVideo'
+import { useDrillResources } from '@/lib/useDrillResources'
 
 
 interface PracticePlan {
@@ -45,6 +47,7 @@ export default function PracticePage() {
   const searchParams = useSearchParams()
   const teamId = searchParams.get('teamId')
   const supabase = createSupabaseComponentClient()
+  const { drills: drillResources, findDrill } = useDrillResources()
 
   const FOCUS_OPTIONS = [
     'throwing',
@@ -399,6 +402,14 @@ export default function PracticePage() {
                           </ul>
                         </div>
                       )}
+
+                      {/* Embedded Drill Video */}
+                      <DrillVideoLookup
+                        drillName={block.title}
+                        drillResources={drillResources}
+                        compact={true}
+                        autoExpand={false}
+                      />
                     </div>
                   ))}
                 </div>
