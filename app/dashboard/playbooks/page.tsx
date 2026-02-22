@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { Book, Play, CheckCircle, Circle, Users, Clock, Target, ChevronDown, ChevronUp, Plus, Trash2, RotateCcw, X, ChevronLeft, ChevronRight, Lightbulb, AlertTriangle, Home } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { DrillVideoLookup } from '@/components/DrillVideo'
+import { useDrillResources } from '@/lib/useDrillResources'
 
 interface PlaybookTemplate {
   id: string
@@ -87,6 +89,7 @@ function PlaybooksPageContent() {
   const searchParams = useSearchParams()
   const teamId = searchParams.get('teamId')
   const supabase = createSupabaseComponentClient()
+  const { drills: drillResources } = useDrillResources()
 
   useEffect(() => {
     if (teamId) {
@@ -462,6 +465,14 @@ function PlaybooksPageContent() {
                     </div>
                   </div>
                 )}
+
+                {/* Embedded Drill Video */}
+                <DrillVideoLookup
+                  drillName={activity.name}
+                  drillResources={drillResources}
+                  compact={true}
+                  autoExpand={false}
+                />
               </div>
             ))}
           </div>
