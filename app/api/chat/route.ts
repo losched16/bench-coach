@@ -222,6 +222,19 @@ export async function POST(request: NextRequest) {
 
     const drillsSummary = savedDrills?.map(d => `${d.title} (${d.category})`) || []
 
+    // Load drill resources library for AI to reference
+    let drillResources: any[] = []
+    try {
+      const { data: resources } = await supabaseAdmin
+        .from('drill_resources')
+        .select('drill_name, skill_category, description, youtube_url, youtube_video_id, channel, age_range, difficulty_level, mechanic_focus, common_flaws_fixed, equipment_needed, ai_coaching_notes, safety_notes')
+        .limit(100)
+
+      drillResources = resources || []
+    } catch (e) {
+      console.warn('Could not load drill resources (table may not exist yet)')
+    }
+
     // Load recent practice recaps
     let practiceRecaps: any[] = []
     try {
@@ -269,6 +282,7 @@ export async function POST(request: NextRequest) {
       memorySummary: memorySummary?.summary,
       activePlaybooks: playbookContext,
       savedDrills: drillsSummary,
+      drillResources: drillResources.length > 0 ? drillResources : undefined,
       practiceRecaps: practiceRecaps.length > 0 ? practiceRecaps : undefined,
     }
 
