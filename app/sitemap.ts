@@ -7,19 +7,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Static pages
   const staticPages: MetadataRoute.Sitemap = [
     {
-      url: 'https://mybenchcoach.com',
+      url: 'https://www.mybenchcoach.com',
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 1,
     },
     {
-      url: 'https://mybenchcoach.com/auth/login',
+      url: 'https://www.mybenchcoach.com/auth/login',
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.5,
     },
     {
-      url: 'https://mybenchcoach.com/auth/signup',
+      url: 'https://www.mybenchcoach.com/auth/signup',
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.8,

@@ -238,7 +238,7 @@ export function SeoPageLayout({ page }: SeoPageLayoutProps) {
             publisher: {
               '@type': 'Organization',
               name: 'BenchCoach',
-              url: 'https://mybenchcoach.com',
+              url: 'https://www.mybenchcoach.com',
             },
             datePublished: page.created_at,
             dateModified: page.updated_at,

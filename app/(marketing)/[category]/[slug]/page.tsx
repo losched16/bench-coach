@@ -48,7 +48,7 @@ export async function generateMetadata({
     }
   }
   
-  const canonicalUrl = page.canonical || `https://mybenchcoach.com/${page.category}/${page.slug}`
+  const canonicalUrl = page.canonical || `https://www.mybenchcoach.com/${page.category}/${page.slug}`
   
   return {
     title: `${page.title} | BenchCoach`,
