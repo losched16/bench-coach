@@ -33,7 +33,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .eq('is_published', true)
   
   const dynamicPages: MetadataRoute.Sitemap = seoPages?.map((page: any) => ({
-    url: `https://mybenchcoach.com/${page.category}/${page.slug}`,
+    url: `https://www.mybenchcoach.com/${page.category}/${page.slug}`,
     lastModified: new Date(page.updated_at),
     changeFrequency: 'monthly' as const,
     priority: page.type === 'hub' ? 0.9 : 0.7,
