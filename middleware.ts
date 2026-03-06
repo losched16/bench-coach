@@ -75,8 +75,11 @@ export async function middleware(request: NextRequest) {
   return response
 }
 
+// 🔥 THIS IS THE FIX - Only run middleware on protected routes
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/dashboard/:path*',
+    '/auth/:path*',
+    '/onboarding/:path*',
   ],
 }
