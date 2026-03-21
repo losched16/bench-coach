@@ -454,7 +454,7 @@ CRITICAL: When you use a drill from the library, you MUST copy the exact "drill_
     const prompt = `Create a ${duration}-minute practice plan for a ${context.team.age_group} ${context.team.skill_level} team.
 
 Focus areas: ${focus.join(', ')}
-${constraints ? `Constraints: ${constraints}` : ''}
+${constraints ? `Additional context: ${constraints}` : ''}
 
 Team context:
 - Currently working on: ${context.team.primary_goals.length > 0 ? context.team.primary_goals.join(', ') : 'Not specified'}
@@ -463,27 +463,43 @@ Team context:
 ${context.teamNotes.length > 0 ? `- Current issues: ${context.teamNotes.map(n => n.note).join('; ')}` : ''}
 ${drillLibrarySection}
 
-Create a DETAILED practice plan. This is for volunteer coaches who may have never coached before — they need step-by-step instructions they can follow like a recipe.
+YOU MUST CREATE AN EXTREMELY DETAILED PRACTICE PLAN. The coach reading this has NEVER coached before. They are a parent who volunteered. They need to read this plan and know EXACTLY what to do, step by step, like following a cooking recipe.
 
-Structure:
-1. Warm-up (age-appropriate, dynamic — not just jogging)
-2. 2-4 focused drill blocks based on focus areas
-3. Game-like activity or competition that reinforces the skills practiced
-4. Cool-down / team talk
+STRUCTURE:
+1. Warm-up (5-10 min) — A SPECIFIC dynamic warm-up with named exercises, reps, and distances. NOT "team jog." Include things like high knees for 30 feet, arm circles 10 each direction, bear crawls, etc.
+2. 2-4 SPECIFIC NAMED DRILLS — Each drill block must be a REAL, NAMED baseball drill (e.g., "Alligator Ground Balls", "Two-Knee Throwing Drill", "Soft Toss Hitting", "Bucket Drill"). NOT vague categories like "Skill Assessment Rotation" or "Throwing Assessment."
+3. A competitive game or scrimmage with SPECIFIC RULES explained
+4. Cool-down / team talk (3-5 min)
 
-DETAIL REQUIREMENTS FOR EVERY BLOCK:
-- "detailed_instructions": Write 4-8 numbered steps explaining EXACTLY how to run this drill. Include player positioning, distances, repetitions, timing, and transitions. A first-time coach should be able to read this and run the drill perfectly.
-- "coaching_cues": Give 4-6 SPECIFIC phrases the coach should say OUT LOUD during the drill. Not generic ("Nice job!") but technical ("Squeeze the glove shut like you're catching an egg", "Step toward your target with your front foot pointing at them", "Get your glove below the ball and scoop up").
-- "common_mistakes": List 3-5 specific mistakes you'll see, with the CORRECTION for each. Format: "Mistake — Correction" (e.g., "Throwing with just the arm — Have them point their front shoulder at the target and step with the opposite foot")
-- "setup": Exactly what equipment is needed and how to arrange players/cones/bases.
-- "equipment": List of equipment needed for this block.
-- "drill_variations": How to make it easier for struggling players AND harder for advanced players.
-- "success_indicators": 2-3 observable signs that players are doing the drill correctly.
+===== MANDATORY RULES — VIOLATIONS WILL BE REJECTED =====
 
-If a drill from the DRILL VIDEO LIBRARY matches what you're recommending, include:
-- "youtube_video_id": The exact video ID from the library
-- "youtube_channel": The channel name
-- "drill_name": The exact drill name from the library
+RULE 1 — NO GENERIC BLOCKS: Every drill block must be a SPECIFIC, NAMED drill. NEVER use vague titles like "Throwing Assessment", "Skill Assessment Rotation", "Hitting Station", or "Fielding Practice." Use the actual drill name like "Rollers Ground Ball Drill" or "One-Knee Throwing Drill."
+
+RULE 2 — DETAILED INSTRUCTIONS ARE MANDATORY: Every block MUST have "detailed_instructions" with 5-10 numbered steps. Each step must include SPECIFIC distances (in feet), SPECIFIC rep counts, SPECIFIC player positioning, and SPECIFIC timing. Example of GOOD:
+"1. Split players into pairs, each pair with one ball. Line them up facing each other 15 feet apart.
+2. Round 1 (2 minutes): One-knee throwing. Both players take a knee (throwing-side knee down). Throw 10 balls back and forth focusing ONLY on wrist snap and follow-through.
+3. Round 2 (2 minutes): Stand up. Move back to 25 feet apart. Throw 10 balls. Coach walks the line checking that every player steps toward their partner with their glove-side foot.
+4. Round 3 (2 minutes): Move back to 35 feet. Throw 10 balls. Players must use full crow-hop: shuffle, skip, throw.
+5. Coach pulls aside any player who needs extra help and demonstrates the grip (two fingers on top, thumb underneath, like holding a TV remote)."
+
+Example of BAD (NEVER do this):
+"Partner throwing to assess arm strength and accuracy" — This tells the coach NOTHING about how to run the drill.
+
+RULE 3 — COACHING CUES MUST BE TECHNICAL: Every block must have 4-6 coaching cues. These are the EXACT words the coach says out loud. They must be SPECIFIC mechanical instructions, NOT cheerleading.
+GOOD cues: "Point your glove at the ball like you're reaching for it", "Step with your LEFT foot toward your target", "Get your glove below the ball — scoop up, never stab down", "Squish the bug with your back foot when you swing"
+BAD cues (NEVER use these): "Nice throw!", "Good effort!", "Hustle!", "Nice try!", "Show me your best!"
+
+RULE 4 — MISTAKES MUST INCLUDE CORRECTIONS: Every block must have 3-5 common mistakes. Each one MUST follow the format "What you'll see — How to fix it." Example:
+"Player throws sidearm — Have them start from one knee to force an overhand slot. Put your hand above their throwing shoulder as a target to reach for."
+NOT just "Rushing" or "Bad form."
+
+RULE 5 — USE DRILL VIDEOS: For EVERY drill block, search the DRILL VIDEO LIBRARY and find the most relevant drill video. If you find one that matches (even partially), you MUST include its youtube_video_id, youtube_channel, and drill_name. Coaches NEED to see what the drill looks like. This is critical — a volunteer coach who has never done the drill needs to watch a 60-second video to understand it.
+
+RULE 6 — EQUIPMENT AND SETUP MUST BE SPECIFIC: "Setup: 3 stations, coaches assess" is NOT acceptable. Instead: "Setup: Place 3 cones in a line 10 feet apart along the third-base line. Coach stands 20 feet away with a bucket of 15 balls. Players line up single-file behind the first cone. You need: bucket of baseballs (15+), 3 cones, 1 glove per player."
+
+RULE 7 — EVERY BLOCK NEEDS VARIATIONS AND SUCCESS INDICATORS:
+- "drill_variations" must explain how to make it EASIER (for the weakest player) and HARDER (for the kid who's already good). Be specific.
+- "success_indicators" must list 2-3 things the coach can OBSERVE that tell them the drill is working. Example: "Players are stepping toward their target on every throw", "You hear the ball pop in the glove consistently."
 
 Format as JSON:
 {
@@ -491,27 +507,35 @@ Format as JSON:
   "blocks": [
     {
       "type": "warmup|drill|station|game|cooldown",
-      "title": "Block Title",
+      "title": "Specific Drill Name",
       "minutes": 10,
-      "description": "One-sentence overview of this block",
-      "detailed_instructions": "1. Line players up in two lines facing each other, about 15 feet apart...\\n2. Each player needs a glove and one ball per pair...\\n3. Start with 5 wrist-flick throws (elbow on glove, flick only)...\\n4. Back up to 25 feet and throw 10 full throws focusing on stepping toward partner...\\n(continue with specific steps)",
-      "setup": "Equipment and field arrangement details",
-      "equipment": ["baseballs", "gloves", "cones"],
-      "coaching_cues": ["Specific technical phrase 1", "Specific technical phrase 2"],
-      "common_mistakes": ["Mistake — Correction", "Mistake — Correction"],
-      "drill_variations": "Easier: ... Harder: ...",
-      "success_indicators": ["What good execution looks like"],
-      "youtube_video_id": "abc123 (only if from drill library)",
-      "youtube_channel": "Channel Name (only if from drill library)",
-      "drill_name": "Exact Drill Name (only if from drill library)"
+      "description": "One-sentence overview",
+      "detailed_instructions": "1. [Step with distances, reps, positions]\\n2. [Next step]\\n3. [Continue for 5-10 steps]",
+      "setup": "Exact equipment layout and player arrangement with distances",
+      "equipment": ["baseballs (15+)", "cones (4)", "batting tee", "gloves"],
+      "coaching_cues": ["Technical phrase coach says out loud", "Another specific mechanical cue"],
+      "common_mistakes": ["What you'll see — How to fix it", "Another mistake — Its correction"],
+      "drill_variations": "Easier: [specific modification]. Harder: [specific progression].",
+      "success_indicators": ["Observable sign 1", "Observable sign 2"],
+      "youtube_video_id": "exact_id_from_library",
+      "youtube_channel": "Channel Name",
+      "drill_name": "Exact Drill Name From Library"
     }
   ]
 }`
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 6000,
-      system: `You are an expert youth baseball coach who has coached thousands of practices across all age groups. You create incredibly detailed, actionable practice plans that a first-time volunteer parent-coach can follow step by step. You know that most youth coaches are dads and moms who volunteered — they need SPECIFIC instructions, not vague suggestions. Every drill should be explained like a recipe: exact setup, exact steps, exact words to say. Always return valid JSON.`,
+      max_tokens: 8000,
+      system: `You are Coach Mike, a 25-year veteran youth baseball coach who has trained over 500 volunteer parent-coaches. You are famous for your incredibly detailed practice plans that even a first-day parent volunteer can follow perfectly.
+
+Your practice plans are like recipes — every drill has exact distances, exact reps, exact words to say, and a YouTube video to watch. You NEVER write vague plans. You NEVER use generic coaching cues like "Nice job" or "Good effort." You ALWAYS use specific, named drills — never vague categories like "Skill Assessment" or "Throwing Practice."
+
+You believe that the #1 reason youth practices fail is because the coach doesn't know EXACTLY what to do next. Your plans eliminate that problem completely.
+
+When you have a drill video library available, you ALWAYS match drills to videos so the coach can SEE what the drill looks like before running it.
+
+Always return valid JSON. No text outside the JSON.`,
       messages: [{ role: 'user', content: prompt }],
     })
 
