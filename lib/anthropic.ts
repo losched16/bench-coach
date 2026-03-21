@@ -424,9 +424,33 @@ export async function generatePracticePlan(
   duration: number,
   focus: string[],
   context: TeamContext,
-  constraints?: string
+  constraints?: string,
+  drillResources?: any[]
 ): Promise<any> {
   try {
+    // Build drill library context for the prompt
+    let drillLibrarySection = ''
+    if (drillResources && drillResources.length > 0) {
+      drillLibrarySection = `
+
+DRILL VIDEO LIBRARY:
+You have access to a curated library of ${drillResources.length} drills with YouTube video demonstrations. When a drill from this library fits the practice plan, USE IT by including its exact drill_name and youtube_video_id in the block. This lets coaches see a video demo of exactly how to run the drill.
+
+Available drills:
+${drillResources.map(d =>
+  `- "${d.drill_name}" (${d.skill_category}, ${d.difficulty_level || 'all levels'}, Ages: ${d.age_range || 'all'})
+     ${d.youtube_video_id ? `youtube_video_id: "${d.youtube_video_id}"` : ''}
+     ${d.channel ? `Channel: ${d.channel}` : ''}
+     ${d.description || ''}
+     ${d.mechanic_focus?.length ? `Mechanics: ${d.mechanic_focus.join(', ')}` : ''}
+     ${d.common_flaws_fixed?.length ? `Fixes: ${d.common_flaws_fixed.join(', ')}` : ''}
+     ${d.equipment_needed?.length ? `Equipment: ${d.equipment_needed.join(', ')}` : ''}
+     ${d.ai_coaching_notes || ''}`
+).join('\n')}
+
+CRITICAL: When you use a drill from the library, you MUST copy the exact "drill_name" and "youtube_video_id" into your JSON output. Do NOT make up video IDs.`
+    }
+
     const prompt = `Create a ${duration}-minute practice plan for a ${context.team.age_group} ${context.team.skill_level} team.
 
 Focus areas: ${focus.join(', ')}
@@ -437,23 +461,31 @@ Team context:
 - Areas showing improvement: ${context.team.improved_areas && context.team.improved_areas.length > 0 ? context.team.improved_areas.join(', ') : 'None yet'}
 - Mastered skills (lighter maintenance): ${context.team.mastered_areas && context.team.mastered_areas.length > 0 ? context.team.mastered_areas.join(', ') : 'None yet'}
 ${context.teamNotes.length > 0 ? `- Current issues: ${context.teamNotes.map(n => n.note).join('; ')}` : ''}
+${drillLibrarySection}
 
-Create a practice plan with time blocks that includes:
-1. Warm-up (age-appropriate)
-2. 3 stations or drills focused on the goals
-3. Game-like activity or competition
-4. Cool-down / reflection
+Create a DETAILED practice plan. This is for volunteer coaches who may have never coached before — they need step-by-step instructions they can follow like a recipe.
 
-Prioritize the focus areas and current work-on items. For improved areas, include challenging progressions. For mastered areas, only light maintenance if relevant.
+Structure:
+1. Warm-up (age-appropriate, dynamic — not just jogging)
+2. 2-4 focused drill blocks based on focus areas
+3. Game-like activity or competition that reinforces the skills practiced
+4. Cool-down / team talk
 
-For each block, include:
-- Time allocation
-- Setup instructions
-- Coaching cues (what to say)
-- Common mistakes to watch for
-- Adjustments for different skill levels
+DETAIL REQUIREMENTS FOR EVERY BLOCK:
+- "detailed_instructions": Write 4-8 numbered steps explaining EXACTLY how to run this drill. Include player positioning, distances, repetitions, timing, and transitions. A first-time coach should be able to read this and run the drill perfectly.
+- "coaching_cues": Give 4-6 SPECIFIC phrases the coach should say OUT LOUD during the drill. Not generic ("Nice job!") but technical ("Squeeze the glove shut like you're catching an egg", "Step toward your target with your front foot pointing at them", "Get your glove below the ball and scoop up").
+- "common_mistakes": List 3-5 specific mistakes you'll see, with the CORRECTION for each. Format: "Mistake — Correction" (e.g., "Throwing with just the arm — Have them point their front shoulder at the target and step with the opposite foot")
+- "setup": Exactly what equipment is needed and how to arrange players/cones/bases.
+- "equipment": List of equipment needed for this block.
+- "drill_variations": How to make it easier for struggling players AND harder for advanced players.
+- "success_indicators": 2-3 observable signs that players are doing the drill correctly.
 
-Format as JSON with this structure:
+If a drill from the DRILL VIDEO LIBRARY matches what you're recommending, include:
+- "youtube_video_id": The exact video ID from the library
+- "youtube_channel": The channel name
+- "drill_name": The exact drill name from the library
+
+Format as JSON:
 {
   "title": "Practice Plan Title",
   "blocks": [
@@ -461,19 +493,25 @@ Format as JSON with this structure:
       "type": "warmup|drill|station|game|cooldown",
       "title": "Block Title",
       "minutes": 10,
-      "description": "What we're doing",
-      "setup": "How to set it up",
-      "coaching_cues": ["Cue 1", "Cue 2"],
-      "common_mistakes": ["Mistake 1", "Mistake 2"],
-      "adjustments": "How to make easier/harder"
+      "description": "One-sentence overview of this block",
+      "detailed_instructions": "1. Line players up in two lines facing each other, about 15 feet apart...\\n2. Each player needs a glove and one ball per pair...\\n3. Start with 5 wrist-flick throws (elbow on glove, flick only)...\\n4. Back up to 25 feet and throw 10 full throws focusing on stepping toward partner...\\n(continue with specific steps)",
+      "setup": "Equipment and field arrangement details",
+      "equipment": ["baseballs", "gloves", "cones"],
+      "coaching_cues": ["Specific technical phrase 1", "Specific technical phrase 2"],
+      "common_mistakes": ["Mistake — Correction", "Mistake — Correction"],
+      "drill_variations": "Easier: ... Harder: ...",
+      "success_indicators": ["What good execution looks like"],
+      "youtube_video_id": "abc123 (only if from drill library)",
+      "youtube_channel": "Channel Name (only if from drill library)",
+      "drill_name": "Exact Drill Name (only if from drill library)"
     }
   ]
 }`
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 3000,
-      system: 'You are an expert youth baseball coach creating practice plans. Always return valid JSON.',
+      max_tokens: 6000,
+      system: `You are an expert youth baseball coach who has coached thousands of practices across all age groups. You create incredibly detailed, actionable practice plans that a first-time volunteer parent-coach can follow step by step. You know that most youth coaches are dads and moms who volunteered — they need SPECIFIC instructions, not vague suggestions. Every drill should be explained like a recipe: exact setup, exact steps, exact words to say. Always return valid JSON.`,
       messages: [{ role: 'user', content: prompt }],
     })
 

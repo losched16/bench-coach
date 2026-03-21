@@ -85,6 +85,12 @@ export async function POST(request: NextRequest) {
       fullConstraints += `\n\nRECENT PRACTICE RECAPS (use these to make this plan better):\n${recapContext}`
     }
 
+    // Load drill resources (same as chat API)
+    const { data: drillResources } = await supabaseAdmin
+      .from('drill_resources')
+      .select('drill_name, skill_category, description, youtube_url, youtube_video_id, channel, age_range, difficulty_level, mechanic_focus, common_flaws_fixed, equipment_needed, ai_coaching_notes, safety_notes')
+      .limit(100)
+
     // Build context
     const context: TeamContext = {
       team: {
@@ -100,7 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate practice plan
-    const plan = await generatePracticePlan(duration, focus, context, fullConstraints)
+    const plan = await generatePracticePlan(duration, focus, context, fullConstraints, drillResources || [])
 
     return NextResponse.json(plan)
 
