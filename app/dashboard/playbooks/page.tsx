@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { Book, Play, CheckCircle, Circle, Users, Clock, Target, ChevronDown, ChevronUp, Plus, Trash2, RotateCcw, X, ChevronLeft, ChevronRight, Lightbulb, AlertTriangle, Home } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
-import { DrillVideoLookup } from '@/components/DrillVideo'
+import { DrillVideo, DrillVideoLookup } from '@/components/DrillVideo'
 import { useDrillResources } from '@/lib/useDrillResources'
 
 interface PlaybookTemplate {
@@ -54,9 +54,17 @@ interface SessionDetail {
     duration: string
     setup: string
     instructions: string
+    detailed_instructions?: string
     reps: string
     coaching_cues: string[]
     success_indicator: string
+    common_mistakes?: string[]
+    drill_variations?: string
+    success_indicators?: string[]
+    equipment?: string[]
+    youtube_video_id?: string
+    youtube_channel?: string
+    drill_name?: string
   }>
   common_problems: Array<{
     problem: string
@@ -419,6 +427,19 @@ function PlaybooksPageContent() {
                   </div>
                 </div>
 
+                {/* Equipment */}
+                {activity.equipment && activity.equipment.length > 0 && (
+                  <div className="mb-4">
+                    <div className="flex flex-wrap gap-1.5">
+                      {activity.equipment.map((item, eIdx) => (
+                        <span key={eIdx} className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full border border-gray-200">
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Setup */}
                 {activity.setup && (
                   <div className="mb-4">
@@ -429,50 +450,98 @@ function PlaybooksPageContent() {
                   </div>
                 )}
 
-                {/* Instructions */}
-                <div className="mb-4">
-                  <div className="text-sm font-medium text-gray-700 mb-1">Instructions:</div>
-                  <div className="text-sm text-gray-600">
-                    {activity.instructions}
+                {/* Detailed Instructions (preferred) or regular Instructions */}
+                {(activity.detailed_instructions || activity.instructions) && (
+                  <div className="mb-4">
+                    <div className="text-sm font-semibold text-blue-800 mb-1.5 uppercase tracking-wide">
+                      {activity.detailed_instructions ? '📋 How to Run This Drill' : 'Instructions'}
+                    </div>
+                    <div className="text-sm text-gray-700 bg-blue-50 p-4 rounded-lg border border-blue-100 whitespace-pre-line leading-relaxed">
+                      {activity.detailed_instructions || activity.instructions}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Coaching Cues */}
                 {activity.coaching_cues && activity.coaching_cues.length > 0 && (
                   <div className="mb-4">
-                    <div className="text-sm font-medium text-gray-700 mb-2">Coaching Cues (say these!):</div>
+                    <div className="text-sm font-semibold text-gray-700 mb-2">🗣️ Say This Out Loud:</div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {activity.coaching_cues.map((cue, cueIdx) => (
-                        <div key={cueIdx} className="flex items-start space-x-2 text-sm">
-                          <span className="text-blue-500 font-bold">"</span>
-                          <span className="text-gray-700 italic">{cue}</span>
-                          <span className="text-blue-500 font-bold">"</span>
+                        <div key={cueIdx} className="flex items-start space-x-2 text-sm bg-yellow-50 border border-yellow-100 rounded-lg p-2">
+                          <span className="text-yellow-600 font-bold shrink-0">💬</span>
+                          <span className="text-gray-700 italic">&ldquo;{cue}&rdquo;</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* Success Indicator */}
-                {activity.success_indicator && (
-                  <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-100">
-                    <div className="flex items-start space-x-2">
-                      <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={16} />
-                      <div>
-                        <span className="text-sm font-medium text-green-800">Success looks like: </span>
-                        <span className="text-sm text-green-700">{activity.success_indicator}</span>
-                      </div>
+                {/* Common Mistakes */}
+                {activity.common_mistakes && activity.common_mistakes.length > 0 && (
+                  <div className="mb-4">
+                    <div className="text-sm font-semibold text-gray-700 mb-2">⚠️ Common Mistakes & Fixes:</div>
+                    <div className="space-y-1.5">
+                      {activity.common_mistakes.map((mistake, mIdx) => (
+                        <div key={mIdx} className="text-sm text-gray-700 bg-red-50 border border-red-100 rounded-lg p-2.5">
+                          {mistake}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
 
-                {/* Embedded Drill Video */}
-                <DrillVideoLookup
-                  drillName={activity.name}
-                  drillResources={drillResources}
-                  compact={true}
-                  autoExpand={false}
-                />
+                {/* Drill Variations */}
+                {activity.drill_variations && (
+                  <div className="mb-4">
+                    <div className="text-sm font-semibold text-gray-700 mb-1">🔄 Variations:</div>
+                    <div className="text-sm text-gray-600 bg-purple-50 border border-purple-100 rounded-lg p-3">
+                      {activity.drill_variations}
+                    </div>
+                  </div>
+                )}
+
+                {/* Success Indicator(s) */}
+                {(activity.success_indicator || (activity.success_indicators && activity.success_indicators.length > 0)) && (
+                  <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-100">
+                    <div className="text-sm font-semibold text-green-800 mb-1">✅ Success Looks Like:</div>
+                    {activity.success_indicators && activity.success_indicators.length > 0 ? (
+                      <ul className="space-y-1">
+                        {activity.success_indicators.map((ind, sIdx) => (
+                          <li key={sIdx} className="flex items-start space-x-2 text-sm text-green-700">
+                            <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={14} />
+                            <span>{ind}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="flex items-start space-x-2">
+                        <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={16} />
+                        <span className="text-sm text-green-700">{activity.success_indicator}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Embedded Drill Video - direct embed if video_id exists, otherwise lookup */}
+                {activity.youtube_video_id ? (
+                  <div className="mt-4">
+                    <DrillVideo
+                      drillName={activity.drill_name || activity.name}
+                      youtubeVideoId={activity.youtube_video_id}
+                      channel={activity.youtube_channel}
+                      compact={false}
+                      autoExpand={false}
+                    />
+                  </div>
+                ) : (
+                  <DrillVideoLookup
+                    drillName={activity.name}
+                    drillResources={drillResources}
+                    compact={true}
+                    autoExpand={false}
+                  />
+                )}
               </div>
             ))}
           </div>
