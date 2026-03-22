@@ -555,3 +555,90 @@ Always return valid JSON. No text outside the JSON.`,
     throw new Error('Failed to generate practice plan')
   }
 }
+
+export async function generateReplacementBlock(
+  ageGroup: string,
+  blockToReplace: any,
+  otherBlocks: any[],
+  coachNote: string,
+  drillResources?: any[]
+): Promise<any> {
+  try {
+    let drillLibrarySection = ''
+    if (drillResources && drillResources.length > 0) {
+      drillLibrarySection = `\nDRILL VIDEO LIBRARY (${drillResources.length} drills available):
+${drillResources.map(d =>
+  `- "${d.drill_name}" (${d.skill_category}, ${d.difficulty_level || 'all levels'}, Ages: ${d.age_range || 'all'})
+     ${d.youtube_video_id ? `youtube_video_id: "${d.youtube_video_id}"` : ''}
+     ${d.channel ? `Channel: ${d.channel}` : ''}
+     ${d.description || ''}`
+).join('\n')}
+
+CRITICAL: When you use a drill from the library, copy the exact "drill_name" and "youtube_video_id" into your JSON output.`
+    }
+
+    const otherDrillNames = otherBlocks.map(b => b.title).join(', ')
+
+    const prompt = `I'm coaching a ${ageGroup} youth baseball team. I have a practice plan but I want to REPLACE one specific drill block.
+
+THE DRILL I WANT TO REPLACE:
+- Title: "${blockToReplace.title}"
+- Type: ${blockToReplace.type || 'drill'}
+- Duration: ${blockToReplace.minutes} minutes
+- Description: ${blockToReplace.description || 'N/A'}
+
+OTHER DRILLS ALREADY IN THIS PLAN (do NOT duplicate these):
+${otherDrillNames}
+
+${coachNote ? `COACH'S REQUEST: "${coachNote}"` : 'The coach wants a different drill that still fits this practice. Suggest something engaging and age-appropriate.'}
+${drillLibrarySection}
+
+Generate ONE replacement drill block that:
+1. Is a SPECIFIC, NAMED drill (not a vague category)
+2. Fits the ${ageGroup} age group
+3. Takes approximately ${blockToReplace.minutes} minutes
+4. Is the same type: ${blockToReplace.type || 'drill'}
+5. Does NOT duplicate any drill already in the plan
+6. Has full detailed instructions a first-time coach can follow
+7. Matches a drill video from the library if one exists
+
+Return ONLY valid JSON for a single block:
+{
+  "type": "${blockToReplace.type || 'drill'}",
+  "title": "Specific Drill Name",
+  "minutes": ${blockToReplace.minutes},
+  "description": "One-sentence overview",
+  "detailed_instructions": "1. [Step with distances, reps]\\n2. [Next step]\\n(5-10 steps)",
+  "setup": "Equipment layout and player arrangement",
+  "equipment": ["list", "of", "equipment"],
+  "coaching_cues": ["Technical phrase 1", "Technical phrase 2"],
+  "common_mistakes": ["Mistake — Correction", "Mistake — Correction"],
+  "drill_variations": "Easier: ... Harder: ...",
+  "success_indicators": ["Observable sign 1", "Observable sign 2"],
+  "youtube_video_id": "exact_id_from_library_if_match",
+  "youtube_channel": "Channel Name",
+  "drill_name": "Exact Drill Name From Library"
+}`
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 3000,
+      system: `You are Coach Mike, a 25-year veteran youth baseball coach. You create incredibly detailed drill instructions that a first-time volunteer parent-coach can follow perfectly. Every drill has exact distances, reps, words to say, and a YouTube video when available. Always return valid JSON. No text outside the JSON.`,
+      messages: [{ role: 'user', content: prompt }],
+    })
+
+    const content = response.content[0].type === 'text'
+      ? response.content[0].text
+      : ''
+
+    const jsonMatch = content.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0])
+    }
+
+    throw new Error('Failed to parse replacement block')
+  } catch (error) {
+    console.error('Replacement block generation error:', error)
+    throw new Error('Failed to generate replacement block')
+  }
+}

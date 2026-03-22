@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
-import { Plus, Clock, ChevronDown, ChevronUp, Trash2, Pencil, Sparkles, ClipboardCheck } from 'lucide-react'
+import { Plus, Clock, ChevronDown, ChevronUp, Trash2, Pencil, Sparkles, ClipboardCheck, RefreshCw, Search, X } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import Link from 'next/link'
 import { DrillVideo, DrillVideoLookup } from '@/components/DrillVideo'
@@ -43,7 +43,18 @@ export default function PracticePage() {
     coaching_cues: string
   }>>([{ title: '', minutes: 10, description: '', coaching_cues: '' }])
   const [savingCustom, setSavingCustom] = useState(false)
-  
+
+  // Swap drill state
+  const [swapModal, setSwapModal] = useState<{ planId: string; blockIndex: number; block: any } | null>(null)
+  const [swapTab, setSwapTab] = useState<'ai' | 'library'>('ai')
+  const [swapNote, setSwapNote] = useState('')
+  const [swapGenerating, setSwapGenerating] = useState(false)
+  const [swapPreview, setSwapPreview] = useState<any>(null)
+  const [swapSaving, setSwapSaving] = useState(false)
+  const [librarySearch, setLibrarySearch] = useState('')
+  const [libraryCategory, setLibraryCategory] = useState('all')
+  const [teamAgeGroup, setTeamAgeGroup] = useState('8U')
+
   const searchParams = useSearchParams()
   const teamId = searchParams.get('teamId')
   const supabase = createSupabaseComponentClient()
@@ -64,6 +75,7 @@ export default function PracticePage() {
   useEffect(() => {
     if (teamId) {
       loadPlans()
+      loadTeam()
     }
   }, [teamId])
 
@@ -83,6 +95,109 @@ export default function PracticePage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const loadTeam = async () => {
+    try {
+      const { data } = await supabase
+        .from('teams')
+        .select('age_group')
+        .eq('id', teamId)
+        .single()
+      if (data) setTeamAgeGroup(data.age_group || '8U')
+    } catch (e) { /* ignore */ }
+  }
+
+  const openSwapModal = (planId: string, blockIndex: number, block: any) => {
+    setSwapModal({ planId, blockIndex, block })
+    setSwapTab('ai')
+    setSwapNote('')
+    setSwapPreview(null)
+    setLibrarySearch('')
+    setLibraryCategory('all')
+  }
+
+  const handleAISwap = async () => {
+    if (!swapModal) return
+    setSwapGenerating(true)
+    setSwapPreview(null)
+    try {
+      const plan = plans.find(p => p.id === swapModal.planId)
+      const allBlocks = Array.isArray(plan?.content) ? plan.content : plan?.content?.blocks || []
+      const otherBlocks = allBlocks.filter((_: any, i: number) => i !== swapModal.blockIndex)
+
+      const response = await fetch('/api/practice-plan/swap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamId,
+          ageGroup: teamAgeGroup,
+          blockToReplace: swapModal.block,
+          otherBlocks,
+          coachNote: swapNote,
+        }),
+      })
+
+      if (!response.ok) throw new Error('Failed to generate replacement')
+      const newBlock = await response.json()
+      setSwapPreview(newBlock)
+    } catch (error) {
+      console.error('Swap error:', error)
+      alert('Failed to generate replacement drill')
+    } finally {
+      setSwapGenerating(false)
+    }
+  }
+
+  const confirmSwap = async (newBlock: any) => {
+    if (!swapModal) return
+    setSwapSaving(true)
+    try {
+      const plan = plans.find(p => p.id === swapModal.planId)
+      if (!plan) return
+
+      const blocks = Array.isArray(plan.content) ? [...plan.content] : [...(plan.content?.blocks || [])]
+      blocks[swapModal.blockIndex] = newBlock
+
+      const updatedContent = Array.isArray(plan.content) ? blocks : { ...plan.content, blocks }
+
+      const { error } = await supabase
+        .from('practice_plans')
+        .update({ content: updatedContent })
+        .eq('id', swapModal.planId)
+
+      if (error) throw error
+
+      // Update local state
+      setPlans(prev => prev.map(p =>
+        p.id === swapModal.planId ? { ...p, content: updatedContent } : p
+      ))
+      setSwapModal(null)
+    } catch (error) {
+      console.error('Save error:', error)
+      alert('Failed to save replacement drill')
+    } finally {
+      setSwapSaving(false)
+    }
+  }
+
+  const handleLibraryPick = (drill: any) => {
+    const newBlock = {
+      type: swapModal?.block?.type || 'drill',
+      title: drill.drill_name,
+      minutes: swapModal?.block?.minutes || 10,
+      description: drill.description || '',
+      setup: drill.equipment_needed?.length ? `Equipment: ${drill.equipment_needed.join(', ')}` : '',
+      equipment: drill.equipment_needed || [],
+      coaching_cues: drill.ai_coaching_notes ? [drill.ai_coaching_notes] : [],
+      common_mistakes: [],
+      drill_variations: '',
+      success_indicators: [],
+      youtube_video_id: drill.youtube_video_id || undefined,
+      youtube_channel: drill.channel || undefined,
+      drill_name: drill.drill_name,
+    }
+    confirmSwap(newBlock)
   }
 
   const toggleFocus = (focus: string) => {
@@ -383,7 +498,16 @@ export default function PracticePage() {
                             </span>
                             <h4 className="font-semibold text-gray-900 text-base">{block.title}</h4>
                           </div>
-                          <span className="text-sm font-medium text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200">{block.minutes} min</span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => openSwapModal(plan.id, idx, block)}
+                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Swap this drill"
+                            >
+                              <RefreshCw size={15} />
+                            </button>
+                            <span className="text-sm font-medium text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200">{block.minutes} min</span>
+                          </div>
                         </div>
                         {block.description && (
                           <p className="text-sm text-gray-600 mt-2 ml-11">{block.description}</p>
@@ -598,6 +722,208 @@ export default function PracticePage() {
               >
                 Delete
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Swap Drill Modal */}
+      {swapModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Swap Drill</h3>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  Replacing: <span className="font-medium">{swapModal.block.title}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setSwapModal(null)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex border-b border-gray-200">
+              <button
+                onClick={() => { setSwapTab('ai'); setSwapPreview(null) }}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                  swapTab === 'ai'
+                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Sparkles size={16} className="inline mr-2" />
+                AI Suggestion
+              </button>
+              <button
+                onClick={() => setSwapTab('library')}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                  swapTab === 'library'
+                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Search size={16} className="inline mr-2" />
+                Pick from Library
+              </button>
+            </div>
+
+            {/* Tab Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {swapTab === 'ai' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      What would you prefer instead? <span className="text-gray-400">(optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={swapNote}
+                      onChange={(e) => setSwapNote(e.target.value)}
+                      placeholder="e.g., something simpler for beginners, a catching drill, a fun game..."
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <button
+                    onClick={handleAISwap}
+                    disabled={swapGenerating}
+                    className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium"
+                  >
+                    {swapGenerating ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <RefreshCw size={16} className="animate-spin" />
+                        Generating replacement...
+                      </span>
+                    ) : 'Generate Replacement Drill'}
+                  </button>
+
+                  {/* AI Preview */}
+                  {swapPreview && (
+                    <div className="border border-green-200 rounded-lg overflow-hidden bg-green-50">
+                      <div className="px-4 py-3 border-b border-green-200 flex items-center justify-between">
+                        <div>
+                          <h4 className="font-semibold text-gray-900">{swapPreview.title}</h4>
+                          <p className="text-sm text-gray-600 mt-0.5">{swapPreview.description}</p>
+                        </div>
+                        <span className="text-xs bg-white px-2 py-1 rounded-full border border-gray-200">{swapPreview.minutes} min</span>
+                      </div>
+                      <div className="px-4 py-3 space-y-3">
+                        {swapPreview.detailed_instructions && (
+                          <div className="bg-white rounded-lg p-3 border border-green-200">
+                            <span className="text-xs font-semibold text-blue-800 uppercase">How to Run This Drill</span>
+                            <div className="text-sm text-gray-800 mt-1.5 whitespace-pre-line leading-relaxed max-h-40 overflow-y-auto">
+                              {swapPreview.detailed_instructions}
+                            </div>
+                          </div>
+                        )}
+                        {swapPreview.coaching_cues && swapPreview.coaching_cues.length > 0 && (
+                          <div>
+                            <span className="text-xs font-semibold text-gray-600">Coaching Cues:</span>
+                            <div className="flex flex-wrap gap-1.5 mt-1">
+                              {swapPreview.coaching_cues.slice(0, 3).map((cue: string, i: number) => (
+                                <span key={i} className="text-xs bg-white border border-green-200 rounded px-2 py-1 italic">"{cue}"</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {swapPreview.youtube_video_id && (
+                          <div className="text-xs text-gray-500 flex items-center gap-1">
+                            <span className="text-red-500">&#9654;</span>
+                            Video included: {swapPreview.drill_name || swapPreview.title} via {swapPreview.youtube_channel}
+                          </div>
+                        )}
+                      </div>
+                      <div className="px-4 py-3 border-t border-green-200 flex gap-3">
+                        <button
+                          onClick={handleAISwap}
+                          disabled={swapGenerating}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
+                        >
+                          {swapGenerating ? 'Generating...' : 'Try Another'}
+                        </button>
+                        <button
+                          onClick={() => confirmSwap(swapPreview)}
+                          disabled={swapSaving}
+                          className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+                        >
+                          {swapSaving ? 'Saving...' : 'Use This Drill'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {swapTab === 'library' && (
+                <div className="space-y-4">
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      value={librarySearch}
+                      onChange={(e) => setLibrarySearch(e.target.value)}
+                      placeholder="Search drills..."
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <select
+                      value={libraryCategory}
+                      onChange={(e) => setLibraryCategory(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="all">All Categories</option>
+                      {[...new Set(drillResources.map((d: any) => d.skill_category))].sort().map((cat: any) => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {drillResources
+                      .filter((d: any) => {
+                        const matchesSearch = !librarySearch ||
+                          d.drill_name?.toLowerCase().includes(librarySearch.toLowerCase()) ||
+                          d.description?.toLowerCase().includes(librarySearch.toLowerCase())
+                        const matchesCat = libraryCategory === 'all' || d.skill_category === libraryCategory
+                        return matchesSearch && matchesCat
+                      })
+                      .map((drill: any, i: number) => (
+                        <div
+                          key={i}
+                          className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-900 text-sm truncate">{drill.drill_name}</span>
+                              {drill.youtube_video_id && (
+                                <span className="text-red-500 shrink-0" title="Has video">&#9654;</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-xs text-gray-500">{drill.skill_category}</span>
+                              {drill.difficulty_level && (
+                                <span className="text-xs text-gray-400">• {drill.difficulty_level}</span>
+                              )}
+                              {drill.channel && (
+                                <span className="text-xs text-gray-400">• {drill.channel}</span>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleLibraryPick(drill)}
+                            disabled={swapSaving}
+                            className="shrink-0 ml-3 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+                          >
+                            {swapSaving ? '...' : 'Use This'}
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
