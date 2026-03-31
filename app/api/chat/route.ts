@@ -264,6 +264,38 @@ export async function POST(request: NextRequest) {
       console.warn('Could not load practice recaps (columns may not exist yet)')
     }
 
+    // Load player game stats for AI context
+    let playerStats: any[] = []
+    try {
+      const { data: stats } = await supabaseAdmin
+        .from('player_season_batting')
+        .select('*')
+        .eq('team_id', teamId)
+
+      if (stats && stats.length > 0) {
+        // Also load recent game log for each player (last 3 games)
+        for (const ps of stats) {
+          const { data: recentGames } = await supabaseAdmin
+            .from('player_game_stats')
+            .select('hits, at_bats, game_notes, game:games(game_date, opponent)')
+            .eq('team_player_id', ps.team_player_id)
+            .order('created_at', { ascending: false })
+            .limit(3)
+
+          ps.recent_games = recentGames?.map((g: any) => ({
+            date: g.game?.game_date,
+            opponent: g.game?.opponent,
+            hits: g.hits || 0,
+            at_bats: g.at_bats || 0,
+            notes: g.game_notes,
+          })) || []
+        }
+        playerStats = stats
+      }
+    } catch (e) {
+      console.warn('Could not load player stats (tables may not exist yet)')
+    }
+
     // Build context
     const context: TeamContext = {
       team: {
@@ -284,6 +316,7 @@ export async function POST(request: NextRequest) {
       savedDrills: drillsSummary,
       drillResources: drillResources.length > 0 ? drillResources : undefined,
       practiceRecaps: practiceRecaps.length > 0 ? practiceRecaps : undefined,
+      playerStats: playerStats.length > 0 ? playerStats : undefined,
     }
 
     // Convert history
