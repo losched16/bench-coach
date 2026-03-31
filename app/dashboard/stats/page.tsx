@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createSupabaseComponentClient } from '@/lib/supabase'
 import {
   BarChart3, Plus, Trophy, TrendingUp, ChevronRight, Calendar,
   Star, Target, Zap, Award, Edit2, Trash2, ChevronDown, ChevronUp,
@@ -91,7 +91,7 @@ interface PlayerStatEntry {
 // ── Main Component ─────────────────────────────────────
 
 export default function StatsPage() {
-  const supabase = createClientComponentClient()
+  const supabase = createSupabaseComponentClient()
   const [teamId, setTeamId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [games, setGames] = useState<Game[]>([])
