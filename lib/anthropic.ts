@@ -340,12 +340,15 @@ When the coach asks about what to work on, what went well, or how practice is go
 ${context.playerStats && context.playerStats.length > 0 ? `
 PLAYER GAME STATS (Season):
 ${context.playerStats.map(ps => {
-  let statLine = `${ps.player_name}${ps.jersey_number ? ` (#${ps.jersey_number})` : ''}: ${ps.games_played} games`
+  let statLine = `${ps.player_name}${ps.jersey_number ? ` (#${ps.jersey_number})` : ''}: ${ps.games_played || 0} games`
   if (ps.total_ab > 0) {
-    statLine += ` | AVG: ${ps.batting_avg.toFixed(3)} | OBP: ${ps.obp.toFixed(3)} | SLG: ${ps.slg.toFixed(3)} | OPS: ${(ps.obp + ps.slg).toFixed(3)}`
-    statLine += `\n   ${ps.total_hits}H, ${ps.total_doubles}×2B, ${ps.total_triples}×3B, ${ps.total_hr}HR, ${ps.total_rbi}RBI, ${ps.total_runs}R, ${ps.total_walks}BB, ${ps.total_strikeouts}K, ${ps.total_sb}SB`
+    const avg = Number(ps.batting_avg) || 0
+    const obp = Number(ps.obp) || 0
+    const slg = Number(ps.slg) || 0
+    statLine += ` | AVG: ${avg.toFixed(3)} | OBP: ${obp.toFixed(3)} | SLG: ${slg.toFixed(3)} | OPS: ${(obp + slg).toFixed(3)}`
+    statLine += `\n   ${ps.total_hits || 0}H, ${ps.total_doubles || 0}×2B, ${ps.total_triples || 0}×3B, ${ps.total_hr || 0}HR, ${ps.total_rbi || 0}RBI, ${ps.total_runs || 0}R, ${ps.total_walks || 0}BB, ${ps.total_strikeouts || 0}K, ${ps.total_sb || 0}SB`
   }
-  if (ps.total_errors > 0) statLine += ` | ${ps.total_errors}E`
+  if ((ps.total_errors || 0) > 0) statLine += ` | ${ps.total_errors}E`
   if (ps.recent_games && ps.recent_games.length > 0) {
     statLine += `\n   Last ${ps.recent_games.length} games: ${ps.recent_games.map(g => `${g.hits}-${g.at_bats} vs ${g.opponent || '?'}`).join(', ')}`
   }
