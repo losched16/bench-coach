@@ -75,6 +75,32 @@ export interface TeamContext {
     next_focus: string[]
     notes?: string
   }>
+  playerStats?: Array<{
+    player_name: string
+    jersey_number?: string | null
+    games_played: number
+    total_ab: number
+    total_hits: number
+    total_doubles: number
+    total_triples: number
+    total_hr: number
+    total_rbi: number
+    total_runs: number
+    total_walks: number
+    total_strikeouts: number
+    total_sb: number
+    batting_avg: number
+    obp: number
+    slg: number
+    total_errors: number
+    recent_games?: Array<{
+      date: string
+      opponent: string | null
+      hits: number
+      at_bats: number
+      notes: string | null
+    }>
+  }>
   drillResources?: Array<{
     drill_name: string
     skill_category: string
@@ -310,6 +336,32 @@ When the coach asks about what to work on, what went well, or how practice is go
 - Honor the coach's stated "next focus" areas
 - Note player callouts — celebrate positives, address concerns
 - Factor in energy levels and attendance patterns
+
+${context.playerStats && context.playerStats.length > 0 ? `
+PLAYER GAME STATS (Season):
+${context.playerStats.map(ps => {
+  let statLine = `${ps.player_name}${ps.jersey_number ? ` (#${ps.jersey_number})` : ''}: ${ps.games_played} games`
+  if (ps.total_ab > 0) {
+    statLine += ` | AVG: ${ps.batting_avg.toFixed(3)} | OBP: ${ps.obp.toFixed(3)} | SLG: ${ps.slg.toFixed(3)} | OPS: ${(ps.obp + ps.slg).toFixed(3)}`
+    statLine += `\n   ${ps.total_hits}H, ${ps.total_doubles}×2B, ${ps.total_triples}×3B, ${ps.total_hr}HR, ${ps.total_rbi}RBI, ${ps.total_runs}R, ${ps.total_walks}BB, ${ps.total_strikeouts}K, ${ps.total_sb}SB`
+  }
+  if (ps.total_errors > 0) statLine += ` | ${ps.total_errors}E`
+  if (ps.recent_games && ps.recent_games.length > 0) {
+    statLine += `\n   Last ${ps.recent_games.length} games: ${ps.recent_games.map(g => `${g.hits}-${g.at_bats} vs ${g.opponent || '?'}`).join(', ')}`
+  }
+  return statLine
+}).join('\n')}
+
+USING PLAYER STATS:
+When the coach or parent asks about a player's performance:
+- Reference their batting average, OBP, SLG, and OPS
+- Identify trends (hot streak, slump, improving power)
+- Connect stats to mechanics — e.g., high K rate might mean timing issue, low SLG might mean not driving the ball
+- Compare a player's stats to age-appropriate benchmarks (youth baseball, not MLB)
+- Use stats to recommend specific drills — e.g., if a player walks a lot but has low AVG, they have a good eye but need contact work
+- Celebrate milestones and improvements
+- When recommending practice focus, use stats to prioritize: a player hitting .150 needs more batting work than a player hitting .400
+` : ''}
 
 ${context.drillResources && context.drillResources.length > 0 ? `
 DRILL RESOURCES LIBRARY:
