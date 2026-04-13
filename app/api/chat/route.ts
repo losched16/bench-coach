@@ -273,7 +273,6 @@ export async function POST(request: NextRequest) {
         .eq('team_id', teamId)
 
       if (stats && stats.length > 0) {
-        // Also load recent game log for each player (last 3 games)
         for (const ps of stats) {
           const { data: recentGames } = await supabaseAdmin
             .from('player_game_stats')
@@ -294,6 +293,54 @@ export async function POST(request: NextRequest) {
       }
     } catch (e) {
       console.warn('Could not load player stats (tables may not exist yet)')
+    }
+
+    // Load recent games with notes and pitch counts
+    let gameData: any[] = []
+    try {
+      const { data: recentGames } = await supabaseAdmin
+        .from('games')
+        .select('*')
+        .eq('team_id', teamId)
+        .order('game_date', { ascending: false })
+        .limit(10)
+
+      if (recentGames && recentGames.length > 0) {
+        const gameIds = recentGames.map(g => g.id)
+
+        const [notesRes, pitchRes] = await Promise.all([
+          supabaseAdmin.from('game_notes').select('*, player:players(name)').in('game_id', gameIds).order('created_at', { ascending: false }),
+          supabaseAdmin.from('game_pitch_counts').select('*, player:players(name)').in('game_id', gameIds),
+        ])
+
+        gameData = recentGames.map(g => ({
+          date: g.game_date,
+          opponent: g.opponent,
+          status: g.status,
+          score: g.team_score !== null ? `${g.team_score}-${g.opponent_score}` : null,
+          result: g.result,
+          game_notes: (notesRes.data || [])
+            .filter(n => n.game_id === g.id)
+            .slice(0, 20)
+            .map(n => ({
+              player: n.player?.name,
+              type: n.note_type,
+              note: n.note,
+              inning: n.inning,
+            })),
+          pitch_counts: (pitchRes.data || [])
+            .filter(pc => pc.game_id === g.id)
+            .reduce((acc: any, pc: any) => {
+              const name = pc.player?.name || 'Unknown'
+              if (!acc[name]) acc[name] = { total: 0, by_inning: {} }
+              acc[name].total += pc.pitch_count
+              acc[name].by_inning[pc.inning] = pc.pitch_count
+              return acc
+            }, {}),
+        }))
+      }
+    } catch (e) {
+      console.warn('Could not load game data (tables may not exist yet)')
     }
 
     // Build context
@@ -317,6 +364,7 @@ export async function POST(request: NextRequest) {
       drillResources: drillResources.length > 0 ? drillResources : undefined,
       practiceRecaps: practiceRecaps.length > 0 ? practiceRecaps : undefined,
       playerStats: playerStats.length > 0 ? playerStats : undefined,
+      gameData: gameData.length > 0 ? gameData : undefined,
     }
 
     // Convert history

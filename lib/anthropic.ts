@@ -116,6 +116,23 @@ export interface TeamContext {
     ai_coaching_notes?: string
     safety_notes?: string
   }>
+  gameData?: Array<{
+    date: string
+    opponent?: string
+    status: string
+    score?: string | null
+    result?: string | null
+    game_notes: Array<{
+      player?: string
+      type: string
+      note: string
+      inning?: number
+    }>
+    pitch_counts: Record<string, {
+      total: number
+      by_inning: Record<number, number>
+    }>
+  }>
 }
 
 export interface MemorySuggestion {
@@ -364,6 +381,49 @@ When the coach or parent asks about a player's performance:
 - Use stats to recommend specific drills — e.g., if a player walks a lot but has low AVG, they have a good eye but need contact work
 - Celebrate milestones and improvements
 - When recommending practice focus, use stats to prioritize: a player hitting .150 needs more batting work than a player hitting .400
+` : ''}
+
+${context.gameData && context.gameData.length > 0 ? `
+RECENT GAME DATA (${context.gameData.length} games):
+${context.gameData.map(g => {
+  const date = new Date(g.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const parts = [`${date} vs ${g.opponent || 'Unknown'}${g.score ? ` — Score: ${g.score}` : ''}${g.result ? ` (${g.result.toUpperCase()})` : ''}`]
+
+  // Pitch counts
+  const pitchers = Object.entries(g.pitch_counts || {})
+  if (pitchers.length > 0) {
+    parts.push(`  Pitch counts: ${pitchers.map(([name, data]: [string, any]) => {
+      const innings = Object.entries(data.by_inning).map(([inn, count]) => `Inn ${inn}: ${count}`).join(', ')
+      return `${name}: ${data.total} total (${innings})`
+    }).join('; ')}`)
+  }
+
+  // Game notes grouped by player
+  if (g.game_notes.length > 0) {
+    const byPlayer: Record<string, string[]> = {}
+    g.game_notes.forEach((n: any) => {
+      const key = n.player || 'Team'
+      if (!byPlayer[key]) byPlayer[key] = []
+      byPlayer[key].push(`[${n.type}${n.inning ? ` Inn ${n.inning}` : ''}] ${n.note}`)
+    })
+    Object.entries(byPlayer).forEach(([player, notes]) => {
+      parts.push(`  ${player}: ${notes.join('; ')}`)
+    })
+  }
+
+  return parts.join('\n')
+}).join('\n\n')}
+
+USING GAME DATA:
+- When asked about game performance, reference specific game notes and observations
+- Calculate pitch count totals across multiple games to monitor workload
+- Connect game observations to practice recommendations (e.g., "Tyler struggled with grounders in the last 2 games — add infield drills to next practice")
+- Note patterns across games (improving players, recurring issues, etc.)
+- Monitor pitch counts and alert if a player is approaching recommended limits for their age group:
+  * 7-8 year olds: 50 pitches/game, 75/week recommended max
+  * 9-10 year olds: 75 pitches/game, 100/week recommended max
+  * 11-12 year olds: 85 pitches/game, 115/week recommended max
+- When suggesting practice plans, factor in what happened in recent games
 ` : ''}
 
 ${context.drillResources && context.drillResources.length > 0 ? `
