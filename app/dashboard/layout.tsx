@@ -5,7 +5,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
-import { MessageSquare, Users, StickyNote, ClipboardList, Home, LogOut, Plus, UserPlus, Trash2, Settings, Bookmark, Library, BookOpen, HelpCircle, Brain, UsersRound, UserCircle, Menu, X, Calendar, FileText, BarChart3, Activity } from 'lucide-react'
+import { MessageSquare, Users, StickyNote, ClipboardList, Home, LogOut, Plus, UserPlus, Trash2, Settings, Bookmark, Library, BookOpen, HelpCircle, Brain, UsersRound, UserCircle, Menu, X, Calendar, FileText, BarChart3, Activity, Target } from 'lucide-react'
 
 
 interface Team {
@@ -210,6 +210,7 @@ function DashboardContent({
   const navItems = [
     { label: 'Dashboard', href: '/dashboard', icon: Home },
     { label: 'Chat', href: '/dashboard/chat', icon: MessageSquare },
+    { label: 'Fix a Problem', href: '/dashboard/prescribe', icon: Target },
     { label: 'Roster', href: '/dashboard/roster', icon: Users },
     { label: 'Notes', href: '/dashboard/notes', icon: StickyNote },
     { label: 'Practice Plans', href: '/dashboard/practice', icon: ClipboardList },
