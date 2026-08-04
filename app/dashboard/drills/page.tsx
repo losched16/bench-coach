@@ -43,6 +43,10 @@ const SKILL_CATEGORIES = [
   'Fielding (Fly Balls)',
   'Catching',
   'Baserunning',
+  'Team Defense',
+  'Arm Care',
+  'Warmup',
+  'Athletic Development',
 ]
 
 const DIFFICULTY_LEVELS = ['All', 'Beginner', 'Intermediate', 'Advanced']
@@ -137,6 +141,10 @@ export default function DrillLibraryPage() {
       'Fielding (Fly Balls)': 'bg-emerald-100 text-emerald-700 border-emerald-200',
       'Catching': 'bg-yellow-100 text-yellow-700 border-yellow-200',
       'Baserunning': 'bg-cyan-100 text-cyan-700 border-cyan-200',
+      'Team Defense': 'bg-indigo-100 text-indigo-700 border-indigo-200',
+      'Arm Care': 'bg-teal-100 text-teal-700 border-teal-200',
+      'Warmup': 'bg-sky-100 text-sky-700 border-sky-200',
+      'Athletic Development': 'bg-lime-100 text-lime-700 border-lime-200',
     }
     return colors[skill] || 'bg-gray-100 text-gray-700 border-gray-200'
   }
