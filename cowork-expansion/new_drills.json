@@ -1,0 +1,2095 @@
+[
+  {
+    "drill_name": "Youth Receiving Foundations \u2014 Quiet Glove & Soft Hands",
+    "description": "First receiving progression for young catchers: glove presentation, soft hands, and catching the ball with slight momentum toward the strike zone. Fixes stabbing and hard hands behind the plate.",
+    "youtube_url": "https://www.youtube.com/watch?v=JDRg2nvAwqU",
+    "youtube_video_id": "JDRg2nvAwqU",
+    "thumbnail_url": "https://img.youtube.com/vi/JDRg2nvAwqU/hqdefault.jpg",
+    "channel": "Catching Made Simple (Coach Bougie)",
+    "skill_category": "Catching",
+    "primary_skill": "Receiving",
+    "secondary_skill": "Framing",
+    "tags": [
+      "catcher",
+      "receiving",
+      "framing",
+      "soft hands"
+    ],
+    "age_range": "8-12",
+    "min_age": 8,
+    "max_age": 12,
+    "difficulty_level": "Beginner",
+    "progression_level": 2,
+    "indoor_outdoor": "Indoor/Outdoor",
+    "space_required": "Small",
+    "requires_partner": true,
+    "equipment_needed": [
+      "catcher's mitt",
+      "tennis balls or soft baseballs",
+      "catcher's gear"
+    ],
+    "mechanic_focus": [
+      "glove presentation",
+      "soft hands",
+      "glove path"
+    ],
+    "common_flaws_fixed": [
+      "stabbing at pitches",
+      "hard hands behind the plate",
+      "poor receiving"
+    ],
+    "safety_notes": "Use tennis balls or soft training balls for bare-hand/receiving-only work; full gear whenever catching live throws.",
+    "ai_coaching_notes": "Start bare-glove with tennis balls from short distance. Cue 'catch the ball moving toward the zone, not away.' Watch for the elbow locking out \u2014 a slightly bent elbow keeps hands soft.",
+    "reps_guidance": "3 rounds of 10 catches (glove-side, middle, arm-side)",
+    "frequency_guidance": "2-3x/week",
+    "success_markers": [
+      "Glove is quiet after the catch instead of drifting",
+      "Catches low pitches without turning the glove over",
+      "Ball stops moving toward the zone edge, not out of it"
+    ]
+  },
+  {
+    "drill_name": "MLB-Style Receiving & Framing Circuit",
+    "description": "Five MLB-style receiving drills scalable to any age: beating the ball to the spot, sticking pitches, and working the edges of the zone. The middle step once basic soft hands are in place.",
+    "youtube_url": "https://www.youtube.com/watch?v=Z1erh6UVR_w",
+    "youtube_video_id": "Z1erh6UVR_w",
+    "thumbnail_url": "https://img.youtube.com/vi/Z1erh6UVR_w/hqdefault.jpg",
+    "channel": "YouGoProBaseball",
+    "skill_category": "Catching",
+    "primary_skill": "Receiving",
+    "secondary_skill": "Framing",
+    "tags": [
+      "catcher",
+      "receiving",
+      "framing",
+      "strike zone"
+    ],
+    "age_range": "9-14",
+    "min_age": 9,
+    "max_age": 14,
+    "difficulty_level": "Intermediate",
+    "progression_level": 3,
+    "indoor_outdoor": "Indoor/Outdoor",
+    "space_required": "Small",
+    "requires_partner": true,
+    "equipment_needed": [
+      "catcher's mitt",
+      "baseballs",
+      "catcher's gear"
+    ],
+    "mechanic_focus": [
+      "beat the ball to the spot",
+      "sticking pitches",
+      "working zone edges"
+    ],
+    "common_flaws_fixed": [
+      "carrying pitches out of the zone",
+      "loses strikes for the pitcher",
+      "poor framing"
+    ],
+    "safety_notes": null,
+    "ai_coaching_notes": "Run as a 5-station circuit. Cue 'beat it to the spot' \u2014 glove arrives where the pitch will be before the ball does. Freeze each catch for a one-count to build the stick habit.",
+    "reps_guidance": "5 drills x 8-10 receives each",
+    "frequency_guidance": "2x/week",
+    "success_markers": [
+      "Borderline pitches are caught and held in the zone",
+      "Glove beats the ball to the spot on edges",
+      "Umpire-view video shows the ball 'stuck' rather than dragged"
+    ]
+  },
+  {
+    "drill_name": "One-Knee Receiving \u2014 Advanced Framing Setup",
+    "description": "Modern one-knee-down receiving: five drills to master framing from the stance MLB catchers use, at higher pitch speeds. For experienced catchers ready for the progression ceiling.",
+    "youtube_url": "https://www.youtube.com/watch?v=yJxiRn88Ms0",
+    "youtube_video_id": "yJxiRn88Ms0",
+    "thumbnail_url": "https://img.youtube.com/vi/yJxiRn88Ms0/hqdefault.jpg",
+    "channel": "YouGoProBaseball",
+    "skill_category": "Catching",
+    "primary_skill": "Receiving",
+    "secondary_skill": "Framing",
+    "tags": [
+      "catcher",
+      "one knee",
+      "receiving",
+      "framing",
+      "advanced"
+    ],
+    "age_range": "12-16",
+    "min_age": 12,
+    "max_age": 16,
+    "difficulty_level": "Advanced",
+    "progression_level": 4,
+    "indoor_outdoor": "Indoor/Outdoor",
+    "space_required": "Small",
+    "requires_partner": true,
+    "equipment_needed": [
+      "catcher's mitt",
+      "baseballs",
+      "catcher's gear",
+      "pitching machine (optional)"
+    ],
+    "mechanic_focus": [
+      "one-knee setup",
+      "glove path",
+      "receiving low pitches"
+    ],
+    "common_flaws_fixed": [
+      "carrying pitches out of the zone",
+      "poor receiving",
+      "loses strikes for the pitcher"
+    ],
+    "safety_notes": null,
+    "ai_coaching_notes": "Only introduce after two-knee receiving is consistent. Check the free leg still allows a block or throw. Increase pitch speed gradually \u2014 machine work is ideal for high-rep edges.",
+    "reps_guidance": "4 sets of 10 receives per setup (RH low, LH low, edges)",
+    "frequency_guidance": "2x/week in-season",
+    "success_markers": [
+      "Low strike is presented without dropping the glove head",
+      "Can still block and throw from one knee",
+      "Holds the bottom-zone strike at game velocity"
+    ]
+  },
+  {
+    "drill_name": "Blocking the Right Way \u2014 Technique to Reaction Reps",
+    "description": "Correct blocking technique \u2014 knees replace the feet, chin tucks, chest angles the ball back toward the plate \u2014 built from stationary blocks into reaction reps to either side.",
+    "youtube_url": "https://www.youtube.com/watch?v=eQCF2jZiU5M",
+    "youtube_video_id": "eQCF2jZiU5M",
+    "thumbnail_url": "https://img.youtube.com/vi/eQCF2jZiU5M/hqdefault.jpg",
+    "channel": "YouGoProBaseball",
+    "skill_category": "Catching",
+    "primary_skill": "Blocking",
+    "secondary_skill": "Receiving",
+    "tags": [
+      "catcher",
+      "blocking",
+      "balls in the dirt"
+    ],
+    "age_range": "9-14",
+    "min_age": 9,
+    "max_age": 14,
+    "difficulty_level": "Intermediate",
+    "progression_level": 3,
+    "indoor_outdoor": "Indoor/Outdoor",
+    "space_required": "Small",
+    "requires_partner": true,
+    "equipment_needed": [
+      "catcher's gear",
+      "soft training balls",
+      "baseballs"
+    ],
+    "mechanic_focus": [
+      "knee drop",
+      "chin tuck",
+      "chest angle",
+      "lateral blocks"
+    ],
+    "common_flaws_fixed": [
+      "balls in the dirt get past",
+      "picks instead of blocks",
+      "poor blocking"
+    ],
+    "safety_notes": "Full catcher's gear required for every blocking rep. Use soft training balls when learning; progress to baseballs only once form is consistent.",
+    "ai_coaching_notes": "Start with placed balls (no throw) to groove the shape, then rolled balls, then short-hop throws. Cue 'round your shoulders, chin down, deaden it in front.' Left/right blocks push off the opposite foot.",
+    "reps_guidance": "3 sets of 8 blocks (middle, glove-side, arm-side)",
+    "frequency_guidance": "2x/week",
+    "success_markers": [
+      "Ball dies within a 6-foot circle in front of the plate",
+      "Chin stays tucked \u2014 no flinch",
+      "Body beats the ball to the spot on lateral blocks"
+    ]
+  },
+  {
+    "drill_name": "Game-Speed Reaction Blocking",
+    "description": "A game-speed blocking drill with unpredictable balls in the dirt \u2014 the catcher must read and react rather than pre-set. For catchers who already own solid blocking mechanics.",
+    "youtube_url": "https://www.youtube.com/watch?v=n8OCrOmbTBU",
+    "youtube_video_id": "n8OCrOmbTBU",
+    "thumbnail_url": "https://img.youtube.com/vi/n8OCrOmbTBU/hqdefault.jpg",
+    "channel": "Catching IQ",
+    "skill_category": "Catching",
+    "primary_skill": "Blocking",
+    "secondary_skill": "Receiving",
+    "tags": [
+      "catcher",
+      "blocking",
+      "reaction",
+      "advanced"
+    ],
+    "age_range": "12-16",
+    "min_age": 12,
+    "max_age": 16,
+    "difficulty_level": "Advanced",
+    "progression_level": 4,
+    "indoor_outdoor": "Indoor/Outdoor",
+    "space_required": "Small",
+    "requires_partner": true,
+    "equipment_needed": [
+      "catcher's gear",
+      "baseballs",
+      "pitching machine (optional)"
+    ],
+    "mechanic_focus": [
+      "read and react",
+      "lateral quickness",
+      "recovery to throw"
+    ],
+    "common_flaws_fixed": [
+      "balls in the dirt get past",
+      "bails on balls in the dirt",
+      "too many passed balls"
+    ],
+    "safety_notes": "Full catcher's gear required. Game-speed dirt balls only for catchers with established blocking form.",
+    "ai_coaching_notes": "Mix locations randomly and don't telegraph. Score each rep: blocked-in-front = 2, blocked-away = 1, past = 0; track weekly. Add a runner-on-third scenario so recovery-to-throw matters.",
+    "reps_guidance": "3 rounds of 10 random blocks, scored",
+    "frequency_guidance": "1-2x/week in-season",
+    "success_markers": [
+      "8+ of 10 random balls kept in front",
+      "Recovers to throwing position within one second",
+      "No flinch or head-turn at game velocity"
+    ]
+  },
+  {
+    "drill_name": "Catcher Throw-Down Footwork to Second",
+    "description": "Catcher footwork patterns for throwing to second at game speed \u2014 replace, jab-step, and transfer mechanics that shorten pop time and control the running game.",
+    "youtube_url": "https://www.youtube.com/watch?v=RmlsQPV4OGs",
+    "youtube_video_id": "RmlsQPV4OGs",
+    "thumbnail_url": "https://img.youtube.com/vi/RmlsQPV4OGs/hqdefault.jpg",
+    "channel": "Pro Speed Baseball",
+    "skill_category": "Catching",
+    "primary_skill": "Throwing footwork",
+    "secondary_skill": "Transfer",
+    "tags": [
+      "catcher",
+      "pop time",
+      "footwork",
+      "throw down",
+      "advanced"
+    ],
+    "age_range": "12-14",
+    "min_age": 12,
+    "max_age": 14,
+    "difficulty_level": "Advanced",
+    "progression_level": 4,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Full field",
+    "requires_partner": true,
+    "equipment_needed": [
+      "catcher's gear",
+      "baseballs",
+      "stopwatch"
+    ],
+    "mechanic_focus": [
+      "replace footwork",
+      "quick transfer",
+      "direction to second"
+    ],
+    "common_flaws_fixed": [
+      "slow transfer",
+      "slow release",
+      "extra steps before throw"
+    ],
+    "safety_notes": "Arm-care warm-up before throw-downs; cap volume at ~20 full-intensity throws per session for youth arms.",
+    "ai_coaching_notes": "Time every rep glove-to-glove. Cue 'feet start the throw' \u2014 the exchange happens while the feet replace. Start dry (no ball), then from a partner's toss, then live machine pitches.",
+    "reps_guidance": "3 sets of 6 throw-downs, timed",
+    "frequency_guidance": "2x/week",
+    "success_markers": [
+      "Pop time trends down week over week",
+      "Transfer happens during footwork, not after",
+      "Throws arrive on the bag-side of second consistently"
+    ]
+  },
+  {
+    "drill_name": "Bent-Leg Slide Basics \u2014 The Right Way to Slide",
+    "description": "Intro to correct bent-leg sliding: when to start the slide, tucking one leg into the figure-4, keeping hands up, and avoiding the habits that cause injuries.",
+    "youtube_url": "https://www.youtube.com/watch?v=h_mEnVPL6Qg",
+    "youtube_video_id": "h_mEnVPL6Qg",
+    "thumbnail_url": "https://img.youtube.com/vi/h_mEnVPL6Qg/hqdefault.jpg",
+    "channel": "BSBL BLVD",
+    "skill_category": "Baserunning",
+    "primary_skill": "Sliding",
+    "secondary_skill": "Base awareness",
+    "tags": [
+      "sliding",
+      "bent-leg slide",
+      "figure four",
+      "safety"
+    ],
+    "age_range": "7-12",
+    "min_age": 7,
+    "max_age": 12,
+    "difficulty_level": "Beginner",
+    "progression_level": 1,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Small",
+    "requires_partner": false,
+    "equipment_needed": [
+      "grass area or sliding mat",
+      "loose base"
+    ],
+    "mechanic_focus": [
+      "figure-4 leg tuck",
+      "slide start distance",
+      "hands up"
+    ],
+    "common_flaws_fixed": [
+      "can't slide",
+      "slides headfirst",
+      "bad sliding form",
+      "afraid to slide"
+    ],
+    "safety_notes": "No headfirst slides for beginners. Slide on grass, wet grass, or a mat before ever sliding on dirt; remove cleats for first sessions.",
+    "ai_coaching_notes": "Teach on grass in socks or on a sliding mat first \u2014 never on dirt day one. Cue 'sit into it, hands to the sky.' Start from a walk, then jog, then run. Mark a start line about two body lengths from the base.",
+    "reps_guidance": "10-15 slides per session, building speed gradually",
+    "frequency_guidance": "1-2x/week until confident",
+    "success_markers": [
+      "Slides on the seat/hip, not the knees",
+      "Hands stay up through the slide",
+      "Starts the slide at the marked distance without hesitation"
+    ]
+  },
+  {
+    "drill_name": "Sliding Practice Stations",
+    "description": "Station-based sliding reps for teams: high-repetition bent-leg slides in a controlled setting to build comfort and consistency once players know the basic form.",
+    "youtube_url": "https://www.youtube.com/watch?v=e_q6AWdgabQ",
+    "youtube_video_id": "e_q6AWdgabQ",
+    "thumbnail_url": "https://img.youtube.com/vi/e_q6AWdgabQ/hqdefault.jpg",
+    "channel": "ZONED Sports Academy",
+    "skill_category": "Baserunning",
+    "primary_skill": "Sliding",
+    "secondary_skill": "Base awareness",
+    "tags": [
+      "sliding",
+      "stations",
+      "team practice"
+    ],
+    "age_range": "9-13",
+    "min_age": 9,
+    "max_age": 13,
+    "difficulty_level": "Intermediate",
+    "progression_level": 3,
+    "indoor_outdoor": "Indoor/Outdoor",
+    "space_required": "Medium",
+    "requires_partner": false,
+    "equipment_needed": [
+      "sliding mat or grass area",
+      "loose bases"
+    ],
+    "mechanic_focus": [
+      "repetition under control",
+      "slide timing",
+      "consistent form"
+    ],
+    "common_flaws_fixed": [
+      "slides late",
+      "bad sliding form",
+      "doesn't know how to slide"
+    ],
+    "safety_notes": "Use mats or grass for volume work; check the sliding lane is clear of equipment between reps.",
+    "ai_coaching_notes": "Run as a rotating station during practice. Every player gets volume without dirt burn. Watch for the trail leg flattening out \u2014 keep the figure-4. Add a coach pointing left/right so runners slide to a side of the bag.",
+    "reps_guidance": "2 rounds of 6-8 slides per station",
+    "frequency_guidance": "Weekly during season",
+    "success_markers": [
+      "Same slide shape every rep",
+      "Can slide to either side of the bag on command",
+      "No slowing down before the slide starts"
+    ]
+  },
+  {
+    "drill_name": "Pop-Up Slide \u2014 Slide and Advance",
+    "description": "Game-speed pop-up slide: sliding into the bag on the bent leg and using momentum to pop up ready to advance on an overthrow.",
+    "youtube_url": "https://www.youtube.com/watch?v=wMZkEfiFBxc",
+    "youtube_video_id": "wMZkEfiFBxc",
+    "thumbnail_url": "https://img.youtube.com/vi/wMZkEfiFBxc/hqdefault.jpg",
+    "channel": "CoachUp",
+    "skill_category": "Baserunning",
+    "primary_skill": "Sliding",
+    "secondary_skill": "Base awareness",
+    "tags": [
+      "sliding",
+      "pop-up slide",
+      "advance",
+      "advanced"
+    ],
+    "age_range": "11-14",
+    "min_age": 11,
+    "max_age": 14,
+    "difficulty_level": "Advanced",
+    "progression_level": 4,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Medium",
+    "requires_partner": false,
+    "equipment_needed": [
+      "base",
+      "grass or dirt sliding area"
+    ],
+    "mechanic_focus": [
+      "momentum transfer",
+      "pop-up mechanics",
+      "read to advance"
+    ],
+    "common_flaws_fixed": [
+      "can't slide",
+      "no pop-up slide",
+      "slides late"
+    ],
+    "safety_notes": "Full-speed pop-up slides on dirt only after mat/grass mastery; no headfirst variations.",
+    "ai_coaching_notes": "Only after the basic bent-leg slide is automatic. Cue 'slide through the bag, not to it' \u2014 momentum carries the runner up onto the planted foot. Pair with a coach throwing simulated overthrows to train the advance read.",
+    "reps_guidance": "8-10 pop-up slides, last 4 with an overthrow read",
+    "frequency_guidance": "1x/week",
+    "success_markers": [
+      "Pops to standing without using hands",
+      "Eyes find the ball immediately after the slide",
+      "Advances confidently on overthrows in scrimmages"
+    ]
+  },
+  {
+    "drill_name": "Steal Breaks \u2014 Reading the Pitcher & First Move",
+    "description": "Teaches the steal break: what runners watch on the pitcher, when to take off, and the explosive crossover first move. Coach-facing so it translates straight to team practice.",
+    "youtube_url": "https://www.youtube.com/watch?v=JVwDSgbUfBM",
+    "youtube_video_id": "JVwDSgbUfBM",
+    "thumbnail_url": "https://img.youtube.com/vi/JVwDSgbUfBM/hqdefault.jpg",
+    "channel": "Dominate The Diamond",
+    "skill_category": "Baserunning",
+    "primary_skill": "Base stealing",
+    "secondary_skill": "First-step quickness",
+    "tags": [
+      "stealing",
+      "steal break",
+      "crossover",
+      "reads"
+    ],
+    "age_range": "9-13",
+    "min_age": 9,
+    "max_age": 13,
+    "difficulty_level": "Intermediate",
+    "progression_level": 3,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Medium",
+    "requires_partner": false,
+    "equipment_needed": [
+      "bases",
+      "cones"
+    ],
+    "mechanic_focus": [
+      "crossover step",
+      "pitcher reads",
+      "reaction to first move"
+    ],
+    "common_flaws_fixed": [
+      "late steal break",
+      "bad jumps",
+      "doesn't read the pitcher",
+      "poor crossover step on steals"
+    ],
+    "safety_notes": null,
+    "ai_coaching_notes": "Line the whole team up off an imaginary first base facing a coach simulating a pitcher. On first move: break. Cue 'sink, cross over, run through second's back corner.' Call out what tipped the pitcher's move each rep.",
+    "reps_guidance": "3 rounds of 6 breaks (react to leg lift, first move, pickoff mix)",
+    "frequency_guidance": "2x/week",
+    "success_markers": [
+      "Breaks on first move, not on a guess",
+      "Crossover step gains ground toward second",
+      "Freezes correctly on pickoff moves"
+    ]
+  },
+  {
+    "drill_name": "Secondary Lead & Delayed Steal",
+    "description": "The secondary lead and the delayed steal: timing shuffles with the pitch, reading the catcher, and stealing bases without elite speed.",
+    "youtube_url": "https://www.youtube.com/watch?v=SXfbP6x3iXI",
+    "youtube_video_id": "SXfbP6x3iXI",
+    "thumbnail_url": "https://img.youtube.com/vi/SXfbP6x3iXI/hqdefault.jpg",
+    "channel": "YouGoProBaseball",
+    "skill_category": "Baserunning",
+    "primary_skill": "Base stealing",
+    "secondary_skill": "Base awareness",
+    "tags": [
+      "stealing",
+      "secondary lead",
+      "delayed steal"
+    ],
+    "age_range": "10-14",
+    "min_age": 10,
+    "max_age": 14,
+    "difficulty_level": "Intermediate",
+    "progression_level": 3,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Medium",
+    "requires_partner": false,
+    "equipment_needed": [
+      "bases"
+    ],
+    "mechanic_focus": [
+      "secondary lead timing",
+      "catcher reads",
+      "delayed steal timing"
+    ],
+    "common_flaws_fixed": [
+      "no secondary lead",
+      "frozen on steal attempts",
+      "can't steal bases"
+    ],
+    "safety_notes": null,
+    "ai_coaching_notes": "Rep the two-shuffle secondary timed to the pitch crossing the zone. For the delayed steal, break as the catcher's throw goes back to the pitcher. Works especially well at levels where catchers lob returns.",
+    "reps_guidance": "10 secondary leads + 6 delayed-steal reps",
+    "frequency_guidance": "1-2x/week",
+    "success_markers": [
+      "Secondary lead lands as the pitch crosses the plate",
+      "Momentum moving toward the next base at contact",
+      "Successfully times a delayed steal in scrimmage"
+    ]
+  },
+  {
+    "drill_name": "Pro Base-Stealing Package \u2014 Leads, Reads & Jumps",
+    "description": "Game-speed stealing package: primary lead distance, reading pitcher tells and pickoff moves, and maximizing the jump against live pitching.",
+    "youtube_url": "https://www.youtube.com/watch?v=iZK-Rtp1bv4",
+    "youtube_video_id": "iZK-Rtp1bv4",
+    "thumbnail_url": "https://img.youtube.com/vi/iZK-Rtp1bv4/hqdefault.jpg",
+    "channel": "Dominate The Diamond",
+    "skill_category": "Baserunning",
+    "primary_skill": "Base stealing",
+    "secondary_skill": "First-step quickness",
+    "tags": [
+      "stealing",
+      "leads",
+      "jumps",
+      "pickoffs",
+      "advanced"
+    ],
+    "age_range": "11-15",
+    "min_age": 11,
+    "max_age": 15,
+    "difficulty_level": "Advanced",
+    "progression_level": 4,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Full field",
+    "requires_partner": true,
+    "equipment_needed": [
+      "bases",
+      "live pitcher or coach on mound",
+      "stopwatch"
+    ],
+    "mechanic_focus": [
+      "primary lead",
+      "pitcher tells",
+      "jump quality"
+    ],
+    "common_flaws_fixed": [
+      "gets picked off",
+      "bad jumps",
+      "can't steal bases",
+      "slow jump on steals"
+    ],
+    "safety_notes": null,
+    "ai_coaching_notes": "Run against a live pitcher working from the stretch. Chart every rep: safe jump / late / picked. Teach one tell at a time (heel lift, shoulder lean, head pattern). Time first-move-to-second and track improvement.",
+    "reps_guidance": "8-10 live steal reps, charted",
+    "frequency_guidance": "1x/week in-season",
+    "success_markers": [
+      "Identifies the pitcher's tell and states it out loud",
+      "Jump rate improves on the weekly chart",
+      "Returns standing on pickoffs \u2014 never dives late from an overextended lead"
+    ]
+  },
+  {
+    "drill_name": "Little League Cuts & Relays System",
+    "description": "A simplified cut-and-relay system built for Little League fields: where each fielder goes on balls to each outfield spot, kept simple enough for young teams to run in games.",
+    "youtube_url": "https://www.youtube.com/watch?v=Yle6R1-flA8",
+    "youtube_video_id": "Yle6R1-flA8",
+    "thumbnail_url": "https://img.youtube.com/vi/Yle6R1-flA8/hqdefault.jpg",
+    "channel": "Dominate The Diamond",
+    "skill_category": "Team Defense",
+    "primary_skill": "Cutoffs & relays",
+    "secondary_skill": "Throwing accuracy",
+    "tags": [
+      "cutoffs",
+      "relays",
+      "team defense",
+      "positioning"
+    ],
+    "age_range": "8-12",
+    "min_age": 8,
+    "max_age": 12,
+    "difficulty_level": "Beginner",
+    "progression_level": 2,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Full field",
+    "requires_partner": true,
+    "equipment_needed": [
+      "baseballs",
+      "bases",
+      "cones"
+    ],
+    "mechanic_focus": [
+      "cutoff positioning",
+      "who covers what",
+      "communication"
+    ],
+    "common_flaws_fixed": [
+      "no cutoff man",
+      "doesn't line up on relays",
+      "throws to the wrong base"
+    ],
+    "safety_notes": "Sequence throws so only one ball is live at a time; young fielders should never turn their back on an incoming throw.",
+    "ai_coaching_notes": "Walk the whole team through each scenario at half speed with no ball first \u2014 every player physically moves to their spot. Then add a rolled ball, then a thrown ball. Quiz players: 'ball in the right-center gap, runner on first \u2014 where do you go?'",
+    "reps_guidance": "Walk-through of 4 scenarios, then 2 live reps each",
+    "frequency_guidance": "Weekly early season, biweekly after",
+    "success_markers": [
+      "Every player moves somewhere on contact \u2014 nobody stands still",
+      "Cutoff man is in line between outfielder and target base",
+      "Team can name their assignment for each gap without prompting"
+    ]
+  },
+  {
+    "drill_name": "Line Relay Race \u2014 Catch, Turn, Throw",
+    "description": "A repeatable line-relay drill: lining up to the ball, presenting a big target with hands up, and making quick catch-turn-throw transfers down the line. Run it as a race between two lines.",
+    "youtube_url": "https://www.youtube.com/watch?v=YipF1W7BDJM",
+    "youtube_video_id": "YipF1W7BDJM",
+    "thumbnail_url": "https://img.youtube.com/vi/YipF1W7BDJM/hqdefault.jpg",
+    "channel": "PowerNet",
+    "skill_category": "Team Defense",
+    "primary_skill": "Cutoffs & relays",
+    "secondary_skill": "Transfer",
+    "tags": [
+      "relays",
+      "relay race",
+      "transfer",
+      "target"
+    ],
+    "age_range": "8-13",
+    "min_age": 8,
+    "max_age": 13,
+    "difficulty_level": "Beginner",
+    "progression_level": 2,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Medium",
+    "requires_partner": true,
+    "equipment_needed": [
+      "baseballs",
+      "cones"
+    ],
+    "mechanic_focus": [
+      "hands-up target",
+      "glove-side turn",
+      "quick exchange"
+    ],
+    "common_flaws_fixed": [
+      "slow relay throws",
+      "poor relays",
+      "misses the cutoff man"
+    ],
+    "safety_notes": "Match throwing distances to arm strength \u2014 shorten the links for 8-10U rather than letting kids max-effort long throws.",
+    "ai_coaching_notes": "Two lines of 4-5 players, 60-90 feet apart per link. Cue 'big hands, catch, turn glove-side, throw through the chest.' First line to run the ball down and back wins. Shrink spacing for younger kids.",
+    "reps_guidance": "4-6 races per session",
+    "frequency_guidance": "Weekly",
+    "success_markers": [
+      "Relay man's hands are up calling for the ball before it arrives",
+      "Turns glove-side automatically",
+      "Ball travels line-to-line without hitting the ground"
+    ]
+  },
+  {
+    "drill_name": "Cutoff Responsibilities by Situation",
+    "description": "Team cutoff and relay responsibilities by situation \u2014 who the cutoff man is on balls to each outfield spot, and how infielders and outfielders communicate to hit the cutoff.",
+    "youtube_url": "https://www.youtube.com/watch?v=wIU9NdCBBkE",
+    "youtube_video_id": "wIU9NdCBBkE",
+    "thumbnail_url": "https://img.youtube.com/vi/wIU9NdCBBkE/hqdefault.jpg",
+    "channel": "ELITE YOUTH BASEBALL",
+    "skill_category": "Team Defense",
+    "primary_skill": "Cutoffs & relays",
+    "secondary_skill": "Base awareness",
+    "tags": [
+      "cutoffs",
+      "relays",
+      "situations",
+      "communication"
+    ],
+    "age_range": "10-14",
+    "min_age": 10,
+    "max_age": 14,
+    "difficulty_level": "Intermediate",
+    "progression_level": 3,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Full field",
+    "requires_partner": true,
+    "equipment_needed": [
+      "baseballs",
+      "bases"
+    ],
+    "mechanic_focus": [
+      "situational assignments",
+      "cutoff communication",
+      "throw decisions"
+    ],
+    "common_flaws_fixed": [
+      "misses the cutoff man",
+      "throws to the wrong base",
+      "airmails the cutoff"
+    ],
+    "safety_notes": "One live ball at a time; runners wear helmets during live cutoff reps.",
+    "ai_coaching_notes": "Add runners so decisions are real: runner on first, ball to left-center \u2014 where's the throw? Let the cutoff man call 'cut two / cut three / let it go' loudly. Rotate players through cutoff roles so everyone learns both ends.",
+    "reps_guidance": "6-8 situational reps with runners",
+    "frequency_guidance": "Weekly",
+    "success_markers": [
+      "Outfield throws come down through the cutoff man's head height",
+      "Cutoff man makes a loud call on every ball",
+      "Correct base chosen on 4 of 5 situational reps"
+    ]
+  },
+  {
+    "drill_name": "Machine-Fed Relay Sequences at Game Speed",
+    "description": "Game-speed cutoff and relay team sequences modeled on Vanderbilt's practice, using machine-fed balls to rep full outfield-to-infield relays at high tempo.",
+    "youtube_url": "https://www.youtube.com/watch?v=TJXQiYdueQc",
+    "youtube_video_id": "TJXQiYdueQc",
+    "thumbnail_url": "https://img.youtube.com/vi/TJXQiYdueQc/hqdefault.jpg",
+    "channel": "ATEC Sports",
+    "skill_category": "Team Defense",
+    "primary_skill": "Cutoffs & relays",
+    "secondary_skill": "Throwing accuracy",
+    "tags": [
+      "cutoffs",
+      "relays",
+      "game speed",
+      "machine",
+      "advanced"
+    ],
+    "age_range": "13-16",
+    "min_age": 13,
+    "max_age": 16,
+    "difficulty_level": "Advanced",
+    "progression_level": 4,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Full field",
+    "requires_partner": true,
+    "equipment_needed": [
+      "pitching machine or fungo",
+      "baseballs",
+      "bases"
+    ],
+    "mechanic_focus": [
+      "full-speed relays",
+      "double cuts",
+      "tempo"
+    ],
+    "common_flaws_fixed": [
+      "slow relay throws",
+      "misses the cutoff man",
+      "poor relays"
+    ],
+    "safety_notes": "Full-intensity relay throws count toward daily throwing volume \u2014 run this early in practice on fresh arms.",
+    "ai_coaching_notes": "Machine or fungo fires balls into the gaps on a fixed interval so tempo never drops. Run double-cut sequences on balls to the wall. Score runs-prevented vs. bases-gained to make it competitive between defensive groups.",
+    "reps_guidance": "3 rounds of 5 relay sequences at full speed",
+    "frequency_guidance": "1x/week for advanced teams",
+    "success_markers": [
+      "Relay throws are caught chest-high moving toward the target",
+      "Double cut executes with the trail man communicating",
+      "Sequence time from outfield touch to tag drops week over week"
+    ]
+  },
+  {
+    "drill_name": "Two-Base Pickle Drill",
+    "description": "A simple pickle setup \u2014 two bases, two fielders, one runner \u2014 teaching kids to run hard at the runner, hold the ball up, and make one crisp throw for the tag.",
+    "youtube_url": "https://www.youtube.com/watch?v=OEYEvKRh2eQ",
+    "youtube_video_id": "OEYEvKRh2eQ",
+    "thumbnail_url": "https://img.youtube.com/vi/OEYEvKRh2eQ/hqdefault.jpg",
+    "channel": "GoDog Sports",
+    "skill_category": "Team Defense",
+    "primary_skill": "Rundowns",
+    "secondary_skill": "Throwing accuracy",
+    "tags": [
+      "rundown",
+      "pickle",
+      "tags"
+    ],
+    "age_range": "8-12",
+    "min_age": 8,
+    "max_age": 12,
+    "difficulty_level": "Beginner",
+    "progression_level": 2,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Medium",
+    "requires_partner": true,
+    "equipment_needed": [
+      "2 bases",
+      "baseballs"
+    ],
+    "mechanic_focus": [
+      "ball up and visible",
+      "run at the runner",
+      "one-throw finish"
+    ],
+    "common_flaws_fixed": [
+      "panics in rundowns",
+      "too many throws in rundowns",
+      "runner escapes rundowns"
+    ],
+    "safety_notes": "Runners wear helmets; tags applied with the glove, no arm swings at head height.",
+    "ai_coaching_notes": "Cue 'run him back, ball up by your ear, one throw.' The receiving fielder calls 'now!' for the throw. Rotate every player through both fielder spots and runner. Count throws out loud \u2014 celebrate one-throw outs.",
+    "reps_guidance": "Each player: 4-6 reps per role",
+    "frequency_guidance": "Weekly",
+    "success_markers": [
+      "Fielder sprints at the runner instead of hesitating",
+      "Ball stays visible above the shoulder \u2014 no pump fakes",
+      "Most outs recorded in two throws or fewer"
+    ]
+  },
+  {
+    "drill_name": "Calm Rundowns \u2014 Push Back, Follow Your Throw",
+    "description": "Takes the panic out of youth rundowns: pushing the runner back toward the previous base, following your throw, and getting the out in as few throws as possible.",
+    "youtube_url": "https://www.youtube.com/watch?v=cV8Ivq0XcJA",
+    "youtube_video_id": "cV8Ivq0XcJA",
+    "thumbnail_url": "https://img.youtube.com/vi/cV8Ivq0XcJA/hqdefault.jpg",
+    "channel": "Dominate The Diamond",
+    "skill_category": "Team Defense",
+    "primary_skill": "Rundowns",
+    "secondary_skill": "Base awareness",
+    "tags": [
+      "rundown",
+      "pickle",
+      "rotation"
+    ],
+    "age_range": "9-13",
+    "min_age": 9,
+    "max_age": 13,
+    "difficulty_level": "Intermediate",
+    "progression_level": 3,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Medium",
+    "requires_partner": true,
+    "equipment_needed": [
+      "bases",
+      "baseballs"
+    ],
+    "mechanic_focus": [
+      "push runner back",
+      "follow the throw",
+      "rotation"
+    ],
+    "common_flaws_fixed": [
+      "doesn't follow the throw",
+      "panics in rundowns",
+      "too many throws in rundowns"
+    ],
+    "safety_notes": "Helmets on runners; keep rundown lanes clear of bats and loose balls.",
+    "ai_coaching_notes": "Layer in the rule: always push the runner back toward the base he came from, and always follow your throw to the end of the opposite line. Add a second runner variant once the basic rotation is automatic.",
+    "reps_guidance": "6-8 rundown reps with full rotation",
+    "frequency_guidance": "Biweekly",
+    "success_markers": [
+      "Runner is always moving back toward the trailing base",
+      "Thrower follows his throw every time without reminding",
+      "Backup fielder is in line before the throw is made"
+    ]
+  },
+  {
+    "drill_name": "Game-Speed Rundown Execution",
+    "description": "Pro-level rundown execution at game speed \u2014 sprinting to close distance, ball visible above the shoulder, dart-throw timing, and rotating behind the play.",
+    "youtube_url": "https://www.youtube.com/watch?v=OAbBekHAk_g",
+    "youtube_video_id": "OAbBekHAk_g",
+    "thumbnail_url": "https://img.youtube.com/vi/OAbBekHAk_g/hqdefault.jpg",
+    "channel": "Antonelli Baseball",
+    "skill_category": "Team Defense",
+    "primary_skill": "Rundowns",
+    "secondary_skill": "Transfer",
+    "tags": [
+      "rundown",
+      "pickle",
+      "game speed",
+      "advanced"
+    ],
+    "age_range": "12-16",
+    "min_age": 12,
+    "max_age": 16,
+    "difficulty_level": "Advanced",
+    "progression_level": 4,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Medium",
+    "requires_partner": true,
+    "equipment_needed": [
+      "bases",
+      "baseballs",
+      "fast runners"
+    ],
+    "mechanic_focus": [
+      "closing speed",
+      "dart throw timing",
+      "rotation depth"
+    ],
+    "common_flaws_fixed": [
+      "runner escapes rundowns",
+      "panics in rundowns",
+      "doesn't follow the throw"
+    ],
+    "safety_notes": "Game-speed dart throws at short range demand focus \u2014 receivers give a clear target away from the runner's head, and runners wear helmets.",
+    "ai_coaching_notes": "Use your fastest players as runners and score it: out in \u22642 throws = defense wins. Cue 'sprint, show, dart' \u2014 full-speed close, ball shown early, short dart throw on the receiver's call. Rotate at full speed.",
+    "reps_guidance": "8-10 competitive reps, scored",
+    "frequency_guidance": "1x/week in-season",
+    "success_markers": [
+      "Defense wins 80% of reps vs. fast runners",
+      "Dart throws released on the receiver's call \u2014 never early",
+      "Rotation continues seamlessly through multiple throws when needed"
+    ]
+  },
+  {
+    "drill_name": "First Base Fundamentals \u2014 Finding the Bag & the Stretch",
+    "description": "Core first-base play: getting to the bag, setting the feet, and basic stretch mechanics to receive throws. The starting point before picks and off-line throws.",
+    "youtube_url": "https://www.youtube.com/watch?v=95B1kSchurQ",
+    "youtube_video_id": "95B1kSchurQ",
+    "thumbnail_url": "https://img.youtube.com/vi/95B1kSchurQ/hqdefault.jpg",
+    "channel": "Ultimate Baseball Training",
+    "skill_category": "Fielding (Infield)",
+    "primary_skill": "First-base footwork",
+    "secondary_skill": "Receiving throws",
+    "tags": [
+      "first base",
+      "footwork",
+      "stretch"
+    ],
+    "age_range": "8-12",
+    "min_age": 8,
+    "max_age": 12,
+    "difficulty_level": "Beginner",
+    "progression_level": 2,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Medium",
+    "requires_partner": true,
+    "equipment_needed": [
+      "base",
+      "baseballs",
+      "first baseman's mitt (optional)"
+    ],
+    "mechanic_focus": [
+      "find the bag",
+      "heel on the bag",
+      "stretch timing"
+    ],
+    "common_flaws_fixed": [
+      "can't find the bag",
+      "stretches too early",
+      "first baseman fundamentals"
+    ],
+    "safety_notes": null,
+    "ai_coaching_notes": "Cue 'find it with your feet, face the thrower, stretch on release \u2014 not before.' Rep the footwork with no ball first: sprint to the bag from fielding depth, find it, set. Then add easy chest-high throws.",
+    "reps_guidance": "3 rounds of 8 reps (footwork only, then with throws)",
+    "frequency_guidance": "2x/week for first basemen",
+    "success_markers": [
+      "Finds the bag without looking down",
+      "Stretch happens as the throw is released, not as the fielder arrives",
+      "Heel contact maintained through the catch"
+    ]
+  },
+  {
+    "drill_name": "First Base Footwork & Throw Adjustments",
+    "description": "Youth-specific work around the bag from a former pro: adjusting the feet to the throw and stretching to balls at different locations, with repeatable practice drills.",
+    "youtube_url": "https://www.youtube.com/watch?v=R1sbhgRzneQ",
+    "youtube_video_id": "R1sbhgRzneQ",
+    "thumbnail_url": "https://img.youtube.com/vi/R1sbhgRzneQ/hqdefault.jpg",
+    "channel": "Antonelli Baseball",
+    "skill_category": "Fielding (Infield)",
+    "primary_skill": "First-base footwork",
+    "secondary_skill": "Receiving throws",
+    "tags": [
+      "first base",
+      "footwork",
+      "adjustments"
+    ],
+    "age_range": "9-13",
+    "min_age": 9,
+    "max_age": 13,
+    "difficulty_level": "Intermediate",
+    "progression_level": 3,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Medium",
+    "requires_partner": true,
+    "equipment_needed": [
+      "base",
+      "baseballs"
+    ],
+    "mechanic_focus": [
+      "foot adjustments",
+      "shifting on the bag",
+      "stretch to the ball"
+    ],
+    "common_flaws_fixed": [
+      "pulls foot off the bag",
+      "misses off-line throws at first",
+      "first base footwork"
+    ],
+    "safety_notes": null,
+    "ai_coaching_notes": "Throw intentionally to all four quadrants. Cue 'chase the ball with your glove-side foot' \u2014 the stretch foot moves toward the throw while the anchor toe holds the bag edge. Mix in throws from different infield angles.",
+    "reps_guidance": "4 rounds of 6 throws (one round per quadrant)",
+    "frequency_guidance": "2x/week for first basemen",
+    "success_markers": [
+      "Stretch foot mirrors the throw location automatically",
+      "Anchor foot stays on the bag on wide throws",
+      "Clean catches on throws to both sides without crossing feet"
+    ]
+  },
+  {
+    "drill_name": "Advanced First Base \u2014 Off-Line Throws, Picks & Short Hops",
+    "description": "Academy-level footwork around the bag: shifting for throws to either side, timing the stretch, and picking short hops \u2014 the stretch goal for travel-level first basemen.",
+    "youtube_url": "https://www.youtube.com/watch?v=QR2QWQTHp-s",
+    "youtube_video_id": "QR2QWQTHp-s",
+    "thumbnail_url": "https://img.youtube.com/vi/QR2QWQTHp-s/hqdefault.jpg",
+    "channel": "IMG Academy",
+    "skill_category": "Fielding (Infield)",
+    "primary_skill": "First-base footwork",
+    "secondary_skill": "Receiving throws",
+    "tags": [
+      "first base",
+      "picks",
+      "short hops",
+      "advanced"
+    ],
+    "age_range": "11-14",
+    "min_age": 11,
+    "max_age": 14,
+    "difficulty_level": "Advanced",
+    "progression_level": 4,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Medium",
+    "requires_partner": true,
+    "equipment_needed": [
+      "base",
+      "baseballs",
+      "fungo or partner"
+    ],
+    "mechanic_focus": [
+      "short-hop picks",
+      "lateral shifts",
+      "stretch timing"
+    ],
+    "common_flaws_fixed": [
+      "can't pick throws at first",
+      "poor scoops at first",
+      "misses off-line throws at first"
+    ],
+    "safety_notes": "Short-hop volume is hard on the glove hand \u2014 use tennis balls or soft baseballs for high-rep sessions.",
+    "ai_coaching_notes": "Feed short hops on purpose \u2014 start with announced hops, progress to random. Cue 'soft glove through the hop, not at it.' Add baserunner pressure last: a runner sprinting the line forces real stretch timing.",
+    "reps_guidance": "3 sets of 8 picks (announced, random, with runner)",
+    "frequency_guidance": "2x/week",
+    "success_markers": [
+      "Picks 6+ of 8 random short hops cleanly",
+      "Chooses stretch vs. leave-the-bag correctly on wild throws",
+      "Footwork holds up with a live runner"
+    ]
+  },
+  {
+    "drill_name": "Daily Backhand Series",
+    "description": "Five daily backhand drills training glove angle, footwork, and body position on balls to the glove-side and backhand side \u2014 the range and glove control travel-ball infielders need.",
+    "youtube_url": "https://www.youtube.com/watch?v=IEk4QipiFTY",
+    "youtube_video_id": "IEk4QipiFTY",
+    "thumbnail_url": "https://img.youtube.com/vi/IEk4QipiFTY/hqdefault.jpg",
+    "channel": "YouGoProBaseball",
+    "skill_category": "Fielding (Infield)",
+    "primary_skill": "Backhand fielding",
+    "secondary_skill": "Range",
+    "tags": [
+      "infield",
+      "backhand",
+      "glove work",
+      "advanced"
+    ],
+    "age_range": "12-14",
+    "min_age": 12,
+    "max_age": 14,
+    "difficulty_level": "Advanced",
+    "progression_level": 4,
+    "indoor_outdoor": "Indoor/Outdoor",
+    "space_required": "Small",
+    "requires_partner": false,
+    "equipment_needed": [
+      "glove",
+      "baseballs",
+      "cones"
+    ],
+    "mechanic_focus": [
+      "glove angle",
+      "backhand footwork",
+      "fielding through the ball"
+    ],
+    "common_flaws_fixed": [
+      "poor footwork",
+      "poor approach angles",
+      "leaving holes between legs"
+    ],
+    "safety_notes": null,
+    "ai_coaching_notes": "Run as a daily 10-minute series from knees to full speed. Cue 'thumb down, see the ball into the glove, work through it.' The right foot plants outside the ball on a true backhand \u2014 check plant position every rep.",
+    "reps_guidance": "5 drills x 6 reps daily",
+    "frequency_guidance": "4-5x/week (short daily sessions)",
+    "success_markers": [
+      "Fields backhands with the glove out front \u2014 not beside the body",
+      "Plant foot consistently outside the ball",
+      "Converts backhand to throw without extra steps"
+    ]
+  },
+  {
+    "drill_name": "Three-Ball Slow Roller Drill",
+    "description": "Rapid-fire three-ball slow roller drill: charge, field on the run, and throw on the move under time pressure \u2014 the do-or-die play against fast runners.",
+    "youtube_url": "https://www.youtube.com/watch?v=Elzjz_qhLM4",
+    "youtube_video_id": "Elzjz_qhLM4",
+    "thumbnail_url": "https://img.youtube.com/vi/Elzjz_qhLM4/hqdefault.jpg",
+    "channel": "Championship Productions",
+    "skill_category": "Fielding (Infield)",
+    "primary_skill": "Slow rollers",
+    "secondary_skill": "Throwing on the run",
+    "tags": [
+      "infield",
+      "slow roller",
+      "charge",
+      "advanced"
+    ],
+    "age_range": "12-14",
+    "min_age": 12,
+    "max_age": 14,
+    "difficulty_level": "Advanced",
+    "progression_level": 4,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Medium",
+    "requires_partner": true,
+    "equipment_needed": [
+      "baseballs",
+      "fungo or coach rolling balls"
+    ],
+    "mechanic_focus": [
+      "charge angle",
+      "field on the run",
+      "throw on the move"
+    ],
+    "common_flaws_fixed": [
+      "poor approach angles",
+      "poor fielding position",
+      "poor footwork"
+    ],
+    "safety_notes": "Throwing on the run stresses the arm \u2014 full warm-up first and cap circuits for youth arms.",
+    "ai_coaching_notes": "Three balls spaced progressively closer \u2014 the fielder charges, fields, and throws each in sequence with no reset. Cue 'right foot, left foot, throw' rhythm on the run. Bare-hand only when the ball has stopped.",
+    "reps_guidance": "3 circuits of 3 balls per session",
+    "frequency_guidance": "2x/week",
+    "success_markers": [
+      "Fields the ball outside the glove-side foot on the run",
+      "Throw releases within two steps of fielding",
+      "Accurate to first on all three balls of a circuit"
+    ]
+  },
+  {
+    "drill_name": "Double-Play Feeds & Turns",
+    "description": "Double-play footwork, feeds, and pivots at second base for both middle-infield positions \u2014 game-speed exchange and turn mechanics for 12-14U middle infielders.",
+    "youtube_url": "https://www.youtube.com/watch?v=F0MwVYtimb8",
+    "youtube_video_id": "F0MwVYtimb8",
+    "thumbnail_url": "https://img.youtube.com/vi/F0MwVYtimb8/hqdefault.jpg",
+    "channel": "Antonelli Baseball",
+    "skill_category": "Fielding (Infield)",
+    "primary_skill": "Double plays",
+    "secondary_skill": "Transfer",
+    "tags": [
+      "infield",
+      "double play",
+      "feeds",
+      "pivot",
+      "advanced"
+    ],
+    "age_range": "12-14",
+    "min_age": 12,
+    "max_age": 14,
+    "difficulty_level": "Advanced",
+    "progression_level": 4,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Medium",
+    "requires_partner": true,
+    "equipment_needed": [
+      "bases",
+      "baseballs",
+      "partner"
+    ],
+    "mechanic_focus": [
+      "feed accuracy",
+      "pivot footwork",
+      "quick exchange"
+    ],
+    "common_flaws_fixed": [
+      "slow transfer",
+      "slow transitions from catch to throw",
+      "extra steps before throw"
+    ],
+    "safety_notes": "Teach bag footwork that clears the runner's path; no live hard slides in practice turns.",
+    "ai_coaching_notes": "Rep feeds first (chest-high, at the bag), then turns without a runner, then with a soft slide. Cue 'give him the ball where his hands start.' Alternate 4-6-3 and 6-4-3 every round so both players learn both ends.",
+    "reps_guidance": "4 rounds of 6 turns per pairing",
+    "frequency_guidance": "2x/week",
+    "success_markers": [
+      "Feeds arrive chest-high at the bag every rep",
+      "Pivot man's exchange takes one step or fewer",
+      "Full turn (contact to first-base catch) under a coach-set time target"
+    ]
+  },
+  {
+    "drill_name": "Call It Early \u2014 Outfield Communication Basics",
+    "description": "Introduces calling the ball \u2014 loud, early 'mine, mine, mine' between outfielders \u2014 with a simple drill format that builds the habit and prevents collisions.",
+    "youtube_url": "https://www.youtube.com/watch?v=x5oEDLlVpqo",
+    "youtube_video_id": "x5oEDLlVpqo",
+    "thumbnail_url": "https://img.youtube.com/vi/x5oEDLlVpqo/hqdefault.jpg",
+    "channel": "DICK'S Sporting Goods",
+    "skill_category": "Fielding (Fly Balls)",
+    "primary_skill": "Communication",
+    "secondary_skill": "Tracking",
+    "tags": [
+      "outfield",
+      "communication",
+      "call the ball"
+    ],
+    "age_range": "7-11",
+    "min_age": 7,
+    "max_age": 11,
+    "difficulty_level": "Beginner",
+    "progression_level": 1,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Medium",
+    "requires_partner": true,
+    "equipment_needed": [
+      "baseballs or soft balls",
+      "gloves"
+    ],
+    "mechanic_focus": [
+      "early loud calls",
+      "yielding when called off",
+      "tracking together"
+    ],
+    "common_flaws_fixed": [
+      "doesn't call the ball",
+      "nobody calls it",
+      "two players let it drop"
+    ],
+    "safety_notes": null,
+    "ai_coaching_notes": "Toss high flies between two fielders. Rule: the call must come before the ball's peak, three times loud. The other player answers 'take it, take it' and peels away. Start with soft balls so nobody fears the collision.",
+    "reps_guidance": "10-12 fly balls per pair",
+    "frequency_guidance": "Weekly",
+    "success_markers": [
+      "Call comes before the ball peaks",
+      "Non-catching player audibly yields and peels off",
+      "Zero silent drops between fielders in scrimmages"
+    ]
+  },
+  {
+    "drill_name": "Infield/Outfield Priority Drill",
+    "description": "A practice-plan drill covering fly-ball priority between infielders and outfielders \u2014 who calls it, who peels off \u2014 plus ready-position habits, straight from the ABCA.",
+    "youtube_url": "https://www.youtube.com/watch?v=5q3b9m2ERho",
+    "youtube_video_id": "5q3b9m2ERho",
+    "thumbnail_url": "https://img.youtube.com/vi/5q3b9m2ERho/hqdefault.jpg",
+    "channel": "American Baseball Coaches Association (ABCA)",
+    "skill_category": "Fielding (Fly Balls)",
+    "primary_skill": "Communication",
+    "secondary_skill": "Priority rules",
+    "tags": [
+      "outfield",
+      "infield",
+      "priority",
+      "communication"
+    ],
+    "age_range": "9-13",
+    "min_age": 9,
+    "max_age": 13,
+    "difficulty_level": "Intermediate",
+    "progression_level": 3,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Full field",
+    "requires_partner": true,
+    "equipment_needed": [
+      "baseballs",
+      "fungo"
+    ],
+    "mechanic_focus": [
+      "priority rules",
+      "outfielder calls off infielder",
+      "ready position"
+    ],
+    "common_flaws_fixed": [
+      "poor priority on fly balls",
+      "doesn't call off the infielder",
+      "collisions on fly balls"
+    ],
+    "safety_notes": null,
+    "ai_coaching_notes": "Hit tweeners between the infield and outfield on purpose. Teach the rule plainly: the outfielder coming in owns any ball he can reach \u2014 infielders yield to his call. Freeze the play after each rep and ask 'whose ball, and why?'",
+    "reps_guidance": "8-10 tweeners per group",
+    "frequency_guidance": "Biweekly",
+    "success_markers": [
+      "Outfielder's call overrides the infielder every time",
+      "Infielder peels off without stopping in the landing zone",
+      "Tweeners get caught instead of dropping between frozen fielders"
+    ]
+  },
+  {
+    "drill_name": "Do-or-Die Charge & Throw",
+    "description": "The outfield do-or-die play: charging a ground ball hard, fielding off the glove-side foot, and releasing quickly to cut down a runner at the plate.",
+    "youtube_url": "https://www.youtube.com/watch?v=iUdI35veg5E",
+    "youtube_video_id": "iUdI35veg5E",
+    "thumbnail_url": "https://img.youtube.com/vi/iUdI35veg5E/hqdefault.jpg",
+    "channel": "PowerNet",
+    "skill_category": "Fielding (Fly Balls)",
+    "primary_skill": "Charging ground balls",
+    "secondary_skill": "Throwing on the run",
+    "tags": [
+      "outfield",
+      "do or die",
+      "charge",
+      "advanced"
+    ],
+    "age_range": "12-14",
+    "min_age": 12,
+    "max_age": 14,
+    "difficulty_level": "Advanced",
+    "progression_level": 4,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Full field",
+    "requires_partner": true,
+    "equipment_needed": [
+      "baseballs",
+      "fungo",
+      "bases or target"
+    ],
+    "mechanic_focus": [
+      "attack angle",
+      "glove-side pickup",
+      "momentum through the throw"
+    ],
+    "common_flaws_fixed": [
+      "poor route efficiency",
+      "lazy routes",
+      "backpedaling on fly balls"
+    ],
+    "safety_notes": "Max-effort throws \u2014 warm up fully and cap at 8 reps per session for youth arms.",
+    "ai_coaching_notes": "Only for game-on-the-line situations \u2014 teach the distinction from the routine knee-down block. Cue 'attack, glove-side foot, crow hop through the ball.' Chart throw time and accuracy to a plate-sized target.",
+    "reps_guidance": "6-8 charged balls per session",
+    "frequency_guidance": "1x/week",
+    "success_markers": [
+      "Fielding happens off the glove-side foot at speed",
+      "Momentum continues through the throw toward the target",
+      "Throw is catchable at the plate on a line or one long hop"
+    ]
+  },
+  {
+    "drill_name": "Traditional Changeup \u2014 Grip & First Throws",
+    "description": "Step-by-step introduction to holding and throwing a traditional changeup, built for youth hands: burying the ball deep in the palm and throwing with fastball intent.",
+    "youtube_url": "https://www.youtube.com/watch?v=RJRjtqWjNnQ",
+    "youtube_video_id": "RJRjtqWjNnQ",
+    "thumbnail_url": "https://img.youtube.com/vi/RJRjtqWjNnQ/hqdefault.jpg",
+    "channel": "ARM Pitching Development",
+    "skill_category": "Pitching",
+    "primary_skill": "Changeup",
+    "secondary_skill": "Pitch grips",
+    "tags": [
+      "changeup",
+      "grip",
+      "offspeed",
+      "youth pitching"
+    ],
+    "age_range": "8-12",
+    "min_age": 8,
+    "max_age": 12,
+    "difficulty_level": "Beginner",
+    "progression_level": 2,
+    "indoor_outdoor": "Indoor/Outdoor",
+    "space_required": "Small",
+    "requires_partner": true,
+    "equipment_needed": [
+      "baseballs",
+      "glove"
+    ],
+    "mechanic_focus": [
+      "deep grip",
+      "fastball arm speed",
+      "release feel"
+    ],
+    "common_flaws_fixed": [
+      "no changeup",
+      "only throws fastballs",
+      "no second pitch"
+    ],
+    "safety_notes": "The changeup is the safe first off-speed pitch for youth arms \u2014 no curveball spin. Keep total throwing volume within normal daily limits.",
+    "ai_coaching_notes": "Start at short distance playing catch with the grip \u2014 no mound. Cue 'throw the fastball, the grip does the work.' If the ball sails, the grip is too shallow; if it dies into the dirt, too deep. Find the middle.",
+    "reps_guidance": "15-20 changeup throws within a normal catch session",
+    "frequency_guidance": "Every catch-play session for 2-3 weeks",
+    "success_markers": [
+      "Arm speed looks identical to the fastball from behind",
+      "Ball comes out 8-10% slower without being aimed",
+      "Comfortable enough to throw it in a bullpen without hesitation"
+    ]
+  },
+  {
+    "drill_name": "Teaching the Changeup \u2014 Fastball Arm, Slower Ball",
+    "description": "A pro coach's method for developing the changeup with young pitchers: grip selection for small hands and keeping arm speed identical to the fastball so the pitch actually deceives.",
+    "youtube_url": "https://www.youtube.com/watch?v=9CzbPIQfXmM",
+    "youtube_video_id": "9CzbPIQfXmM",
+    "thumbnail_url": "https://img.youtube.com/vi/9CzbPIQfXmM/hqdefault.jpg",
+    "channel": "Coach Dan Blewett",
+    "skill_category": "Pitching",
+    "primary_skill": "Changeup",
+    "secondary_skill": "Pitch grips",
+    "tags": [
+      "changeup",
+      "arm speed",
+      "deception",
+      "youth pitching"
+    ],
+    "age_range": "9-13",
+    "min_age": 9,
+    "max_age": 13,
+    "difficulty_level": "Intermediate",
+    "progression_level": 3,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Medium",
+    "requires_partner": true,
+    "equipment_needed": [
+      "baseballs",
+      "glove",
+      "mound (optional)"
+    ],
+    "mechanic_focus": [
+      "arm speed maintenance",
+      "grip refinement",
+      "command to the zone"
+    ],
+    "common_flaws_fixed": [
+      "no changeup",
+      "needs an offspeed pitch",
+      "one speed pitcher"
+    ],
+    "safety_notes": "Introduce off-speed only after fastball mechanics are stable; changeup before any breaking ball for youth pitchers.",
+    "ai_coaching_notes": "Film from the side: the fastball and changeup deliveries should be indistinguishable. Common fault is slowing the arm \u2014 fix it by cueing 'throw it hard' and letting the grip kill velocity. Mix 1 changeup per 3 fastballs in bullpens.",
+    "reps_guidance": "10-12 changeups per bullpen, mixed with fastballs",
+    "frequency_guidance": "1-2 bullpens/week",
+    "success_markers": [
+      "Side-by-side video shows matching arm speed",
+      "Changeup lands in the bottom half of the zone",
+      "Hitters in live BP are visibly out in front"
+    ]
+  },
+  {
+    "drill_name": "Changeup Grip Menu \u2014 Match the Grip to the Hand",
+    "description": "Walks through circle, three-finger, and other changeup grip options so pitchers can match a grip to their hand size as they grow \u2014 and refine feel and movement.",
+    "youtube_url": "https://www.youtube.com/watch?v=Ji0QzOJe3hE",
+    "youtube_video_id": "Ji0QzOJe3hE",
+    "thumbnail_url": "https://img.youtube.com/vi/Ji0QzOJe3hE/hqdefault.jpg",
+    "channel": "ARM Pitching Development",
+    "skill_category": "Pitching",
+    "primary_skill": "Changeup",
+    "secondary_skill": "Pitch grips",
+    "tags": [
+      "changeup",
+      "circle change",
+      "three finger",
+      "grips"
+    ],
+    "age_range": "9-14",
+    "min_age": 9,
+    "max_age": 14,
+    "difficulty_level": "Intermediate",
+    "progression_level": 3,
+    "indoor_outdoor": "Indoor/Outdoor",
+    "space_required": "Small",
+    "requires_partner": true,
+    "equipment_needed": [
+      "baseballs",
+      "glove"
+    ],
+    "mechanic_focus": [
+      "grip selection",
+      "pronation feel",
+      "movement profile"
+    ],
+    "common_flaws_fixed": [
+      "changeup grip",
+      "no changeup",
+      "pitch grips"
+    ],
+    "safety_notes": "Grip experiments stay within normal catch-play volume; no max-effort mound work while testing grips.",
+    "ai_coaching_notes": "Have the pitcher test 2-3 grips over two weeks of catch play and keep whichever kills the most speed with the least effort. Small hands usually can't do a true circle \u2014 three-finger is the honest starting point. Revisit each off-season as hands grow.",
+    "reps_guidance": "10 throws per grip during catch play",
+    "frequency_guidance": "2-3x/week for two weeks, then settle on one",
+    "success_markers": [
+      "Picks one grip and can describe why it fits",
+      "Consistent 8-12% speed gap off the fastball",
+      "Some arm-side fade develops as pronation improves"
+    ]
+  },
+  {
+    "drill_name": "The Catch Drill \u2014 Track & Read Pitches",
+    "description": "Hitters catch pitches instead of swinging, training the eyes to read pitch type and location out of the hand \u2014 recognition and discipline without swing pressure.",
+    "youtube_url": "https://www.youtube.com/watch?v=0Phvj-iyLcc",
+    "youtube_video_id": "0Phvj-iyLcc",
+    "thumbnail_url": "https://img.youtube.com/vi/0Phvj-iyLcc/hqdefault.jpg",
+    "channel": "Coach Dan Blewett",
+    "skill_category": "Hitting",
+    "primary_skill": "Pitch recognition",
+    "secondary_skill": "Tracking",
+    "tags": [
+      "pitch recognition",
+      "tracking",
+      "vision",
+      "hitting"
+    ],
+    "age_range": "10-14",
+    "min_age": 10,
+    "max_age": 14,
+    "difficulty_level": "Intermediate",
+    "progression_level": 3,
+    "indoor_outdoor": "Indoor/Outdoor",
+    "space_required": "Medium",
+    "requires_partner": true,
+    "equipment_needed": [
+      "glove",
+      "helmet",
+      "live or machine pitching"
+    ],
+    "mechanic_focus": [
+      "reading out of the hand",
+      "early recognition",
+      "strike zone judgment"
+    ],
+    "common_flaws_fixed": [
+      "poor pitch recognition",
+      "can't recognize spin",
+      "fooled by slow pitches"
+    ],
+    "safety_notes": "Helmet required when standing in the box; start with reduced-speed pitching for younger hitters.",
+    "ai_coaching_notes": "Hitter stands in the box wearing a helmet with a glove and catches the pitch, calling 'fastball' or 'change' as early as possible. Score correct early calls. Rotate hitters standing in during bullpens for free reps.",
+    "reps_guidance": "2 rounds of 10 pitches, calls scored",
+    "frequency_guidance": "2x/week (piggyback on bullpens)",
+    "success_markers": [
+      "Calls pitch type before the ball is halfway home",
+      "Correctly takes balls and 'catches strikes' by location call",
+      "Carries calmer takes into live at-bats"
+    ]
+  },
+  {
+    "drill_name": "Stay Back \u2014 Beat the Changeup",
+    "description": "What 'staying back' actually means, with drills to keep weight and hands loaded so hitters aren't fooled out front by off-speed pitches.",
+    "youtube_url": "https://www.youtube.com/watch?v=8_6Ea45fL5s",
+    "youtube_video_id": "8_6Ea45fL5s",
+    "thumbnail_url": "https://img.youtube.com/vi/8_6Ea45fL5s/hqdefault.jpg",
+    "channel": "Ultimate Baseball Training",
+    "skill_category": "Hitting",
+    "primary_skill": "Off-speed hitting",
+    "secondary_skill": "Balance",
+    "tags": [
+      "stay back",
+      "offspeed",
+      "balance",
+      "timing"
+    ],
+    "age_range": "11-15",
+    "min_age": 11,
+    "max_age": 15,
+    "difficulty_level": "Intermediate",
+    "progression_level": 3,
+    "indoor_outdoor": "Indoor/Outdoor",
+    "space_required": "Medium",
+    "requires_partner": true,
+    "equipment_needed": [
+      "bat",
+      "tee",
+      "balls",
+      "front-toss screen"
+    ],
+    "mechanic_focus": [
+      "weight control",
+      "hands loaded",
+      "adjustable stride"
+    ],
+    "common_flaws_fixed": [
+      "out in front of offspeed",
+      "off balance against slow stuff",
+      "way out in front"
+    ],
+    "safety_notes": null,
+    "ai_coaching_notes": "Front toss with random speed changes: the feeder varies fast/slow without telling. Cue 'stride to hit the fastball, keep the hands back for the change.' The stride lands on time \u2014 the hands wait.",
+    "reps_guidance": "3 rounds of 12 mixed-speed swings",
+    "frequency_guidance": "2x/week",
+    "success_markers": [
+      "Head and weight stay behind the front hip on slow pitches",
+      "Hard contact on both speeds within the same round",
+      "No double-stride or lunge when fooled"
+    ]
+  },
+  {
+    "drill_name": "In-Swing Off-Speed Adjustment",
+    "description": "The correct in-swing adjustment when a hitter recognizes off-speed mid-pitch \u2014 keeping the barrel in the zone instead of rolling over, for hitters facing pitchers who mix speeds.",
+    "youtube_url": "https://www.youtube.com/watch?v=oCq8NblqfQE",
+    "youtube_video_id": "oCq8NblqfQE",
+    "thumbnail_url": "https://img.youtube.com/vi/oCq8NblqfQE/hqdefault.jpg",
+    "channel": "Dominate The Diamond",
+    "skill_category": "Hitting",
+    "primary_skill": "Off-speed hitting",
+    "secondary_skill": "Barrel control",
+    "tags": [
+      "offspeed",
+      "adjustment",
+      "barrel control",
+      "advanced"
+    ],
+    "age_range": "12-16",
+    "min_age": 12,
+    "max_age": 16,
+    "difficulty_level": "Advanced",
+    "progression_level": 4,
+    "indoor_outdoor": "Indoor/Outdoor",
+    "space_required": "Medium",
+    "requires_partner": true,
+    "equipment_needed": [
+      "bat",
+      "balls",
+      "front-toss screen or machine"
+    ],
+    "mechanic_focus": [
+      "mid-pitch adjustment",
+      "barrel in the zone",
+      "posture hold"
+    ],
+    "common_flaws_fixed": [
+      "can't hit offspeed",
+      "can't hit the changeup",
+      "fooled by slow pitches"
+    ],
+    "safety_notes": null,
+    "ai_coaching_notes": "Machine or feeder mixes speeds with a 2:1 fastball bias. Cue 'swing fastball, adjust down and long' \u2014 the barrel stays through the hitting zone so late recognition still produces fair contact. Track hard-hit rate on the off-speed only.",
+    "reps_guidance": "4 rounds of 10 mixed pitches",
+    "frequency_guidance": "1-2x/week",
+    "success_markers": [
+      "Off-speed contact goes up the middle or oppo instead of weak pull-side",
+      "Posture holds through the adjusted swing",
+      "Hard-hit rate on off-speed climbs over 3-4 sessions"
+    ]
+  },
+  {
+    "drill_name": "Opposite-Field Teaching Progression",
+    "description": "Five coach-friendly methods for teaching hitters to drive the ball the other way \u2014 the foundation for hitting behind runners and executing situational at-bats.",
+    "youtube_url": "https://www.youtube.com/watch?v=pn3xtpCc8uM",
+    "youtube_video_id": "pn3xtpCc8uM",
+    "thumbnail_url": "https://img.youtube.com/vi/pn3xtpCc8uM/hqdefault.jpg",
+    "channel": "Dominate The Diamond",
+    "skill_category": "Hitting",
+    "primary_skill": "Situational hitting",
+    "secondary_skill": "Opposite field",
+    "tags": [
+      "opposite field",
+      "oppo",
+      "situational hitting"
+    ],
+    "age_range": "9-13",
+    "min_age": 9,
+    "max_age": 13,
+    "difficulty_level": "Beginner",
+    "progression_level": 2,
+    "indoor_outdoor": "Indoor/Outdoor",
+    "space_required": "Medium",
+    "requires_partner": true,
+    "equipment_needed": [
+      "bat",
+      "tee",
+      "balls"
+    ],
+    "mechanic_focus": [
+      "letting the ball travel",
+      "inside path",
+      "contact depth"
+    ],
+    "common_flaws_fixed": [
+      "can't go opposite field",
+      "pull happy",
+      "no situational hitting"
+    ],
+    "safety_notes": null,
+    "ai_coaching_notes": "Start on the tee set deep in the zone. Cue 'let it get to your back hip, hit the inside half.' Progress through the five methods as each sticks. Success is direction, not distance \u2014 a firm ground ball the other way counts.",
+    "reps_guidance": "3 rounds of 10 swings, all must go opposite field",
+    "frequency_guidance": "2x/week",
+    "success_markers": [
+      "Ball flight consistently between center and the opposite-field line",
+      "Contact point is visibly deeper than the pull-side swing",
+      "Can call 'oppo' and execute on demand in BP"
+    ]
+  },
+  {
+    "drill_name": "Oppo Tee & Toss \u2014 Stay Inside the Ball",
+    "description": "A repeatable tee/toss drill for staying inside the ball and driving outside pitches the other way \u2014 plugs directly into situational BP rounds.",
+    "youtube_url": "https://www.youtube.com/watch?v=OhWNIpPlcgA",
+    "youtube_video_id": "OhWNIpPlcgA",
+    "thumbnail_url": "https://img.youtube.com/vi/OhWNIpPlcgA/hqdefault.jpg",
+    "channel": "Pro Speed Baseball",
+    "skill_category": "Hitting",
+    "primary_skill": "Situational hitting",
+    "secondary_skill": "Opposite field",
+    "tags": [
+      "opposite field",
+      "tee work",
+      "inside the ball"
+    ],
+    "age_range": "10-14",
+    "min_age": 10,
+    "max_age": 14,
+    "difficulty_level": "Intermediate",
+    "progression_level": 3,
+    "indoor_outdoor": "Indoor/Outdoor",
+    "space_required": "Small",
+    "requires_partner": false,
+    "equipment_needed": [
+      "bat",
+      "tee",
+      "balls",
+      "net"
+    ],
+    "mechanic_focus": [
+      "staying inside the ball",
+      "outside-pitch path",
+      "extension through contact"
+    ],
+    "common_flaws_fixed": [
+      "can't go opposite field",
+      "pull happy",
+      "doesn't hit behind the runner"
+    ],
+    "safety_notes": null,
+    "ai_coaching_notes": "Tee on the outer third, slightly deep. Cue 'knob to the ball, barrel late.' Rolling over the outside pitch means the barrel released early \u2014 reset with three one-arm bottom-hand swings, then return to full swings.",
+    "reps_guidance": "4 sets of 8 swings on the outer-third tee",
+    "frequency_guidance": "2-3x/week",
+    "success_markers": [
+      "Line drives to the opposite gap off the outer-third tee",
+      "No rolled-over contact for a full set",
+      "Same swing shows up on outside pitches in front toss"
+    ]
+  },
+  {
+    "drill_name": "The Move-'Em At-Bat \u2014 Advancing Runners",
+    "description": "The 'move 'em' at-bat \u2014 advancing a runner from second with nobody out \u2014 broken down with College World Series examples: approach, pitch zones, and execution under pressure.",
+    "youtube_url": "https://www.youtube.com/watch?v=_yEr3pFHQUA",
+    "youtube_video_id": "_yEr3pFHQUA",
+    "thumbnail_url": "https://img.youtube.com/vi/_yEr3pFHQUA/hqdefault.jpg",
+    "channel": "Catalyst Sports",
+    "skill_category": "Hitting",
+    "primary_skill": "Situational hitting",
+    "secondary_skill": "Approach",
+    "tags": [
+      "situational hitting",
+      "moving runners",
+      "approach",
+      "advanced"
+    ],
+    "age_range": "12-16",
+    "min_age": 12,
+    "max_age": 16,
+    "difficulty_level": "Advanced",
+    "progression_level": 4,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Full field",
+    "requires_partner": true,
+    "equipment_needed": [
+      "bat",
+      "balls",
+      "bases",
+      "live or machine pitching"
+    ],
+    "mechanic_focus": [
+      "zone selection",
+      "right-side contact",
+      "situational discipline"
+    ],
+    "common_flaws_fixed": [
+      "can't move runners",
+      "doesn't advance runners",
+      "no approach with runners on"
+    ],
+    "safety_notes": null,
+    "ai_coaching_notes": "Run situational BP: runner at second, nobody out, hitter must move him. Only pitches middle-away get swings \u2014 pulling a ball on the ground to short is a failed rep even if it's a 'hit.' Score execution, not outcomes.",
+    "reps_guidance": "2 situational rounds of 6 at-bat scenarios per session",
+    "frequency_guidance": "Weekly in-season",
+    "success_markers": [
+      "Runner reaches third on 4+ of 6 execution reps",
+      "Hitter can state the plan before stepping in",
+      "Takes the inside pitch he can't execute with, without frustration"
+    ]
+  },
+  {
+    "drill_name": "Overload/Underload Bat Speed Progression",
+    "description": "Overload/underload training with weighted and light bats to raise bat speed in youth hitters \u2014 how to sequence heavy-light swings safely for developing players.",
+    "youtube_url": "https://www.youtube.com/watch?v=Oz1oGdb0n-8",
+    "youtube_video_id": "Oz1oGdb0n-8",
+    "thumbnail_url": "https://img.youtube.com/vi/Oz1oGdb0n-8/hqdefault.jpg",
+    "channel": "Hitting Done Right - HDR",
+    "skill_category": "Hitting",
+    "primary_skill": "Bat speed",
+    "secondary_skill": "Sequencing",
+    "tags": [
+      "bat speed",
+      "overload",
+      "underload",
+      "advanced"
+    ],
+    "age_range": "11-14",
+    "min_age": 11,
+    "max_age": 14,
+    "difficulty_level": "Advanced",
+    "progression_level": 4,
+    "indoor_outdoor": "Indoor/Outdoor",
+    "space_required": "Small",
+    "requires_partner": false,
+    "equipment_needed": [
+      "standard bat",
+      "heavier training bat",
+      "lighter training bat",
+      "tee",
+      "balls"
+    ],
+    "mechanic_focus": [
+      "intent to swing fast",
+      "sequencing under load",
+      "barrel speed"
+    ],
+    "common_flaws_fixed": [
+      "slow bat",
+      "slow bat speed",
+      "late on fast pitching"
+    ],
+    "safety_notes": "Keep overload bats within ~20% of game bat weight for youth; stop if wrist or elbow soreness appears.",
+    "ai_coaching_notes": "Order matters: heavy (feel sequence) \u2192 light (move fast) \u2192 game bat (transfer). Full intent on every swing \u2014 lazy overload swings teach slow. Measure with a swing sensor or simple phone video if no sensor.",
+    "reps_guidance": "3 rounds: 5 heavy + 5 light + 5 game-bat swings",
+    "frequency_guidance": "2x/week with rest days between",
+    "success_markers": [
+      "Game-bat swing speed measurably up over 4-6 weeks",
+      "Swing sequence stays intact under the heavy bat",
+      "No grip/wrist soreness \u2014 load is age-appropriate"
+    ]
+  },
+  {
+    "drill_name": "Deaden & Direct \u2014 Bunt Placement Drill",
+    "description": "A simple high-rep bunting drill that trains deadening the ball and placing bunts toward first or third on command \u2014 precision beyond basic technique.",
+    "youtube_url": "https://www.youtube.com/watch?v=pIx9tM4NKrU",
+    "youtube_video_id": "pIx9tM4NKrU",
+    "thumbnail_url": "https://img.youtube.com/vi/pIx9tM4NKrU/hqdefault.jpg",
+    "channel": "Baseball By The Yard",
+    "skill_category": "Bunting",
+    "primary_skill": "Bunt placement",
+    "secondary_skill": "Bat control",
+    "tags": [
+      "bunting",
+      "placement",
+      "deaden"
+    ],
+    "age_range": "10-14",
+    "min_age": 10,
+    "max_age": 14,
+    "difficulty_level": "Intermediate",
+    "progression_level": 3,
+    "indoor_outdoor": "Indoor/Outdoor",
+    "space_required": "Small",
+    "requires_partner": true,
+    "equipment_needed": [
+      "bat",
+      "balls",
+      "cones or towels as targets"
+    ],
+    "mechanic_focus": [
+      "deadening the ball",
+      "bat angle steering",
+      "top-hand give"
+    ],
+    "common_flaws_fixed": [
+      "can't place bunts",
+      "pops up bunts",
+      "can't get a bunt down"
+    ],
+    "safety_notes": null,
+    "ai_coaching_notes": "Lay towels or cone lanes down each line. Feeder calls 'first side' or 'third side' mid-toss. Cue 'catch it with the barrel' \u2014 soft top hand gives with contact. Chase the ball angle with the knob, not the barrel.",
+    "reps_guidance": "3 rounds of 10 bunts, alternating target lanes",
+    "frequency_guidance": "Weekly",
+    "success_markers": [
+      "7+ of 10 bunts stop inside the called lane",
+      "Ball dies within 15 feet of the plate",
+      "Bat starts at the top of the zone \u2014 anything above it is taken"
+    ]
+  },
+  {
+    "drill_name": "Competitive Team Bunting Game",
+    "description": "A team-wide competitive bunting game scoring sacrifice bunts, push bunts, and bunting for a hit \u2014 pressure and accountability so bunting practice transfers to games.",
+    "youtube_url": "https://www.youtube.com/watch?v=SR8atnQMvg4",
+    "youtube_video_id": "SR8atnQMvg4",
+    "thumbnail_url": "https://img.youtube.com/vi/SR8atnQMvg4/hqdefault.jpg",
+    "channel": "Coach Trent Mongero",
+    "skill_category": "Bunting",
+    "primary_skill": "Bunt execution",
+    "secondary_skill": "Pressure execution",
+    "tags": [
+      "bunting",
+      "competition",
+      "pressure",
+      "advanced"
+    ],
+    "age_range": "12-16",
+    "min_age": 12,
+    "max_age": 16,
+    "difficulty_level": "Advanced",
+    "progression_level": 4,
+    "indoor_outdoor": "Outdoor",
+    "space_required": "Full field",
+    "requires_partner": true,
+    "equipment_needed": [
+      "bats",
+      "balls",
+      "bases",
+      "live pitching or machine"
+    ],
+    "mechanic_focus": [
+      "execution under pressure",
+      "bunt-type selection",
+      "situational bunting"
+    ],
+    "common_flaws_fixed": [
+      "can't get a bunt down",
+      "sacrifice bunt",
+      "bunting for a hit"
+    ],
+    "safety_notes": null,
+    "ai_coaching_notes": "Split the team; each hitter draws a situation card (sac to third, push past the pitcher, squeeze). Points only for executed bunts against live pitching. Losing team does field cleanup \u2014 pressure makes the reps real.",
+    "reps_guidance": "Each player: 4-6 competitive bunt attempts",
+    "frequency_guidance": "Biweekly in-season",
+    "success_markers": [
+      "Executes 3 different bunt types against live pitching",
+      "Success rate climbs across sessions",
+      "Players choose the right bunt for the situation without coaching"
+    ]
+  },
+  {
+    "drill_name": "Youth J-Band Routine \u2014 Pre-Throwing Activation",
+    "description": "Essential J-band resistance exercises for youth pitchers and throwers: warming up the shoulder and building arm strength before any throwing session.",
+    "youtube_url": "https://www.youtube.com/watch?v=yrgUzW0UK40",
+    "youtube_video_id": "yrgUzW0UK40",
+    "thumbnail_url": "https://img.youtube.com/vi/yrgUzW0UK40/hqdefault.jpg",
+    "channel": "ARM Pitching Development",
+    "skill_category": "Arm Care",
+    "primary_skill": "Shoulder activation",
+    "secondary_skill": "Injury prevention",
+    "tags": [
+      "arm care",
+      "j-bands",
+      "warm up",
+      "shoulder"
+    ],
+    "age_range": "8-14",
+    "min_age": 8,
+    "max_age": 14,
+    "difficulty_level": "Beginner",
+    "progression_level": 1,
+    "indoor_outdoor": "Indoor/Outdoor",
+    "space_required": "Small",
+    "requires_partner": false,
+    "equipment_needed": [
+      "J-bands or light resistance bands",
+      "fence or anchor point"
+    ],
+    "mechanic_focus": [
+      "scapular activation",
+      "rotator cuff warm-up",
+      "band control"
+    ],
+    "common_flaws_fixed": [
+      "arm gets tired",
+      "no arm care routine",
+      "needs j-bands"
+    ],
+    "safety_notes": "Light resistance only for youth \u2014 bands should bend, not strain. Stop any exercise that causes joint pain rather than muscle warmth.",
+    "ai_coaching_notes": "Anchor at elbow height and keep tension light \u2014 these are activation reps, not strength maxes. Cue 'slow out, slow back' with no band snap. Make it the non-negotiable first station before any throwing.",
+    "reps_guidance": "1 round of 8-10 reps per exercise, before every throwing session",
+    "frequency_guidance": "Every throwing day",
+    "success_markers": [
+      "Completes the routine without form breakdown",
+      "Reports the arm feeling 'ready' before the first throw",
+      "Routine happens without being reminded"
+    ]
+  },
+  {
+    "drill_name": "9-Exercise J-Band Strength Routine",
+    "description": "A nine-exercise J-band routine targeting the rotator cuff and scapular muscles for throwing durability and velocity \u2014 proper band tension, tempo, and the common form mistakes.",
+    "youtube_url": "https://www.youtube.com/watch?v=slqo583qoAg",
+    "youtube_video_id": "slqo583qoAg",
+    "thumbnail_url": "https://img.youtube.com/vi/slqo583qoAg/hqdefault.jpg",
+    "channel": "Northern Baseball Training",
+    "skill_category": "Arm Care",
+    "primary_skill": "Rotator cuff strength",
+    "secondary_skill": "Injury prevention",
+    "tags": [
+      "arm care",
+      "j-bands",
+      "rotator cuff",
+      "strength"
+    ],
+    "age_range": "10-14",
+    "min_age": 10,
+    "max_age": 14,
+    "difficulty_level": "Intermediate",
+    "progression_level": 3,
+    "indoor_outdoor": "Indoor/Outdoor",
+    "space_required": "Small",
+    "requires_partner": false,
+    "equipment_needed": [
+      "J-bands or resistance bands",
+      "anchor point"
+    ],
+    "mechanic_focus": [
+      "rotator cuff strength",
+      "scapular control",
+      "tempo work"
+    ],
+    "common_flaws_fixed": [
+      "weak rotator cuff",
+      "arm fatigue",
+      "arm durability"
+    ],
+    "safety_notes": "Strength band work belongs on low-throwing days; skip it the day after a max pitch-count outing.",
+    "ai_coaching_notes": "Run as a standalone mini-workout on lighter throwing days, not tacked onto a max-effort session. Cue controlled 2-second tempo each direction. Elbows stay at the set height \u2014 dropping the elbow is the giveaway fatigue sign to stop.",
+    "reps_guidance": "2 sets of 10 reps per exercise",
+    "frequency_guidance": "2-3x/week on low-throw days",
+    "success_markers": [
+      "All 9 exercises completed with steady tempo",
+      "Band resistance can progress after 3-4 weeks",
+      "Arm bounces back faster between outings"
+    ]
+  },
+  {
+    "drill_name": "Post-Throwing Recovery Routine",
+    "description": "Eight exercises pitchers should do after bullpens or game outings to flush the arm and protect the rotator cuff \u2014 a consistent recovery habit between outings.",
+    "youtube_url": "https://www.youtube.com/watch?v=EunHAooYktE",
+    "youtube_video_id": "EunHAooYktE",
+    "thumbnail_url": "https://img.youtube.com/vi/EunHAooYktE/hqdefault.jpg",
+    "channel": "ARM Pitching Development",
+    "skill_category": "Arm Care",
+    "primary_skill": "Recovery",
+    "secondary_skill": "Injury prevention",
+    "tags": [
+      "arm care",
+      "recovery",
+      "post throwing",
+      "pitchers"
+    ],
+    "age_range": "10-14",
+    "min_age": 10,
+    "max_age": 14,
+    "difficulty_level": "Intermediate",
+    "progression_level": 3,
+    "indoor_outdoor": "Indoor/Outdoor",
+    "space_required": "Small",
+    "requires_partner": false,
+    "equipment_needed": [
+      "light bands",
+      "open space"
+    ],
+    "mechanic_focus": [
+      "blood flow",
+      "range of motion",
+      "downregulation"
+    ],
+    "common_flaws_fixed": [
+      "sore arm after pitching",
+      "no recovery routine",
+      "dead arm"
+    ],
+    "safety_notes": "Recovery work is light by design \u2014 no heavy resistance after throwing. Persistent sharp pain after outings is a see-a-doctor sign, not a push-through sign.",
+    "ai_coaching_notes": "The routine happens within 15 minutes of the last pitch, every outing \u2014 consistency is the entire point. Keep everything light and rhythmic; recovery work should feel easier than warm-up work. Log soreness the next day to show players it works.",
+    "reps_guidance": "1 round of 8 exercises immediately after throwing",
+    "frequency_guidance": "After every bullpen, start, or heavy throwing day",
+    "success_markers": [
+      "Next-day soreness noticeably reduced in the player's log",
+      "Routine completed unprompted after outings",
+      "Full pain-free range of motion maintained through the season"
+    ]
+  }
+]

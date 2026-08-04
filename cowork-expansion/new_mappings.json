@@ -1,0 +1,288 @@
+[
+  {
+    "drill_ref": "Kwo1k2i-tSE",
+    "problem_slug": "catcher-receiving",
+    "sort_order": 1,
+    "curated": true,
+    "existing_drill": true
+  },
+  {
+    "drill_ref": "JDRg2nvAwqU",
+    "problem_slug": "catcher-receiving",
+    "sort_order": 2,
+    "curated": true
+  },
+  {
+    "drill_ref": "Z1erh6UVR_w",
+    "problem_slug": "catcher-receiving",
+    "sort_order": 3,
+    "curated": true
+  },
+  {
+    "drill_ref": "yJxiRn88Ms0",
+    "problem_slug": "catcher-receiving",
+    "sort_order": 4,
+    "curated": true
+  },
+  {
+    "drill_ref": "Tjzv5anKEe0",
+    "problem_slug": "catcher-blocking",
+    "sort_order": 1,
+    "curated": true,
+    "existing_drill": true
+  },
+  {
+    "drill_ref": "eQCF2jZiU5M",
+    "problem_slug": "catcher-blocking",
+    "sort_order": 2,
+    "curated": true
+  },
+  {
+    "drill_ref": "n8OCrOmbTBU",
+    "problem_slug": "catcher-blocking",
+    "sort_order": 3,
+    "curated": true
+  },
+  {
+    "drill_ref": "h_mEnVPL6Qg",
+    "problem_slug": "cant-slide",
+    "sort_order": 1,
+    "curated": true
+  },
+  {
+    "drill_ref": "e_q6AWdgabQ",
+    "problem_slug": "cant-slide",
+    "sort_order": 2,
+    "curated": true
+  },
+  {
+    "drill_ref": "wMZkEfiFBxc",
+    "problem_slug": "cant-slide",
+    "sort_order": 3,
+    "curated": true
+  },
+  {
+    "drill_ref": "JVwDSgbUfBM",
+    "problem_slug": "base-stealing",
+    "sort_order": 1,
+    "curated": true
+  },
+  {
+    "drill_ref": "SXfbP6x3iXI",
+    "problem_slug": "base-stealing",
+    "sort_order": 2,
+    "curated": true
+  },
+  {
+    "drill_ref": "iZK-Rtp1bv4",
+    "problem_slug": "base-stealing",
+    "sort_order": 3,
+    "curated": true
+  },
+  {
+    "drill_ref": "Yle6R1-flA8",
+    "problem_slug": "cutoffs-relays",
+    "sort_order": 1,
+    "curated": true
+  },
+  {
+    "drill_ref": "YipF1W7BDJM",
+    "problem_slug": "cutoffs-relays",
+    "sort_order": 2,
+    "curated": true
+  },
+  {
+    "drill_ref": "wIU9NdCBBkE",
+    "problem_slug": "cutoffs-relays",
+    "sort_order": 3,
+    "curated": true
+  },
+  {
+    "drill_ref": "TJXQiYdueQc",
+    "problem_slug": "cutoffs-relays",
+    "sort_order": 4,
+    "curated": true
+  },
+  {
+    "drill_ref": "OEYEvKRh2eQ",
+    "problem_slug": "rundowns",
+    "sort_order": 1,
+    "curated": true
+  },
+  {
+    "drill_ref": "cV8Ivq0XcJA",
+    "problem_slug": "rundowns",
+    "sort_order": 2,
+    "curated": true
+  },
+  {
+    "drill_ref": "OAbBekHAk_g",
+    "problem_slug": "rundowns",
+    "sort_order": 3,
+    "curated": true
+  },
+  {
+    "drill_ref": "95B1kSchurQ",
+    "problem_slug": "first-base-footwork",
+    "sort_order": 1,
+    "curated": true
+  },
+  {
+    "drill_ref": "R1sbhgRzneQ",
+    "problem_slug": "first-base-footwork",
+    "sort_order": 2,
+    "curated": true
+  },
+  {
+    "drill_ref": "QR2QWQTHp-s",
+    "problem_slug": "first-base-footwork",
+    "sort_order": 3,
+    "curated": true
+  },
+  {
+    "drill_ref": "x5oEDLlVpqo",
+    "problem_slug": "outfield-communication",
+    "sort_order": 1,
+    "curated": true
+  },
+  {
+    "drill_ref": "7CbADt5veC0",
+    "problem_slug": "outfield-communication",
+    "sort_order": 2,
+    "curated": true,
+    "existing_drill": true
+  },
+  {
+    "drill_ref": "5q3b9m2ERho",
+    "problem_slug": "outfield-communication",
+    "sort_order": 3,
+    "curated": true
+  },
+  {
+    "drill_ref": "RJRjtqWjNnQ",
+    "problem_slug": "no-changeup",
+    "sort_order": 1,
+    "curated": true
+  },
+  {
+    "drill_ref": "9CzbPIQfXmM",
+    "problem_slug": "no-changeup",
+    "sort_order": 2,
+    "curated": true
+  },
+  {
+    "drill_ref": "Ji0QzOJe3hE",
+    "problem_slug": "no-changeup",
+    "sort_order": 3,
+    "curated": true
+  },
+  {
+    "drill_ref": "0Phvj-iyLcc",
+    "problem_slug": "cant-hit-offspeed",
+    "sort_order": 1,
+    "curated": true
+  },
+  {
+    "drill_ref": "8_6Ea45fL5s",
+    "problem_slug": "cant-hit-offspeed",
+    "sort_order": 2,
+    "curated": true
+  },
+  {
+    "drill_ref": "oCq8NblqfQE",
+    "problem_slug": "cant-hit-offspeed",
+    "sort_order": 3,
+    "curated": true
+  },
+  {
+    "drill_ref": "pn3xtpCc8uM",
+    "problem_slug": "no-situational-hitting",
+    "sort_order": 1,
+    "curated": true
+  },
+  {
+    "drill_ref": "OhWNIpPlcgA",
+    "problem_slug": "no-situational-hitting",
+    "sort_order": 2,
+    "curated": true
+  },
+  {
+    "drill_ref": "_yEr3pFHQUA",
+    "problem_slug": "no-situational-hitting",
+    "sort_order": 3,
+    "curated": true
+  },
+  {
+    "drill_ref": "jw2edYj5Pk4",
+    "problem_slug": "cant-bunt",
+    "sort_order": 1,
+    "curated": true,
+    "existing_drill": true
+  },
+  {
+    "drill_ref": "pIx9tM4NKrU",
+    "problem_slug": "cant-bunt",
+    "sort_order": 2,
+    "curated": true
+  },
+  {
+    "drill_ref": "SR8atnQMvg4",
+    "problem_slug": "cant-bunt",
+    "sort_order": 3,
+    "curated": true
+  },
+  {
+    "drill_ref": "yrgUzW0UK40",
+    "problem_slug": "arm-fatigue",
+    "sort_order": 1,
+    "curated": true
+  },
+  {
+    "drill_ref": "slqo583qoAg",
+    "problem_slug": "arm-fatigue",
+    "sort_order": 2,
+    "curated": true
+  },
+  {
+    "drill_ref": "EunHAooYktE",
+    "problem_slug": "arm-fatigue",
+    "sort_order": 3,
+    "curated": true
+  },
+  {
+    "drill_ref": "IEk4QipiFTY",
+    "problem_slug": "poor-fielding-footwork",
+    "sort_order": 90,
+    "curated": false
+  },
+  {
+    "drill_ref": "Elzjz_qhLM4",
+    "problem_slug": "poor-fielding-footwork",
+    "sort_order": 91,
+    "curated": false
+  },
+  {
+    "drill_ref": "F0MwVYtimb8",
+    "problem_slug": "slow-transfer",
+    "sort_order": 90,
+    "curated": false
+  },
+  {
+    "drill_ref": "RmlsQPV4OGs",
+    "problem_slug": "slow-transfer",
+    "sort_order": 91,
+    "curated": false
+  },
+  {
+    "drill_ref": "Oz1oGdb0n-8",
+    "problem_slug": "late-timing",
+    "sort_order": 90,
+    "curated": false
+  },
+  {
+    "drill_ref": "iUdI35veg5E",
+    "problem_slug": "backpedaling-flyballs",
+    "sort_order": 90,
+    "curated": false
+  }
+]

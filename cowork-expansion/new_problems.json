@@ -1,0 +1,242 @@
+[
+  {
+    "slug": "catcher-receiving",
+    "label": "Stabs / pulls pitches out of the zone (receiving & framing)",
+    "skill_category": "Catching",
+    "description": "Catcher stabs at pitches or carries them out of the zone instead of quietly receiving and framing strikes.",
+    "aliases": [
+      "poor receiving",
+      "stabbing at pitches",
+      "stabbing pitches",
+      "carrying pitches out of the zone",
+      "pulling pitches out of the zone",
+      "loses strikes for the pitcher",
+      "bad framing",
+      "poor framing",
+      "framing",
+      "receiving",
+      "hard hands behind the plate",
+      "noisy glove",
+      "can't stick pitches"
+    ]
+  },
+  {
+    "slug": "catcher-blocking",
+    "label": "Won't block balls in the dirt",
+    "skill_category": "Catching",
+    "description": "Turns the glove or bails to the side instead of dropping to block pitches in the dirt.",
+    "aliases": [
+      "can't block",
+      "won't block",
+      "poor blocking",
+      "balls in the dirt get past",
+      "picks instead of blocks",
+      "turns head on balls in the dirt",
+      "bails on balls in the dirt",
+      "too many passed balls",
+      "wild pitches get by",
+      "blocking"
+    ]
+  },
+  {
+    "slug": "cant-slide",
+    "label": "Can't slide / slides late or wrong",
+    "skill_category": "Baserunning",
+    "description": "Doesn't know how to slide; slides late, headfirst into bases, or with injury-prone form.",
+    "aliases": [
+      "can't slide",
+      "doesn't slide",
+      "afraid to slide",
+      "slides late",
+      "slides headfirst",
+      "bad sliding form",
+      "doesn't know how to slide",
+      "jams fingers sliding",
+      "no pop-up slide",
+      "sliding"
+    ]
+  },
+  {
+    "slug": "base-stealing",
+    "label": "Poor jumps / can't steal bases",
+    "skill_category": "Baserunning",
+    "description": "Gets bad jumps, doesn't read the pitcher, and can't take extra bases on steals.",
+    "aliases": [
+      "can't steal bases",
+      "bad jumps",
+      "slow jump on steals",
+      "gets picked off",
+      "no secondary lead",
+      "doesn't read the pitcher",
+      "late steal break",
+      "poor crossover step on steals",
+      "delayed steal",
+      "frozen on steal attempts",
+      "base stealing",
+      "stealing bases"
+    ]
+  },
+  {
+    "slug": "cutoffs-relays",
+    "label": "Misses the cutoff man / poor relays",
+    "skill_category": "Team Defense",
+    "description": "Outfield throws sail past the cutoff man; relays are slow, off-line, or go to the wrong base.",
+    "aliases": [
+      "misses the cutoff man",
+      "missing cutoffs",
+      "airmails the cutoff",
+      "doesn't hit the cutoff",
+      "poor relays",
+      "slow relay throws",
+      "doesn't line up on relays",
+      "throws to the wrong base",
+      "no cutoff man",
+      "cutoffs",
+      "relays",
+      "cuts and relays"
+    ]
+  },
+  {
+    "slug": "rundowns",
+    "label": "Panics in rundowns",
+    "skill_category": "Team Defense",
+    "description": "Rundowns turn chaotic \u2014 too many throws, the runner escapes, nobody covers a base.",
+    "aliases": [
+      "panics in rundowns",
+      "bad rundowns",
+      "pickle chaos",
+      "too many throws in rundowns",
+      "runner escapes rundowns",
+      "doesn't follow the throw",
+      "rundown",
+      "pickle",
+      "rundown defense"
+    ]
+  },
+  {
+    "slug": "first-base-footwork",
+    "label": "Fumbles footwork around first base",
+    "skill_category": "Fielding (Infield)",
+    "description": "First baseman can't find the bag, stretches too early, or can't handle off-line throws and short hops.",
+    "aliases": [
+      "first base footwork",
+      "can't find the bag",
+      "stretches too early",
+      "pulls foot off the bag",
+      "can't pick throws at first",
+      "poor scoops at first",
+      "first baseman fundamentals",
+      "misses off-line throws at first",
+      "playing first base"
+    ]
+  },
+  {
+    "slug": "outfield-communication",
+    "label": "No call / collides on fly balls",
+    "skill_category": "Fielding (Fly Balls)",
+    "description": "Fielders don't call the ball \u2014 collisions, dropped balls, or everyone deferring to each other.",
+    "aliases": [
+      "doesn't call the ball",
+      "no communication in the outfield",
+      "outfielders collide",
+      "collisions on fly balls",
+      "two players let it drop",
+      "nobody calls it",
+      "poor priority on fly balls",
+      "doesn't call off the infielder",
+      "outfield communication",
+      "priority calls"
+    ]
+  },
+  {
+    "slug": "no-changeup",
+    "label": "Doesn't have a changeup / one speed only",
+    "skill_category": "Pitching",
+    "description": "Throws only fastballs; no safe off-speed pitch to change hitters' timing.",
+    "aliases": [
+      "no changeup",
+      "doesn't have a changeup",
+      "needs an offspeed pitch",
+      "one speed pitcher",
+      "only throws fastballs",
+      "changeup grip",
+      "change up",
+      "no second pitch",
+      "wants to throw a curveball too young",
+      "pitch grips"
+    ]
+  },
+  {
+    "slug": "cant-hit-offspeed",
+    "label": "Fooled by off-speed / poor pitch recognition",
+    "skill_category": "Hitting",
+    "description": "Out on the front foot against changeups and slower pitches; can't recognize speed changes out of the hand.",
+    "aliases": [
+      "can't hit offspeed",
+      "can't hit the changeup",
+      "fooled by slow pitches",
+      "out in front of offspeed",
+      "poor pitch recognition",
+      "can't recognize spin",
+      "struggles against slow pitchers",
+      "way out in front",
+      "off balance against slow stuff",
+      "pitch recognition"
+    ]
+  },
+  {
+    "slug": "no-situational-hitting",
+    "label": "No situational hitting / can't move runners",
+    "skill_category": "Hitting",
+    "description": "Same approach every at-bat; can't move runners over, hit behind them, or drive in a run with an out.",
+    "aliases": [
+      "can't move runners",
+      "no situational hitting",
+      "doesn't hit behind the runner",
+      "can't go opposite field",
+      "pull happy",
+      "no sac fly",
+      "doesn't advance runners",
+      "no approach with runners on",
+      "no productive outs",
+      "situational hitting"
+    ]
+  },
+  {
+    "slug": "cant-bunt",
+    "label": "Can't get a bunt down",
+    "skill_category": "Bunting",
+    "description": "Pops bunts up, misses entirely, or can't place them \u2014 no reliable sacrifice bunt.",
+    "aliases": [
+      "can't bunt",
+      "can't get a bunt down",
+      "pops up bunts",
+      "bad bunt technique",
+      "afraid to bunt",
+      "can't place bunts",
+      "sacrifice bunt",
+      "bunting for a hit",
+      "stabs at the bunt",
+      "bunting"
+    ]
+  },
+  {
+    "slug": "arm-fatigue",
+    "label": "Arm fatigue / no arm-care routine",
+    "skill_category": "Arm Care",
+    "description": "Arm gets tired or sore across the season; no band work or recovery routine to build durability.",
+    "aliases": [
+      "arm gets tired",
+      "arm fatigue",
+      "sore arm after pitching",
+      "no arm care routine",
+      "needs j-bands",
+      "j-band routine",
+      "weak rotator cuff",
+      "no recovery routine",
+      "dead arm",
+      "arm conditioning",
+      "arm durability"
+    ]
+  }
+]
