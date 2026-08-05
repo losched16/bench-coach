@@ -712,6 +712,7 @@ function CaptureForm({
   const [occurredOn, setOccurredOn] = useState(todayStr())
   const [tournamentName, setTournamentName] = useState('')
   const [files, setFiles] = useState<File[]>([])
+  const [pastedText, setPastedText] = useState('')
   const [parsing, setParsing] = useState(false)
   const [parseError, setParseError] = useState<string | null>(null)
   const [parsed, setParsed] = useState<any>(null)
@@ -741,7 +742,7 @@ function CaptureForm({
     })
 
   const handleParse = async () => {
-    if (files.length === 0) return
+    if (files.length === 0 && !pastedText.trim()) return
     setParsing(true)
     setParseError(null)
     try {
@@ -749,7 +750,7 @@ function CaptureForm({
       const res = await fetch('/api/scouting/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images, entryType }),
+        body: JSON.stringify({ images, text: pastedText.trim() || undefined, entryType }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Parse failed')
@@ -827,6 +828,7 @@ function CaptureForm({
         imageUrls,
         rawParse: parsed || null,
         parseConfidence: parsed?.confidence || null,
+        pastedText: pastedText.trim() || null,
         teamId,
         ownTeamName,
       }
@@ -952,7 +954,7 @@ function CaptureForm({
         </div>
       </div>
 
-      {/* 4. Screenshots */}
+      {/* 4. Screenshots + pasted recap text */}
       {entryType !== 'observation' && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Screenshots</label>
@@ -963,14 +965,41 @@ function CaptureForm({
             onChange={e => { setFiles(Array.from(e.target.files || [])); setParsed(null); setParsedPlayers([]) }}
             className="block w-full text-sm text-gray-600 file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border-0 file:bg-red-50 file:text-red-700 file:font-medium hover:file:bg-red-100"
           />
-          {files.length > 0 && !parsed && (
+
+          {(entryType === 'recap' || entryType === 'box_score') && (
+            <div className="mt-3">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {entryType === 'recap'
+                  ? 'Paste the GameChanger recap'
+                  : 'Paste the game recap (optional — adds context to the box score)'}
+              </label>
+              <textarea
+                value={pastedText}
+                onChange={e => { setPastedText(e.target.value); setParsed(null); setParsedPlayers([]) }}
+                rows={entryType === 'recap' ? 6 : 3}
+                placeholder="Copy the written game recap from GameChanger and paste it here…"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
+              />
+              {entryType === 'recap' && (
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Text, screenshots, or both — we&apos;ll pull out pitching notes, tendencies, and players mentioned.
+                </p>
+              )}
+            </div>
+          )}
+
+          {(files.length > 0 || (pastedText.trim() && entryType === 'recap')) && !parsed && (
             <button
               onClick={handleParse}
-              disabled={parsing}
+              disabled={parsing || (entryType === 'box_score' && files.length === 0)}
               className="mt-2 flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 text-sm"
             >
               {parsing ? <Loader2 className="animate-spin" size={16} /> : <Camera size={16} />}
-              {parsing ? 'Reading screenshot…' : `Parse ${files.length} screenshot${files.length === 1 ? '' : 's'}`}
+              {parsing
+                ? 'Reading…'
+                : files.length > 0
+                  ? `Parse ${files.length} screenshot${files.length === 1 ? '' : 's'}${pastedText.trim() ? ' + recap text' : ''}`
+                  : 'Parse recap text'}
             </button>
           )}
           {parseError && <p className="mt-2 text-sm text-red-600">{parseError}</p>}

@@ -38,7 +38,7 @@ Rules:
 - confidence reflects how readable the image was: "high" only if names, numbers, and pitch counts were all clearly legible.
 - If the image is not a box score, return {"players": [], "confidence": "low", "warnings": ["not a box score"]}.`
 
-const RECAP_PROMPT = `Analyze this screenshot of a youth baseball game recap or summary (likely from GameChanger). Extract scouting-relevant facts about the team described.
+const RECAP_PROMPT = `Analyze this youth baseball game recap or summary (a screenshot and/or pasted text, likely from GameChanger). Extract scouting-relevant facts about the team described.
 
 Return ONLY valid JSON, no other text:
 {
@@ -86,10 +86,13 @@ const PROMPTS: Record<string, string> = {
 
 export async function POST(request: NextRequest) {
   try {
-    const { images, entryType } = await request.json()
+    const { images, text, entryType } = await request.json()
 
-    if (!images || !Array.isArray(images) || images.length === 0) {
-      return NextResponse.json({ error: 'No images provided' }, { status: 400 })
+    const imageList = Array.isArray(images) ? images : []
+    const pastedText = typeof text === 'string' ? text.trim() : ''
+
+    if (imageList.length === 0 && !pastedText) {
+      return NextResponse.json({ error: 'Provide screenshots and/or pasted text' }, { status: 400 })
     }
 
     const prompt = PROMPTS[entryType]
@@ -97,7 +100,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Unsupported entry type for parsing: ${entryType}` }, { status: 400 })
     }
 
-    const content: any[] = images.slice(0, 5).map((img: any) => ({
+    const content: any[] = imageList.slice(0, 5).map((img: any) => ({
       type: 'image',
       source: {
         type: 'base64',
@@ -105,12 +108,18 @@ export async function POST(request: NextRequest) {
         data: img.data,
       },
     }))
-    content.push({
-      type: 'text',
-      text: images.length > 1
-        ? `${prompt}\n\nThere are ${images.length} images of the SAME game/document — combine them into one result.`
-        : prompt,
-    })
+
+    let promptText = prompt
+    if (imageList.length > 1) {
+      promptText += `\n\nThere are ${imageList.length} images of the SAME game/document — combine them into one result.`
+    }
+    if (pastedText) {
+      promptText += imageList.length > 0
+        ? `\n\nA written recap of the SAME game is pasted below — combine it with the image(s) into one result. Use it to fill gaps the image doesn't show (who pitched, how the game went, tendencies).`
+        : `\n\nThe recap text is pasted below (no image).`
+      promptText += `\n\nPASTED RECAP TEXT:\n"""\n${pastedText.slice(0, 12000)}\n"""`
+    }
+    content.push({ type: 'text', text: promptText })
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
@@ -118,11 +127,11 @@ export async function POST(request: NextRequest) {
       messages: [{ role: 'user', content }],
     })
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : ''
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    const responseText = response.content[0].type === 'text' ? response.content[0].text : ''
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
       return NextResponse.json(
-        { error: 'Could not parse the screenshot. Try a clearer image.', raw: text },
+        { error: 'Could not parse the recap. Try a clearer image or more complete text.', raw: responseText },
         { status: 400 }
       )
     }
@@ -132,7 +141,7 @@ export async function POST(request: NextRequest) {
       parsed = JSON.parse(jsonMatch[0])
     } catch (e) {
       return NextResponse.json(
-        { error: 'Could not parse the screenshot. Try a clearer image.', raw: text },
+        { error: 'Could not parse the recap. Try a clearer image or more complete text.', raw: responseText },
         { status: 400 }
       )
     }

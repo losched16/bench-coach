@@ -190,6 +190,7 @@ export async function POST(request: NextRequest) {
       imageUrls,
       rawParse,
       parseConfidence,
+      pastedText, // raw GameChanger recap text pasted by the coach
       players, // reviewed box-score player rows
       bracket, // reviewed bracket parse { teams, games, tournament_name }
       teamId, // coach's own team, for bracket matchups
@@ -198,6 +199,24 @@ export async function POST(request: NextRequest) {
 
     if (!coachId || !entryType) {
       return NextResponse.json({ error: 'coachId and entryType required' }, { status: 400 })
+    }
+
+    // Keep the original pasted recap alongside the parse, and fold what it
+    // said into the entry notes so it's visible on the entry and reaches the
+    // chat assistant's scouting context.
+    const storedParse = pastedText
+      ? { ...(rawParse || {}), pasted_text: String(pastedText).slice(0, 20000) }
+      : rawParse || null
+    let entryNotes: string | null = notes || null
+    if (rawParse?.summary || (rawParse?.tendencies || []).length > 0 || rawParse?.pitching_notes) {
+      const recapParts: string[] = []
+      if (rawParse.summary) recapParts.push(`Recap: ${rawParse.summary}`)
+      if (rawParse.pitching_notes) recapParts.push(`Pitching: ${rawParse.pitching_notes}`)
+      if ((rawParse.tendencies || []).length > 0) recapParts.push(`Tendencies: ${rawParse.tendencies.join('; ')}`)
+      entryNotes = [entryNotes, recapParts.join('\n')].filter(Boolean).join('\n')
+    } else if (pastedText && !rawParse) {
+      // Text pasted but never parsed — keep it readable rather than losing it
+      entryNotes = [entryNotes, `Pasted recap: ${String(pastedText).slice(0, 2000)}`].filter(Boolean).join('\n')
     }
 
     // 1. Resolve the opponent team (not needed for bracket entries)
@@ -220,10 +239,10 @@ export async function POST(request: NextRequest) {
         occurred_on: occurredOn || null,
         tournament_name: tournamentName || null,
         image_urls: imageUrls || [],
-        raw_parse: rawParse || null,
+        raw_parse: storedParse,
         parse_status: rawParse ? 'parsed' : 'none',
         parse_confidence: parseConfidence || null,
-        notes: notes || null,
+        notes: entryNotes,
       })
       .select()
       .single()
