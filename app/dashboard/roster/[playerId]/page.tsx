@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import SwingAnalysisUpload from '@/components/SwingAnalysisUpload'
+import { usePageView } from '@/lib/tracking'
 
 interface PlayerData {
   id: string
@@ -956,5 +957,6 @@ function PlayerDetailContent() {
 }
 
 export default function PlayerDetailPage() {
+  usePageView('roster_detail')
   return <Suspense fallback={<div className="text-gray-600">Loading...</div>}><PlayerDetailContent /></Suspense>
 }

@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { FileText, Clock, Users, Filter, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react'
 import { DrillVideo } from '@/components/DrillVideo'
+import { usePageView } from '@/lib/tracking'
 
 interface PracticeTemplate {
   id: string
@@ -34,6 +35,7 @@ const FOCUS_TYPES = [
 ]
 
 export default function TemplatesPage() {
+  usePageView('templates')
   const [templates, setTemplates] = useState<PracticeTemplate[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedAge, setSelectedAge] = useState('all')

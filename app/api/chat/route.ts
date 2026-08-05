@@ -236,6 +236,7 @@ export async function POST(request: NextRequest) {
       const { data: resources } = await supabaseAdmin
         .from('drill_resources')
         .select('drill_name, skill_category, description, youtube_url, youtube_video_id, channel, age_range, difficulty_level, mechanic_focus, common_flaws_fixed, equipment_needed, ai_coaching_notes, safety_notes')
+        .or('status.eq.approved,status.is.null')
         .limit(100)
 
       drillResources = resources || []

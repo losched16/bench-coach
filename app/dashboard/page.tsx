@@ -6,6 +6,7 @@ import { createSupabaseComponentClient } from '@/lib/supabase'
 import Link from 'next/link'
 
 import { MessageSquare, ClipboardList, Users, FileText, Calendar } from 'lucide-react'
+import { usePageView } from '@/lib/tracking'
 
 interface TeamData {
   team: any
@@ -242,6 +243,7 @@ function DashboardContent() {
 }
 
 export default function DashboardPage() {
+  usePageView('home')
   return (
     <Suspense fallback={<div className="text-gray-600">Loading dashboard...</div>}>
       <DashboardContent />

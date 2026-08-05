@@ -7,6 +7,7 @@ import {
   Users, Plus, Copy, Check, Trash2, Shield, Eye, Pencil, 
   Crown, Link2, RefreshCw, Clock, UserMinus, ChevronDown
 } from 'lucide-react'
+import { usePageView } from '@/lib/tracking'
 
 interface TeamMember {
   id: string
@@ -665,6 +666,7 @@ function TeamMembersContent() {
 }
 
 export default function TeamMembersPage() {
+  usePageView('team')
   return (
     <Suspense fallback={<div className="text-gray-600">Loading...</div>}>
       <TeamMembersContent />

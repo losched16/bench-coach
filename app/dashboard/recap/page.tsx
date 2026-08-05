@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { ArrowLeft, Plus, X, ThumbsUp, ThumbsDown, User, Sun, Cloud, CloudRain, Snowflake, Zap, Check, Loader2 } from 'lucide-react'
+import { usePageView } from '@/lib/tracking'
 
 interface Player {
   id: string
@@ -45,6 +46,7 @@ const ENERGY_OPTIONS = [
 ]
 
 export default function RecapPage() {
+  usePageView('recap')
   const [plan, setPlan] = useState<PracticePlan | null>(null)
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)

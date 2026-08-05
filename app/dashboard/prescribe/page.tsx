@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Target, Sparkles, Loader2, CheckCircle2, RefreshCw, Dumbbell, AlertCircle } from 'lucide-react'
+import { usePageView, useTracker } from '@/lib/tracking'
 
 interface Problem { slug: string; label: string; skill_category: string | null }
 
@@ -36,6 +37,8 @@ interface Prescription {
 }
 
 export default function PrescribePage() {
+  usePageView('prescribe')
+  const track = useTracker()
   const searchParams = useSearchParams()
   const teamId = searchParams.get('teamId')
 
@@ -76,6 +79,12 @@ export default function PrescribePage() {
       })
       const data = await res.json()
       setResult(data)
+      if (!data.error) {
+        track('prescription_generated', {
+          matched_problems: (data.matchedProblems || []).map((p: any) => p.slug),
+          drill_count: (data.drills || []).length,
+        })
+      }
     } catch (e: any) {
       setResult({ drills: [], error: e.message || 'Something went wrong' })
     } finally {

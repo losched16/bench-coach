@@ -7,6 +7,7 @@ import {
   Star, Target, Zap, Award, Edit2, Trash2, ChevronDown, ChevronUp,
   Users, Hash, X, Save, Loader2
 } from 'lucide-react'
+import { usePageView } from '@/lib/tracking'
 
 // ── Types ──────────────────────────────────────────────
 
@@ -91,6 +92,7 @@ interface PlayerStatEntry {
 // ── Main Component ─────────────────────────────────────
 
 export default function StatsPage() {
+  usePageView('stats')
   const supabase = createSupabaseComponentClient()
   const [teamId, setTeamId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)

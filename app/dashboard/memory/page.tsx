@@ -7,6 +7,7 @@ import {
   Brain, Trash2, User, Users, Settings, AlertCircle, 
   StickyNote, Lightbulb, RefreshCw, Info
 } from 'lucide-react'
+import { usePageView } from '@/lib/tracking'
 
 interface TeamNote {
   id: string
@@ -420,6 +421,7 @@ function MemoryPageContent() {
 }
 
 export default function MemoryPage() {
+  usePageView('memory')
   return (
     <Suspense fallback={<div className="text-gray-600">Loading...</div>}>
       <MemoryPageContent />

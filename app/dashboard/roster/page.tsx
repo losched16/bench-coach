@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { Plus, User, Trash2, ChevronRight, StickyNote, Upload, Camera, Check, X, Loader2 } from 'lucide-react'
 import Link from 'next/link'
+import { usePageView } from '@/lib/tracking'
 
 interface Player {
   id: string
@@ -668,6 +669,7 @@ function RosterPageContent() {
 }
 
 export default function RosterPage() {
+  usePageView('roster')
   return (
     <Suspense fallback={<div className="text-gray-600">Loading...</div>}>
       <RosterPageContent />

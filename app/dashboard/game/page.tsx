@@ -9,6 +9,7 @@ import {
   MapPin, Send, Trash2, Activity, ChevronLeft
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { usePageView } from '@/lib/tracking'
 
 interface Player {
   id: string
@@ -914,6 +915,7 @@ function GamePageContent() {
 }
 
 export default function GamePage() {
+  usePageView('game')
   return (
     <Suspense fallback={<div className="p-6 text-center text-gray-500">Loading...</div>}>
       <GamePageContent />

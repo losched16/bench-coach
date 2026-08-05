@@ -6,6 +6,7 @@ import { createSupabaseComponentClient } from '@/lib/supabase'
 import { Plus, Pin, Trash2, Pencil, Users, User } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import Link from 'next/link'
+import { usePageView } from '@/lib/tracking'
 
 interface TeamNote {
   id: string
@@ -732,6 +733,7 @@ function NotesPageContent() {
 }
 
 export default function NotesPage() {
+  usePageView('notes')
   return (
     <Suspense fallback={<div className="text-gray-600">Loading...</div>}>
       <NotesPageContent />

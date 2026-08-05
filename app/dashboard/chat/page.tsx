@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { Send, Loader2, Trash2, Plus } from 'lucide-react'
 import { ChatMessageContent } from '@/components/ChatMessageContent'
+import { usePageView } from '@/lib/tracking'
 
 interface Message {
   id: string
@@ -14,6 +15,7 @@ interface Message {
 }
 
 export default function ChatPage() {
+  usePageView('chat')
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)

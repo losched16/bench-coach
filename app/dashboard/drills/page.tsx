@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { Search, Filter, Play, Clock, Users, MapPin, ChevronDown, ChevronUp, X } from 'lucide-react'
+import { usePageView } from '@/lib/tracking'
 
 interface DrillResource {
   id: string
@@ -54,6 +55,7 @@ const DIFFICULTY_LEVELS = ['All', 'Beginner', 'Intermediate', 'Advanced']
 const AGE_GROUPS = ['All', '6U', '8U', '10U', '12U']
 
 export default function DrillLibraryPage() {
+  usePageView('drills')
   const [drills, setDrills] = useState<DrillResource[]>([])
   const [filteredDrills, setFilteredDrills] = useState<DrillResource[]>([])
   const [loading, setLoading] = useState(true)

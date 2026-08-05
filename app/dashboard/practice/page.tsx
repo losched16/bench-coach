@@ -8,6 +8,7 @@ import { formatDate } from '@/lib/utils'
 import Link from 'next/link'
 import { DrillVideo, DrillVideoLookup } from '@/components/DrillVideo'
 import { useDrillResources } from '@/lib/useDrillResources'
+import { usePageView } from '@/lib/tracking'
 
 
 interface PracticePlan {
@@ -21,6 +22,7 @@ interface PracticePlan {
 }
 
 export default function PracticePage() {
+  usePageView('practice')
   const [plans, setPlans] = useState<PracticePlan[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)

@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { ArrowLeft, Save, Check, Star, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
+import { usePageView } from '@/lib/tracking'
 
 const PRIMARY_GOALS = [
   { id: 'throwing', label: 'Throwing', icon: '🎯' },
@@ -45,6 +46,7 @@ interface TeamData {
 }
 
 export default function SettingsPage() {
+  usePageView('settings')
   const [team, setTeam] = useState<TeamData | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)

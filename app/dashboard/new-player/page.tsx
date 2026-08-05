@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { ArrowLeft, User } from 'lucide-react'
 import Link from 'next/link'
+import { usePageView } from '@/lib/tracking'
 
 export default function NewPlayerPage() {
+  usePageView('new_player')
   const [playerName, setPlayerName] = useState('')
   const [jerseyNumber, setJerseyNumber] = useState('')
   const [birthYear, setBirthYear] = useState('')

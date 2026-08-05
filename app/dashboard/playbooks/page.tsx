@@ -7,6 +7,7 @@ import { Book, Play, CheckCircle, Circle, Users, Clock, Target, ChevronDown, Che
 import { formatDate } from '@/lib/utils'
 import { DrillVideo, DrillVideoLookup } from '@/components/DrillVideo'
 import { useDrillResources } from '@/lib/useDrillResources'
+import { usePageView } from '@/lib/tracking'
 
 interface PlaybookTemplate {
   id: string
@@ -1009,6 +1010,7 @@ function PlaybooksPageContent() {
 }
 
 export default function PlaybooksPage() {
+  usePageView('playbooks')
   return (
     <Suspense fallback={<div className="text-gray-600">Loading...</div>}>
       <PlaybooksPageContent />

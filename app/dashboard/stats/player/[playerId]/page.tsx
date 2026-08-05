@@ -7,6 +7,7 @@ import {
   Calendar, ChevronDown, ChevronUp, Award, BarChart3, Target,
   Share2, Loader2
 } from 'lucide-react'
+import { usePageView } from '@/lib/tracking'
 
 interface SeasonStats {
   team_player_id: string
@@ -70,6 +71,7 @@ interface Milestone {
 }
 
 export default function PlayerStatsPage() {
+  usePageView('stats_player_detail')
   const params = useParams()
   const searchParams = useSearchParams()
   const playerId = params.playerId as string

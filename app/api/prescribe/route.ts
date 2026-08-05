@@ -101,6 +101,9 @@ export async function POST(request: NextRequest) {
       .from('drill_problem_map')
       .select('problem_slug, sort_order, curated, drill:drill_resources(*)')
       .in('problem_slug', slugs)
+      // Only approved drills reach a prescription; filtered-out joins come
+      // back as null and are skipped below
+      .or('status.eq.approved,status.is.null', { foreignTable: 'drill' })
 
     // Flatten + dedupe drills (a drill may fix several of the matched problems).
     const byId = new Map<string, any>()

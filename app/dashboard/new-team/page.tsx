@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { usePageView } from '@/lib/tracking'
 
 const AGE_GROUPS = ['6U', '7U', '8U', '9U', '10U', '11U', '12U', '13U+']
 const SKILL_LEVELS = [
@@ -14,6 +15,7 @@ const SKILL_LEVELS = [
 ]
 
 export default function NewTeamPage() {
+  usePageView('new_team')
   const [seasonName, setSeasonName] = useState('')
   const [teamName, setTeamName] = useState('')
   const [ageGroup, setAgeGroup] = useState('')

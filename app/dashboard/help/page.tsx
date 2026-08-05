@@ -7,6 +7,7 @@ import {
   Lightbulb, Target, Clock, CheckCircle, Star, Zap, Heart,
   Search, Home, Play, Award
 } from 'lucide-react'
+import { usePageView } from '@/lib/tracking'
 
 interface HelpArticle {
   id: string
@@ -17,6 +18,7 @@ interface HelpArticle {
 }
 
 export default function HelpPage() {
+  usePageView('help')
   const [expandedArticle, setExpandedArticle] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')

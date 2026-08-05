@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { User, Lock, CreditCard, Shield, Check, AlertCircle, Loader2, ExternalLink } from 'lucide-react'
+import { usePageView } from '@/lib/tracking'
 
 interface CoachProfile {
   id: string
@@ -15,6 +16,7 @@ interface CoachProfile {
 }
 
 export default function ProfilePage() {
+  usePageView('profile')
   const [profile, setProfile] = useState<CoachProfile | null>(null)
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)

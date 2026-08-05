@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { Plus, Calendar, Shield, RotateCcw, Save, Trash2, ChevronDown, ChevronUp, Users, AlertCircle } from 'lucide-react'
+import { usePageView } from '@/lib/tracking'
 
 // Types
 interface Player {
@@ -82,6 +83,7 @@ function formatDate(dateStr: string): string {
 }
 
 export default function LineupPage() {
+  usePageView('lineup')
   // State
   const [players, setPlayers] = useState<Player[]>([])
   const [eligibility, setEligibility] = useState<PositionEligibility[]>([])
