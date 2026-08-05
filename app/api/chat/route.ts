@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { generateChatResponse, TeamContext } from '@/lib/anthropic'
+import { generateChatResponse, TeamContext, ScoutingContext } from '@/lib/anthropic'
+import {
+  aggregateBattingLines,
+  computePitcherAvailability,
+  stalenessLabel,
+  stalenessOf,
+  MIN_PA_FOR_TENDENCY,
+  PitchCountRuleSet,
+} from '@/lib/scouting'
 
 // Use service role for server-side operations (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -343,6 +351,213 @@ export async function POST(request: NextRequest) {
       console.warn('Could not load game data (tables may not exist yet)')
     }
 
+    // Load scouting context when the conversation concerns an opponent.
+    // Scouting data is scoped to this coach's account only.
+    let scouting: ScoutingContext | undefined
+    try {
+      const { data: opponentTeams } = await supabaseAdmin
+        .from('opponent_teams')
+        .select('id, name, age_group, first_seen, last_seen, notes')
+        .eq('coach_id', team.coach_id)
+
+      if (opponentTeams && opponentTeams.length > 0) {
+        const recentText = [
+          message,
+          ...(history || []).slice(-4).map((h: any) => h.content || ''),
+        ].join('\n').toLowerCase()
+
+        // Teams named in the conversation
+        const namedTeams = opponentTeams.filter(ot => {
+          const words = ot.name.toLowerCase().split(/\s+/).filter((w: string) => w.length >= 4)
+          return recentText.includes(ot.name.toLowerCase()) || words.some((w: string) => recentText.includes(w))
+        })
+
+        // Generic scouting intent ("who can they pitch tomorrow?")
+        const scoutingIntent =
+          /(scout|opponent|matchup|bracket|availab)/i.test(recentText) ||
+          /\b(they|them|their)\b[^.?!]*\b(pitch|throw|start|bunt|steal|hit|play)/i.test(recentText)
+
+        const { data: allMatchups } = await supabaseAdmin
+          .from('matchups')
+          .select('opponent_team_id, scheduled_at, status, tournament_name')
+          .eq('coach_id', team.coach_id)
+          .in('status', ['upcoming', 'possible'])
+
+        let relevantTeams = namedTeams
+        if (relevantTeams.length === 0 && scoutingIntent) {
+          // No team named — fall back to teams with pending matchups, then most recently seen
+          const matchupTeamIds = new Set((allMatchups || []).map(m => m.opponent_team_id))
+          relevantTeams = opponentTeams
+            .sort((a, b) => {
+              const aM = matchupTeamIds.has(a.id) ? 0 : 1
+              const bM = matchupTeamIds.has(b.id) ? 0 : 1
+              if (aM !== bM) return aM - bM
+              return (b.last_seen || '').localeCompare(a.last_seen || '')
+            })
+            .slice(0, 2)
+        }
+        relevantTeams = relevantTeams.slice(0, 3)
+
+        if (relevantTeams.length > 0 || (scoutingIntent && (allMatchups || []).length > 0)) {
+          const today = new Date().toISOString().split('T')[0]
+          const opponentNameById: Record<string, string> = {}
+          opponentTeams.forEach(ot => { opponentNameById[ot.id] = ot.name })
+
+          // Rule sets for availability math (coach's own + system defaults)
+          const { data: ruleRows } = await supabaseAdmin
+            .from('pitch_count_rules')
+            .select('*')
+            .or(`coach_id.is.null,coach_id.eq.${team.coach_id}`)
+          const pickRule = (ageGroup: string | null): PitchCountRuleSet | null => {
+            const rules = (ruleRows || []) as PitchCountRuleSet[]
+            if (rules.length === 0) return null
+            const digits = (ageGroup || team.age_group || '').replace(/\D/g, '')
+            const byAge = digits ? rules.find(r => r.age_group.replace(/\D/g, '').includes(digits)) : null
+            return byAge
+              || rules.find(r => r.sanctioning_body === 'Little League' && r.age_group === '11-12')
+              || rules[0]
+          }
+
+          const opponentContexts = []
+          const availabilityBoards = []
+
+          for (const ot of relevantTeams) {
+            const [playersRes, entriesRes] = await Promise.all([
+              supabaseAdmin
+                .from('opponent_players')
+                .select('*, appearances:opponent_appearances(game_date, batting_line, pitches_thrown, positions_played)')
+                .eq('opponent_team_id', ot.id),
+              supabaseAdmin
+                .from('scouting_entries')
+                .select('entry_type, occurred_on, notes')
+                .eq('opponent_team_id', ot.id)
+                .not('notes', 'is', null)
+                .order('occurred_on', { ascending: false })
+                .limit(5),
+            ])
+
+            const players = (playersRes.data || []).slice(0, 18).map((p: any) => {
+              const apps = p.appearances || []
+              const batting = aggregateBattingLines(apps.map((a: any) => a.batting_line))
+              const pitchApps = apps
+                .filter((a: any) => (a.pitches_thrown || 0) > 0)
+                .sort((a: any, b: any) => (a.game_date || '').localeCompare(b.game_date || ''))
+              const lastPitch = pitchApps[pitchApps.length - 1]
+              return {
+                name: p.name,
+                jersey_number: p.jersey_number,
+                identity_confidence: p.confidence,
+                positions: p.positions || [],
+                notes: p.notes,
+                last_seen: p.last_seen,
+                batting: batting.pa > 0 ? batting : null,
+                small_sample: batting.pa > 0 && batting.pa < MIN_PA_FOR_TENDENCY,
+                pitching: lastPitch
+                  ? {
+                      outings: pitchApps.length,
+                      total_pitches: pitchApps.reduce((s: number, a: any) => s + (a.pitches_thrown || 0), 0),
+                      last_date: lastPitch.game_date,
+                      last_pitches: lastPitch.pitches_thrown,
+                    }
+                  : null,
+              }
+            })
+
+            opponentContexts.push({
+              name: ot.name,
+              age_group: ot.age_group,
+              first_seen: ot.first_seen,
+              last_seen: ot.last_seen,
+              staleness_note:
+                ot.last_seen && stalenessOf(ot.last_seen, today) !== 'current'
+                  ? `Most recent data is ${stalenessLabel(ot.last_seen, today)}`
+                  : null,
+              team_notes: ot.notes,
+              entry_count: (entriesRes.data || []).length,
+              players,
+              recent_notes: (entriesRes.data || []).map((e: any) => ({
+                date: e.occurred_on,
+                type: e.entry_type,
+                note: e.notes,
+              })),
+            })
+
+            // Availability board for the nearest pending matchup (or tomorrow)
+            const rule = pickRule(ot.age_group)
+            if (rule) {
+              const teamMatchups = (allMatchups || [])
+                .filter(m => m.opponent_team_id === ot.id && m.scheduled_at)
+                .sort((a, b) => (a.scheduled_at || '').localeCompare(b.scheduled_at || ''))
+              const tomorrow = new Date()
+              tomorrow.setDate(tomorrow.getDate() + 1)
+              const targetDate =
+                teamMatchups[0]?.scheduled_at?.split('T')[0] ||
+                tomorrow.toISOString().split('T')[0]
+
+              const rows = (playersRes.data || [])
+                .filter((p: any) => (p.appearances || []).some((a: any) => (a.pitches_thrown || 0) > 0))
+                .map((p: any) => {
+                  const avail = computePitcherAvailability(p.appearances || [], rule, targetDate)
+                  return {
+                    name: p.name,
+                    jersey_number: p.jersey_number,
+                    identity_confidence: p.confidence,
+                    status: avail.status,
+                    explanation: avail.explanation,
+                  }
+                })
+
+              if (rows.length > 0) {
+                const gameDates = new Set<string>()
+                ;(playersRes.data || []).forEach((p: any) =>
+                  (p.appearances || []).forEach((a: any) => a.game_date && gameDates.add(a.game_date))
+                )
+                availabilityBoards.push({
+                  opponent_name: ot.name,
+                  target_date: targetDate,
+                  rule_label: `${rule.sanctioning_body} ${rule.age_group}`,
+                  coverage_notes: [
+                    `Based on ${gameDates.size} logged game(s) only — unlogged games are not counted, so the picture may be incomplete.`,
+                  ],
+                  rows,
+                })
+              }
+            }
+          }
+
+          scouting = {
+            opponents: opponentContexts,
+            availabilityBoards,
+            upcomingMatchups: (allMatchups || []).slice(0, 10).map(m => ({
+              opponent_name: opponentNameById[m.opponent_team_id] || 'Unknown',
+              scheduled_at: m.scheduled_at,
+              status: m.status,
+              tournament_name: m.tournament_name,
+            })),
+          }
+
+          // Instrumentation: scouting chat queries
+          if (relevantTeams.length > 0) {
+            const { data: coachRow } = await supabaseAdmin
+              .from('coaches')
+              .select('user_id')
+              .eq('id', team.coach_id)
+              .single()
+            if (coachRow?.user_id) {
+              await supabaseAdmin.from('user_events').insert({
+                user_id: coachRow.user_id,
+                event_type: 'feature_use',
+                event_name: 'scouting_chat_query',
+                metadata: { opponents: relevantTeams.map(t => t.name) },
+              })
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load scouting context (tables may not exist yet)')
+    }
+
     // Build context
     const context: TeamContext = {
       team: {
@@ -365,6 +580,7 @@ export async function POST(request: NextRequest) {
       practiceRecaps: practiceRecaps.length > 0 ? practiceRecaps : undefined,
       playerStats: playerStats.length > 0 ? playerStats : undefined,
       gameData: gameData.length > 0 ? gameData : undefined,
+      scouting,
     }
 
     // Convert history

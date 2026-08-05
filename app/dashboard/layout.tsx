@@ -5,7 +5,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
-import { MessageSquare, Users, StickyNote, ClipboardList, Home, LogOut, Plus, UserPlus, Trash2, Settings, Bookmark, Library, BookOpen, HelpCircle, Brain, UsersRound, UserCircle, Menu, X, Calendar, FileText, BarChart3, Activity, Target } from 'lucide-react'
+import { MessageSquare, Users, StickyNote, ClipboardList, Home, LogOut, Plus, UserPlus, Trash2, Settings, Bookmark, Library, BookOpen, HelpCircle, Brain, UsersRound, UserCircle, Menu, X, Calendar, FileText, BarChart3, Activity, Target, Search } from 'lucide-react'
 
 
 interface Team {
@@ -215,6 +215,7 @@ function DashboardContent({
     { label: 'Notes', href: '/dashboard/notes', icon: StickyNote },
     { label: 'Practice Plans', href: '/dashboard/practice', icon: ClipboardList },
     { label: 'Game Day', href: '/dashboard/game', icon: Activity },
+    { label: 'Scouting', href: '/dashboard/scouting', icon: Search },
     { label: 'Lineup Builder', href: '/dashboard/lineup', icon: Calendar },
     { label: 'Stats', href: '/dashboard/stats', icon: BarChart3 },
     { label: 'Practice Library', href: '/dashboard/templates', icon: Library },

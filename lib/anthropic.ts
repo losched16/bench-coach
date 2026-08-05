@@ -15,6 +15,53 @@ export interface JournalEntry {
   skills?: string[]
 }
 
+export interface ScoutingOpponentContext {
+  name: string
+  age_group?: string | null
+  first_seen?: string | null
+  last_seen?: string | null
+  staleness_note?: string | null   // e.g. "over a season old — historical, not current"
+  team_notes?: string | null
+  entry_count: number
+  players: Array<{
+    name: string
+    jersey_number?: string | null
+    identity_confidence: string    // confirmed | probable | uncertain
+    positions?: string[]
+    notes?: string | null
+    last_seen?: string | null
+    batting?: { games: number; pa: number; ab: number; h: number; bb: number; k: number; xbh: number; sb: number } | null
+    small_sample?: boolean         // under ~15 PA — observation, not a tendency
+    pitching?: { outings: number; total_pitches: number; last_date: string; last_pitches: number } | null
+  }>
+  recent_notes: Array<{ date: string | null; type: string; note: string }>
+}
+
+export interface ScoutingAvailabilityContext {
+  opponent_name: string
+  target_date: string
+  rule_label: string
+  coverage_notes: string[]
+  rows: Array<{
+    name: string
+    jersey_number?: string | null
+    identity_confidence: string
+    status: string                 // ineligible | limited | available | unknown
+    explanation: string
+  }>
+}
+
+export interface ScoutingContext {
+  opponents: ScoutingOpponentContext[]
+  availabilityBoards: ScoutingAvailabilityContext[]
+  upcomingMatchups: Array<{
+    opponent_name: string
+    scheduled_at: string | null
+    status: string
+    tournament_name: string | null
+  }>
+}
+
 export interface TeamContext {
   team: {
     name: string
@@ -133,6 +180,7 @@ export interface TeamContext {
       by_inning: Record<number, number>
     }>
   }>
+  scouting?: ScoutingContext
 }
 
 export interface MemorySuggestion {
@@ -449,6 +497,65 @@ IMPORTANT INSTRUCTIONS FOR DRILL RECOMMENDATIONS:
    "I'd recommend the **High Tee Drill** to fix that uppercut. Here's an excellent video demonstration from Dominate The Diamond: https://www.youtube.com/watch?v=..."
 
 This helps coaches who may not know the drill see exactly how it's done with proper form.
+` : ''}
+
+${context.scouting && (context.scouting.opponents.length > 0 || context.scouting.upcomingMatchups.length > 0) ? `
+OPPONENT SCOUTING DATA (the coach's own logged notes and box scores):
+${context.scouting.upcomingMatchups.length > 0 ? `
+Upcoming/possible matchups:
+${context.scouting.upcomingMatchups.map(m =>
+  `- vs ${m.opponent_name}${m.scheduled_at ? ` at ${m.scheduled_at}` : ''} (${m.status}${m.tournament_name ? `, ${m.tournament_name}` : ''})`
+).join('\n')}
+` : ''}
+${context.scouting.opponents.map(o => {
+  const parts = [`OPPONENT: ${o.name}${o.age_group ? ` (${o.age_group})` : ''} — ${o.entry_count} logged entr${o.entry_count === 1 ? 'y' : 'ies'}, first seen ${o.first_seen || '?'}, last seen ${o.last_seen || '?'}`]
+  if (o.staleness_note) parts.push(`  DATA AGE: ${o.staleness_note}`)
+  if (o.team_notes) parts.push(`  Coach's team notes: ${o.team_notes}`)
+  if (o.recent_notes.length > 0) {
+    parts.push(`  Recent entry notes:`)
+    o.recent_notes.forEach(n => parts.push(`    ${n.date || '?'} [${n.type}]: ${n.note}`))
+  }
+  if (o.players.length > 0) {
+    parts.push(`  Known players:`)
+    o.players.forEach(p => {
+      let line = `    ${p.jersey_number ? `#${p.jersey_number} ` : ''}${p.name}`
+      if (p.identity_confidence !== 'confirmed') line += ` [identity: ${p.identity_confidence}]`
+      if (p.positions && p.positions.length > 0) line += ` (${p.positions.join('/')})`
+      if (p.batting && p.batting.pa > 0) {
+        line += ` — batting ${p.batting.h}/${p.batting.ab}, ${p.batting.bb}BB ${p.batting.k}K over ${p.batting.games} logged games`
+        if (p.small_sample) line += ` [SMALL SAMPLE: ${p.batting.pa} PA — an observation, not a tendency]`
+      }
+      if (p.pitching) {
+        line += ` — pitched ${p.pitching.outings} outing${p.pitching.outings === 1 ? '' : 's'}, ${p.pitching.total_pitches} total pitches, last ${p.pitching.last_date} (${p.pitching.last_pitches} pitches)`
+      }
+      if (p.notes) line += ` — notes: ${p.notes}`
+      parts.push(line)
+    })
+  }
+  return parts.join('\n')
+}).join('\n\n')}
+
+${context.scouting.availabilityBoards.length > 0 ? `
+PITCHING AVAILABILITY (derived from logged pitch counts + rest-day rules):
+${context.scouting.availabilityBoards.map(b => {
+  const parts = [`vs ${b.opponent_name} on ${b.target_date} (rules: ${b.rule_label}):`]
+  b.rows.forEach(r => {
+    parts.push(`  ${r.jersey_number ? `#${r.jersey_number} ` : ''}${r.name}: ${r.status.toUpperCase()}${r.identity_confidence !== 'confirmed' ? ` [identity: ${r.identity_confidence}]` : ''} — ${r.explanation}`)
+  })
+  b.coverage_notes.forEach(n => parts.push(`  COVERAGE: ${n}`))
+  return parts.join('\n')
+}).join('\n\n')}
+` : ''}
+
+USING SCOUTING DATA — ANSWER STYLE (follow strictly):
+1. Lead with what's known and HOW RECENTLY it was observed. If the data is one box score from four months ago, say that first.
+2. Never present a single game as a pattern. Anything under ~15 plate appearances is an observation with a small-sample caveat, not a tendency.
+3. Weight recent appearances heavily; anything over ~4 months old is decayed, and anything over a season old is historical — on re-encountering a team after a long gap, open with "here's what we saw last spring, but this is a year old."
+4. The coach's own written notes outweigh parsed stats when they conflict.
+5. Pitching availability claims must state the inference explicitly (e.g. "Their #12 threw 68 Saturday — under most rule sets that's 3 days rest, so he shouldn't be available Sunday") AND repeat the coverage caveats: unlogged games are not counted, so never imply the picture is complete.
+6. If a player's identity confidence is "probable" or "uncertain", say so whenever an availability or performance claim rests on them.
+7. "Who should we start against them?" — combine the coach's OWN roster, stats and lineup data with this opponent context to recommend a lineup.
+8. BOUNDARIES: stick to observable baseball facts about opposing players (stats, pitch counts, positions, on-field tendencies). Never characterize an opposing child's personality, attitude, body, or potential. This is the coach's organized note-taking on games they already watched, using data the tournament already published — keep your language there.
 ` : ''}
 
 USING DEVELOPMENT JOURNAL DATA:

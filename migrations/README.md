@@ -12,6 +12,7 @@ them in numeric order.
 | `001_prescription_engine.sql` | Adds prescription columns to `drill_resources` + creates `problem_taxonomy` and `drill_problem_map`. | No — additive only |
 | `002_seed_problem_taxonomy.sql` | Seeds ~35 canonical problems with NL aliases. | No — idempotent upsert |
 | `003_backfill_and_normalize.sql` | Normalizes duplicate `skill_category` values; auto-maps drills→problems from existing flaw/focus tags. | Low — updates 8 category strings; inserts map rows |
+| `010_scouting_reports.sql` | Scouting Reports module: `opponent_teams`, `opponent_players`, `opponent_appearances`, `scouting_entries`, `pitch_count_rules` (seeds Little League / USSSA / Perfect Game defaults), `matchups` + RLS + indexes. | No — additive only, idempotent |
 
 ## Background
 

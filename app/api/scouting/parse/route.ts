@@ -1,0 +1,167 @@
+import { NextRequest, NextResponse } from 'next/server'
+import Anthropic from '@anthropic-ai/sdk'
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY!,
+})
+
+// Parses scouting screenshots (GameChanger box scores, recaps, tournament
+// brackets) with Claude vision. Returns structured data for the coach to
+// review BEFORE anything is saved — the capture screen is the confirm step.
+
+const BOX_SCORE_PROMPT = `Analyze this screenshot of a youth baseball box score (likely from GameChanger). Extract the OPPONENT team's data.
+
+Return ONLY valid JSON in this exact shape, no other text:
+{
+  "team_name": "team name as shown, or null",
+  "game_date": "YYYY-MM-DD if visible, else null",
+  "final_score": "e.g. 7-4, or null",
+  "players": [
+    {
+      "name": "player name as printed (do not guess expansions of abbreviated names)",
+      "jersey_number": "12 or null",
+      "batting_order_slot": 1,
+      "positions": ["P", "SS"],
+      "batting_line": {"ab": 3, "h": 2, "2b": 0, "3b": 0, "hr": 0, "rbi": 1, "bb": 1, "k": 0, "sb": 0},
+      "pitches_thrown": 45,
+      "innings_pitched": 2.1
+    }
+  ],
+  "confidence": "high|medium|low",
+  "warnings": ["anything cut off, blurry, or ambiguous"]
+}
+
+Rules:
+- pitches_thrown and innings_pitched: null for players who did not pitch. Pitch counts matter most — read them carefully and never guess a number you cannot see.
+- Omit batting_line fields you cannot see rather than inventing zeros; use null for unknown jersey numbers.
+- Keep names exactly as printed (e.g. "T. Smith" stays "T. Smith").
+- confidence reflects how readable the image was: "high" only if names, numbers, and pitch counts were all clearly legible.
+- If the image is not a box score, return {"players": [], "confidence": "low", "warnings": ["not a box score"]}.`
+
+const RECAP_PROMPT = `Analyze this screenshot of a youth baseball game recap or summary (likely from GameChanger). Extract scouting-relevant facts about the team described.
+
+Return ONLY valid JSON, no other text:
+{
+  "team_name": "team name if identifiable, or null",
+  "game_date": "YYYY-MM-DD if visible, else null",
+  "summary": "2-3 sentence factual summary of what the recap says",
+  "pitching_notes": "who pitched, how long, how effective — or null",
+  "tendencies": ["observable team tendencies mentioned: aggressive baserunning, bunting, etc."],
+  "players_mentioned": [
+    {"name": "as printed", "jersey_number": "or null", "note": "observable baseball fact only"}
+  ],
+  "confidence": "high|medium|low",
+  "warnings": []
+}
+
+Rules:
+- Stick to observable baseball facts. Do not characterize individual kids beyond on-field performance.
+- Keep names exactly as printed.
+- If the image is not a game recap, return {"summary": null, "confidence": "low", "warnings": ["not a recap"]}.`
+
+const BRACKET_PROMPT = `Analyze this screenshot of a youth baseball tournament bracket. Extract the structure so a coach can prep for teams they MIGHT face.
+
+Return ONLY valid JSON, no other text:
+{
+  "tournament_name": "if visible, else null",
+  "teams": [
+    {"name": "team name as printed", "bracket_position": "e.g. 'Pool A seed 2' or 'upper bracket QF1'"}
+  ],
+  "games": [
+    {"team_a": "name", "team_b": "name or 'TBD'", "round": "e.g. quarterfinal", "scheduled_at": "YYYY-MM-DD HH:MM if shown, else null"}
+  ],
+  "confidence": "high|medium|low",
+  "warnings": []
+}
+
+Rules:
+- Include every team name you can read, even in later TBD rounds.
+- If the image is not a bracket, return {"teams": [], "games": [], "confidence": "low", "warnings": ["not a bracket"]}.`
+
+const PROMPTS: Record<string, string> = {
+  box_score: BOX_SCORE_PROMPT,
+  recap: RECAP_PROMPT,
+  bracket: BRACKET_PROMPT,
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const { images, entryType } = await request.json()
+
+    if (!images || !Array.isArray(images) || images.length === 0) {
+      return NextResponse.json({ error: 'No images provided' }, { status: 400 })
+    }
+
+    const prompt = PROMPTS[entryType]
+    if (!prompt) {
+      return NextResponse.json({ error: `Unsupported entry type for parsing: ${entryType}` }, { status: 400 })
+    }
+
+    const content: any[] = images.slice(0, 5).map((img: any) => ({
+      type: 'image',
+      source: {
+        type: 'base64',
+        media_type: img.mimeType || 'image/png',
+        data: img.data,
+      },
+    }))
+    content.push({
+      type: 'text',
+      text: images.length > 1
+        ? `${prompt}\n\nThere are ${images.length} images of the SAME game/document — combine them into one result.`
+        : prompt,
+    })
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4000,
+      messages: [{ role: 'user', content }],
+    })
+
+    const text = response.content[0].type === 'text' ? response.content[0].text : ''
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      return NextResponse.json(
+        { error: 'Could not parse the screenshot. Try a clearer image.', raw: text },
+        { status: 400 }
+      )
+    }
+
+    let parsed: any
+    try {
+      parsed = JSON.parse(jsonMatch[0])
+    } catch (e) {
+      return NextResponse.json(
+        { error: 'Could not parse the screenshot. Try a clearer image.', raw: text },
+        { status: 400 }
+      )
+    }
+
+    // Light cleanup for box scores so downstream math is safe
+    if (entryType === 'box_score' && Array.isArray(parsed.players)) {
+      parsed.players = parsed.players
+        .filter((p: any) => p.name && typeof p.name === 'string')
+        .map((p: any) => ({
+          ...p,
+          name: p.name.trim(),
+          jersey_number: p.jersey_number != null ? String(p.jersey_number).trim() : null,
+          pitches_thrown:
+            p.pitches_thrown != null && !isNaN(Number(p.pitches_thrown))
+              ? Number(p.pitches_thrown)
+              : null,
+          innings_pitched:
+            p.innings_pitched != null && !isNaN(Number(p.innings_pitched))
+              ? Number(p.innings_pitched)
+              : null,
+        }))
+    }
+
+    return NextResponse.json({ parsed })
+  } catch (error: any) {
+    console.error('Scouting parse error:', error)
+    return NextResponse.json(
+      { error: error.message || 'Failed to analyze image' },
+      { status: 500 }
+    )
+  }
+}
