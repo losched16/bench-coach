@@ -344,6 +344,7 @@ function ScoutingContent() {
           rules={rules}
           prefillOpponentId={boardPrefillId}
           track={track}
+          onRulesChanged={() => loadRules(coachId)}
         />
       )}
     </div>
@@ -1134,7 +1135,7 @@ function CaptureForm({
 // ── Availability board ─────────────────────────────────
 
 function AvailabilityBoard({
-  coachId, teamId, ownTeamName, opponents, rules, prefillOpponentId, track,
+  coachId, teamId, ownTeamName, opponents, rules, prefillOpponentId, track, onRulesChanged,
 }: {
   coachId: string
   teamId: string | null
@@ -1143,10 +1144,12 @@ function AvailabilityBoard({
   rules: RuleSet[]
   prefillOpponentId: string | null
   track: (event: string, metadata?: any) => void
+  onRulesChanged: () => void
 }) {
   const [subjectId, setSubjectId] = useState<string>(prefillOpponentId || '')
   const [date, setDate] = useState(tomorrowStr())
   const [ruleId, setRuleId] = useState<string>('')
+  const [showRuleManager, setShowRuleManager] = useState(false)
   const [loading, setLoading] = useState(false)
   const [board, setBoard] = useState<BoardRow[] | null>(null)
   const [coverage, setCoverage] = useState<{ logged_game_count: number; last_logged_game: string | null; notes: string[] } | null>(null)
@@ -1226,16 +1229,36 @@ function AvailabilityBoard({
             </select>
           </div>
         </div>
-        <button
-          onClick={loadBoard}
-          disabled={!subjectId || loading}
-          className="mt-3 flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
-        >
-          {loading ? <Loader2 className="animate-spin" size={16} /> : <Eye size={16} />}
-          {loading ? 'Computing…' : 'Show Availability'}
-        </button>
+        <div className="mt-3 flex items-center gap-4 flex-wrap">
+          <button
+            onClick={loadBoard}
+            disabled={!subjectId || loading}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
+          >
+            {loading ? <Loader2 className="animate-spin" size={16} /> : <Eye size={16} />}
+            {loading ? 'Computing…' : 'Show Availability'}
+          </button>
+          <button
+            onClick={() => setShowRuleManager(!showRuleManager)}
+            className="text-sm text-blue-700 hover:underline"
+          >
+            {showRuleManager ? 'Hide rule editor' : 'Tournament uses different rules? Add or edit a rule set'}
+          </button>
+        </div>
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       </div>
+
+      {showRuleManager && (
+        <RuleManager
+          coachId={coachId}
+          rules={rules}
+          track={track}
+          onSaved={async (newRuleId) => {
+            onRulesChanged()
+            if (newRuleId) setRuleId(newRuleId)
+          }}
+        />
+      )}
 
       {board && coverage && (
         <>
@@ -1303,6 +1326,244 @@ function AvailabilityBoard({
           )}
         </>
       )}
+    </div>
+  )
+}
+
+// ── Pitch count rule editor ────────────────────────────
+// Tournament directors tweak rules weekend to weekend, so coaches can clone
+// any rule set (system or their own), adjust the bands, and save it under
+// the tournament's name. Editing an existing custom set = saving with the
+// same name + age group (upsert). System defaults can't be changed, only
+// cloned.
+
+function RuleManager({
+  coachId, rules, track, onSaved,
+}: {
+  coachId: string
+  rules: RuleSet[]
+  track: (event: string, metadata?: any) => void
+  onSaved: (newRuleId: string | null) => void
+}) {
+  const [name, setName] = useState('')
+  const [ageGroup, setAgeGroup] = useState('')
+  const [dailyMax, setDailyMax] = useState<string>('')
+  const [bands, setBands] = useState<Array<{ max_pitches: string; rest_days: string }>>([
+    { max_pitches: '20', rest_days: '0' },
+    { max_pitches: '35', rest_days: '1' },
+    { max_pitches: '50', rest_days: '2' },
+  ])
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState<string | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+
+  const customRules = rules.filter(r => r.coach_id)
+
+  const loadFrom = (rule: RuleSet) => {
+    // Cloning a system set keeps the name editable; loading your own custom
+    // set keeps its name so saving overwrites it in place
+    setName(rule.coach_id ? rule.sanctioning_body : `${rule.sanctioning_body} (adjusted)`)
+    setAgeGroup(rule.age_group)
+    setDailyMax(rule.daily_max != null ? String(rule.daily_max) : '')
+    setBands(rule.thresholds.map(t => ({ max_pitches: String(t.max_pitches), rest_days: String(t.rest_days) })))
+    setErr(null)
+  }
+
+  const handleSave = async () => {
+    setErr(null)
+    const parsedBands = bands
+      .filter(b => b.max_pitches !== '' && b.rest_days !== '')
+      .map(b => ({ max_pitches: Number(b.max_pitches), rest_days: Number(b.rest_days) }))
+      .sort((a, b) => a.max_pitches - b.max_pitches)
+
+    if (!name.trim() || !ageGroup.trim()) {
+      setErr('Give the rule set a name (e.g. the tournament name) and an age group.')
+      return
+    }
+    if (parsedBands.length === 0 || parsedBands.some(b => isNaN(b.max_pitches) || isNaN(b.rest_days))) {
+      setErr('Add at least one valid threshold band (numbers only).')
+      return
+    }
+
+    setSaving(true)
+    try {
+      const res = await fetch('/api/scouting/rules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coachId,
+          sanctioningBody: name.trim(),
+          ageGroup: ageGroup.trim(),
+          dailyMax: dailyMax === '' ? null : Number(dailyMax),
+          thresholds: parsedBands,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Save failed')
+      track('pitch_rule_saved', { name: name.trim(), age_group: ageGroup.trim() })
+      onSaved(data.rule?.id || null)
+    } catch (e: any) {
+      setErr(e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async (ruleId: string) => {
+    if (!confirm('Delete this custom rule set?')) return
+    setDeleting(ruleId)
+    await fetch(`/api/scouting/rules?ruleId=${ruleId}&coachId=${coachId}`, { method: 'DELETE' })
+    setDeleting(null)
+    onSaved(null)
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 space-y-4">
+      <div>
+        <h3 className="font-semibold text-gray-900">Custom Pitch Count Rules</h3>
+        <p className="text-sm text-gray-600 mt-0.5">
+          Every tournament can run its own limits. Start from a published rule set, adjust the bands to
+          match your tournament&apos;s rules sheet, and save it under the tournament&apos;s name.
+        </p>
+      </div>
+
+      {customRules.length > 0 && (
+        <div>
+          <div className="text-sm font-medium text-gray-700 mb-1">Your rule sets</div>
+          <div className="space-y-1">
+            {customRules.map(r => (
+              <div key={r.id} className="flex items-center justify-between text-sm bg-gray-50 rounded-lg px-3 py-2">
+                <span>
+                  <span className="font-medium">{r.sanctioning_body}</span> {r.age_group}
+                  {r.daily_max != null && <span className="text-gray-500"> · daily max {r.daily_max}</span>}
+                  <span className="text-gray-500">
+                    {' · '}
+                    {r.thresholds.map(t => `≤${t.max_pitches}→${t.rest_days}d`).join(', ')}
+                  </span>
+                </span>
+                <span className="flex items-center gap-2 flex-shrink-0 ml-3">
+                  <button onClick={() => loadFrom(r)} className="text-blue-700 hover:underline">edit</button>
+                  <button
+                    onClick={() => handleDelete(r.id)}
+                    disabled={deleting === r.id}
+                    className="text-gray-400 hover:text-red-600 disabled:opacity-50"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="sm:col-span-3">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Start from</label>
+          <select
+            defaultValue=""
+            onChange={e => {
+              const rule = rules.find(r => r.id === e.target.value)
+              if (rule) loadFrom(rule)
+            }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
+          >
+            <option value="">Blank / pick a rule set to copy…</option>
+            {rules.map(r => (
+              <option key={r.id} value={r.id}>
+                {r.sanctioning_body} {r.age_group}{r.coach_id ? ' (custom)' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Rule set name</label>
+          <input
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="e.g. Metro Summer Slam"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Age group</label>
+          <input
+            type="text"
+            value={ageGroup}
+            onChange={e => setAgeGroup(e.target.value)}
+            placeholder="e.g. 11U"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Daily max (optional)</label>
+          <input
+            type="number"
+            value={dailyMax}
+            onChange={e => setDailyMax(e.target.value)}
+            placeholder="e.g. 85"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Rest-day bands</label>
+        <p className="text-xs text-gray-500 mb-2">
+          Read as: &quot;threw up to N pitches → needs M full rest days.&quot; A pitcher&apos;s rest requirement is the
+          first band their day total fits under.
+        </p>
+        <div className="space-y-2">
+          {bands.map((b, i) => (
+            <div key={i} className="flex items-center gap-2 text-sm">
+              <span className="text-gray-600">Up to</span>
+              <input
+                type="number"
+                value={b.max_pitches}
+                onChange={e => setBands(prev => prev.map((x, j) => (j === i ? { ...x, max_pitches: e.target.value } : x)))}
+                className="w-20 px-2 py-1.5 border border-gray-300 rounded-lg"
+              />
+              <span className="text-gray-600">pitches →</span>
+              <input
+                type="number"
+                value={b.rest_days}
+                onChange={e => setBands(prev => prev.map((x, j) => (j === i ? { ...x, rest_days: e.target.value } : x)))}
+                className="w-16 px-2 py-1.5 border border-gray-300 rounded-lg"
+              />
+              <span className="text-gray-600">rest day(s)</span>
+              <button
+                onClick={() => setBands(prev => prev.filter((_, j) => j !== i))}
+                className="p-1 text-gray-400 hover:text-red-600"
+                disabled={bands.length <= 1}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={() => setBands(prev => [...prev, { max_pitches: '', rest_days: '' }])}
+          className="mt-2 text-sm text-blue-700 hover:underline"
+        >
+          + Add band
+        </button>
+      </div>
+
+      {err && <p className="text-sm text-red-600">{err}</p>}
+
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 text-sm font-medium"
+      >
+        {saving ? <Loader2 className="animate-spin" size={16} /> : <Plus size={16} />}
+        {saving ? 'Saving…' : 'Save Rule Set'}
+      </button>
+      <p className="text-xs text-gray-500">
+        Saving with the same name and age group updates that rule set in place. Published defaults
+        (Little League, USSSA, Cal Ripken, Babe Ruth, Perfect Game) can&apos;t be edited — clone and adjust instead.
+      </p>
     </div>
   )
 }

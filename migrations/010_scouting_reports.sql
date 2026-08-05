@@ -260,6 +260,33 @@ SELECT NULL, 'USSSA', '13U-14U', 95,
   '[{"max_pitches": 25, "rest_days": 0}, {"max_pitches": 45, "rest_days": 1}, {"max_pitches": 95, "rest_days": 2}]'::jsonb
 WHERE NOT EXISTS (SELECT 1 FROM pitch_count_rules WHERE coach_id IS NULL AND sanctioning_body = 'USSSA' AND age_group = '13U-14U');
 
+-- Cal Ripken (Babe Ruth League youth division — Pitch Smart aligned bands)
+INSERT INTO pitch_count_rules (coach_id, sanctioning_body, age_group, daily_max, thresholds)
+SELECT NULL, 'Cal Ripken', '8U', 50,
+  '[{"max_pitches": 20, "rest_days": 0}, {"max_pitches": 35, "rest_days": 1}, {"max_pitches": 50, "rest_days": 2}]'::jsonb
+WHERE NOT EXISTS (SELECT 1 FROM pitch_count_rules WHERE coach_id IS NULL AND sanctioning_body = 'Cal Ripken' AND age_group = '8U');
+
+INSERT INTO pitch_count_rules (coach_id, sanctioning_body, age_group, daily_max, thresholds)
+SELECT NULL, 'Cal Ripken', '9-10', 75,
+  '[{"max_pitches": 20, "rest_days": 0}, {"max_pitches": 35, "rest_days": 1}, {"max_pitches": 50, "rest_days": 2}, {"max_pitches": 65, "rest_days": 3}, {"max_pitches": 75, "rest_days": 4}]'::jsonb
+WHERE NOT EXISTS (SELECT 1 FROM pitch_count_rules WHERE coach_id IS NULL AND sanctioning_body = 'Cal Ripken' AND age_group = '9-10');
+
+INSERT INTO pitch_count_rules (coach_id, sanctioning_body, age_group, daily_max, thresholds)
+SELECT NULL, 'Cal Ripken', '11-12', 85,
+  '[{"max_pitches": 20, "rest_days": 0}, {"max_pitches": 35, "rest_days": 1}, {"max_pitches": 50, "rest_days": 2}, {"max_pitches": 65, "rest_days": 3}, {"max_pitches": 85, "rest_days": 4}]'::jsonb
+WHERE NOT EXISTS (SELECT 1 FROM pitch_count_rules WHERE coach_id IS NULL AND sanctioning_body = 'Cal Ripken' AND age_group = '11-12');
+
+-- Babe Ruth League (13-15 / 16-18 divisions — Pitch Smart aligned bands)
+INSERT INTO pitch_count_rules (coach_id, sanctioning_body, age_group, daily_max, thresholds)
+SELECT NULL, 'Babe Ruth', '13-15', 95,
+  '[{"max_pitches": 20, "rest_days": 0}, {"max_pitches": 35, "rest_days": 1}, {"max_pitches": 50, "rest_days": 2}, {"max_pitches": 65, "rest_days": 3}, {"max_pitches": 95, "rest_days": 4}]'::jsonb
+WHERE NOT EXISTS (SELECT 1 FROM pitch_count_rules WHERE coach_id IS NULL AND sanctioning_body = 'Babe Ruth' AND age_group = '13-15');
+
+INSERT INTO pitch_count_rules (coach_id, sanctioning_body, age_group, daily_max, thresholds)
+SELECT NULL, 'Babe Ruth', '16-18', 105,
+  '[{"max_pitches": 20, "rest_days": 0}, {"max_pitches": 35, "rest_days": 1}, {"max_pitches": 50, "rest_days": 2}, {"max_pitches": 65, "rest_days": 3}, {"max_pitches": 105, "rest_days": 4}]'::jsonb
+WHERE NOT EXISTS (SELECT 1 FROM pitch_count_rules WHERE coach_id IS NULL AND sanctioning_body = 'Babe Ruth' AND age_group = '16-18');
+
 -- Perfect Game (youth tournament guidance, Pitch Smart aligned)
 INSERT INTO pitch_count_rules (coach_id, sanctioning_body, age_group, daily_max, thresholds)
 SELECT NULL, 'Perfect Game', '9-10', 75,
