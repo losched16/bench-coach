@@ -372,10 +372,12 @@ export async function POST(request: NextRequest) {
           return recentText.includes(ot.name.toLowerCase()) || words.some((w: string) => recentText.includes(w))
         })
 
-        // Generic scouting intent ("who can they pitch tomorrow?")
+        // Generic scouting intent ("who can they pitch tomorrow?", "their #7")
         const scoutingIntent =
           /(scout|opponent|matchup|bracket|availab)/i.test(recentText) ||
-          /\b(they|them|their)\b[^.?!]*\b(pitch|throw|start|bunt|steal|hit|play)/i.test(recentText)
+          /\b(they|them|their)\b[^.?!]*\b(pitch|throw|start|bunt|steal|hit|play)/i.test(recentText) ||
+          /\b(their|that|the)\s*#\s?\d+/i.test(recentText) ||
+          /\b(play|played|face|facing|against)\b[^.?!]*\b(them|these guys|that team)\b/i.test(recentText)
 
         const { data: allMatchups } = await supabaseAdmin
           .from('matchups')
