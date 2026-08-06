@@ -125,3 +125,7 @@ export function scoreDrillRelevance(complaint: string, drill: ScorableDrill): nu
   }
   return score
 }
+
+// Marks the end of the streamed markdown and the start of the JSON tail
+// (drills, prescription id). Shared so the client splits on the same token.
+export const META_SENTINEL = '\n<<<BENCHCOACH_META>>>'

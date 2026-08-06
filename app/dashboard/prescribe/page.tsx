@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { usePageView, useTracker } from '@/lib/tracking'
 import { AnalysisProse } from '@/components/AnalysisProse'
+import { splitSections, META_SENTINEL } from '@/lib/analysis'
 
 interface Problem { slug: string; label: string; skill_category: string | null }
 
@@ -41,6 +42,7 @@ interface Prescription {
   message?: string
   needsMigration?: boolean
   error?: string
+  streaming?: boolean
 }
 
 interface RosterPlayer { player_id: string; name: string; birth_year: number | null }
@@ -125,17 +127,65 @@ function PrescribeContent() {
           competitionLevel: competitionLevel === 'both' ? undefined : competitionLevel,
         }),
       })
-      const data = await res.json()
-      setResult(data)
-      if (!data.error) {
-        track('prescription_generated', {
-          matched_problems: (data.matchedProblems || []).map((p: any) => p?.slug),
-          drill_count: (data.drills || []).length,
-          had_player_context: !!playerId,
-        })
+
+      // Migration / validation errors still come back as JSON
+      const contentType = res.headers.get('content-type') || ''
+      if (contentType.includes('application/json')) {
+        const data = await res.json()
+        setResult(data)
+        if (data.needsMigration) setNeedsMigration(true)
+        return
+      }
+
+      if (!res.body) throw new Error('No response from the server')
+
+      // Render the analysis as it is written rather than after it finishes —
+      // a read takes 20-40 seconds and a spinner that long reads as broken.
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+
+        const sentinelAt = buffer.indexOf(META_SENTINEL)
+        const markdown = sentinelAt === -1 ? buffer : buffer.slice(0, sentinelAt)
+
+        setResult(prev => ({
+          ...(prev || { drills: [] }),
+          sections: splitSections(markdown),
+          streaming: sentinelAt === -1,
+        }))
+
+        if (sentinelAt !== -1) {
+          const metaText = buffer.slice(sentinelAt + META_SENTINEL.length)
+          try {
+            const meta = JSON.parse(metaText)
+            setResult(prev => ({
+              ...(prev || { drills: [] }),
+              ...meta,
+              sections: splitSections(markdown),
+              streaming: false,
+            }))
+            if (!meta.error) {
+              track('prescription_generated', {
+                matched_problems: (meta.matchedProblems || []).map((p: any) => p?.slug),
+                drill_count: (meta.drills || []).length,
+                had_player_context: !!playerId,
+              })
+            }
+          } catch {
+            // Metadata tail incomplete — the next chunk finishes it
+          }
+        }
       }
     } catch (e: any) {
-      setResult({ drills: [], error: e.message || 'Something went wrong' })
+      setResult(prev => prev?.sections?.length
+        ? { ...prev, streaming: false }
+        : { drills: [], error: e.message || 'Something went wrong' })
     } finally {
       setLoading(false)
     }
@@ -261,7 +311,7 @@ function PrescribeContent() {
         </div>
       )}
 
-      {loading && (
+      {loading && !result?.sections?.length && (
         <div className="bg-white rounded-lg shadow p-8 text-center">
           <Loader2 className="animate-spin mx-auto text-red-600 mb-3" size={24} />
           <p className="text-gray-700 font-medium">Reading the evidence</p>
@@ -287,7 +337,7 @@ function PrescribeContent() {
           {/* The analysis — six sections */}
           {result.sections && result.sections.length > 0 && (
             <div className="space-y-4">
-              {result.sections.map((section) => {
+              {result.sections.map((section, idx) => {
                 const meta = SECTION_META[section.key] || { icon: ChevronRight, accent: 'text-gray-600' }
                 const Icon = meta.icon
                 const isPriority = section.key.startsWith('the_one_thing')
@@ -303,6 +353,9 @@ function PrescribeContent() {
                       <h2 className="font-semibold text-gray-900">{section.heading}</h2>
                     </div>
                     <AnalysisProse body={section.body} />
+                    {result.streaming && idx === result.sections!.length - 1 && (
+                      <span className="inline-block w-2 h-4 bg-red-500 animate-pulse align-middle ml-0.5 rounded-sm" />
+                    )}
                   </div>
                 )
               })}

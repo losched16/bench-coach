@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 import { assembleCoachContext, renderCoachContext, CoachContext } from '@/lib/coachContext'
-import { AnalysisSection, splitSections, ageGuidanceFor, scoreDrillRelevance } from '@/lib/analysis'
+import { AnalysisSection, splitSections, ageGuidanceFor, scoreDrillRelevance, META_SENTINEL } from '@/lib/analysis'
 import { COACH_VOICE } from '@/lib/coachVoice'
 
 // Service role for server-side reads (bypasses RLS), matching the other API routes.
@@ -12,6 +12,18 @@ const supabaseAdmin = createClient(
 )
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
+
+// The analysis is a long generation and the response streams, so the function
+// needs room. Without this Vercel kills it at the platform default (60s on
+// Pro, 10s on Hobby) part-way through writing.
+export const maxDuration = 300
+
+// Effort is the main latency/quality dial on Opus 5. `medium` writes this
+// analysis in roughly half the time of `high` with little visible loss,
+// because the prompt already supplies the evidence and the structure — the
+// model is writing, not reasoning its way to the shape. Raise to 'high' if
+// the reads start feeling shallow.
+const ANALYSIS_EFFORT = 'medium'
 // Diagnosis is a cheap classification. The written analysis is the product —
 // it gets the strongest model, because this is the surface people pay for.
 const DIAGNOSE_MODEL = 'claude-haiku-4-5-20251001'
@@ -179,10 +191,6 @@ export async function POST(request: NextRequest) {
     // METHOD toward what actually works at this age, it does not withhold one.
     const ageGuidance = ageGuidanceFor(primary, playerAge)
 
-    const { markdown, sections } = await writeAnalysis(
-      complaint, primary, selected, ctx, scope, playerAge, ageGuidance
-    )
-
     const drillPayload = selected.map(d => ({
       id: d.id,
       drill_name: d.drill_name,
@@ -200,49 +208,86 @@ export async function POST(request: NextRequest) {
       success_marker: d.success_markers?.length ? d.success_markers[0] : null,
     }))
 
-    // 6. Persist it. Without a saved prescription there is no return visit,
-    //    no reassessment, and no compounding value — the whole retention
-    //    argument rests on this row existing.
-    let prescriptionId: string | null = null
-    if (coachId) {
-      const priority = sections.find(x => x.key.startsWith('the_one_thing'))?.body || null
-      const successCriteria = sections.find(x => x.key.startsWith('what_to_watch'))?.body || null
-      const summary = sections.find(x => x.key.startsWith('what_the_data'))?.body || null
+    // 6. Stream the analysis as it is written. A read takes 20-40 seconds; a
+    //    spinner for that long reads as broken, and buffering the whole
+    //    response is also what let the platform kill the request before
+    //    anything reached the browser.
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      async start(controller) {
+        let markdown = ''
+        try {
+          const analysisStream = writeAnalysis(
+            complaint, primary, selected, ctx, scope, playerAge, ageGuidance
+          )
 
-      // A lesson diagnosis in the evidence means this priority came from an
-      // instructor, and is exempt from AI override during the hold window.
-      const origin = (ctx.lessonDiagnoses?.length || 0) > 0 ? 'instructor' : 'ai'
+          for await (const event of analysisStream) {
+            if (event.type === 'content_block_delta' && (event.delta as any).type === 'text_delta') {
+              const chunk = (event.delta as any).text as string
+              markdown += chunk
+              controller.enqueue(encoder.encode(chunk))
+            }
+          }
 
-      const { data: saved, error: saveErr } = await supabaseAdmin
-        .from('prescriptions')
-        .insert({
-          coach_id: coachId,
-          scope,
-          player_id: scope === 'player' ? playerId : null,
-          team_id: teamId || null,
-          problem_id: primary?.slug || null,
-          origin,
-          summary,
-          priority,
-          success_criteria: successCriteria,
-          drill_ids: selected.map(d => d.id),
-          sessions: { markdown, sections },
-          status: 'active',
-        })
-        .select('id, review_due_at')
-        .single()
+          const sections = splitSections(markdown)
 
-      if (!saveErr && saved) prescriptionId = (saved as any).id
-    }
+          // 7. Persist. Without a saved prescription there is no return visit,
+          //    no reassessment, and no compounding value.
+          let prescriptionId: string | null = null
+          if (coachId && markdown.trim()) {
+            const priority = sections.find(x => x.key.startsWith('the_one_thing'))?.body || null
+            const successCriteria = sections.find(x => x.key.startsWith('what_to_watch'))?.body || null
+            const summary = sections.find(x => x.key.startsWith('what_the_data'))?.body || null
+            // A lesson diagnosis means this priority came from an instructor,
+            // and is exempt from AI override during the hold window.
+            const origin = (ctx.lessonDiagnoses?.length || 0) > 0 ? 'instructor' : 'ai'
 
-    return NextResponse.json({
-      diagnosis: primary,
-      matchedProblems: slugs.map(s => tax.find(t => t.slug === s)).filter(Boolean),
-      analysis: markdown,
-      sections,
-      drills: drillPayload,
-      prescriptionId,
+            const { data: saved } = await supabaseAdmin
+              .from('prescriptions')
+              .insert({
+                coach_id: coachId,
+                scope,
+                player_id: scope === 'player' ? playerId : null,
+                team_id: teamId || null,
+                problem_id: primary?.slug || null,
+                origin,
+                summary,
+                priority,
+                success_criteria: successCriteria,
+                drill_ids: selected.map(d => d.id),
+                sessions: { markdown, sections },
+                status: 'active',
+              })
+              .select('id')
+              .single()
+
+            if (saved) prescriptionId = (saved as any).id
+          }
+
+          controller.enqueue(encoder.encode(META_SENTINEL + JSON.stringify({
+            diagnosis: primary,
+            matchedProblems: slugs.map((x: string) => tax.find(t => t.slug === x)).filter(Boolean),
+            drills: drillPayload,
+            prescriptionId,
+          })))
+        } catch (e: any) {
+          console.error('Analysis stream error:', e)
+          controller.enqueue(encoder.encode(META_SENTINEL + JSON.stringify({
+            error: e?.message || 'The analysis stopped part-way through. Try again.',
+          })))
+        }
+        controller.close()
+      },
     })
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'X-Accel-Buffering': 'no',
+      },
+    })
+
   } catch (error: any) {
     console.error('Prescribe API error:', error)
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
@@ -332,7 +377,7 @@ Every recommendation names a specific observable, a specific fix, and a specific
 
 ONE PRIORITY. Not a list. Youth players improve on one thing at a time over four to six weeks. If you name three things, none of them get done well. Anything else you noticed goes in a single "also noticed, not working on yet" line — visible, but not competing for attention.`
 
-async function writeAnalysis(
+function writeAnalysis(
   complaint: string,
   problem: TaxonomyRow | null,
   drills: any[],
@@ -340,7 +385,7 @@ async function writeAnalysis(
   scope: 'player' | 'team',
   playerAge?: number,
   ageGuidance?: string | null,
-): Promise<{ markdown: string; sections: AnalysisSection[] }> {
+) {
   const drillList = drills.length === 0
     ? '(none — our video library has nothing matching this yet)'
     : drills.map((d, i) =>
@@ -405,19 +450,12 @@ ${hasMetrics ? '## Metrics\nWhat the logged measurements show as a trend. Never 
 
 Write it now. No preamble, no sign-off, no "I hope this helps".`
 
-  const res = await anthropic.messages.create({
+  return anthropic.messages.stream({
     model: ANALYSIS_MODEL,
     max_tokens: 8000,
     system: ANALYSIS_SYSTEM,
     messages: [{ role: 'user', content: prompt }],
-  })
-
-  if ((res.stop_reason as string) === 'refusal') {
-    throw new Error('The analysis could not be generated for this request.')
-  }
-
-  const textBlock = res.content.find(b => b.type === 'text')
-  const markdown = textBlock && textBlock.type === 'text' ? textBlock.text.trim() : ''
-  return { markdown, sections: splitSections(markdown) }
+    output_config: { effort: ANALYSIS_EFFORT },
+  } as any)
 }
 
