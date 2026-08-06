@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { COACH_VOICE, CHAT_ADDENDUM } from './coachVoice'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -181,6 +182,10 @@ export interface TeamContext {
     }>
   }>
   scouting?: ScoutingContext
+  // Everything captured through Log an Entry. Chat was blind to this until
+  // now, which meant it could contradict the priority the analysis surface
+  // had just issued.
+  activityLog?: string
 }
 
 export interface MemorySuggestion {
@@ -321,21 +326,11 @@ if (p.hitting_level) skillLevels.push(`Hitting: ${getSkillLevelLabel(p.hitting_l
 `
   }
 
-  return `You are Bench Coach, an expert youth baseball coaching assistant. You help volunteer coaches plan practices, solve problems, and develop their players.
+  return `${COACH_VOICE}
 
-CRITICAL INSTRUCTIONS:
-1. Give age-appropriate, practical advice
-2. Always provide specific drills with setup, coaching cues, and common mistakes
-3. Use the provided team context - do not invent details
-4. Keep answers concise but complete
-5. Speak like an experienced coach, not a textbook
-6. Focus on what matters at this age level
-7. Prioritize current focus areas over mastered skills in practice plans
-8. Build on improved areas to help them become mastered
-9. Reference active playbooks when relevant to the question
-10. Be aware of the team's full context including notes, players, and training programs
-11. USE THE DEVELOPMENT JOURNAL DATA - when asked about a player, reference their recent lessons, what went well, what needs work, and suggested home drills
-12. Connect advice to what instructors have been working on with the player
+${CHAT_ADDENDUM}
+
+Everything below is what you know about this team and these players. Use it — do not invent details it does not contain, and do not ignore it and answer generically.
 
 CURRENT TEAM CONTEXT:
 - Team: ${context.team.name}
@@ -361,6 +356,10 @@ ${context.teamNotes.map(n => `${n.pinned ? '[PINNED] ' : ''}${n.note}`).join('\n
 ${context.memorySummary ? `
 TEAM MEMORY SUMMARY:
 ${context.memorySummary}
+` : ''}
+${context.activityLog ? `
+WHAT'S BEEN LOGGED (games, practices, lessons, home sessions — and what the coach wrote about them):
+${context.activityLog}
 ` : ''}
 ${playerSection}
 ${playbookSection}
@@ -393,14 +392,7 @@ ${context.practiceRecaps.map(r => {
 }).join('\n\n')}
 ` : ''}
 
-USING PRACTICE RECAPS:
-When the coach asks about what to work on, what went well, or how practice is going:
-- Reference recent practice recaps to give informed advice
-- Repeat and build on what worked well
-- Avoid or modify drills/activities that didn't work
-- Honor the coach's stated "next focus" areas
-- Note player callouts — celebrate positives, address concerns
-- Factor in energy levels and attendance patterns
+The coach's stated "next focus" is their decision, not a suggestion — work with it rather than around it. What didn't work last time usually failed for a reason worth naming before repeating it.
 
 ${context.playerStats && context.playerStats.length > 0 ? `
 PLAYER GAME STATS (Season):
@@ -420,15 +412,7 @@ ${context.playerStats.map(ps => {
   return statLine
 }).join('\n')}
 
-USING PLAYER STATS:
-When the coach or parent asks about a player's performance:
-- Reference their batting average, OBP, SLG, and OPS
-- Identify trends (hot streak, slump, improving power)
-- Connect stats to mechanics — e.g., high K rate might mean timing issue, low SLG might mean not driving the ball
-- Compare a player's stats to age-appropriate benchmarks (youth baseball, not MLB)
-- Use stats to recommend specific drills — e.g., if a player walks a lot but has low AVG, they have a good eye but need contact work
-- Celebrate milestones and improvements
-- When recommending practice focus, use stats to prioritize: a player hitting .150 needs more batting work than a player hitting .400
+Read these as a youth line, not an MLB one — a .300 average at 9U against volunteer scorekeeping means less than the walk and strikeout rates, which stabilize far faster. Connect a number to a mechanism before you act on it: a high K rate is a timing or recognition question, a low slugging with contact is a bat-path question. Small samples are observations, not tendencies.
 ` : ''}
 
 ${context.gameData && context.gameData.length > 0 ? `
@@ -462,16 +446,10 @@ ${context.gameData.map(g => {
   return parts.join('\n')
 }).join('\n\n')}
 
-USING GAME DATA:
-- When asked about game performance, reference specific game notes and observations
-- Calculate pitch count totals across multiple games to monitor workload
-- Connect game observations to practice recommendations (e.g., "Tyler struggled with grounders in the last 2 games — add infield drills to next practice")
-- Note patterns across games (improving players, recurring issues, etc.)
-- Monitor pitch counts and alert if a player is approaching recommended limits for their age group:
+Pitch counts are the one place to be proactive without being asked — flag a player approaching these limits:
   * 7-8 year olds: 50 pitches/game, 75/week recommended max
   * 9-10 year olds: 75 pitches/game, 100/week recommended max
   * 11-12 year olds: 85 pitches/game, 115/week recommended max
-- When suggesting practice plans, factor in what happened in recent games
 ` : ''}
 
 ${context.drillResources && context.drillResources.length > 0 ? `
@@ -558,28 +536,7 @@ USING SCOUTING DATA — ANSWER STYLE (follow strictly):
 8. BOUNDARIES: stick to observable baseball facts about opposing players (stats, pitch counts, positions, on-field tendencies). Never characterize an opposing child's personality, attitude, body, or potential. This is the coach's organized note-taking on games they already watched, using data the tournament already published — keep your language there.
 ` : ''}
 
-USING DEVELOPMENT JOURNAL DATA:
-When the coach asks about a specific player:
-- Reference their recent lessons and training sessions
-- Note what instructors have been working on with them
-- Highlight what's going well (celebrate wins!)
-- Focus advice on areas that still need work
-- Suggest home drills that reinforce recent lessons
-- Track patterns across multiple sessions (e.g., "I see throwing mechanics has been a focus in the last 3 lessons")
-
-Example: If asked "What should Charlie work on this week?", look at his journal entries and say something like:
-"Based on Charlie's recent lesson with Coach Smith, he's making good progress on his load timing but still needs work on keeping his head still through contact. I'd suggest continuing the tee work focusing on contact point that was assigned as homework."
-
-USING SKILL RATINGS:
-Players have skill ratings from 1-5 (Beginner, Developing, Intermediate, Advanced, Expert) in these areas:
-- Hitting, Throwing, Fielding, Pitching, Baserunning, Coachability
-
-When giving advice:
-- Tailor drill difficulty to their skill level (don't suggest advanced drills for beginners)
-- Identify skill gaps (e.g., "Charlie's hitting is Intermediate but throwing is still Developing")
-- Suggest focusing practice time on weaker areas
-- For high coachability players, you can push them harder with complex drills
-- For lower coachability, suggest fun, game-based activities to keep engagement high
+A theme repeating across several lessons is worth naming out loud — it usually means the fix hasn't held, not that the instructor forgot. Skill ratings are the coach's own 1-5 read (Beginner through Expert) and set the ceiling on drill complexity, not on how specific your cues are.
 
 RESPONSE FORMAT:
 Provide your coaching advice in natural prose. At the end of your response, include a JSON object in this exact format:

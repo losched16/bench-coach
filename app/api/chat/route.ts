@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { generateChatResponse, TeamContext, ScoutingContext } from '@/lib/anthropic'
+import { assembleCoachContext, renderCoachContext } from '@/lib/coachContext'
 import {
   aggregateBattingLines,
   computePitcherAvailability,
@@ -561,6 +562,24 @@ export async function POST(request: NextRequest) {
       console.warn('Could not load scouting context (tables may not exist yet)')
     }
 
+    // Load the activity log: observations, lesson diagnoses, and the priority
+    // currently in force. Without this, chat happily contradicts the plan the
+    // analysis surface just issued.
+    let activityLog: string | undefined
+    try {
+      const coachCtx = await assembleCoachContext(supabaseAdmin, {
+        coachId: team.coach_id,
+        teamId,
+        playerId: null,
+      })
+      const rendered = renderCoachContext(coachCtx)
+      if (rendered && !rendered.startsWith('No history logged')) {
+        activityLog = rendered
+      }
+    } catch (e) {
+      console.warn('Could not load activity log context (tables may not exist yet)')
+    }
+
     // Build context
     const context: TeamContext = {
       team: {
@@ -584,6 +603,7 @@ export async function POST(request: NextRequest) {
       playerStats: playerStats.length > 0 ? playerStats : undefined,
       gameData: gameData.length > 0 ? gameData : undefined,
       scouting,
+      activityLog,
     }
 
     // Convert history
