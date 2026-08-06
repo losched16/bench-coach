@@ -420,7 +420,9 @@ function PrescribeContent() {
               <span>
                 Saved. We&apos;ll hold this priority for three weeks rather than changing it every time new data
                 comes in — that&apos;s how long it actually takes to move something at this age. Log your home
-                sessions against it and the check-in will tell you whether it worked.
+                sessions against it and the{' '}
+                <a href={`/dashboard/checkin?teamId=${teamId}`} className="underline font-medium">check-in</a>{' '}
+                will tell you whether it worked.
               </span>
             </div>
           )}

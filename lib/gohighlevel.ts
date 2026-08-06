@@ -215,6 +215,27 @@ export async function trackSubscriptionCancelled(email: string) {
 }
 
 /**
+ * A priority has run its three weeks and there's a read waiting.
+ *
+ * The email itself is a GoHighLevel workflow keyed off this tag — we do not
+ * compose it here, because the copy needs to be editable without a deploy.
+ * The tag is removed on the way in so a workflow that fires on tag-added
+ * re-triggers cleanly next time.
+ *
+ * This is the ONLY lifecycle email in the loop and it goes out at most once a
+ * week. It says a check-in is ready. It never mentions sessions that weren't
+ * logged — that is a plan problem, and telling someone they fell behind is how
+ * you get them to stop opening the app.
+ */
+export async function trackCheckinDue(email: string, count: number) {
+  const contact = await findContactByEmail(email)
+  if (!contact) return false
+  await removeTagsFromContact(contact.id, ['checkin_due'])
+  await addTagsToContact(contact.id, ['checkin_due', count > 1 ? 'checkin_due_multiple' : 'checkin_due_single'])
+  return true
+}
+
+/**
  * Track when a payment fails
  */
 export async function trackPaymentFailed(email: string) {
