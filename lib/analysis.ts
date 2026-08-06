@@ -59,3 +59,69 @@ export function ageGuidanceFor(
   if (typeof lowestStandard !== 'number') return null
   return Number(playerAge) < lowestStandard ? problem.do_not_coach_note : null
 }
+
+// ── Fallback drill relevance ───────────────────────────
+// The problem taxonomy is an accelerator, not a gate. Plenty of real coaching
+// questions ("how do I add velocity", "he's scared of the ball at the plate")
+// are goals or descriptions rather than catalogued flaws, and the engine must
+// still answer them. When taxonomy mapping comes up short we score the drill
+// library directly against the coach's words.
+
+const STOPWORDS = new Set([
+  'the','a','an','and','or','but','is','are','was','were','be','been','being','to','of','in','on',
+  'at','for','with','how','do','i','my','he','she','they','him','her','his','get','got','can','cant',
+  "can't",'we','it','that','this','has','have','him','more','most','very','really','just','some','any',
+  'about','from','when','what','why','need','needs','help','fix','work','working','better','improve',
+])
+
+function tokens(text: string): string[] {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s'-]/g, ' ')
+    .split(/\s+/)
+    .filter(t => t.length > 2 && !STOPWORDS.has(t))
+}
+
+// Light stemming so "pitching"/"pitch" and "throwing"/"throw" collide
+function stem(t: string): string {
+  return t.replace(/(ing|ed|es|s)$/, '')
+}
+
+export interface ScorableDrill {
+  drill_name?: string | null
+  description?: string | null
+  skill_category?: string | null
+  mechanic_focus?: string[] | null
+  common_flaws_fixed?: string[] | null
+  ai_coaching_notes?: string | null
+}
+
+// Weighted so an explicit "fixes this flaw" tag counts for more than an
+// incidental word in a description.
+export function scoreDrillRelevance(complaint: string, drill: ScorableDrill): number {
+  const want = new Set(tokens(complaint).map(stem))
+  if (want.size === 0) return 0
+
+  const fields: Array<[string, number]> = [
+    [(drill.common_flaws_fixed || []).join(' '), 4],
+    [(drill.mechanic_focus || []).join(' '), 3],
+    [drill.drill_name || '', 3],
+    [drill.skill_category || '', 2],
+    [drill.description || '', 1],
+    [drill.ai_coaching_notes || '', 1],
+  ]
+
+  let score = 0
+  const counted = new Set<string>()
+  for (const [text, weight] of fields) {
+    for (const t of Array.from(new Set(tokens(text).map(stem)))) {
+      if (!want.has(t)) continue
+      // Each distinct term contributes once at its best weight
+      const key = t
+      if (counted.has(key)) continue
+      counted.add(key)
+      score += weight
+    }
+  }
+  return score
+}

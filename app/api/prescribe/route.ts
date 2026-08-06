@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 import { assembleCoachContext, renderCoachContext, CoachContext } from '@/lib/coachContext'
-import { AnalysisSection, splitSections, ageGuidanceFor } from '@/lib/analysis'
+import { AnalysisSection, splitSections, ageGuidanceFor, scoreDrillRelevance } from '@/lib/analysis'
 
 // Service role for server-side reads (bypasses RLS), matching the other API routes.
 const supabaseAdmin = createClient(
@@ -95,25 +95,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 3. Diagnose: map the complaint -> 1-3 ranked problem slugs (semantic via Claude).
-    const slugs = await diagnose(complaint, tax)
-    if (slugs.length === 0) {
-      return NextResponse.json({
-        diagnosis: null,
-        drills: [],
-        message: "I couldn't match that to a known problem yet. Try describing the specific skill (hitting, throwing, fielding, pitching, baserunning).",
-      })
-    }
-    const primary = tax.find(t => t.slug === slugs[0]) || null
+    // 3. Diagnose. The taxonomy is an accelerator, not a gate — plenty of real
+    //    questions ("how do I add velocity") are goals rather than catalogued
+    //    flaws, and we answer those too. An empty match is not a dead end.
+    const { slugs, categories } = await diagnose(complaint, tax)
+    const primary = slugs.length > 0 ? (tax.find(t => t.slug === slugs[0]) || null) : null
 
     // 4. Select candidate drills mapped to those problems.
-    const { data: mapRows } = await supabaseAdmin
-      .from('drill_problem_map')
-      .select('problem_slug, sort_order, curated, drill:drill_resources(*)')
-      .in('problem_slug', slugs)
-      // Only approved drills reach a prescription; filtered-out joins come
-      // back as null and are skipped below
-      .or('status.eq.approved,status.is.null', { foreignTable: 'drill' })
+    const { data: mapRows } = slugs.length > 0
+      ? await supabaseAdmin
+          .from('drill_problem_map')
+          .select('problem_slug, sort_order, curated, drill:drill_resources(*)')
+          .in('problem_slug', slugs)
+          // Only approved drills reach a prescription; filtered-out joins come
+          // back as null and are skipped below
+          .or('status.eq.approved,status.is.null', { foreignTable: 'drill' })
+      : { data: [] as any[] }
 
     // Flatten + dedupe drills (a drill may fix several of the matched problems).
     const byId = new Map<string, any>()
@@ -142,14 +139,31 @@ export async function POST(request: NextRequest) {
     // If the problem has a curated sequence, show only the curated drills (clean,
     // verified plan). Otherwise fall back to the best auto-mapped drills.
     const curatedSel = ordered.filter(d => d._curated)
-    const selected = (curatedSel.length >= 2 ? curatedSel : ordered).slice(0, 4)
-    if (selected.length === 0) {
-      return NextResponse.json({
-        diagnosis: primary,
-        matchedProblems: slugs.map(s => tax.find(t => t.slug === s)).filter(Boolean),
-        drills: [],
-        message: `Diagnosed as "${primary?.label}", but no drills match this player's age/level filters yet.`,
-      })
+    let selected = (curatedSel.length >= 2 ? curatedSel : ordered).slice(0, 4)
+
+    // 4b. Taxonomy came up short — search the library directly against the
+    //     coach's own words. This is what makes "how do I add velocity"
+    //     answerable even though it is not a catalogued flaw.
+    if (selected.length < 2) {
+      const already = new Set(selected.map(d => d.id))
+      let q = supabaseAdmin
+        .from('drill_resources')
+        .select('*')
+        .or('status.eq.approved,status.is.null')
+        .limit(400)
+      if (categories.length > 0) q = q.in('skill_category', categories)
+
+      const { data: candidates } = await q
+
+      const scored = (candidates || [])
+        .filter((d: any) => !already.has(d.id))
+        .filter((d: any) => !(playerAge && d.min_age && d.max_age && (playerAge < d.min_age || playerAge > d.max_age)))
+        .filter((d: any) => !(competitionLevel && d.competition_level && d.competition_level !== 'both' && d.competition_level !== competitionLevel))
+        .map((d: any) => ({ ...d, _relevance: scoreDrillRelevance(complaint, d) }))
+        .filter((d: any) => d._relevance > 0)
+        .sort((a: any, b: any) => b._relevance - a._relevance)
+
+      selected = [...selected, ...scored].slice(0, 4)
     }
 
     // 5. Write the analysis. This is the product — everything above is setup.
@@ -235,11 +249,23 @@ export async function POST(request: NextRequest) {
 }
 
 // --- diagnosis: semantic match with deterministic alias fallback ------------
-async function diagnose(complaint: string, tax: TaxonomyRow[]): Promise<string[]> {
+async function diagnose(
+  complaint: string,
+  tax: TaxonomyRow[],
+): Promise<{ slugs: string[]; categories: string[] }> {
   const list = tax.map(t => `- ${t.slug} (${t.skill_category}): ${t.label}${t.aliases?.length ? ` — e.g. ${t.aliases.slice(0, 6).join(', ')}` : ''}`).join('\n')
-  const prompt = `A youth baseball coach describes a problem. Match it to the 1-3 most relevant problem slugs from the list. Return ONLY a JSON array of slugs, most relevant first, e.g. ["late-timing"]. If nothing fits, return [].
+  const allCategories = Array.from(new Set(tax.map(t => t.skill_category).filter(Boolean))) as string[]
+
+  const prompt = `A youth baseball coach describes something they want help with. Two jobs:
+
+1. Match it to the 1-3 most relevant problem slugs, most relevant first. Many requests are goals rather than flaws ("add velocity", "hit for more power") and will not match any slug — that is fine, return an empty array. Do not force a bad match.
+2. Name the skill area(s) it belongs to, whether or not a slug matched, so we can search the drill library. Use only values from the category list.
+
+Return ONLY JSON: {"slugs": ["late-timing"], "categories": ["Hitting"]}
 
 COACH SAYS: "${complaint}"
+
+CATEGORIES: ${allCategories.join(', ')}
 
 PROBLEMS:
 ${list}`
@@ -251,11 +277,20 @@ ${list}`
       messages: [{ role: 'user', content: prompt }],
     })
     const text = res.content[0].type === 'text' ? res.content[0].text : ''
-    const m = text.match(/\[[\s\S]*\]/)
+    const m = text.match(/\{[\s\S]*\}/)
     if (m) {
-      const arr = JSON.parse(m[0]) as string[]
-      const valid = arr.filter(s => tax.some(t => t.slug === s))
-      if (valid.length) return valid.slice(0, 3)
+      const parsed = JSON.parse(m[0]) as { slugs?: string[]; categories?: string[] }
+      const validSlugs = (parsed.slugs || []).filter(x => tax.some(t => t.slug === x)).slice(0, 3)
+      const validCats = (parsed.categories || []).filter(c =>
+        tax.some(t => (t.skill_category || '').toLowerCase() === String(c).toLowerCase())
+      )
+      // Normalize category casing back to what the database stores
+      const canonicalCats = validCats.map(c =>
+        (tax.find(t => (t.skill_category || '').toLowerCase() === String(c).toLowerCase())?.skill_category) || c
+      )
+      if (validSlugs.length || canonicalCats.length) {
+        return { slugs: validSlugs, categories: Array.from(new Set(canonicalCats)) }
+      }
     }
   } catch (e) {
     console.warn('Claude diagnosis failed, falling back to alias match:', (e as any)?.message)
@@ -268,7 +303,11 @@ ${list}`
     const score = terms.reduce((s, term) => s + (term.length > 3 && c.includes(term) ? 1 : 0), 0)
     return { slug: t.slug, score }
   }).filter(x => x.score > 0).sort((a, b) => b.score - a.score)
-  return scored.slice(0, 3).map(x => x.slug)
+  const fallbackSlugs = scored.slice(0, 3).map(x => x.slug)
+  const fallbackCats = Array.from(new Set(
+    fallbackSlugs.map(sl => tax.find(t => t.slug === sl)?.skill_category).filter(Boolean)
+  )) as string[]
+  return { slugs: fallbackSlugs, categories: fallbackCats }
 }
 
 
@@ -331,7 +370,9 @@ async function writeAnalysis(
   playerAge?: number,
   ageGuidance?: string | null,
 ): Promise<{ markdown: string; sections: AnalysisSection[] }> {
-  const drillList = drills.map((d, i) =>
+  const drillList = drills.length === 0
+    ? '(none — our video library has nothing matching this yet)'
+    : drills.map((d, i) =>
     `[${i + 1}] "${d.drill_name}" (${d.skill_category}${d.difficulty_level ? `, ${d.difficulty_level}` : ''})\n` +
     `    What it is: ${d.description || 'no description on file'}\n` +
     `    Coaching cues on file: ${d.ai_coaching_notes || 'none'}` +
@@ -345,7 +386,9 @@ async function writeAnalysis(
 
 "${complaint}"
 
-${problem ? `This maps to a known problem in our library: **${problem.label}**${problem.description ? ` — ${problem.description}` : ''}` : 'This did not map cleanly to a known problem in our library.'}
+${problem
+  ? `This maps to a known problem in our library: **${problem.label}**${problem.description ? ` — ${problem.description}` : ''}`
+  : 'This does not map to a catalogued flaw in our library — it is likely a goal or a broader ask rather than a single mechanical fault. That is normal and it does not change your job: answer it properly from your own coaching knowledge. Do not mention the library, the taxonomy, or matching.'}
 
 EVERYTHING WE KNOW ABOUT ${scope === 'team' ? 'THIS TEAM' : 'THIS PLAYER'}:
 
@@ -377,7 +420,11 @@ ${scope === 'team'
   : 'Two home sessions of 15–20 minutes each. Say what happens in each one, concretely enough to run without watching a video first. Then one line the parent can hand the team coach — one sentence, something a volunteer can act on in a normal practice.'}
 
 ## Drills
-Two or three of the drills listed above, by their exact names. For each: one line on why THIS drill for THIS flaw — the mechanism, not a restatement of the drill name. Then the dose (sets/reps/frequency). If one of them only makes sense after another is working, say so and order them.
+${drills.length === 0
+  ? `We have no video in our library for this one. Say so in one short sentence — plainly, no apology — and then describe two or three drills yourself: the setup, what the player does, the dose, and what the coach watches for. The absence of a video is not a reason to give a thinner answer.`
+  : drills.length < 2
+    ? `We only have ${drills.length} matching video. Use it, and describe one or two more drills yourself to complete the plan — setup, dose, what to watch for — noting briefly that those don't have video yet.`
+    : `Two or three of the drills listed above, by their exact names. For each: one line on why THIS drill for THIS problem — the mechanism, not a restatement of the drill name. Then the dose (sets/reps/frequency). If one of them only makes sense after another is working, say so and order them.`}
 
 ## What to watch next
 The success criteria, stated in advance, in terms the coach can actually observe in a game or a session. Specific enough to be wrong: "more balls to the right side" beats "better contact". Give it a timeframe of about three weeks, and say what "no change" would look like so they can tell the difference between not working and not enough time yet.
