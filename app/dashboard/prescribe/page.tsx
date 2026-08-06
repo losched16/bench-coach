@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import {
   Target, Sparkles, Loader2, AlertCircle, Play, ClipboardList,
-  Search, Eye, CalendarCheck, Dumbbell, Heart, ChevronRight,
+  Search, Eye, CalendarCheck, Dumbbell, ChevronRight,
 } from 'lucide-react'
 import { usePageView, useTracker } from '@/lib/tracking'
 import { AnalysisProse } from '@/components/AnalysisProse'
@@ -38,8 +38,6 @@ interface Prescription {
   sections?: Section[]
   drills: PrescribedDrill[]
   prescriptionId?: string | null
-  doNotCoach?: boolean
-  reassurance?: string | null
   message?: string
   needsMigration?: boolean
   error?: string
@@ -134,7 +132,6 @@ function PrescribeContent() {
           matched_problems: (data.matchedProblems || []).map((p: any) => p?.slug),
           drill_count: (data.drills || []).length,
           had_player_context: !!playerId,
-          do_not_coach: !!data.doNotCoach,
         })
       }
     } catch (e: any) {
@@ -281,22 +278,7 @@ function PrescribeContent() {
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">{result.error}</div>
           )}
 
-          {/* Do-not-coach: reassurance, not a drill plan */}
-          {result.doNotCoach && result.reassurance && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-5">
-              <div className="flex items-center gap-2 mb-2">
-                <Heart className="text-green-600" size={20} />
-                <h2 className="font-semibold text-gray-900">Leave this one alone</h2>
-              </div>
-              <p className="text-[15px] leading-relaxed text-gray-700">{result.reassurance}</p>
-              <p className="text-sm text-gray-500 mt-3">
-                Not everything that looks like a flaw is one. If you want something to work on instead,
-                describe a different problem above.
-              </p>
-            </div>
-          )}
-
-          {result.message && !result.drills?.length && !result.doNotCoach && (
+          {result.message && !result.drills?.length && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-amber-800 text-sm">
               {result.message}
             </div>

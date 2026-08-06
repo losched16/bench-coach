@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 import { assembleCoachContext, renderCoachContext, CoachContext } from '@/lib/coachContext'
-import { AnalysisSection, splitSections, doNotCoachApplies } from '@/lib/analysis'
+import { AnalysisSection, splitSections, ageGuidanceFor } from '@/lib/analysis'
 
 // Service role for server-side reads (bypasses RLS), matching the other API routes.
 const supabaseAdmin = createClient(
@@ -106,21 +106,6 @@ export async function POST(request: NextRequest) {
     }
     const primary = tax.find(t => t.slug === slugs[0]) || null
 
-    // 3b. Some "problems" are developmentally normal at this age. Telling a
-    //     parent "that's normal at 7, leave it alone" is an answer no free
-    //     drill app gives them — and prescribing drills here would be wrong.
-    if (doNotCoachApplies(primary, playerAge)) {
-      return NextResponse.json({
-        diagnosis: primary,
-        matchedProblems: [primary],
-        doNotCoach: true,
-        reassurance: primary?.do_not_coach_note || null,
-        drills: [],
-        sections: [],
-        analysis: '',
-      })
-    }
-
     // 4. Select candidate drills mapped to those problems.
     const { data: mapRows } = await supabaseAdmin
       .from('drill_problem_map')
@@ -175,8 +160,12 @@ export async function POST(request: NextRequest) {
       playerId: playerId || null,
     })
 
+    // Age-sensitive problems still get a full plan — this note steers the
+    // METHOD toward what actually works at this age, it does not withhold one.
+    const ageGuidance = ageGuidanceFor(primary, playerAge)
+
     const { markdown, sections } = await writeAnalysis(
-      complaint, primary, selected, ctx, scope, playerAge
+      complaint, primary, selected, ctx, scope, playerAge, ageGuidance
     )
 
     const drillPayload = selected.map(d => ({
@@ -238,7 +227,6 @@ export async function POST(request: NextRequest) {
       sections,
       drills: drillPayload,
       prescriptionId,
-      doNotCoach: false,
     })
   } catch (error: any) {
     console.error('Prescribe API error:', error)
@@ -302,7 +290,11 @@ HOW YOU THINK
 
 You separate signal from noise before you say anything. Three strikeouts is not a swing problem if two were called strikes on the outside corner — that is an umpire read and an approach question. A .180 average over 22 at-bats is not a slump, it is 22 at-bats. You say which is which, out loud, because the coach cannot tell and that is most of what they are paying you for.
 
-You know what is developmentally normal. An 8-year-old who catches one-handed is 8. A 7-year-old with an uphill swing path is fine. You do not manufacture a problem to look useful, and when the honest answer is "that is normal for this age, leave it alone," you say that and explain why — a parent who stops worrying about the wrong thing got real value.
+You know what is developmentally normal, and you use that to choose the METHOD, never to refuse. A 7-year-old with an uphill swing path does not need "swing level" — that produces choppers — but if the back shoulder is collapsing and everything is popped up, that is real and it compounds, so you fix it with tee height and contact point instead of cues about swing plane. Same problem, age-appropriate tool.
+
+You never tell a coach to leave something alone. They asked because it bothers them, and if you decline they will go find a worse drill on the internet. If something is genuinely normal for the age, you still give them the work that makes it resolve faster and you set an honest expectation about the timeline. "This is common at 7 and here is how we speed it up" is the answer. "Don't worry about it" is not.
+
+The one thing you push back on is an ask that is unsafe or physically impossible — adding 10mph to an 8-year-old's fastball, a swing overhaul in a week. Say so plainly in a sentence, then answer the real question underneath it: what CAN move in three weeks, and how.
 
 You are specific about mechanism. Not "he is stepping in the bucket" but what that does to his ability to reach the outside pitch, and why the drill you are prescribing changes it. A coach who understands WHY runs the drill correctly; a coach following instructions runs it once.
 
@@ -337,6 +329,7 @@ async function writeAnalysis(
   ctx: CoachContext,
   scope: 'player' | 'team',
   playerAge?: number,
+  ageGuidance?: string | null,
 ): Promise<{ markdown: string; sections: AnalysisSection[] }> {
   const drillList = drills.map((d, i) =>
     `[${i + 1}] "${d.drill_name}" (${d.skill_category}${d.difficulty_level ? `, ${d.difficulty_level}` : ''})\n` +
@@ -358,7 +351,13 @@ EVERYTHING WE KNOW ABOUT ${scope === 'team' ? 'THIS TEAM' : 'THIS PLAYER'}:
 
 ${renderCoachContext(ctx)}
 
-DRILLS AVAILABLE FOR THIS PROBLEM (already filtered for age and level — use these, and only these, by name):
+${ageGuidance ? `HOW THIS PROBLEM WORKS AT THIS AGE (${playerAge}) — this changes your METHOD, not whether you help:
+
+${ageGuidance}
+
+Use that. Do NOT tell the coach to leave it alone or that it will resolve on its own — they asked for a fix and they will go find a worse one elsewhere if you decline. Give them the age-appropriate version of the fix, and be honest about what a realistic three-week change looks like at this age.
+
+` : ''}DRILLS AVAILABLE FOR THIS PROBLEM (already filtered for age and level — use these, and only these, by name):
 
 ${drillList}
 

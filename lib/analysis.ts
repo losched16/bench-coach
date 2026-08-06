@@ -38,21 +38,24 @@ export function splitSections(markdown: string): AnalysisSection[] {
   return sections
 }
 
-// A problem that is developmentally normal at this age gets reassurance, not
-// a drill plan. Telling a parent "that's normal at 7, leave it alone" is an
-// answer no free drill app gives them.
-export function doNotCoachApplies(
-  problem: { do_not_coach_flag?: boolean | null; age_relevance?: string[] | null } | null,
+// Age-sensitive problems still get a plan — the note shapes HOW we prescribe,
+// not whether we do. A coach who asks for a fix wants a fix; an extreme
+// uppercut at 7 compounds if ignored. But the method that works at 7 is not
+// the method that works at 12, and this is where we say so.
+//
+// Returns the guidance when the player is younger than the age range where
+// the standard approach applies. Null means prescribe normally.
+export function ageGuidanceFor(
+  problem: { do_not_coach_flag?: boolean | null; do_not_coach_note?: string | null; age_relevance?: string[] | null } | null,
   playerAge?: number
-): boolean {
-  if (!problem?.do_not_coach_flag || !playerAge) return false
+): string | null {
+  if (!problem?.do_not_coach_flag || !problem.do_not_coach_note || !playerAge) return null
   const relevant = problem.age_relevance || []
-  if (relevant.length === 0) return false
-  // age_relevance lists the age groups where coaching it IS appropriate
-  const ageNum = Number(playerAge)
-  const lowestCoachable = relevant
+  if (relevant.length === 0) return null
+  const lowestStandard = relevant
     .map(a => parseInt(String(a).replace(/\D/g, ''), 10))
     .filter(n => !isNaN(n))
     .sort((a, b) => a - b)[0]
-  return typeof lowestCoachable === 'number' && ageNum < lowestCoachable
+  if (typeof lowestStandard !== 'number') return null
+  return Number(playerAge) < lowestStandard ? problem.do_not_coach_note : null
 }
