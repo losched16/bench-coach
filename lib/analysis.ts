@@ -102,28 +102,43 @@ export function scoreDrillRelevance(complaint: string, drill: ScorableDrill): nu
   const want = new Set(tokens(complaint).map(stem))
   if (want.size === 0) return 0
 
-  const fields: Array<[string, number]> = [
+  // skill_category is deliberately absent. It is already the filter, so
+  // counting it again gives every drill in the category a free passing score
+  // — which is how a changeup-grip video ended up recommended for a velocity
+  // question: it matched the word "pitching" and nothing else.
+  const substantive: Array<[string, number]> = [
     [(drill.common_flaws_fixed || []).join(' '), 4],
     [(drill.mechanic_focus || []).join(' '), 3],
     [drill.drill_name || '', 3],
-    [drill.skill_category || '', 2],
+  ]
+  const supporting: Array<[string, number]> = [
     [drill.description || '', 1],
     [drill.ai_coaching_notes || '', 1],
   ]
 
   let score = 0
+  let substantiveHits = 0
   const counted = new Set<string>()
-  for (const [text, weight] of fields) {
+
+  for (const [text, weight] of substantive) {
     for (const t of Array.from(new Set(tokens(text).map(stem)))) {
-      if (!want.has(t)) continue
-      // Each distinct term contributes once at its best weight
-      const key = t
-      if (counted.has(key)) continue
-      counted.add(key)
+      if (!want.has(t) || counted.has(t)) continue
+      counted.add(t)
+      score += weight
+      substantiveHits++
+    }
+  }
+  for (const [text, weight] of supporting) {
+    for (const t of Array.from(new Set(tokens(text).map(stem)))) {
+      if (!want.has(t) || counted.has(t)) continue
+      counted.add(t)
       score += weight
     }
   }
-  return score
+
+  // A hit in a description alone is not enough to prescribe something. The
+  // drill has to claim it addresses this, or be named for it.
+  return substantiveHits > 0 ? score : 0
 }
 
 // Marks the end of the streamed markdown and the start of the JSON tail

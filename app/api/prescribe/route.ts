@@ -168,15 +168,21 @@ export async function POST(request: NextRequest) {
 
       const { data: candidates } = await q
 
-      const scored = (candidates || [])
+      const eligible = (candidates || [])
         .filter((d: any) => !already.has(d.id))
         .filter((d: any) => !(playerAge && d.min_age && d.max_age && (playerAge < d.min_age || playerAge > d.max_age)))
         .filter((d: any) => !(competitionLevel && d.competition_level && d.competition_level !== 'both' && d.competition_level !== competitionLevel))
-        .map((d: any) => ({ ...d, _relevance: scoreDrillRelevance(complaint, d) }))
-        .filter((d: any) => d._relevance > 0)
-        .sort((a: any, b: any) => b._relevance - a._relevance)
 
-      selected = [...selected, ...scored].slice(0, 4)
+      // Keyword score only bounds the pool sent to the model — it must not
+      // decide inclusion, or drills it cannot read ("momentum down the mound"
+      // for a velocity ask) get dropped before anything can judge them.
+      const pool = eligible
+        .map((d: any) => ({ ...d, _relevance: scoreDrillRelevance(complaint, d) }))
+        .sort((a: any, b: any) => b._relevance - a._relevance)
+        .slice(0, 40)
+
+      const picked = await pickRelevantDrills(complaint, pool)
+      selected = [...selected, ...picked].slice(0, 4)
     }
 
     // 5. Write the analysis. This is the product — everything above is setup.
@@ -291,6 +297,52 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Prescribe API error:', error)
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
+  }
+}
+
+// --- relevance gate --------------------------------------------------------
+// Keyword scoring cannot tell that "momentum down the mound" answers a
+// velocity question, or that a changeup grip does not. It matches strings.
+// This asks a fast model which drills genuinely address the ask, which is
+// the difference between a recommendation and a category listing.
+async function pickRelevantDrills(
+  complaint: string,
+  candidates: any[],
+): Promise<any[]> {
+  if (candidates.length === 0) return []
+  if (candidates.length === 1) return candidates
+
+  const list = candidates.map((d, i) =>
+    `${i}. ${d.drill_name}${d.mechanic_focus?.length ? ` — trains: ${d.mechanic_focus.join(', ')}` : ''}` +
+    `${d.common_flaws_fixed?.length ? ` — fixes: ${d.common_flaws_fixed.join(', ')}` : ''}` +
+    `${d.description ? ` — ${String(d.description).slice(0, 140)}` : ''}`
+  ).join('\n')
+
+  const prompt = `A youth baseball coach asked: "${complaint}"
+
+Which of these drills would genuinely help with that? Think about what the drill actually trains, not what category it is filed under. A drill that shares a skill area but works a different quality does NOT count — a changeup grip drill does not help someone throw harder, and a bunting drill does not help someone field grounders.
+
+Return ONLY a JSON array of the numbers, best first, at most 4. If none of them genuinely help, return [].
+
+${list}`
+
+  try {
+    const res = await anthropic.messages.create({
+      model: DIAGNOSE_MODEL,
+      max_tokens: 200,
+      messages: [{ role: 'user', content: prompt }],
+    })
+    const text = res.content[0].type === 'text' ? res.content[0].text : ''
+    const m = text.match(/\[[\s\S]*?\]/)
+    if (!m) return []
+    const picks = JSON.parse(m[0]) as number[]
+    return picks
+      .filter(i => Number.isInteger(i) && i >= 0 && i < candidates.length)
+      .slice(0, 4)
+      .map(i => candidates[i])
+  } catch (e) {
+    console.warn('Drill relevance gate failed, falling back to keyword order:', (e as any)?.message)
+    return candidates.slice(0, 3)
   }
 }
 
@@ -441,7 +493,7 @@ ${drills.length === 0
   ? `We have no video in our library for this one. Say so in one short sentence — plainly, no apology — and then describe two or three drills yourself: the setup, what the player does, the dose, and what the coach watches for. The absence of a video is not a reason to give a thinner answer.`
   : drills.length < 2
     ? `We only have ${drills.length} matching video. Use it, and describe one or two more drills yourself to complete the plan — setup, dose, what to watch for — noting briefly that those don't have video yet.`
-    : `Two or three of the drills listed above, by their exact names. For each: one line on why THIS drill for THIS problem — the mechanism, not a restatement of the drill name. Then the dose (sets/reps/frequency). If one of them only makes sense after another is working, say so and order them.`}
+    : `Two or three of the drills listed above, by their exact names. For each: one line on why THIS drill for THIS problem — the mechanism, not a restatement of the drill name. Then the dose (sets/reps/frequency). If one of them only makes sense after another is working, say so and order them. If one of them does not genuinely address the ask, leave it out rather than reaching for a justification — a short list of drills that fit beats a longer one that doesn't.`}
 
 ## What to watch next
 The success criteria, stated in advance, in terms the coach can actually observe in a game or a session. Specific enough to be wrong: "more balls to the right side" beats "better contact". Give it a timeframe of about three weeks, and say what "no change" would look like so they can tell the difference between not working and not enough time yet.
