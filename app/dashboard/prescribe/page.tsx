@@ -1,9 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Target, Sparkles, Loader2, CheckCircle2, RefreshCw, Dumbbell, AlertCircle } from 'lucide-react'
+import { createSupabaseComponentClient } from '@/lib/supabase'
+import {
+  Target, Sparkles, Loader2, AlertCircle, Play, ClipboardList,
+  Search, Eye, CalendarCheck, Dumbbell, Heart, ChevronRight,
+} from 'lucide-react'
 import { usePageView, useTracker } from '@/lib/tracking'
+import { AnalysisProse } from '@/components/AnalysisProse'
 
 interface Problem { slug: string; label: string; skill_category: string | null }
 
@@ -19,33 +24,52 @@ interface PrescribedDrill {
   difficulty_level?: string
   equipment_needed?: string[]
   ai_coaching_notes?: string
-  why?: string | null
   reps?: string | null
   frequency?: string | null
   success_marker?: string | null
 }
 
+interface Section { key: string; heading: string; body: string }
+
 interface Prescription {
   diagnosis?: { slug: string; label: string } | null
   matchedProblems?: Problem[]
-  summary?: string
-  reassess?: string
+  analysis?: string
+  sections?: Section[]
   drills: PrescribedDrill[]
+  prescriptionId?: string | null
+  doNotCoach?: boolean
+  reassurance?: string | null
   message?: string
   needsMigration?: boolean
   error?: string
 }
 
-export default function PrescribePage() {
+interface RosterPlayer { player_id: string; name: string; birth_year: number | null }
+
+// Each section gets its own icon and treatment — the six-section shape IS the
+// output contract, so it should be visually legible as six distinct answers.
+const SECTION_META: Record<string, { icon: any; accent: string }> = {
+  what_the_data_showed: { icon: Search, accent: 'text-slate-600' },
+  the_one_thing: { icon: Target, accent: 'text-red-600' },
+  this_week: { icon: CalendarCheck, accent: 'text-blue-600' },
+  drills: { icon: Dumbbell, accent: 'text-green-600' },
+  what_to_watch_next: { icon: Eye, accent: 'text-purple-600' },
+  metrics: { icon: ClipboardList, accent: 'text-gray-600' },
+}
+
+function PrescribeContent() {
   usePageView('prescribe')
   const track = useTracker()
   const searchParams = useSearchParams()
   const teamId = searchParams.get('teamId')
+  const supabase = createSupabaseComponentClient()
 
   const [problems, setProblems] = useState<Problem[]>([])
   const [needsMigration, setNeedsMigration] = useState(false)
   const [complaint, setComplaint] = useState('')
-  const [playerAge, setPlayerAge] = useState('')
+  const [roster, setRoster] = useState<RosterPlayer[]>([])
+  const [playerId, setPlayerId] = useState('')
   const [competitionLevel, setCompetitionLevel] = useState<'both' | 'rec' | 'travel'>('both')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<Prescription | null>(null)
@@ -60,6 +84,31 @@ export default function PrescribePage() {
       .catch(() => {})
   }, [])
 
+  useEffect(() => {
+    if (!teamId) return
+    supabase
+      .from('team_players')
+      .select('player:players(id, name, birth_year)')
+      .eq('team_id', teamId)
+      .then(({ data }) => {
+        const list: RosterPlayer[] = (data || [])
+          .map((tp: any) => ({
+            player_id: tp.player?.id,
+            name: tp.player?.name || '',
+            birth_year: tp.player?.birth_year ?? null,
+          }))
+          .filter((r: RosterPlayer) => r.player_id && r.name)
+        setRoster(list)
+        if (list.length === 1) setPlayerId(list[0].player_id)
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamId])
+
+  const selectedPlayer = roster.find(r => r.player_id === playerId)
+  const playerAge = selectedPlayer?.birth_year
+    ? new Date().getFullYear() - selectedPlayer.birth_year
+    : undefined
+
   const submit = async (text?: string) => {
     const q = (text ?? complaint).trim()
     if (!q) return
@@ -73,7 +122,8 @@ export default function PrescribePage() {
         body: JSON.stringify({
           complaint: q,
           teamId,
-          playerAge: playerAge ? parseInt(playerAge) : undefined,
+          playerId: playerId || undefined,
+          playerAge,
           competitionLevel: competitionLevel === 'both' ? undefined : competitionLevel,
         }),
       })
@@ -81,8 +131,10 @@ export default function PrescribePage() {
       setResult(data)
       if (!data.error) {
         track('prescription_generated', {
-          matched_problems: (data.matchedProblems || []).map((p: any) => p.slug),
+          matched_problems: (data.matchedProblems || []).map((p: any) => p?.slug),
           drill_count: (data.drills || []).length,
+          had_player_context: !!playerId,
+          do_not_coach: !!data.doNotCoach,
         })
       }
     } catch (e: any) {
@@ -92,7 +144,6 @@ export default function PrescribePage() {
     }
   }
 
-  // A few high-value quick-picks, drawn from the taxonomy when available.
   const quickPicks = problems.length
     ? problems.filter(p =>
         ['late-timing', 'casting', 'fear-of-ball', 'stepping-in-bucket', 'slow-transfer', 'inaccurate-throws', 'rushing-delivery', 'pulling-head']
@@ -109,29 +160,17 @@ export default function PrescribePage() {
           <h1 className="text-2xl font-bold text-gray-900">What to Work On</h1>
         </div>
         <p className="text-gray-600 mt-1">
-          Describe what a player is struggling with in plain English. You'll get one priority, the drills that fix it, and how to know it worked.
+          Describe what you&apos;re seeing in plain English. You&apos;ll get a read on what&apos;s actually going on,
+          one priority, and how to know in three weeks whether it moved.
         </p>
       </div>
-
-      {/* Empty state — point at the capture surface that makes this proactive */}
-      {!result && !loading && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-900 flex items-start gap-2">
-          <Sparkles size={16} className="flex-shrink-0 mt-0.5" />
-          <span>
-            Logged this weekend&apos;s games?{' '}
-            <a href={`/dashboard/log?teamId=${teamId}`} className="underline font-medium">
-              Log an entry
-            </a>{' '}
-            and the answer here gets specific to what actually happened.
-          </span>
-        </div>
-      )}
 
       {needsMigration && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3">
           <AlertCircle className="text-amber-600 flex-shrink-0" size={20} />
           <div className="text-sm text-amber-800">
-            The prescription engine isn't set up yet. Apply the SQL files in <code className="bg-amber-100 px-1 rounded">/migrations</code> in your Supabase SQL editor, then refresh.
+            The prescription engine isn&apos;t set up yet. Apply the SQL files in{' '}
+            <code className="bg-amber-100 px-1 rounded">/migrations</code> in your Supabase SQL editor, then refresh.
           </div>
         </div>
       )}
@@ -147,17 +186,23 @@ export default function PrescribePage() {
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
         />
 
-        {/* Optional context */}
         <div className="flex flex-wrap items-center gap-3 text-sm">
-          <div className="flex items-center gap-2">
-            <label className="text-gray-600">Age</label>
-            <input
-              type="number" min={4} max={18} value={playerAge}
-              onChange={(e) => setPlayerAge(e.target.value)}
-              placeholder="any"
-              className="w-20 px-2 py-1.5 border border-gray-300 rounded-lg"
-            />
-          </div>
+          {roster.length > 1 && (
+            <div className="flex items-center gap-2">
+              <label className="text-gray-600">Player</label>
+              <select
+                value={playerId}
+                onChange={(e) => setPlayerId(e.target.value)}
+                className="px-2 py-1.5 border border-gray-300 rounded-lg"
+              >
+                <option value="">Whole team</option>
+                {roster.map(r => (
+                  <option key={r.player_id} value={r.player_id}>{r.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="flex items-center gap-2">
             <label className="text-gray-600">Level</label>
             <div className="flex rounded-lg border border-gray-300 overflow-hidden">
@@ -172,18 +217,26 @@ export default function PrescribePage() {
               ))}
             </div>
           </div>
+
           <button
             onClick={() => submit()}
             disabled={loading || !complaint.trim()}
             className="ml-auto flex items-center gap-2 px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
           >
             {loading ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
-            {loading ? 'Building plan…' : 'Get plan'}
+            {loading ? 'Thinking…' : 'Get the read'}
           </button>
         </div>
 
-        {/* Quick picks */}
-        {quickPicks.length > 0 && (
+        {/* What the answer is actually built from — tells the user why logging pays off */}
+        {playerId && selectedPlayer && (
+          <p className="text-xs text-gray-500">
+            Using everything logged for {selectedPlayer.name}
+            {playerAge ? ` (age ${playerAge})` : ''} — stats, your notes, lessons, and what we&apos;ve already tried.
+          </p>
+        )}
+
+        {quickPicks.length > 0 && !result && (
           <div className="flex flex-wrap gap-2 pt-1">
             <span className="text-xs text-gray-500 self-center">Common:</span>
             {quickPicks.map(p => (
@@ -199,10 +252,25 @@ export default function PrescribePage() {
         )}
       </div>
 
-      {/* Loading skeleton */}
+      {/* Empty state — the capture surface is what makes this specific */}
+      {!result && !loading && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-900 flex items-start gap-2">
+          <Sparkles size={16} className="flex-shrink-0 mt-0.5" />
+          <span>
+            The more you&apos;ve logged, the more specific this gets.{' '}
+            <a href={`/dashboard/log?teamId=${teamId}`} className="underline font-medium">Log an entry</a>{' '}
+            after a game or a lesson and the read here stops being generic.
+          </span>
+        </div>
+      )}
+
       {loading && (
-        <div className="text-center py-10 text-gray-500 flex items-center justify-center gap-2">
-          <Loader2 className="animate-spin" size={18} /> Diagnosing and sequencing drills…
+        <div className="bg-white rounded-lg shadow p-8 text-center">
+          <Loader2 className="animate-spin mx-auto text-red-600 mb-3" size={24} />
+          <p className="text-gray-700 font-medium">Reading the evidence</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Weighing what you&apos;ve seen against the stats, then picking one thing. Usually 15–30 seconds.
+          </p>
         </div>
       )}
 
@@ -212,75 +280,129 @@ export default function PrescribePage() {
           {result.error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">{result.error}</div>
           )}
-          {result.message && !result.drills?.length && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-blue-800 text-sm">{result.message}</div>
-          )}
 
-          {result.diagnosis && (
-            <div className="bg-white rounded-lg shadow p-5">
-              <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">Diagnosis</div>
-              <div className="text-lg font-semibold text-gray-900">{result.diagnosis.label}</div>
-              {result.summary && <p className="text-gray-700 mt-2">{result.summary}</p>}
-              {result.reassess && (
-                <div className="mt-3 flex items-start gap-2 bg-blue-50 rounded-lg p-3">
-                  <RefreshCw className="text-blue-600 flex-shrink-0 mt-0.5" size={16} />
-                  <p className="text-sm text-blue-800"><span className="font-medium">Reassess:</span> {result.reassess}</p>
-                </div>
-              )}
+          {/* Do-not-coach: reassurance, not a drill plan */}
+          {result.doNotCoach && result.reassurance && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Heart className="text-green-600" size={20} />
+                <h2 className="font-semibold text-gray-900">Leave this one alone</h2>
+              </div>
+              <p className="text-[15px] leading-relaxed text-gray-700">{result.reassurance}</p>
+              <p className="text-sm text-gray-500 mt-3">
+                Not everything that looks like a flaw is one. If you want something to work on instead,
+                describe a different problem above.
+              </p>
             </div>
           )}
 
-          {/* Sequenced drills */}
-          {result.drills?.map((d, i) => (
-            <div key={d.id} className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="flex items-center gap-2 px-5 pt-4">
-                <span className="flex items-center justify-center w-7 h-7 rounded-full bg-red-600 text-white text-sm font-bold">{i + 1}</span>
-                <h3 className="font-semibold text-gray-900">{d.drill_name}</h3>
-                {d.difficulty_level && (
-                  <span className="ml-auto text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600">{d.difficulty_level}</span>
-                )}
-              </div>
+          {result.message && !result.drills?.length && !result.doNotCoach && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-amber-800 text-sm">
+              {result.message}
+            </div>
+          )}
 
-              {d.youtube_video_id && (
-                <div className="aspect-video bg-black mt-3">
-                  <iframe
-                    src={`https://www.youtube.com/embed/${d.youtube_video_id}?rel=0`}
-                    title={d.drill_name}
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
-              )}
-
-              <div className="p-5 space-y-3">
-                {d.why && (
-                  <p className="text-gray-700"><span className="font-medium text-gray-900">Why:</span> {d.why}</p>
-                )}
-                <div className="flex flex-wrap gap-4 text-sm">
-                  {d.reps && (
-                    <div className="flex items-center gap-1.5 text-gray-700">
-                      <Dumbbell size={15} className="text-gray-400" /> {d.reps}
+          {/* The analysis — six sections */}
+          {result.sections && result.sections.length > 0 && (
+            <div className="space-y-4">
+              {result.sections.map((section) => {
+                const meta = SECTION_META[section.key] || { icon: ChevronRight, accent: 'text-gray-600' }
+                const Icon = meta.icon
+                const isPriority = section.key.startsWith('the_one_thing')
+                return (
+                  <div
+                    key={section.key}
+                    className={`bg-white rounded-lg shadow-sm border p-5 ${
+                      isPriority ? 'border-red-300 ring-1 ring-red-100' : 'border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <Icon className={meta.accent} size={18} />
+                      <h2 className="font-semibold text-gray-900">{section.heading}</h2>
                     </div>
-                  )}
-                  {d.frequency && (
-                    <div className="flex items-center gap-1.5 text-gray-700">
-                      <RefreshCw size={15} className="text-gray-400" /> {d.frequency}
-                    </div>
-                  )}
-                </div>
-                {d.success_marker && (
-                  <div className="flex items-start gap-2 bg-green-50 rounded-lg p-3">
-                    <CheckCircle2 className="text-green-600 flex-shrink-0 mt-0.5" size={16} />
-                    <p className="text-sm text-green-800"><span className="font-medium">You'll know it's working when:</span> {d.success_marker}</p>
+                    <AnalysisProse body={section.body} />
                   </div>
-                )}
-                {d.channel && <p className="text-xs text-gray-400">Video by {d.channel}</p>}
+                )
+              })}
+            </div>
+          )}
+
+          {/* Drill cards with the videos */}
+          {result.drills?.length > 0 && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Play className="text-green-600" size={18} />
+                <h2 className="font-semibold text-gray-900">Watch these</h2>
+              </div>
+              <div className="space-y-3">
+                {result.drills.map(d => (
+                  <div key={d.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
+                    {d.youtube_video_id && (
+                      <a
+                        href={d.youtube_url || `https://www.youtube.com/watch?v=${d.youtube_video_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-shrink-0 relative group"
+                      >
+                        <img
+                          src={d.thumbnail_url || `https://img.youtube.com/vi/${d.youtube_video_id}/mqdefault.jpg`}
+                          alt=""
+                          className="w-32 h-[72px] object-cover rounded"
+                        />
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          <span className="w-8 h-8 rounded-full bg-black/60 group-hover:bg-red-600 flex items-center justify-center transition-colors">
+                            <Play className="text-white ml-0.5" size={14} fill="white" />
+                          </span>
+                        </span>
+                      </a>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-gray-900 text-sm">{d.drill_name}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {[d.skill_category, d.difficulty_level, d.channel].filter(Boolean).join(' · ')}
+                      </div>
+                      {(d.reps || d.frequency) && (
+                        <div className="text-xs text-gray-600 mt-1">
+                          {[d.reps, d.frequency].filter(Boolean).join(' · ')}
+                        </div>
+                      )}
+                      {d.equipment_needed?.length ? (
+                        <div className="text-xs text-gray-500 mt-1">
+                          Needs: {d.equipment_needed.join(', ')}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
+          )}
+
+          {/* Saved confirmation — the return visit is the whole point */}
+          {result.prescriptionId && (
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-sm text-slate-700 flex items-start gap-2">
+              <CalendarCheck size={16} className="flex-shrink-0 mt-0.5 text-slate-500" />
+              <span>
+                Saved. We&apos;ll hold this priority for three weeks rather than changing it every time new data
+                comes in — that&apos;s how long it actually takes to move something at this age. Log your home
+                sessions against it and the check-in will tell you whether it worked.
+              </span>
+            </div>
+          )}
         </div>
       )}
     </div>
+  )
+}
+
+export default function PrescribePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="animate-spin text-gray-400" size={32} />
+      </div>
+    }>
+      <PrescribeContent />
+    </Suspense>
   )
 }
