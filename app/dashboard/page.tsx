@@ -92,6 +92,12 @@ function DashboardContent() {
 
   const quickActions = [
     {
+      label: 'Log an Entry',
+      icon: ClipboardList,
+      href: `/dashboard/log?teamId=${teamId}`,
+      color: 'red',
+    },
+    {
       label: 'Open Chat',
       icon: MessageSquare,
       href: `/dashboard/chat?teamId=${teamId}`,

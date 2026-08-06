@@ -210,7 +210,8 @@ function DashboardContent({
   const navItems = [
     { label: 'Dashboard', href: '/dashboard', icon: Home },
     { label: 'Chat', href: '/dashboard/chat', icon: MessageSquare },
-    { label: 'Fix a Problem', href: '/dashboard/prescribe', icon: Target },
+    { label: 'Log an Entry', href: '/dashboard/log', icon: ClipboardList },
+    { label: 'What to Work On', href: '/dashboard/prescribe', icon: Target },
     { label: 'Roster', href: '/dashboard/roster', icon: Users },
     { label: 'Notes', href: '/dashboard/notes', icon: StickyNote },
     { label: 'Practice Plans', href: '/dashboard/practice', icon: ClipboardList },

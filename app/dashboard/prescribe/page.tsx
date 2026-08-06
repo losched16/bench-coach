@@ -106,12 +106,26 @@ export default function PrescribePage() {
       <div>
         <div className="flex items-center gap-2">
           <Target className="text-red-600" size={26} />
-          <h1 className="text-2xl font-bold text-gray-900">Fix a Problem</h1>
+          <h1 className="text-2xl font-bold text-gray-900">What to Work On</h1>
         </div>
         <p className="text-gray-600 mt-1">
-          Describe what a player is struggling with in plain English. You'll get a short, sequenced drill plan — with reps and how to know it's working.
+          Describe what a player is struggling with in plain English. You'll get one priority, the drills that fix it, and how to know it worked.
         </p>
       </div>
+
+      {/* Empty state — point at the capture surface that makes this proactive */}
+      {!result && !loading && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-900 flex items-start gap-2">
+          <Sparkles size={16} className="flex-shrink-0 mt-0.5" />
+          <span>
+            Logged this weekend&apos;s games?{' '}
+            <a href={`/dashboard/log?teamId=${teamId}`} className="underline font-medium">
+              Log an entry
+            </a>{' '}
+            and the answer here gets specific to what actually happened.
+          </span>
+        </div>
+      )}
 
       {needsMigration && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3">
