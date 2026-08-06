@@ -197,8 +197,8 @@ IMPORTANT:
     console.log('Calling Claude API...')
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 8000,
+      model: 'claude-sonnet-5',
+      max_tokens: 12000,
       system: systemPrompt,
       messages: [
         {

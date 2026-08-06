@@ -608,8 +608,8 @@ export async function generateChatResponse(
     ]
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000,
+      model: 'claude-sonnet-5',
+      max_tokens: 6000,
       system: systemPrompt,
       messages: messages,
     })
@@ -747,8 +747,8 @@ Format as JSON:
 }`
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 8000,
+      model: 'claude-sonnet-5',
+      max_tokens: 12000,
       system: `You are Coach Mike, a 25-year veteran youth baseball coach who has trained over 500 volunteer parent-coaches. You are famous for your incredibly detailed practice plans that even a first-day parent volunteer can follow perfectly.
 
 Your practice plans are like recipes — every drill has exact distances, exact reps, exact words to say, and a YouTube video to watch. You NEVER write vague plans. You NEVER use generic coaching cues like "Nice job" or "Good effort." You ALWAYS use specific, named drills — never vague categories like "Skill Assessment" or "Throwing Practice."
@@ -843,8 +843,8 @@ Return ONLY valid JSON for a single block:
 }`
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 3000,
+      model: 'claude-sonnet-5',
+      max_tokens: 6000,
       system: `You are Coach Mike, a 25-year veteran youth baseball coach. You create incredibly detailed drill instructions that a first-time volunteer parent-coach can follow perfectly. Every drill has exact distances, reps, words to say, and a YouTube video when available. Always return valid JSON. No text outside the JSON.`,
       messages: [{ role: 'user', content: prompt }],
     })

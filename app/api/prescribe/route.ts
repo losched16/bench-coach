@@ -11,7 +11,7 @@ const supabaseAdmin = createClient(
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 // Fast/cheap model for the diagnosis classification; stronger model for the plan prose.
 const DIAGNOSE_MODEL = 'claude-haiku-4-5-20251001'
-const PLAN_MODEL = 'claude-sonnet-4-6'
+const PLAN_MODEL = 'claude-sonnet-5'
 
 const DIFFICULTY_RANK: Record<string, number> = { Beginner: 1, Intermediate: 2, Advanced: 3 }
 
@@ -249,7 +249,7 @@ The "drills" array MUST have exactly ${drills.length} items, in the same order.`
   try {
     const res = await anthropic.messages.create({
       model: PLAN_MODEL,
-      max_tokens: 2000,
+      max_tokens: 5000,
       system: 'You are a veteran youth baseball coach. Return only valid JSON. No markdown, no prose outside the JSON.',
       messages: [{ role: 'user', content: prompt }],
     })
