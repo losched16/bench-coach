@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
       durationMin,
       games,            // reviewed game rows with matched players
       rosterMappings,   // [{ source_name, team_player_id }] confirmed this session
+      prescriptionId: explicitPrescriptionId, // set by the one-tap logger
     } = body
 
     if (!coachId || !entryType || !occurredOn) {
@@ -91,8 +92,12 @@ export async function POST(request: NextRequest) {
 
     // A home session works whatever priority is currently active — logging it
     // IS the check-in, so we attach it automatically rather than asking.
-    let prescriptionId: string | null = null
-    if (entryType === 'home_session') {
+    //
+    // The one-tap logger names the priority explicitly, which matters once a
+    // coach has more than one running: "most recent active" would quietly
+    // credit the wrong one.
+    let prescriptionId: string | null = explicitPrescriptionId || null
+    if (entryType === 'home_session' && !prescriptionId) {
       let pq = supabaseAdmin
         .from('prescriptions')
         .select('id')
@@ -241,6 +246,53 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Log POST error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
+
+// PATCH: attach notes to an entry that already exists.
+//
+// The one-tap logger saves the session the instant the button is pressed —
+// that is the whole point, and making it wait for a text box is how you get
+// nothing logged at all. The optional "how did it go" arrives afterwards, if
+// they feel like it, and lands here.
+export async function PATCH(request: NextRequest) {
+  try {
+    const { coachId, entryId, notes } = await request.json()
+
+    if (!coachId || !entryId) {
+      return NextResponse.json({ error: 'coachId and entryId are required' }, { status: 400 })
+    }
+
+    const { data: entry } = await supabaseAdmin
+      .from('entries')
+      .select('id, team_id, player_id, occurred_on')
+      .eq('id', entryId)
+      .eq('coach_id', coachId)
+      .maybeSingle()
+
+    if (!entry) return NextResponse.json({ error: 'Entry not found' }, { status: 404 })
+
+    const rows = (notes || [])
+      .filter((n: any) => n?.body && String(n.body).trim())
+      .map((n: any) => ({
+        coach_id: coachId,
+        team_id: (entry as any).team_id,
+        player_id: (entry as any).player_id,
+        entry_id: (entry as any).id,
+        prompt_key: n.prompt_key || null,
+        body: String(n.body).trim(),
+        observed_on: (entry as any).occurred_on,
+      }))
+
+    if (rows.length === 0) return NextResponse.json({ success: true, observations: 0 })
+
+    const { error } = await supabaseAdmin.from('observations').insert(rows)
+    if (error) throw error
+
+    return NextResponse.json({ success: true, observations: rows.length })
+  } catch (error: any) {
+    console.error('Log PATCH error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

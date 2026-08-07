@@ -5,10 +5,11 @@ import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import {
   CalendarCheck, Loader2, AlertCircle, Target, History, Search,
-  CheckCircle2, RotateCcw, XCircle, Sparkles, ChevronRight,
+  CheckCircle2, RotateCcw, XCircle, ChevronRight,
 } from 'lucide-react'
 import { usePageView, useTracker } from '@/lib/tracking'
 import { AnalysisProse } from '@/components/AnalysisProse'
+import { ActivePriority } from '@/components/ActivePriority'
 import { splitSections } from '@/lib/analysis'
 import { VERDICT_SENTINEL, visibleMarkdown, AdherenceRead, DueState, Verdict, VerdictStatus } from '@/lib/checkin'
 
@@ -23,6 +24,11 @@ interface OpenPrescription {
   daysElapsed: number
   due: DueState
   adherence: AdherenceRead
+  lastSessionOn: string | null
+  evidenceCount: number
+  hasEvidence: boolean
+  playerId: string | null
+  teamId: string | null
 }
 
 interface Section { key: string; heading: string; body: string }
@@ -59,18 +65,6 @@ const ACTIONS: Array<{ status: VerdictStatus; label: string; icon: any; classNam
     hint: 'Season ended, position changed, something else took over.',
   },
 ]
-
-function dueLabel(p: OpenPrescription): { text: string; className: string } {
-  if (p.due === 'overdue') return { text: 'Overdue', className: 'bg-red-100 text-red-700' }
-  if (p.due === 'due') return { text: 'Ready to check in', className: 'bg-amber-100 text-amber-800' }
-  const daysLeft = p.reviewDueAt
-    ? Math.max(0, Math.ceil((new Date(p.reviewDueAt).getTime() - Date.now()) / 86_400_000))
-    : null
-  return {
-    text: daysLeft !== null ? `${daysLeft} days to go` : 'In progress',
-    className: 'bg-gray-100 text-gray-600',
-  }
-}
 
 function CheckinContent() {
   usePageView('checkin')
@@ -261,45 +255,24 @@ function CheckinContent() {
         </div>
       )}
 
-      {/* Due first — this is what the page is for */}
-      {dueList.length > 0 && (
-        <div className="space-y-3">
-          {dueList.map(p => {
-            const badge = dueLabel(p)
-            const isActive = p.id === activeId
-            return (
-              <div
+      {/* Due first — this is what the page is for. Same card as the dashboard,
+          so the log button is here too: a priority that's due with nothing
+          logged needs a session far more than it needs a verdict. */}
+      {coachId && dueList.length > 0 && (
+        <div className="space-y-4">
+          {dueList
+            .filter(p => p.id !== activeId || !sections)
+            .map(p => (
+              <ActivePriority
                 key={p.id}
-                className={`bg-white rounded-lg shadow-sm border p-5 ${
-                  isActive ? 'border-red-300 ring-1 ring-red-100' : 'border-amber-200'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-gray-900">{p.subjectName}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${badge.className}`}>{badge.text}</span>
-                      <span className="text-xs text-gray-500">{p.daysElapsed} days in</span>
-                    </div>
-                    <p className="text-sm text-gray-700 mt-2 line-clamp-3">{p.priority}</p>
-                    <p className="text-xs text-gray-500 mt-2">
-                      {p.adherence.logged} of about {p.adherence.expected} sessions logged
-                    </p>
-                  </div>
-                  {!isActive && (
-                    <button
-                      onClick={() => run(p.id)}
-                      disabled={running}
-                      className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors text-sm"
-                    >
-                      {running ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} />}
-                      Check in
-                    </button>
-                  )}
-                </div>
-              </div>
-            )
-          })}
+                item={p}
+                coachId={coachId}
+                teamId={teamId}
+                busy={running}
+                onCheckIn={run}
+                onLogged={() => load(coachId)}
+              />
+            ))}
         </div>
       )}
 
@@ -397,31 +370,26 @@ function CheckinContent() {
         </div>
       )}
 
-      {/* Still holding — visible so the loop feels alive between check-ins */}
-      {holdingList.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
-          <h2 className="font-semibold text-gray-900 mb-1">In progress</h2>
-          <p className="text-xs text-gray-500 mb-3">
-            We hold a priority for three weeks rather than changing it every time new data lands — that&apos;s
-            how long it takes to move something at this age.
-          </p>
-          <div className="space-y-3">
-            {holdingList.map(p => (
-              <div key={p.id} className="flex items-start justify-between gap-3 p-3 bg-gray-50 rounded-lg">
-                <div className="min-w-0">
-                  <div className="font-medium text-gray-900 text-sm">{p.subjectName}</div>
-                  <div className="text-sm text-gray-600 line-clamp-2">{p.priority}</div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {p.adherence.logged} of about {p.adherence.expected} sessions logged ·{' '}
-                    <a href={`/dashboard/log?teamId=${teamId}`} className="text-red-600 underline">log one</a>
-                  </div>
-                </div>
-                <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full ${dueLabel(p).className}`}>
-                  {dueLabel(p).text}
-                </span>
-              </div>
-            ))}
+      {/* Still holding — visible so the loop feels alive between check-ins, and
+          loggable from here so the three weeks actually accumulate something */}
+      {coachId && holdingList.length > 0 && (
+        <div className="space-y-4">
+          <div>
+            <h2 className="font-semibold text-gray-900">In progress</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              We hold a priority for three weeks rather than changing it every time new data lands — that&apos;s
+              how long it takes to move something at this age.
+            </p>
           </div>
+          {holdingList.map(p => (
+            <ActivePriority
+              key={p.id}
+              item={p}
+              coachId={coachId}
+              teamId={teamId}
+              onLogged={() => load(coachId)}
+            />
+          ))}
         </div>
       )}
     </div>

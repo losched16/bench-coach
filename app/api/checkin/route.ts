@@ -77,7 +77,15 @@ export async function GET(request: NextRequest) {
     const playerIds = Array.from(new Set(list.map((p: any) => p.player_id).filter(Boolean)))
     const teamIds = Array.from(new Set(list.map((p: any) => p.team_id).filter(Boolean)))
 
-    const [playersRes, teamsRes, sessionsRes] = await Promise.all([
+    // Everything logged since the oldest open priority was issued. One query,
+    // bucketed below — this is what tells us whether a check-in has anything
+    // to check, which decides whether we ask for one at all.
+    const earliestIssued = list
+      .map((p: any) => (p.issued_at || '').slice(0, 10))
+      .filter(Boolean)
+      .sort()[0] || '1970-01-01'
+
+    const [playersRes, teamsRes, sessionsRes, evidenceRes] = await Promise.all([
       playerIds.length
         ? supabaseAdmin.from('players').select('id, name').in('id', playerIds)
         : Promise.resolve({ data: [] as any[] }),
@@ -86,9 +94,15 @@ export async function GET(request: NextRequest) {
         : Promise.resolve({ data: [] as any[] }),
       supabaseAdmin
         .from('entries')
-        .select('prescription_id')
+        .select('prescription_id, occurred_on')
         .in('prescription_id', list.map((p: any) => p.id))
         .eq('entry_type', 'home_session'),
+      supabaseAdmin
+        .from('entries')
+        .select('entry_type, occurred_on, player_id, team_id')
+        .eq('coach_id', coachId)
+        .gte('occurred_on', earliestIssued)
+        .limit(500),
     ])
 
     const playerName: Record<string, string> = {}
@@ -96,15 +110,29 @@ export async function GET(request: NextRequest) {
     const teamName: Record<string, string> = {}
     for (const t of (teamsRes as any).data || []) teamName[t.id] = t.name
     const sessionCount: Record<string, number> = {}
+    const lastSessionOn: Record<string, string> = {}
     for (const s of (sessionsRes as any).data || []) {
       const pid = (s as any).prescription_id
+      const on = (s as any).occurred_on as string
       sessionCount[pid] = (sessionCount[pid] || 0) + 1
+      if (on && (!lastSessionOn[pid] || on > lastSessionOn[pid])) lastSessionOn[pid] = on
     }
+
+    const allEntries = (evidenceRes as any).data || []
 
     const prescriptions = list.map((p: any) => {
       const scope: 'player' | 'team' = p.scope === 'team' ? 'team' : 'player'
       const days = daysBetween(p.issued_at)
       const logged = sessionCount[p.id] || 0
+      const issuedDate = (p.issued_at || '').slice(0, 10)
+
+      // Anything logged for this subject since we issued the priority is
+      // something to read — a game counts even though it isn't adherence.
+      const evidenceCount = allEntries.filter((e: any) =>
+        e.occurred_on >= issuedDate &&
+        (scope === 'player' ? e.player_id === p.player_id : e.team_id === p.team_id)
+      ).length
+
       return {
         id: p.id,
         scope,
@@ -120,12 +148,17 @@ export async function GET(request: NextRequest) {
         daysElapsed: days,
         due: dueState(p),
         adherence: readAdherence(logged, expectedSessions(scope, days)),
+        lastSessionOn: lastSessionOn[p.id] || null,
+        evidenceCount,
+        // Asking someone to sit through a check-in that can only conclude
+        // "I can't tell" is how a good feature teaches people to ignore it.
+        hasEvidence: evidenceCount > 0,
       }
     })
 
     return NextResponse.json({
       prescriptions,
-      dueCount: prescriptions.filter(p => p.due !== 'holding').length,
+      dueCount: prescriptions.filter(p => p.due !== 'holding' && p.hasEvidence).length,
     })
   } catch (error: any) {
     console.error('Checkin GET error:', error)

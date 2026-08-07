@@ -5,8 +5,9 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import Link from 'next/link'
 
-import { MessageSquare, ClipboardList, Users, FileText, Calendar, CalendarCheck, ArrowRight } from 'lucide-react'
+import { MessageSquare, ClipboardList, Users, FileText, Calendar, Target } from 'lucide-react'
 import { usePageView } from '@/lib/tracking'
+import { ActivePriority, ActivePriorityItem } from '@/components/ActivePriority'
 
 interface TeamData {
   team: any
@@ -15,20 +16,13 @@ interface TeamData {
   topIssues: any[]
 }
 
-// What's waiting on the coach: priorities that have run their three weeks and
-// are ready to be judged. This is the loop's return visit — if it isn't on the
-// dashboard, the check-in only happens when someone remembers it exists.
-interface DuePrescription {
-  id: string
-  subjectName: string
-  priority: string | null
-  daysElapsed: number
-  due: 'holding' | 'due' | 'overdue'
-}
-
 function DashboardContent() {
   const [data, setData] = useState<TeamData | null>(null)
-  const [dueCheckins, setDueCheckins] = useState<DuePrescription[]>([])
+  // What's live: the priority being worked, with the log button on it, and the
+  // check-in CTA once there's something to check. If this isn't on the
+  // dashboard the loop only closes when someone remembers it exists.
+  const [priorities, setPriorities] = useState<ActivePriorityItem[]>([])
+  const [coachId, setCoachId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -83,7 +77,7 @@ function DashboardContent() {
         topIssues: topIssues || [],
       })
 
-      loadDueCheckins()
+      loadPriorities()
     } catch (error) {
       console.error('Error loading dashboard:', error)
     } finally {
@@ -93,21 +87,26 @@ function DashboardContent() {
 
   // Deliberately separate and non-blocking: a missing check-in table or a slow
   // response must never keep the dashboard from rendering.
-  const loadDueCheckins = async () => {
+  const loadPriorities = async (cid?: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data: coach } = await supabase
-        .from('coaches').select('id').eq('user_id', user.id).single() as { data: { id: string } | null }
-      if (!coach) return
+      let id = cid || coachId
+      if (!id) {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const { data: coach } = await supabase
+          .from('coaches').select('id').eq('user_id', user.id).single() as { data: { id: string } | null }
+        if (!coach) return
+        id = coach.id
+        setCoachId(coach.id)
+      }
 
-      const params = new URLSearchParams({ coachId: coach.id })
+      const params = new URLSearchParams({ coachId: id })
       if (teamId) params.set('teamId', teamId)
       const res = await fetch(`/api/checkin?${params}`)
       const json = await res.json()
-      setDueCheckins((json.prescriptions || []).filter((p: DuePrescription) => p.due !== 'holding'))
+      setPriorities(json.prescriptions || [])
     } catch {
-      // no badge is the correct failure mode here
+      // no card is the correct failure mode here
     }
   }
 
@@ -125,6 +124,14 @@ function DashboardContent() {
   }
 
   const quickActions = [
+    // First, because it's the front door to the loop — and until now the only
+    // way to reach it from here was the sidebar.
+    {
+      label: 'What to Work On',
+      icon: Target,
+      href: `/dashboard/prescribe?teamId=${teamId}`,
+      color: 'red',
+    },
     {
       label: 'Log an Entry',
       icon: ClipboardList,
@@ -175,36 +182,26 @@ function DashboardContent() {
         </p>
       </div>
 
-      {/* Check-in due — the return visit that makes the priority worth setting */}
-      {dueCheckins.length > 0 && (
-        <div className="bg-white rounded-lg shadow border-l-4 border-amber-400 p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <CalendarCheck className="text-amber-600" size={20} />
-            <h3 className="font-semibold text-gray-900">
-              {dueCheckins.length === 1 ? 'A check-in is ready' : `${dueCheckins.length} check-ins are ready`}
-            </h3>
-          </div>
-          <div className="space-y-3">
-            {dueCheckins.slice(0, 3).map((p) => (
-              <Link
+      {/* The live priority (or priorities), each with its log button. Ready-to-
+          check-in ones sort first — that's the action that matters most. */}
+      {coachId && priorities.length > 0 && (
+        <div className="space-y-4">
+          {priorities
+            .slice()
+            .sort((a, b) => {
+              const rank = (p: ActivePriorityItem) => (p.due !== 'holding' && p.hasEvidence ? 0 : 1)
+              return rank(a) - rank(b)
+            })
+            .slice(0, 3)
+            .map((p) => (
+              <ActivePriority
                 key={p.id}
-                href={`/dashboard/checkin?teamId=${teamId}&prescriptionId=${p.id}`}
-                className="flex items-start justify-between gap-3 p-3 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors"
-              >
-                <div className="min-w-0">
-                  <div className="text-sm text-gray-900">
-                    <span className="font-medium">{p.daysElapsed} days ago</span> we flagged this for{' '}
-                    <span className="font-medium">{p.subjectName}</span>
-                  </div>
-                  <div className="text-sm text-gray-600 line-clamp-2 mt-0.5">{p.priority}</div>
-                </div>
-                <ArrowRight className="text-amber-600 flex-shrink-0 mt-1" size={16} />
-              </Link>
+                item={p}
+                coachId={coachId}
+                teamId={teamId}
+                onLogged={() => loadPriorities(coachId)}
+              />
             ))}
-          </div>
-          <p className="text-xs text-gray-500 mt-3">
-            We said in advance what improvement would look like. Open it and we&apos;ll tell you whether it happened.
-          </p>
         </div>
       )}
 
@@ -227,7 +224,7 @@ function DashboardContent() {
       {/* Quick Actions */}
       <div>
         <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {quickActions.map((action) => {
             const Icon = action.icon
             return (
