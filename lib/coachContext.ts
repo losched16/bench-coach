@@ -14,6 +14,9 @@
 
 import { SupabaseClient } from '@supabase/supabase-js'
 import { focusAreaLabel, focusAreaRank } from './focusAreas'
+import {
+  MetricType, MetricReading, groupIntoSessions, renderMetricsForPrompt,
+} from './metrics'
 
 export interface CoachContext {
   player?: {
@@ -86,6 +89,10 @@ export interface CoachContext {
     outcome_note: string | null
     adherence_sessions: number
   }>
+  // Objective evidence. Everything else here is a judgment call or a stat
+  // line typed by a volunteer; a measurement is neither, which makes it the
+  // cleanest way to answer "did the work move it".
+  metrics?: Array<{ type: MetricType; sessions: ReturnType<typeof groupIntoSessions> }>
   // Several at a time — one per focus area. A player works pitching, hitting
   // and fielding in the same week; the surfaces need to see all of it so they
   // don't contradict a plan that's already running in another area.
@@ -295,6 +302,43 @@ export async function assembleCoachContext(
     }
   }
 
+  // ── Measurements ──
+  if (playerId) {
+    try {
+      const [{ data: types }, { data: readings }] = await Promise.all([
+        supabase.from('metric_types').select('*').or(`coach_id.is.null,coach_id.eq.${coachId}`),
+        supabase
+          .from('player_metrics')
+          .select('id, metric_type_id, metric, value, unit, attempts, successes, measured_on, note')
+          .eq('player_id', playerId)
+          .order('measured_on', { ascending: true })
+          .limit(500),
+      ])
+
+      const typeById = new Map<string, MetricType>(
+        ((types || []) as any[]).map((t: any) => [t.id, t as MetricType])
+      )
+      const byType = new Map<string, MetricReading[]>()
+      for (const r of ((readings || []) as any[])) {
+        if (!r.metric_type_id) continue
+        const list = byType.get(r.metric_type_id) || []
+        list.push(r as MetricReading)
+        byType.set(r.metric_type_id, list)
+      }
+
+      ctx.metrics = Array.from(byType.entries())
+        .map(([typeId, list]) => {
+          const type = typeById.get(typeId)
+          if (!type) return null
+          return { type, sessions: groupIntoSessions(list, type.direction) }
+        })
+        .filter(Boolean) as CoachContext['metrics']
+    } catch {
+      // tables may not exist yet
+      ctx.metrics = []
+    }
+  }
+
   // ── Prescription history — what we already told them, and whether it moved ──
   try {
     let pq = supabase
@@ -457,6 +501,11 @@ export function renderCoachContext(ctx: CoachContext): string {
         `${j.needs_work ? ` — needs work: ${j.needs_work}` : ''}`
       ).join('\n')
     )
+  }
+
+  if (ctx.metrics?.length) {
+    const rendered = renderMetricsForPrompt(ctx.metrics)
+    if (rendered) parts.push(rendered)
   }
 
   if (ctx.activePrescriptions?.length) {

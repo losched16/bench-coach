@@ -18,6 +18,7 @@
 
 import { SupabaseClient } from '@supabase/supabase-js'
 import { focusAreaLabel } from './focusAreas'
+import { MIN_SESSIONS_FOR_TREND } from './metrics'
 
 // ── Timing ─────────────────────────────────────────────
 
@@ -459,10 +460,27 @@ export function renderCheckinEvidence(ev: CheckinEvidence): string {
     )
   }
 
-  if (ev.metricsSince.length >= 3) {
+  // Measurements are the only objective evidence available to a check-in.
+  // If a priority moved a number, that is the strongest possible answer to
+  // "did it work" — and if it didn't, that's just as decisive.
+  if (ev.metricsSince.length > 0) {
+    const byMetric: Record<string, typeof ev.metricsSince> = {}
+    for (const m of ev.metricsSince) (byMetric[m.metric] ||= []).push(m)
+
     parts.push(
-      `MEASUREMENTS (trend only — a single-session jump is noise at this age):\n` +
-      ev.metricsSince.map(m => `  ${m.date} ${m.metric}: ${m.value}${m.unit || ''}`).join('\n')
+      `MEASUREMENTS — objective, unlike everything above:\n` +
+      Object.entries(byMetric).map(([metric, rows]) => {
+        const dates = Array.from(new Set(rows.map(r => r.date)))
+        const line = rows.map(r => `${r.date}: ${r.value}${r.unit || ''}`).join(', ')
+        return `  ${metric} — ${line}` +
+          (dates.length < MIN_SESSIONS_FOR_TREND
+            ? `\n      ⚠ only ${dates.length} session${dates.length === 1 ? '' : 's'}. Not a trend yet — do NOT ` +
+              `call a direction off this, say what another session or two would tell you.`
+            : '')
+      }).join('\n') +
+      `\n\n  Where a number moved and the priority was about that quality, say so — it is the cleanest ` +
+      `evidence in this whole check-in. Where it did not move, that is equally decisive and you should ` +
+      `say that too. Never celebrate a single good session.`
     )
   }
 

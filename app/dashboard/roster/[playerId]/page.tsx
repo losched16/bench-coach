@@ -6,11 +6,12 @@ import { createSupabaseComponentClient } from '@/lib/supabase'
 import { 
   ArrowLeft, User, Plus, Trash2, Pencil, StickyNote, 
   Target, TrendingUp, Calendar, BookOpen, 
-  Clock, CheckCircle, AlertCircle, Home, Upload, X, Play, Image as ImageIcon, Video
+  Clock, CheckCircle, AlertCircle, Home, Upload, X, Play, Image as ImageIcon, Video, Gauge
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import SwingAnalysisUpload from '@/components/SwingAnalysisUpload'
 import { usePageView } from '@/lib/tracking'
+import { PlayerMetrics } from '@/components/PlayerMetrics'
 
 interface PlayerData {
   id: string
@@ -155,7 +156,7 @@ function PlayerDetailContent() {
   const supabase = createSupabaseComponentClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'journal' | 'swing-analysis'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'measurements' | 'journal' | 'swing-analysis'>('overview')
   const [player, setPlayer] = useState<PlayerData | null>(null)
   const [notes, setNotes] = useState<PlayerNote[]>([])
   const [playbooks, setPlaybooks] = useState<ActivePlaybook[]>([])
@@ -504,6 +505,9 @@ function PlayerDetailContent() {
           <button onClick={() => setActiveTab('overview')} className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'overview' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
             <div className="flex items-center space-x-2"><User size={18} /><span>Overview</span></div>
           </button>
+          <button onClick={() => setActiveTab('measurements')} className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'measurements' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            <div className="flex items-center space-x-2"><Gauge size={18} /><span>Measurements</span></div>
+          </button>
           <button onClick={() => setActiveTab('journal')} className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'journal' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
             <div className="flex items-center space-x-2"><BookOpen size={18} /><span>Development Journal</span>{journalEntries.length > 0 && <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">{journalEntries.length}</span>}</div>
           </button>
@@ -512,6 +516,15 @@ function PlayerDetailContent() {
           </button>
         </nav>
       </div>
+
+      {activeTab === 'measurements' && (
+        <PlayerMetrics
+          coachId={coachId}
+          playerId={playerId as string}
+          playerName={player?.name || 'this player'}
+          teamId={teamId}
+        />
+      )}
 
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -484,7 +484,9 @@ function writeAnalysis(
     (d.reps_guidance ? `\n    Suggested dose: ${d.reps_guidance}` : '')
   ).join('\n\n')
 
-  const hasMetrics = false // player_metrics wiring lands with Build 4
+  // Measurements now flow through renderCoachContext, so the Metrics section
+  // is real whenever a player has any — this was a placeholder until now.
+  const hasMetrics = (ctx.metrics?.length || 0) > 0
 
   const prompt = `A coach came to you with this, in their words:
 
@@ -534,7 +536,9 @@ ${drills.length === 0
 ## What to watch next
 The success criteria, stated in advance, in terms the coach can actually observe in a game or a session. Specific enough to be wrong: "more balls to the right side" beats "better contact". Give it a timeframe of about three weeks, and say what "no change" would look like so they can tell the difference between not working and not enough time yet.
 
-${hasMetrics ? '## Metrics\nWhat the logged measurements show as a trend. Never celebrate a single-session jump.' : '(Omit the Metrics section entirely — nothing is logged.)'}
+${hasMetrics
+  ? '## Metrics\nWhat the measurements show as a trend, and what you would expect this priority to move over three weeks. Never celebrate a single-session jump, and if there are fewer than three sessions say the trend is not readable yet rather than implying one.'
+  : '(Omit the Metrics section entirely — nothing measured yet.)'}
 
 Write it now. No preamble, no sign-off, no "I hope this helps".`
 
