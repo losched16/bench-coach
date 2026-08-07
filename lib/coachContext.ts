@@ -409,7 +409,11 @@ export function renderCoachContext(ctx: CoachContext): string {
     parts.push(
       `WHAT THE COACH SAW (outranks the box score — if these conflict with stats, trust these):\n` +
       nonLessonObs.slice(0, 15).map(o => {
-        const tag = o.prompt_key === 'context' ? '[context/fatigue]'
+        // Notes tapped out during the game carry their own weight: seen live
+        // and written at the time, not reconstructed on Sunday night.
+        const inGame = o.prompt_key?.startsWith('in_game_')
+        const tag = inGame ? `[live, during the game — ${o.prompt_key!.slice('in_game_'.length)}]`
+          : o.prompt_key === 'context' ? '[context/fatigue]'
           : o.prompt_key === 'outs' ? '[on the outs]'
           : o.prompt_key === 'unseen' ? '[not in the box score]'
           : o.prompt_key ? `[${o.prompt_key}]` : ''
