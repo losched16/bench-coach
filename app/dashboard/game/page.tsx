@@ -9,6 +9,7 @@ import {
   MapPin, Send, Trash2, Activity, ChevronLeft
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { findExistingGame } from '@/lib/games'
 import { usePageView } from '@/lib/tracking'
 
 interface Player {
@@ -149,22 +150,47 @@ function GamePageContent() {
     if (!teamId || !setupOpponent.trim()) return
     setSaving(true)
     try {
-      const { data, error } = await supabase.from('games').insert({
-        team_id: teamId,
-        game_date: setupDate,
-        opponent: setupOpponent.trim(),
-        location: setupLocation.trim() || null,
-        total_innings: setupInnings,
-        current_inning: 1,
-        status: 'live',
-      }).select().single()
+      // If a lineup was built for this game, it already created the games row.
+      // Start THAT one rather than a second record for the same event —
+      // otherwise the lineup you made is attached to a game you aren't playing.
+      const existing = await findExistingGame(supabase, {
+        teamId, gameDate: setupDate, opponent: setupOpponent,
+      })
 
-      if (error) throw error
+      let data: any
+      if (existing) {
+        const { data: resumed, error } = await supabase
+          .from('games')
+          .update({
+            location: setupLocation.trim() || null,
+            total_innings: setupInnings,
+            current_inning: 1,
+            status: 'live',
+          })
+          .eq('id', existing.id)
+          .select()
+          .single()
+        if (error) throw error
+        data = resumed
+      } else {
+        const { data: created, error } = await supabase.from('games').insert({
+          team_id: teamId,
+          game_date: setupDate,
+          opponent: setupOpponent.trim(),
+          location: setupLocation.trim() || null,
+          total_innings: setupInnings,
+          current_inning: 1,
+          status: 'live',
+        }).select().single()
+        if (error) throw error
+        data = created
+      }
+
       setActiveGame(data)
       setGameNotes([])
       setPitchCounts([])
       setView('live')
-      setGames(prev => [data, ...prev])
+      setGames(prev => [data, ...prev.filter(g => g.id !== data.id)])
     } catch (e) {
       console.error('Error starting game:', e)
       alert('Failed to start game')

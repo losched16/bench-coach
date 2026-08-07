@@ -133,7 +133,7 @@ function LogContent() {
   const [parsedGames, setParsedGames] = useState<ParsedGame[] | null>(null)
 
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState<{ games: number; stats: number; notes: number } | null>(null)
+  const [saved, setSaved] = useState<{ games: number; attached: number; stats: number; notes: number } | null>(null)
   const startedAt = useRef<number>(Date.now())
   // Held so a save that lands mid-parse can wait for it rather than dropping
   // the stats on the floor — the user was told it would wait.
@@ -396,6 +396,7 @@ function LogContent() {
 
       setSaved({
         games: data.summary?.gamesCreated || 0,
+        attached: data.summary?.gamesAttached || 0,
         stats: data.summary?.statLinesCreated || 0,
         notes: data.summary?.observations || 0,
       })
@@ -465,6 +466,13 @@ function LogContent() {
               saved.notes > 0 && `${saved.notes} note${saved.notes === 1 ? '' : 's'}`,
             ].filter(Boolean).join(', ') || 'Entry saved'}
             . The form is cleared and ready for the next one.
+            {saved.attached > 0 && (
+              <div className="mt-1.5 text-green-800">
+                {saved.attached === 1 ? 'One game was' : `${saved.attached} games were`} already on file
+                {' '}— we added the box score to {saved.attached === 1 ? 'it' : 'them'} rather than creating a
+                second copy.
+              </div>
+            )}
           </div>
           <button onClick={() => setSaved(null)} className="text-green-700 hover:text-green-900">
             <X size={16} />

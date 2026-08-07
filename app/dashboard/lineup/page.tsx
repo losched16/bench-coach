@@ -6,6 +6,7 @@ import { createSupabaseComponentClient } from '@/lib/supabase'
 import { Plus, Calendar, Shield, RotateCcw, Save, Trash2, ChevronDown, ChevronUp, Users, AlertCircle } from 'lucide-react'
 import { usePageView } from '@/lib/tracking'
 import { LINEUP_MODES, STRATEGIES, LineupMode, Strategy } from '@/lib/lineup'
+import { findExistingGame } from '@/lib/games'
 
 // Types
 interface Player {
@@ -267,12 +268,37 @@ export default function LineupPage() {
     setSaving(true)
 
     try {
+      const forDate = gameDate || new Date().toISOString().split('T')[0]
+
+      // Attach to the actual game, creating it if it doesn't exist yet. Before
+      // this, a lineup and the game you played with it were two unrelated rows
+      // joined by an opponent name you typed twice.
+      const existing = await findExistingGame(supabase, {
+        teamId, gameDate: forDate, opponent,
+      })
+      let gameId: string | null = existing?.id || null
+      if (!gameId) {
+        const { data: newGame } = await supabase
+          .from('games')
+          .insert({
+            team_id: teamId,
+            game_date: forDate,
+            opponent: opponent?.trim() || null,
+            total_innings: innings,
+            status: 'scheduled',
+          })
+          .select('id')
+          .single()
+        gameId = (newGame as any)?.id || null
+      }
+
       // Create the game lineup record
       const { data: lineup, error: lineupError } = await supabase
         .from('game_lineups')
         .insert({
           team_id: teamId,
-          game_date: gameDate || new Date().toISOString().split('T')[0],
+          game_id: gameId,
+          game_date: forDate,
           opponent: opponent || null,
           innings,
           pitching_type: pitchingType,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { normalizeStatLine } from '@/lib/entries'
+import { findExistingGame } from '@/lib/games'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -178,36 +179,65 @@ export async function POST(request: NextRequest) {
     // 4. Normalize parsed games into games / player_game_stats so the Stats
     //    page and season totals stay the single source of truth for stats
     let gamesCreated = 0
+    let gamesAttached = 0
     let statLinesCreated = 0
     let firstGameId: string | null = null
 
     if ((entryType === 'game' || entryType === 'scrimmage') && teamId && Array.isArray(games)) {
       for (const g of games) {
         const gameDate = g.game_date || occurredOn
-        const { data: newGame, error: gameError } = await supabaseAdmin
-          .from('games')
-          .insert({
-            team_id: teamId,
-            game_date: gameDate,
-            opponent: g.opponent || null,
-            team_score: g.team_score ?? null,
-            opponent_score: g.opponent_score ?? null,
-            result: normalizeResult(g.result, g.team_score, g.opponent_score),
-            game_type: entryType === 'scrimmage' ? 'scrimmage' : 'regular',
-          })
-          .select('id')
-          .single()
 
-        if (gameError) throw gameError
-        gamesCreated++
-        if (!firstGameId) firstGameId = newGame.id
+        // The coach may already have tracked this game live in Game Day, or
+        // built a lineup for it. Attach the box score to that record instead
+        // of creating a second one — otherwise the season shows it twice.
+        const existing = await findExistingGame(supabaseAdmin, {
+          teamId, gameDate, opponent: g.opponent,
+        })
+
+        let gameId: string
+        if (existing) {
+          // The box score is the better source for the final line; a live
+          // game usually ends without anyone typing the score in.
+          await supabaseAdmin
+            .from('games')
+            .update({
+              team_score: g.team_score ?? undefined,
+              opponent_score: g.opponent_score ?? undefined,
+              result: normalizeResult(g.result, g.team_score, g.opponent_score) ?? undefined,
+              status: 'completed',
+            })
+            .eq('id', existing.id)
+          gameId = existing.id
+          gamesAttached++
+        } else {
+          const { data: newGame, error: gameError } = await supabaseAdmin
+            .from('games')
+            .insert({
+              team_id: teamId,
+              game_date: gameDate,
+              opponent: g.opponent || null,
+              team_score: g.team_score ?? null,
+              opponent_score: g.opponent_score ?? null,
+              result: normalizeResult(g.result, g.team_score, g.opponent_score),
+              game_type: entryType === 'scrimmage' ? 'scrimmage' : 'regular',
+              status: 'completed',
+            })
+            .select('id')
+            .single()
+
+          if (gameError) throw gameError
+          gameId = (newGame as any).id
+          gamesCreated++
+        }
+
+        if (!firstGameId) firstGameId = gameId
 
         const statRows = (g.players || [])
           .filter((p: any) => p.team_player_id)
           .map((p: any) => {
             const line = normalizeStatLine(p.batting_line || {})
             return {
-              game_id: newGame.id,
+              game_id: gameId,
               team_player_id: p.team_player_id,
               at_bats: line.at_bats,
               hits: line.hits,
@@ -228,6 +258,19 @@ export async function POST(request: NextRequest) {
           })
 
         if (statRows.length > 0) {
+          // Attaching to a game that already exists means the same box score
+          // could be uploaded twice — which used to make a duplicate game
+          // (bad) and would now double the stat lines on one game (worse).
+          // Clear this game's rows for these players first. Deterministic,
+          // and doesn't depend on a unique constraint we can't verify.
+          if (existing) {
+            await supabaseAdmin
+              .from('player_game_stats')
+              .delete()
+              .eq('game_id', gameId)
+              .in('team_player_id', statRows.map((r: any) => r.team_player_id))
+          }
+
           const { error: statError } = await supabaseAdmin
             .from('player_game_stats')
             .insert(statRows)
@@ -246,6 +289,7 @@ export async function POST(request: NextRequest) {
       summary: {
         observations: observationRows.length,
         gamesCreated,
+        gamesAttached,
         statLinesCreated,
         linkedToPrescription: !!prescriptionId,
       },
