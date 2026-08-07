@@ -5,7 +5,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
-import { MessageSquare, Users, StickyNote, ClipboardList, Home, LogOut, Plus, UserPlus, Trash2, Settings, Bookmark, Library, BookOpen, HelpCircle, Brain, UsersRound, UserCircle, Menu, X, Calendar, FileText, BarChart3, Activity, Target, Search, CalendarCheck } from 'lucide-react'
+import { MessageSquare, Users, StickyNote, ClipboardList, Home, LogOut, Plus, UserPlus, Trash2, Settings, Bookmark, HelpCircle, Brain, UsersRound, UserCircle, Menu, X, Calendar, BarChart3, Activity, Target, Search, CalendarCheck } from 'lucide-react'
 
 
 interface Team {
@@ -207,26 +207,65 @@ function DashboardContent({
 
   const selectedTeam = teams.find(t => t.id === selectedTeamId)
 
-  const navItems = [
-    { label: 'Dashboard', href: '/dashboard', icon: Home },
-    { label: 'Chat', href: '/dashboard/chat', icon: MessageSquare },
-    { label: 'Log an Entry', href: '/dashboard/log', icon: ClipboardList },
-    { label: 'What to Work On', href: '/dashboard/prescribe', icon: Target },
-    { label: 'Check-In', href: '/dashboard/checkin', icon: CalendarCheck },
-    { label: 'Roster', href: '/dashboard/roster', icon: Users },
-    { label: 'Notes', href: '/dashboard/notes', icon: StickyNote },
-    { label: 'Practice Plans', href: '/dashboard/practice', icon: ClipboardList },
-    { label: 'Game Day', href: '/dashboard/game', icon: Activity },
-    { label: 'Scouting', href: '/dashboard/scouting', icon: Search },
-    { label: 'Lineup Builder', href: '/dashboard/lineup', icon: Calendar },
-    { label: 'Stats', href: '/dashboard/stats', icon: BarChart3 },
-    { label: 'Playbooks', href: '/dashboard/playbooks', icon: BookOpen },
-    { label: 'AI Memory', href: '/dashboard/memory', icon: Brain },
-    { label: 'Drill Library', href: '/dashboard/drills', icon: Bookmark },
-    { label: 'Team Members', href: '/dashboard/team', icon: UsersRound },
-    { label: 'Profile', href: '/dashboard/profile', icon: UserCircle },
-    { label: 'Help', href: '/dashboard/help', icon: HelpCircle },
-    { label: 'Settings', href: '/dashboard/settings', icon: Settings },
+  // Grouped, not a flat list of seventeen.
+  //
+  // The first thing a new coach sees has to answer "what is this?", and the
+  // answer is the loop: log what happened, get one thing to work on, find out
+  // three weeks later whether it moved. That reads as the product only if it
+  // sits at the top under its own heading. Everything else is a tool you reach
+  // for when you need it, and headings say so without hiding anything.
+  //
+  // Playbooks is deliberately absent — the page still exists, it is just not a
+  // destination. It duplicates what a priority does, without the evidence.
+  const navGroups: Array<{ label: string; items: Array<{ label: string; href: string; icon: any }> }> = [
+    {
+      label: '',
+      items: [
+        { label: 'Dashboard', href: '/dashboard', icon: Home },
+      ],
+    },
+    {
+      label: 'Coaching',
+      items: [
+        { label: 'Chat', href: '/dashboard/chat', icon: MessageSquare },
+        { label: 'Log an Entry', href: '/dashboard/log', icon: ClipboardList },
+        { label: 'What to Work On', href: '/dashboard/prescribe', icon: Target },
+        { label: 'Check-In', href: '/dashboard/checkin', icon: CalendarCheck },
+      ],
+    },
+    {
+      label: 'Team',
+      items: [
+        { label: 'Roster', href: '/dashboard/roster', icon: Users },
+        { label: 'Stats', href: '/dashboard/stats', icon: BarChart3 },
+        { label: 'Notes', href: '/dashboard/notes', icon: StickyNote },
+        { label: 'Team Members', href: '/dashboard/team', icon: UsersRound },
+      ],
+    },
+    {
+      label: 'Game Day',
+      items: [
+        { label: 'Game Day', href: '/dashboard/game', icon: Activity },
+        { label: 'Lineup Builder', href: '/dashboard/lineup', icon: Calendar },
+        { label: 'Scouting', href: '/dashboard/scouting', icon: Search },
+      ],
+    },
+    {
+      label: 'Planning',
+      items: [
+        { label: 'Practice Plans', href: '/dashboard/practice', icon: ClipboardList },
+        { label: 'Drill Library', href: '/dashboard/drills', icon: Bookmark },
+      ],
+    },
+    {
+      label: 'Account',
+      items: [
+        { label: 'AI Memory', href: '/dashboard/memory', icon: Brain },
+        { label: 'Profile', href: '/dashboard/profile', icon: UserCircle },
+        { label: 'Settings', href: '/dashboard/settings', icon: Settings },
+        { label: 'Help', href: '/dashboard/help', icon: HelpCircle },
+      ],
+    },
   ]
 
   if (loading) {
@@ -414,26 +453,35 @@ function DashboardContent({
             )}
 
             {/* Navigation Links */}
-            <nav className="p-4 space-y-1">
-              {navItems.map((item) => {
-                const Icon = item.icon
-                const isActive = pathname === item.href
-                return (
-                  <Link
-                    key={item.href}
-                    href={`${item.href}?teamId=${selectedTeamId}`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-red-50 text-red-700 font-medium'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Icon size={20} />
-                    <span>{item.label}</span>
-                  </Link>
-                )
-              })}
+            <nav className="p-4 space-y-4">
+              {navGroups.map((group, gi) => (
+                <div key={group.label || `g${gi}`} className="space-y-1">
+                  {group.label && (
+                    <div className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                      {group.label}
+                    </div>
+                  )}
+                  {group.items.map((item) => {
+                    const Icon = item.icon
+                    const isActive = pathname === item.href
+                    return (
+                      <Link
+                        key={item.href}
+                        href={`${item.href}?teamId=${selectedTeamId}`}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+                          isActive
+                            ? 'bg-red-50 text-red-700 font-medium'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        <Icon size={20} />
+                        <span>{item.label}</span>
+                      </Link>
+                    )
+                  })}
+                </div>
+              ))}
             </nav>
 
             {/* Delete Team - Bottom of drawer */}
@@ -460,25 +508,34 @@ function DashboardContent({
         <div className="flex">
           {/* Desktop Sidebar Navigation */}
           <aside className="hidden lg:block w-64 flex-shrink-0 pr-8">
-            <nav className="space-y-1 sticky top-24">
-              {navItems.map((item) => {
-                const Icon = item.icon
-                const isActive = pathname === item.href
-                return (
-                  <Link
-                    key={item.href}
-                    href={`${item.href}?teamId=${selectedTeamId}`}
-                    className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-red-50 text-red-700 font-medium'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Icon size={20} />
-                    <span>{item.label}</span>
-                  </Link>
-                )
-              })}
+            <nav className="space-y-4 sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pb-4">
+              {navGroups.map((group, gi) => (
+                <div key={group.label || `g${gi}`} className="space-y-1">
+                  {group.label && (
+                    <div className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                      {group.label}
+                    </div>
+                  )}
+                  {group.items.map((item) => {
+                    const Icon = item.icon
+                    const isActive = pathname === item.href
+                    return (
+                      <Link
+                        key={item.href}
+                        href={`${item.href}?teamId=${selectedTeamId}`}
+                        className={`flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors ${
+                          isActive
+                            ? 'bg-red-50 text-red-700 font-medium'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        <Icon size={20} />
+                        <span>{item.label}</span>
+                      </Link>
+                    )
+                  })}
+                </div>
+              ))}
               
               {/* Delete Team - Desktop */}
               {canCreate && selectedTeam && (
