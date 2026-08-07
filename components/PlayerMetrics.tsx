@@ -212,7 +212,7 @@ export function PlayerMetrics({ coachId, playerId, playerName, teamId }: Props) 
               >
                 {types.map(t => (
                   <option key={t.id} value={t.id}>
-                    {t.label}{t.unit ? ` (${t.unit})` : ''}
+                    {t.label}{t.unit ? ` (${t.unit})` : ''}{t.coach_id ? ' — yours' : ''}
                   </option>
                 ))}
               </select>
@@ -375,6 +375,15 @@ export function PlayerMetrics({ coachId, playerId, playerName, teamId }: Props) 
             Exit velo off a tee, home to first, throws on target out of ten — anything you can measure the
             same way twice. Three sessions in, the check-in can tell you whether the work is moving it.
           </p>
+          {/* Reachable from here, not only from inside the log form. Someone
+              tracking something we never thought of shouldn't have to open a
+              preset first to find out they can. */}
+          <button
+            onClick={() => setShowNewType(true)}
+            className="mt-3 text-sm text-blue-600 hover:text-blue-700"
+          >
+            Or track something of your own
+          </button>
         </div>
       )}
 
