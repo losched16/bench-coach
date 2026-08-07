@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { generateChatResponse, TeamContext, ScoutingContext } from '@/lib/anthropic'
 import { assembleCoachContext, renderCoachContext } from '@/lib/coachContext'
+import { generateChatTitle } from '@/lib/chatTitles'
 import {
   aggregateBattingLines,
   computePitcherAvailability,
@@ -25,7 +26,7 @@ export const maxDuration = 120
 
 export async function POST(request: NextRequest) {
   try {
-    const { teamId, message, history } = await request.json()
+    const { teamId, message, history, threadId: requestedThreadId } = await request.json()
 
     console.log('Chat API called with teamId:', teamId)
 
@@ -621,12 +622,32 @@ export async function POST(request: NextRequest) {
     // Generate response
     const response = await generateChatResponse(message, context, conversationHistory)
 
-    // Get or create chat thread
-    let { data: thread } = await supabaseAdmin
-      .from('chat_threads')
-      .select('id')
-      .eq('team_id', teamId)
-      .single()
+    // Which conversation this belongs to. The client names it explicitly now
+    // that a team can have many; falling back to the most recently used one
+    // keeps older clients and direct API calls working.
+    let thread: { id: string; title?: string | null } | null = null
+
+    if (requestedThreadId) {
+      const { data } = await supabaseAdmin
+        .from('chat_threads')
+        .select('id, title')
+        .eq('id', requestedThreadId)
+        .eq('team_id', teamId)   // a thread id from another team is not a match
+        .maybeSingle()
+      thread = data
+    }
+
+    if (!thread) {
+      const { data } = await supabaseAdmin
+        .from('chat_threads')
+        .select('id, title')
+        .eq('team_id', teamId)
+        .order('last_message_at', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      thread = data
+    }
 
     if (!thread) {
       const { data: newThread, error: threadErr } = await supabaseAdmin
@@ -679,11 +700,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Name the conversation off its opening question. Only once — a title
+    // that changes as the chat drifts is a title the coach can't scan for.
+    let threadTitle = thread.title || null
+    if (!threadTitle) {
+      threadTitle = await generateChatTitle(message)
+      await supabaseAdmin.from('chat_threads').update({ title: threadTitle }).eq('id', thread.id)
+    }
+
     return NextResponse.json({
       message: response.message,
       memory_suggestions: response.memory_suggestions,
       id: assistantMsg.id,
       user_message_id: userMsg.id,
+      threadId: thread.id,
+      threadTitle,
     })
 
   } catch (error: any) {
@@ -700,19 +731,37 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const teamId = searchParams.get('teamId')
+    const requestedThreadId = searchParams.get('threadId')
 
     if (!teamId) {
       return NextResponse.json({ error: 'Missing teamId' }, { status: 400 })
     }
 
-    // Get or create chat thread for this team (use oldest if multiple exist)
-    let { data: thread } = await supabaseAdmin
-      .from('chat_threads')
-      .select('id')
-      .eq('team_id', teamId)
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .single()
+    let thread: { id: string; title?: string | null } | null = null
+
+    if (requestedThreadId) {
+      const { data } = await supabaseAdmin
+        .from('chat_threads')
+        .select('id, title')
+        .eq('id', requestedThreadId)
+        .eq('team_id', teamId)
+        .maybeSingle()
+      thread = data
+    }
+
+    // No thread asked for: open the one they were last using, not the oldest.
+    // Landing in a months-old conversation is how this looked broken.
+    if (!thread) {
+      const { data } = await supabaseAdmin
+        .from('chat_threads')
+        .select('id, title')
+        .eq('team_id', teamId)
+        .order('last_message_at', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      thread = data
+    }
 
     if (!thread) {
       const { data: newThread, error: threadErr } = await supabaseAdmin
@@ -728,10 +777,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (!thread) {
-      return NextResponse.json({ error: 'Failed to get/create thread' }, { status: 500 })
-    }
-
     // Load messages for this thread
     const { data: messages } = await supabaseAdmin
       .from('chat_messages')
@@ -741,6 +786,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       threadId: thread.id,
+      threadTitle: thread.title ?? null,
       messages: messages || []
     })
 

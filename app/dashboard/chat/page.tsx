@@ -3,8 +3,9 @@
 import { useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
-import { Send, Loader2, Trash2, Plus } from 'lucide-react'
+import { Send, Loader2, Menu, X } from 'lucide-react'
 import { ChatMessageContent } from '@/components/ChatMessageContent'
+import { ChatThreadList, ChatThread } from '@/components/ChatThreadList'
 import { usePageView } from '@/lib/tracking'
 
 interface Message {
@@ -22,7 +23,12 @@ export default function ChatPage() {
   const [initialLoading, setInitialLoading] = useState(true)
   const [teamContext, setTeamContext] = useState<any>(null)
   const [threadId, setThreadId] = useState<string | null>(null)
-  const [showClearModal, setShowClearModal] = useState(false)
+  const [threads, setThreads] = useState<ChatThread[]>([])
+  const [threadsPanelOpen, setThreadsPanelOpen] = useState(false)
+  const [startingThread, setStartingThread] = useState(false)
+  // Set when migration 020 hasn't been applied — the rail is useless without
+  // it, so say why rather than showing an empty list.
+  const [threadsUnavailable, setThreadsUnavailable] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const searchParams = useSearchParams()
   const teamId = searchParams.get('teamId')
@@ -31,6 +37,7 @@ export default function ChatPage() {
   useEffect(() => {
     if (teamId) {
       loadChat()
+      loadThreads()
       loadTeamContext()
     }
   }, [teamId])
@@ -39,10 +46,12 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const loadChat = async () => {
+  // No id opens whichever conversation was used last, which is where the
+  // coach left off.
+  const loadChat = async (id?: string) => {
     try {
-      // Use the GET endpoint to load chat with service role
-      const response = await fetch(`/api/chat?teamId=${teamId}`)
+      const url = id ? `/api/chat?teamId=${teamId}&threadId=${id}` : `/api/chat?teamId=${teamId}`
+      const response = await fetch(url)
       if (response.ok) {
         const data = await response.json()
         setThreadId(data.threadId)
@@ -53,6 +62,83 @@ export default function ChatPage() {
     } finally {
       setInitialLoading(false)
     }
+  }
+
+  const loadThreads = async () => {
+    try {
+      const response = await fetch(`/api/chat/threads?teamId=${teamId}`)
+      const data = await response.json()
+      if (data.needsMigration) {
+        setThreadsUnavailable(true)
+        return
+      }
+      setThreads(data.threads || [])
+    } catch (error) {
+      console.error('Error loading conversations:', error)
+    }
+  }
+
+  const handleSelectThread = (id: string) => {
+    if (id === threadId) { setThreadsPanelOpen(false); return }
+    setMessages([])
+    setThreadId(id)
+    setThreadsPanelOpen(false)
+    loadChat(id)
+  }
+
+  const handleNewThread = async () => {
+    // An untitled thread with no messages already in the list is the one they
+    // just made — reuse it instead of stacking up empties.
+    const empty = threads.find(t => t.message_count === 0)
+    if (empty) { handleSelectThread(empty.id); return }
+
+    setStartingThread(true)
+    try {
+      const response = await fetch('/api/chat/threads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId }),
+      })
+      const data = await response.json()
+      if (data.thread) {
+        setMessages([])
+        setThreadId(data.thread.id)
+        setThreadsPanelOpen(false)
+        await loadThreads()
+      }
+    } catch (error) {
+      console.error('Error starting a new chat:', error)
+    } finally {
+      setStartingThread(false)
+    }
+  }
+
+  const handleRenameThread = async (id: string, title: string) => {
+    setThreads(prev => prev.map(t => (t.id === id ? { ...t, title } : t)))
+    await fetch('/api/chat/threads', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threadId: id, title }),
+    })
+  }
+
+  const handleDeleteThread = async (id: string) => {
+    const remaining = threads.filter(t => t.id !== id)
+    setThreads(remaining)
+    await fetch(`/api/chat/threads?threadId=${id}`, { method: 'DELETE' })
+
+    // Deleting the open conversation has to land somewhere — the next most
+    // recent, or a clean slate if that was the last one.
+    if (id === threadId) {
+      setMessages([])
+      if (remaining.length > 0) {
+        setThreadId(remaining[0].id)
+        loadChat(remaining[0].id)
+      } else {
+        setThreadId(null)
+      }
+    }
+    loadThreads()
   }
 
   const loadTeamContext = async () => {
@@ -109,6 +195,9 @@ export default function ChatPage() {
           teamId,
           message: userMessage,
           history: messages.slice(-6),
+          // Without this the server falls back to "most recent thread", which
+          // is the wrong one the moment you switch conversations.
+          threadId,
         }),
       })
 
@@ -133,6 +222,11 @@ export default function ChatPage() {
         { ...tempUserMsg, id: data.user_message_id },
         assistantMsg,
       ])
+
+      // The first message is what names the conversation, and every message
+      // reorders the list, so the rail refreshes on each exchange.
+      if (data.threadId) setThreadId(data.threadId)
+      loadThreads()
     } catch (error: any) {
       console.error('Chat error:', error)
       const detail = error?.message ? `\n\n\`${error.message}\`` : ''
@@ -149,18 +243,6 @@ export default function ChatPage() {
     }
   }
 
-  const handleClearChat = async () => {
-    if (!threadId) return
-
-    try {
-      await fetch(`/api/chat?threadId=${threadId}`, { method: 'DELETE' })
-      setMessages([])
-      setShowClearModal(false)
-    } catch (error) {
-      console.error('Error clearing chat:', error)
-    }
-  }
-
   if (initialLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -169,30 +251,87 @@ export default function ChatPage() {
     )
   }
 
+  const activeThread = threads.find(t => t.id === threadId) || null
+  const railProps = {
+    threads,
+    activeId: threadId,
+    busy: startingThread,
+    onSelect: handleSelectThread,
+    onNew: handleNewThread,
+    onRename: handleRenameThread,
+    onDelete: handleDeleteThread,
+  }
+
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-12rem)]">
+      {/* Conversations — a rail on desktop, a sheet on phones */}
+      {!threadsUnavailable && (
+        <aside className="hidden lg:flex w-64 shrink-0 bg-white rounded-lg shadow flex-col overflow-hidden">
+          <ChatThreadList {...railProps} />
+        </aside>
+      )}
+
+      {threadsPanelOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setThreadsPanelOpen(false)} />
+          <div className="relative bg-white w-72 max-w-[85vw] h-full shadow-xl flex flex-col">
+            <div className="px-3 py-2 border-b border-gray-200 flex items-center justify-between">
+              <span className="font-semibold text-gray-900 text-sm">Conversations</span>
+              <button onClick={() => setThreadsPanelOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={18} />
+              </button>
+            </div>
+            <ChatThreadList {...railProps} />
+          </div>
+        </div>
+      )}
+
       {/* Chat Area */}
       <div className="flex-1 bg-white rounded-lg shadow flex flex-col min-w-0">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900">AI Coach</h2>
-          {messages.length > 0 && (
+        <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-3">
+          {!threadsUnavailable && (
             <button
-              onClick={() => setShowClearModal(true)}
-              className="text-sm text-gray-500 hover:text-red-600 flex items-center gap-1"
+              onClick={() => setThreadsPanelOpen(true)}
+              className="lg:hidden text-gray-500 hover:text-gray-800 shrink-0"
+              aria-label="Conversations"
             >
-              <Plus size={16} className="rotate-45" />
-              New Chat
+              <Menu size={20} />
+            </button>
+          )}
+          <div className="min-w-0 flex-1">
+            <h2 className="font-semibold text-gray-900 truncate">
+              {activeThread?.title || 'AI Coach'}
+            </h2>
+            {activeThread?.title && (
+              <p className="text-xs text-gray-500">AI Coach</p>
+            )}
+          </div>
+          {!threadsUnavailable && (
+            <button
+              onClick={handleNewThread}
+              disabled={startingThread}
+              className="lg:hidden text-sm text-blue-600 hover:text-blue-700 shrink-0 disabled:opacity-50"
+            >
+              New
             </button>
           )}
         </div>
+
+        {threadsUnavailable && (
+          <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-800">
+            Separate conversations need migration 020 applied in Supabase. Until then this stays a single chat.
+          </div>
+        )}
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
           {messages.length === 0 ? (
             <div className="text-center text-gray-500 mt-12">
               <div className="text-4xl mb-4">⚾</div>
-              <p className="text-lg mb-2">Ask me anything about coaching</p>
+              <p className="text-lg mb-2">
+                {threads.length > 1 ? 'New conversation' : 'Ask me anything about coaching'}
+              </p>
               <div className="text-sm space-y-1">
                 <p>"What drills can help fix an uppercut swing?"</p>
                 <p>"Why are we falling apart in games?"</p>
@@ -279,7 +418,7 @@ export default function ChatPage() {
 
       {/* Context Sidebar */}
       {teamContext && (
-        <aside className="hidden lg:block w-80 bg-white rounded-lg shadow p-6 overflow-y-auto">
+        <aside className="hidden xl:block w-80 shrink-0 bg-white rounded-lg shadow p-6 overflow-y-auto">
           <h3 className="font-semibold text-gray-900 mb-4">Team Context</h3>
 
           <div className="space-y-4 text-sm">
@@ -342,32 +481,9 @@ export default function ChatPage() {
         </aside>
       )}
 
-      {/* Clear Chat Modal */}
-      {showClearModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Start New Chat?</h3>
-            <p className="text-gray-600 mb-4">
-              This will clear your current conversation. Make sure you've saved any important drills
-              or information to memory first.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowClearModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleClearChat}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-              >
-                Clear & Start New
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* The "this will clear your conversation" warning used to live here.
+          Starting a new chat no longer destroys anything, so there is nothing
+          left to warn about. */}
     </div>
   )
 }
