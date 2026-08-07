@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { textFrom } from '@/lib/claudeText'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -58,26 +59,26 @@ Important:
       ],
     })
 
-    const content = response.content[0]
-    if (content.type !== 'text') {
-      return NextResponse.json({ error: 'Unexpected response type' }, { status: 500 })
+    const text = textFrom(response)
+    if (!text) {
+      return NextResponse.json({ error: 'No response from the reader. Try again.' }, { status: 500 })
     }
 
     // Parse the JSON response
     let players = []
     try {
       // Try to extract JSON from the response (in case there's extra text)
-      const jsonMatch = content.text.match(/\[[\s\S]*\]/)
+      const jsonMatch = text.match(/\[[\s\S]*\]/)
       if (jsonMatch) {
         players = JSON.parse(jsonMatch[0])
       } else {
-        players = JSON.parse(content.text)
+        players = JSON.parse(text)
       }
     } catch (e) {
-      console.error('Failed to parse player data:', content.text)
-      return NextResponse.json({ 
+      console.error('Failed to parse player data:', text)
+      return NextResponse.json({
         error: 'Could not parse roster data from image. Please try a clearer screenshot.',
-        raw: content.text 
+        raw: text
       }, { status: 400 })
     }
 

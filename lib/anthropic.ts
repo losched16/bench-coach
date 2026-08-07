@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { COACH_VOICE, CHAT_ADDENDUM } from './coachVoice'
+import { textFrom, requireText } from './claudeText'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -568,14 +569,16 @@ export async function generateChatResponse(
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-5',
-      max_tokens: 6000,
+      // Thinking tokens count against this, so it has to cover the reasoning
+      // and the answer. A coach asking a real question is worth the room.
+      max_tokens: 10000,
       system: systemPrompt,
       messages: messages,
     })
 
-    const fullContent = response.content[0].type === 'text' 
-      ? response.content[0].text 
-      : ''
+    // An empty reply is a failure here, not a valid answer — throw rather than
+    // save a blank message to the conversation.
+    const fullContent = requireText(response, 'chat reply')
 
     // Extract memory suggestions from the response
     const memorySuggestionsMatch = fullContent.match(/MEMORY_SUGGESTIONS:\s*(\{[\s\S]*?\})\s*$/m)
@@ -595,9 +598,12 @@ export async function generateChatResponse(
       message: cleanMessage,
       memory_suggestions: memorySuggestions,
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Claude API error:', error)
-    throw new Error('Failed to generate response')
+    // Keep the real reason. Collapsing every failure into one generic string is
+    // how a silent empty-response bug survives — the log said nothing useful
+    // and the UI said nothing at all.
+    throw new Error(error?.message || 'Failed to generate response')
   }
 }
 
@@ -718,7 +724,9 @@ Format as JSON:
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-5',
-      max_tokens: 12000,
+      // Thinking counts against this and a full plan is long JSON; too low and
+      // the response truncates mid-object and fails to parse.
+      max_tokens: 20000,
       system: `${COACH_VOICE}
 
 WHAT THIS SURFACE IS
@@ -733,9 +741,7 @@ Always return valid JSON. No text outside the JSON.`,
       messages: [{ role: 'user', content: prompt }],
     })
 
-    const content = response.content[0].type === 'text' 
-      ? response.content[0].text 
-      : ''
+    const content = textFrom(response)
 
     // Extract JSON from response
     const jsonMatch = content.match(/\{[\s\S]*\}/)
@@ -816,14 +822,12 @@ Return ONLY valid JSON for a single block:
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-5',
-      max_tokens: 6000,
+      max_tokens: 10000,
       system: `You are Coach Mike, a 25-year veteran youth baseball coach. You create incredibly detailed drill instructions that a first-time volunteer parent-coach can follow perfectly. Every drill has exact distances, reps, words to say, and a YouTube video when available. Always return valid JSON. No text outside the JSON.`,
       messages: [{ role: 'user', content: prompt }],
     })
 
-    const content = response.content[0].type === 'text'
-      ? response.content[0].text
-      : ''
+    const content = textFrom(response)
 
     const jsonMatch = content.match(/\{[\s\S]*\}/)
     if (jsonMatch) {

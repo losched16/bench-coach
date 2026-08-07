@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
+import { textFrom } from '@/lib/claudeText'
 import { COACH_VOICE } from '@/lib/coachVoice'
 import {
   buildFieldingPlan, validateFieldingPlan, battingSlots,
@@ -369,15 +370,15 @@ Return ONLY JSON, no markdown fences:
   try {
     const res = await anthropic.messages.create({
       model: 'claude-sonnet-5',
-      max_tokens: 4000,
+      max_tokens: 8000,
       system,
       messages: [{ role: 'user', content: prompt }],
     })
 
-    const text = res.content.find(c => c.type === 'text')
-    if (!text || text.type !== 'text') return fallback()
+    const text = textFrom(res)
+    if (!text) return fallback()
 
-    const match = text.text.replace(/```(?:json)?/g, '').match(/\{[\s\S]*\}/)
+    const match = text.replace(/```(?:json)?/g, '').match(/\{[\s\S]*\}/)
     if (!match) return fallback()
 
     const parsed = JSON.parse(match[0]) as Partial<OrderResult>

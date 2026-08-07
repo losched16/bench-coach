@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { textFrom } from '@/lib/claudeText'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -123,11 +124,13 @@ export async function POST(request: NextRequest) {
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-5',
-      max_tokens: 8000,
+      // Box scores are long JSON and thinking spends from this budget — too
+      // low and the object truncates mid-array and never parses.
+      max_tokens: 16000,
       messages: [{ role: 'user', content }],
     })
 
-    const responseText = response.content[0].type === 'text' ? response.content[0].text : ''
+    const responseText = textFrom(response)
     const jsonMatch = responseText.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
       return NextResponse.json(

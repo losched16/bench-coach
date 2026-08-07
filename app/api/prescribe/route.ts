@@ -5,6 +5,7 @@ import { assembleCoachContext, renderCoachContext, CoachContext } from '@/lib/co
 import { AnalysisSection, splitSections, ageGuidanceFor, scoreDrillRelevance, META_SENTINEL } from '@/lib/analysis'
 import { COACH_VOICE } from '@/lib/coachVoice'
 import { resolveFocusArea, focusAreaLabel } from '@/lib/focusAreas'
+import { textFrom } from '@/lib/claudeText'
 
 // Service role for server-side reads (bypasses RLS), matching the other API routes.
 const supabaseAdmin = createClient(
@@ -366,7 +367,7 @@ ${list}`
       max_tokens: 200,
       messages: [{ role: 'user', content: prompt }],
     })
-    const text = res.content[0].type === 'text' ? res.content[0].text : ''
+    const text = textFrom(res)
     const m = text.match(/\[[\s\S]*?\]/)
     if (!m) return []
     const picks = JSON.parse(m[0]) as number[]
@@ -408,7 +409,7 @@ ${list}`
       max_tokens: 200,
       messages: [{ role: 'user', content: prompt }],
     })
-    const text = res.content[0].type === 'text' ? res.content[0].text : ''
+    const text = textFrom(res)
     const m = text.match(/\{[\s\S]*\}/)
     if (m) {
       const parsed = JSON.parse(m[0]) as { slugs?: string[]; categories?: string[] }

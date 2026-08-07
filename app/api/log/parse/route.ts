@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
+import { textFrom } from '@/lib/claudeText'
 import { matchRosterPlayer, RosterCandidate } from '@/lib/entries'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
@@ -109,12 +110,13 @@ export async function POST(request: NextRequest) {
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-5',
-      max_tokens: 12000,
+      // Thinking spends from this budget too, and a truncated box score is
+      // unparseable JSON rather than a partial result.
+      max_tokens: 16000,
       messages: [{ role: 'user', content }],
     })
 
-    const responseText = response.content.find(b => b.type === 'text')
-    const raw = responseText && responseText.type === 'text' ? responseText.text : ''
+    const raw = textFrom(response)
     const jsonMatch = raw.match(/\{[\s\S]*\}/)
 
     if (!jsonMatch) {
