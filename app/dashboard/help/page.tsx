@@ -128,7 +128,7 @@ export default function HelpPage() {
             <ul className="space-y-1 text-yellow-800 text-sm">
               <li>• Be specific about age group - &quot;6U&quot; vs &quot;12U&quot; matters</li>
               <li>• Ask follow-up questions to dig deeper</li>
-              <li>• Save drills you like to your Saved Drills library</li>
+              <li>• Browse the Drill Library any time to look a drill up yourself</li>
             </ul>
           </div>
         </div>
@@ -243,52 +243,26 @@ export default function HelpPage() {
       )
     },
     {
-      id: 'saved-drills',
-      title: 'Saved Drills Library',
+      id: 'drill-library',
+      title: 'Drill Library',
       icon: Bookmark,
       category: 'features',
       content: (
         <div className="space-y-4">
-          <p>Build your personal library of go-to drills. Save from AI chat or create your own.</p>
-          <h4 className="font-semibold">Categories:</h4>
+          <p>
+            Every drill in the system, with a video demonstration, filterable by skill, age and
+            difficulty. You don&apos;t have to browse it to benefit from it — What to Work On and your
+            practice plans both pull from here automatically. It&apos;s here for when you want to look
+            something up yourself.
+          </p>
           <div className="grid grid-cols-3 gap-2 text-sm">
-            <div className="bg-green-100 text-green-700 px-3 py-1 rounded text-center">Fielding</div>
             <div className="bg-red-100 text-red-700 px-3 py-1 rounded text-center">Hitting</div>
-            <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded text-center">Throwing</div>
-            <div className="bg-orange-100 text-orange-700 px-3 py-1 rounded text-center">Baserunning</div>
-            <div className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-center">Warm-up</div>
-            <div className="bg-gray-100 text-gray-700 px-3 py-1 rounded text-center">General</div>
+            <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded text-center">Pitching</div>
+            <div className="bg-sky-100 text-sky-700 px-3 py-1 rounded text-center">Throwing</div>
+            <div className="bg-green-100 text-green-700 px-3 py-1 rounded text-center">Fielding</div>
+            <div className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-center">Catching</div>
+            <div className="bg-amber-100 text-amber-800 px-3 py-1 rounded text-center">Baserunning</div>
           </div>
-        </div>
-      )
-    },
-    {
-      id: 'practice-library',
-      title: 'Practice Library',
-      icon: Library,
-      category: 'features',
-      content: (
-        <div className="space-y-4">
-          <p>Store and reuse your favorite practice plan templates throughout the season.</p>
-          <h4 className="font-semibold">Template Ideas:</h4>
-          <ul className="space-y-2 text-sm">
-            <li className="flex items-start space-x-2">
-              <CheckCircle size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
-              <span><strong>Season Opener:</strong> Fundamentals and team building</span>
-            </li>
-            <li className="flex items-start space-x-2">
-              <CheckCircle size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
-              <span><strong>Game Day Warm-up:</strong> Consistent pre-game routine</span>
-            </li>
-            <li className="flex items-start space-x-2">
-              <CheckCircle size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
-              <span><strong>Skill Focus:</strong> Hitting Practice, Fielding Practice</span>
-            </li>
-            <li className="flex items-start space-x-2">
-              <CheckCircle size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
-              <span><strong>Fun Day:</strong> Games and competitions</span>
-            </li>
-          </ul>
         </div>
       )
     },

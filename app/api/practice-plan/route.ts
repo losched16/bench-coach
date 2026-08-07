@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { generatePracticePlan, TeamContext } from '@/lib/anthropic'
+import { assembleCoachContext, renderCoachContext } from '@/lib/coachContext'
 
 // Use service role for server-side operations (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -106,8 +107,28 @@ export async function POST(request: NextRequest) {
       players: [],
     }
 
+    // What the loop knows: active team priorities, what the coach logged, and
+    // any check-in outcomes. The practice builder used to be blind to all of
+    // it, so a plan could cheerfully re-prescribe a drill the check-in had
+    // just concluded wasn't working.
+    let loopContext = ''
+    try {
+      const coachContext = await assembleCoachContext(supabaseAdmin, {
+        coachId: team.coach_id,
+        teamId,
+      })
+      if (coachContext.activePrescriptions?.length || coachContext.observations?.length) {
+        loopContext = renderCoachContext(coachContext)
+      }
+    } catch (e: any) {
+      // The plan is still worth generating without it
+      console.warn('Practice plan: loop context unavailable:', e?.message)
+    }
+
     // Generate practice plan
-    const plan = await generatePracticePlan(duration, focus, context, fullConstraints, drillResources || [])
+    const plan = await generatePracticePlan(
+      duration, focus, context, fullConstraints, drillResources || [], loopContext || undefined
+    )
 
     return NextResponse.json(plan)
 

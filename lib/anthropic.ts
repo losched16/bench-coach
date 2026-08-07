@@ -280,11 +280,13 @@ ${context.activePlaybooks.map(pb => {
   return pbText
 }).join('\n\n')}
 
-PLAYBOOK GUIDANCE:
-- If asked about playbook progress, reference the specific day and activities
-- If a day was missed, suggest reviewing the previous session before continuing
-- Connect playbook work to the player's overall development
-- Encourage consistency but be flexible with timing
+HOW A PLAYBOOK RANKS AGAINST A PRIORITY
+
+A playbook is a pre-written program picked off a shelf. A priority under "currently working on" above was diagnosed from this specific player's logged evidence and comes with success criteria and a review date. When the two point in different directions, THE PRIORITY WINS — say so plainly and explain why rather than letting the coach work both.
+
+If they agree, say so and treat the playbook's current session as the vehicle for the priority. If the playbook has drifted onto something the evidence says is no longer the problem, tell them to park it. Do not enumerate a playbook day just because it is next in sequence.
+
+Reference the specific day and activities when asked about progress. If a day was missed, that is a scheduling fact, not a failing — suggest picking up where they left off and move on.
 `
   }
 
@@ -604,7 +606,11 @@ export async function generatePracticePlan(
   focus: string[],
   context: TeamContext,
   constraints?: string,
-  drillResources?: any[]
+  drillResources?: any[],
+  // What the loop already concluded about this team: active priorities and
+  // what the coach actually wrote down. Without this the practice builder is a
+  // separate tool that has never heard of the check-in.
+  loopContext?: string
 ): Promise<any> {
   try {
     // Build drill library context for the prompt
@@ -640,6 +646,13 @@ Team context:
 - Areas showing improvement: ${context.team.improved_areas && context.team.improved_areas.length > 0 ? context.team.improved_areas.join(', ') : 'None yet'}
 - Mastered skills (lighter maintenance): ${context.team.mastered_areas && context.team.mastered_areas.length > 0 ? context.team.mastered_areas.join(', ') : 'None yet'}
 ${context.teamNotes.length > 0 ? `- Current issues: ${context.teamNotes.map(n => n.note).join('; ')}` : ''}
+${loopContext ? `
+WHAT WE'RE ALREADY WORKING ON — build the practice around this, don't ignore it:
+
+${loopContext}
+
+If a priority above is live for this team, at least one drill block must move it forward, and say which one in that block's description. If a check-in concluded something stalled, do NOT put the same drill back in unchanged — that is the specific failure the coach is paying us to catch.
+` : ''}
 ${drillLibrarySection}
 
 YOU MUST CREATE AN EXTREMELY DETAILED PRACTICE PLAN. The coach reading this has NEVER coached before. They are a parent who volunteered. They need to read this plan and know EXACTLY what to do, step by step, like following a cooking recipe.
@@ -706,13 +719,15 @@ Format as JSON:
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-5',
       max_tokens: 12000,
-      system: `You are Coach Mike, a 25-year veteran youth baseball coach who has trained over 500 volunteer parent-coaches. You are famous for your incredibly detailed practice plans that even a first-day parent volunteer can follow perfectly.
+      system: `${COACH_VOICE}
 
-Your practice plans are like recipes — every drill has exact distances, exact reps, exact words to say, and a YouTube video to watch. You NEVER write vague plans. You NEVER use generic coaching cues like "Nice job" or "Good effort." You ALWAYS use specific, named drills — never vague categories like "Skill Assessment" or "Throwing Practice."
+WHAT THIS SURFACE IS
 
-You believe that the #1 reason youth practices fail is because the coach doesn't know EXACTLY what to do next. Your plans eliminate that problem completely.
+You are writing a practice plan a volunteer parent will run on a field on Tuesday, holding a phone. They may never have coached before. The #1 reason youth practices fail is the coach not knowing exactly what to do next, and your plan removes that.
 
-When you have a drill video library available, you ALWAYS match drills to videos so the coach can SEE what the drill looks like before running it.
+The output is JSON, not prose — but everything above about naming mechanics still applies, and applies harder here. It is the difference between "Partner throwing to assess arm strength" and a drill someone can actually run. The writing standard governs the text inside the fields.
+
+When a drill video library is available, match drills to videos so the coach can watch before running it.
 
 Always return valid JSON. No text outside the JSON.`,
       messages: [{ role: 'user', content: prompt }],

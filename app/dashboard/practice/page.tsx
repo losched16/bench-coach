@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
-import { Plus, Clock, ChevronDown, ChevronUp, Trash2, Pencil, Sparkles, ClipboardCheck, RefreshCw, Search, X } from 'lucide-react'
+import { Plus, Clock, ChevronDown, ChevronUp, Trash2, Pencil, Sparkles, ClipboardCheck, RefreshCw, Search, X, FileText } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import Link from 'next/link'
 import { DrillVideo, DrillVideoLookup } from '@/components/DrillVideo'
 import { useDrillResources } from '@/lib/useDrillResources'
 import { usePageView } from '@/lib/tracking'
+import { TemplateGallery } from '@/components/TemplateGallery'
 
 
 interface PracticePlan {
@@ -45,6 +46,7 @@ export default function PracticePage() {
     coaching_cues: string
   }>>([{ title: '', minutes: 10, description: '', coaching_cues: '' }])
   const [savingCustom, setSavingCustom] = useState(false)
+  const [showTemplateModal, setShowTemplateModal] = useState(false)
 
   // Swap drill state
   const [swapModal, setSwapModal] = useState<{ planId: string; blockIndex: number; block: any } | null>(null)
@@ -73,6 +75,11 @@ export default function PracticePage() {
     'confidence',
     'focus/behavior'
   ]
+
+  // The retired Practice Library route redirects here with ?start=template.
+  useEffect(() => {
+    if (searchParams.get('start') === 'template') setShowTemplateModal(true)
+  }, [searchParams])
 
   useEffect(() => {
     if (teamId) {
@@ -397,6 +404,19 @@ export default function PracticePage() {
                       <div className="text-sm text-gray-500">Write your own plan</div>
                     </div>
                   </button>
+                  <button
+                    onClick={() => {
+                      setShowNewMenu(false)
+                      setShowTemplateModal(true)
+                    }}
+                    className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <FileText size={20} className="text-green-600" />
+                    <div>
+                      <div className="font-medium text-gray-900">Start from a template</div>
+                      <div className="text-sm text-gray-500">Pre-built plans, ready to run</div>
+                    </div>
+                  </button>
                 </div>
               </div>
             </>
@@ -404,6 +424,32 @@ export default function PracticePage() {
         </div>
         </div>
       </div>
+
+      {/* Pre-built plans. Absorbed from the old Practice Library nav item —
+          starting from a template is a way to begin a plan, not a place to go. */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 bg-black/50 z-40 flex items-start justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8">
+            <div className="flex items-start justify-between p-5 border-b border-gray-200 sticky top-0 bg-white rounded-t-lg z-10">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Start from a template</h3>
+                <p className="text-sm text-gray-600">
+                  Pre-built plans, ready to run. Copy one into your plans and change whatever you want.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowTemplateModal(false)}
+                className="text-gray-400 hover:text-gray-600 flex-shrink-0"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-5">
+              <TemplateGallery teamId={teamId} onCopied={loadPlans} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {plans.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
