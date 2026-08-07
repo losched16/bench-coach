@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Target, Check, Loader2, ArrowRight, CalendarCheck } from 'lucide-react'
 import { todayStr } from '@/lib/entries'
+import { focusAreaLabel, focusAreaChip } from '@/lib/focusAreas'
 
 // The active priority, with the log button attached to it.
 //
@@ -23,6 +24,7 @@ import { todayStr } from '@/lib/entries'
 export interface ActivePriorityItem {
   id: string
   scope: 'player' | 'team'
+  focusArea?: string | null
   subjectName: string
   priority: string | null
   daysElapsed: number
@@ -115,13 +117,18 @@ export function ActivePriority({
     <div className={`bg-white rounded-lg shadow p-5 border-l-4 ${
       readyToCheckIn ? 'border-amber-400' : 'border-red-500'
     }`}>
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
         {readyToCheckIn
           ? <CalendarCheck className="text-amber-600" size={20} />
           : <Target className="text-red-600" size={20} />}
         <h3 className="font-semibold text-gray-900">
           {readyToCheckIn ? 'A check-in is ready' : 'Working on'}
         </h3>
+        {/* The area is the unit. Several run at once and a coach needs to see
+            at a glance which one this card is. */}
+        <span className={`text-xs px-2 py-0.5 rounded-full ${focusAreaChip(item.focusArea)}`}>
+          {focusAreaLabel(item.focusArea)}
+        </span>
         <span className="text-xs text-gray-500 ml-auto">
           Day {item.daysElapsed} of {HOLD_DAYS}
         </span>

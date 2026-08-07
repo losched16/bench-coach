@@ -96,8 +96,14 @@ export async function POST(request: NextRequest) {
     // The one-tap logger names the priority explicitly, which matters once a
     // coach has more than one running: "most recent active" would quietly
     // credit the wrong one.
+    //
+    // An explicit null is a real answer, not a missing one: "this was
+    // maintenance work, don't credit it to anything." Guessing there would
+    // inflate the adherence number the check-in uses to decide whether a drill
+    // failed or was never run, which is the one signal the loop depends on.
+    const choseExplicitly = Object.prototype.hasOwnProperty.call(body, 'prescriptionId')
     let prescriptionId: string | null = explicitPrescriptionId || null
-    if (entryType === 'home_session' && !prescriptionId) {
+    if (entryType === 'home_session' && !prescriptionId && !choseExplicitly) {
       let pq = supabaseAdmin
         .from('prescriptions')
         .select('id')

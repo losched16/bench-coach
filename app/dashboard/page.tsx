@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { MessageSquare, ClipboardList, Users, FileText, Calendar, Target } from 'lucide-react'
 import { usePageView } from '@/lib/tracking'
 import { ActivePriority, ActivePriorityItem } from '@/components/ActivePriority'
+import { focusAreaRank } from '@/lib/focusAreas'
 
 interface TeamData {
   team: any
@@ -188,11 +189,12 @@ function DashboardContent() {
         <div className="space-y-4">
           {priorities
             .slice()
+            // Ready-to-check-in first; then a stable order by area, so a weekly
+            // rotation doesn't reshuffle itself every time the page loads.
             .sort((a, b) => {
               const rank = (p: ActivePriorityItem) => (p.due !== 'holding' && p.hasEvidence ? 0 : 1)
-              return rank(a) - rank(b)
+              return rank(a) - rank(b) || focusAreaRank(a.focusArea) - focusAreaRank(b.focusArea)
             })
-            .slice(0, 3)
             .map((p) => (
               <ActivePriority
                 key={p.id}

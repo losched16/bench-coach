@@ -11,11 +11,13 @@ import { usePageView, useTracker } from '@/lib/tracking'
 import { AnalysisProse } from '@/components/AnalysisProse'
 import { ActivePriority } from '@/components/ActivePriority'
 import { splitSections } from '@/lib/analysis'
+import { focusAreaRank, focusAreaLabel, focusAreaChip } from '@/lib/focusAreas'
 import { VERDICT_SENTINEL, visibleMarkdown, AdherenceRead, DueState, Verdict, VerdictStatus } from '@/lib/checkin'
 
 interface OpenPrescription {
   id: string
   scope: 'player' | 'team'
+  focusArea: string | null
   subjectName: string
   priority: string | null
   successCriteria: string | null
@@ -209,8 +211,10 @@ function CheckinContent() {
   }
 
   const activePrescription = open.find(p => p.id === activeId) || null
-  const dueList = open.filter(p => p.due !== 'holding')
-  const holdingList = open.filter(p => p.due === 'holding')
+  const byArea = (a: OpenPrescription, b: OpenPrescription) =>
+    focusAreaRank(a.focusArea) - focusAreaRank(b.focusArea)
+  const dueList = open.filter(p => p.due !== 'holding').sort(byArea)
+  const holdingList = open.filter(p => p.due === 'holding').sort(byArea)
 
   if (loading) {
     return (
@@ -291,6 +295,20 @@ function CheckinContent() {
       {/* The read */}
       {sections && sections.length > 0 && (
         <div className="space-y-4">
+          {/* Which priority this read is about — with several running in
+              parallel, an unlabelled wall of prose is ambiguous. */}
+          {activePrescription && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-gray-900">{activePrescription.subjectName}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${focusAreaChip(activePrescription.focusArea)}`}>
+                {focusAreaLabel(activePrescription.focusArea)}
+              </span>
+              <span className="text-xs text-gray-500">
+                {activePrescription.daysElapsed} days in ·{' '}
+                {activePrescription.adherence.logged} sessions logged
+              </span>
+            </div>
+          )}
           {sections.map((section, idx) => {
             const meta = SECTION_META[section.key] || { icon: ChevronRight, accent: 'text-gray-600' }
             const Icon = meta.icon

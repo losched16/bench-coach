@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
     let q = supabaseAdmin
       .from('prescriptions')
-      .select('id, scope, player_id, team_id, priority, success_criteria, issued_at, review_due_at, min_hold_until, status')
+      .select('id, scope, player_id, team_id, focus_area, priority, success_criteria, issued_at, review_due_at, min_hold_until, status')
       .eq('coach_id', coachId)
       .eq('status', 'active')
       .order('review_due_at', { ascending: true })
@@ -136,6 +136,7 @@ export async function GET(request: NextRequest) {
       return {
         id: p.id,
         scope,
+        focusArea: p.focus_area ?? null,
         subjectName: scope === 'player'
           ? (playerName[p.player_id] || 'this player')
           : (teamName[p.team_id] || 'this team'),
@@ -334,6 +335,8 @@ Three rules specific to this job:
 2. Be willing to be wrong. "We had the cause wrong — the timing was fine, it's the front shoulder" is the most valuable sentence you can write. Never defend the earlier read because it was yours.
 
 3. Never make the coach feel bad about what they did not log. If the sessions did not happen, the plan asked for something that did not fit into a real week with a job and two other kids. That is a plan problem and you fix it by making the ask smaller — not by mentioning what they missed. Do not write any sentence that reads as a reminder about compliance.
+
+4. Stay in your area. This player may have priorities running in hitting, pitching, fielding and athleticism at the same time — that is normal, they are different skills worked in different slots, and they do not compete. Judge the one in front of you. Do not comment on the others and do not suggest dropping anything to make room.
 
 If there genuinely is not enough evidence to call it, say so in one sentence and say exactly what one piece of information would settle it. That is a real answer. Padding it out with maybes is not.`
 

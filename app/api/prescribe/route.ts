@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { assembleCoachContext, renderCoachContext, CoachContext } from '@/lib/coachContext'
 import { AnalysisSection, splitSections, ageGuidanceFor, scoreDrillRelevance, META_SENTINEL } from '@/lib/analysis'
 import { COACH_VOICE } from '@/lib/coachVoice'
+import { resolveFocusArea, focusAreaLabel } from '@/lib/focusAreas'
 
 // Service role for server-side reads (bypasses RLS), matching the other API routes.
 const supabaseAdmin = createClient(
@@ -113,6 +114,14 @@ export async function POST(request: NextRequest) {
     //    flaws, and we answer those too. An empty match is not a dead end.
     const { slugs, categories } = await diagnose(complaint, tax)
     const primary = slugs.length > 0 ? (tax.find(t => t.slug === slugs[0]) || null) : null
+
+    // Which area of the game this priority occupies. A player works several
+    // areas in the same week and those don't compete — but two priorities on
+    // the same motion do, so the area is what a new priority replaces.
+    const focusArea = resolveFocusArea(
+      categories.length ? categories : [primary?.skill_category || ''],
+      `${primary?.label || ''} ${complaint}`
+    )
 
     // 4. Select candidate drills mapped to those problems.
     const { data: mapRows } = slugs.length > 0
@@ -256,6 +265,7 @@ export async function POST(request: NextRequest) {
                 player_id: scope === 'player' ? playerId : null,
                 team_id: teamId || null,
                 problem_id: primary?.slug || null,
+                focus_area: focusArea,
                 origin,
                 summary,
                 priority,
@@ -268,6 +278,30 @@ export async function POST(request: NextRequest) {
               .single()
 
             if (saved) prescriptionId = (saved as any).id
+
+            // A new priority replaces the one already running IN THE SAME AREA
+            // only. Hitting and fielding run in parallel all week; two swing
+            // corrections at once mean you can't tell which cue failed.
+            if (prescriptionId && focusArea) {
+              let sq = supabaseAdmin
+                .from('prescriptions')
+                .update({
+                  status: 'abandoned',
+                  superseded_by: prescriptionId,
+                  outcome_note: `Replaced by a newer ${focusAreaLabel(focusArea).toLowerCase()} priority.`,
+                  resolved_at: new Date().toISOString(),
+                })
+                .eq('coach_id', coachId)
+                .eq('status', 'active')
+                .eq('focus_area', focusArea)
+                .neq('id', prescriptionId)
+
+              sq = scope === 'player'
+                ? sq.eq('player_id', playerId)
+                : sq.eq('team_id', teamId).eq('scope', 'team')
+
+              await sq
+            }
           }
 
           controller.enqueue(encoder.encode(META_SENTINEL + JSON.stringify({
@@ -427,7 +461,9 @@ THE OUTPUT CONTRACT
 
 Every recommendation names a specific observable, a specific fix, and a specific way to know it worked. If you cannot supply all three, you do not have a recommendation yet — say what you would need to see.
 
-ONE PRIORITY. Not a list. Youth players improve on one thing at a time over four to six weeks. If you name three things, none of them get done well. Anything else you noticed goes in a single "also noticed, not working on yet" line — visible, but not competing for attention.`
+ONE PRIORITY, for the area you were asked about. Not a list. A player improves on one correction per motion over four to six weeks; name three things about the swing and none of them get done well, and when it doesn't move you cannot tell which cue failed. Anything else you noticed in this area goes in a single "also noticed, not working on yet" line — visible, but not competing for attention.
+
+That constraint is about ONE MOTION, not about the player's whole week. Working hitting, pitching, fielding and agility across the same fortnight is normal and correct — different skills, different practice slots. If the context shows priorities running in other areas, leave them alone: build around them, never tell the coach to drop one to make room for yours.`
 
 function writeAnalysis(
   complaint: string,

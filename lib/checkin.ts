@@ -17,6 +17,7 @@
 // and tested without a database.
 
 import { SupabaseClient } from '@supabase/supabase-js'
+import { focusAreaLabel } from './focusAreas'
 
 // ── Timing ─────────────────────────────────────────────
 
@@ -177,6 +178,7 @@ export interface CheckinEvidence {
   prescription: {
     id: string
     scope: 'player' | 'team'
+    focus_area: string | null
     priority: string | null
     summary: string | null
     success_criteria: string | null
@@ -351,6 +353,7 @@ export async function gatherCheckinEvidence(
     prescription: {
       id: p.id,
       scope,
+      focus_area: p.focus_area ?? null,
       priority: p.priority,
       summary: p.summary,
       success_criteria: p.success_criteria,
@@ -390,7 +393,8 @@ export function renderCheckinEvidence(ev: CheckinEvidence): string {
   const p = ev.prescription
 
   parts.push(
-    `THE PRESCRIPTION WE ISSUED ${p.issued_at.slice(0, 10)} (${ev.daysElapsed} days ago) for ${ev.subjectName}` +
+    `THE ${focusAreaLabel(p.focus_area).toUpperCase()} PRIORITY WE ISSUED ${p.issued_at.slice(0, 10)} ` +
+    `(${ev.daysElapsed} days ago) for ${ev.subjectName}` +
     (ev.playerAge ? `, age ${ev.playerAge}` : '') + ':\n' +
     `  The one thing: ${p.priority || '(not recorded)'}\n` +
     `  What we said to watch for: ${p.success_criteria || '(no criteria recorded — say so, and set some this time)'}\n` +

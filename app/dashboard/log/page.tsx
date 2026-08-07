@@ -10,10 +10,22 @@ import {
 } from '@/lib/entries'
 import {
   Loader2, CheckCircle2, AlertTriangle, X, Plus,
-  ClipboardList, ChevronRight, Trash2, Info,
+  ClipboardList, ChevronRight, Trash2, Info, Target,
 } from 'lucide-react'
+import { focusAreaLabel, focusAreaChip, focusAreaRank } from '@/lib/focusAreas'
 
 // ── Types ──────────────────────────────────────────────
+
+// A priority a home session can be credited to. Several run in parallel —
+// one per area of the game — so this can never be guessed.
+interface OpenPriority {
+  id: string
+  focusArea: string | null
+  subjectName: string
+  priority: string | null
+  playerId: string | null
+  adherence: { logged: number; expected: number }
+}
 
 interface RosterPlayer {
   team_player_id: string
@@ -107,6 +119,9 @@ function LogContent() {
   const [occurredOn, setOccurredOn] = useState(mostRecentWeekend())
   const [playerId, setPlayerId] = useState<string>('')
   const [instructorName, setInstructorName] = useState('')
+  const [openPriorities, setOpenPriorities] = useState<OpenPriority[]>([])
+  // '' means "something else" — logged, but not credited to any priority.
+  const [prescriptionId, setPrescriptionId] = useState<string>('')
   const [durationMin, setDurationMin] = useState<string>('')
   const [noteValues, setNoteValues] = useState<Record<string, string>>({})
 
@@ -124,6 +139,21 @@ function LogContent() {
   const parsePromise = useRef<Promise<ParsedGame[] | null> | null>(null)
 
   const config = ENTRY_TYPES[entryType]
+
+  // Only the priorities this session could plausibly belong to. Once a player
+  // is chosen, team priorities and other players' drop out.
+  const relevantPriorities = openPriorities.filter(
+    p => !playerId || !p.playerId || p.playerId === playerId
+  )
+
+  // Preselect only when there is genuinely one answer. With several areas
+  // running, defaulting to "most recent" is the guess this replaced.
+  useEffect(() => {
+    if (!config.linksToPrescription) return
+    if (prescriptionId && relevantPriorities.some(p => p.id === prescriptionId)) return
+    setPrescriptionId(relevantPriorities.length === 1 ? relevantPriorities[0].id : '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entryType, playerId, openPriorities])
 
   // ── Init ──
   useEffect(() => {
@@ -158,12 +188,35 @@ function LogContent() {
         if (list.length === 1) setPlayerId(list[0].player_id)
       }
 
-      await loadRecent(coach.id)
+      await Promise.all([loadRecent(coach.id), loadPriorities(coach.id)])
       setLoading(false)
     }
     init()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId])
+
+  const loadPriorities = async (cid: string) => {
+    try {
+      const params = new URLSearchParams({ coachId: cid })
+      if (teamId) params.set('teamId', teamId)
+      const res = await fetch(`/api/checkin?${params}`)
+      const data = await res.json()
+      const list: OpenPriority[] = (data.prescriptions || [])
+        .map((p: any) => ({
+          id: p.id,
+          focusArea: p.focusArea ?? null,
+          subjectName: p.subjectName,
+          priority: p.priority,
+          playerId: p.playerId ?? null,
+          adherence: p.adherence,
+        }))
+        .sort((a: OpenPriority, b: OpenPriority) =>
+          focusAreaRank(a.focusArea) - focusAreaRank(b.focusArea))
+      setOpenPriorities(list)
+    } catch {
+      // The picker just doesn't appear — the entry still saves.
+    }
+  }
 
   const loadRecent = async (cid: string) => {
     const params = new URLSearchParams({ coachId: cid, limit: '5' })
@@ -314,6 +367,7 @@ function LogContent() {
           durationMin: config.capturesDuration && durationMin ? Number(durationMin) : null,
           games: config.parses ? gamesForSave || [] : [],
           rosterMappings,
+          prescriptionId: config.linksToPrescription ? prescriptionId || null : null,
         }),
       })
       const data = await res.json()
@@ -485,12 +539,72 @@ function LogContent() {
             )}
           </div>
 
+          {/* Which priority this session counts toward.
+              Never guessed: a driveway session on outfield credited to the
+              pitching priority corrupts the adherence number the check-in uses
+              to decide whether a drill failed or was simply never run. */}
           {config.linksToPrescription && (
-            <p className="text-xs text-blue-800 bg-blue-50 border border-blue-200 rounded px-2 py-1.5 mt-2 inline-flex items-start gap-1.5">
-              <Info size={14} className="flex-shrink-0 mt-0.5" />
-              This attaches automatically to whatever you&apos;re currently working on — that&apos;s how the check-in
-              knows the plan is being run.
-            </p>
+            relevantPriorities.length > 0 ? (
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  What did this session count toward?
+                </label>
+                <div className="space-y-2">
+                  {relevantPriorities.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setPrescriptionId(p.id)}
+                      className={`w-full flex items-start gap-3 p-3 rounded-lg border text-left transition-colors ${
+                        prescriptionId === p.id
+                          ? 'border-red-400 bg-red-50 ring-1 ring-red-100'
+                          : 'border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Target
+                        size={16}
+                        className={`flex-shrink-0 mt-0.5 ${prescriptionId === p.id ? 'text-red-600' : 'text-gray-400'}`}
+                      />
+                      <span className="min-w-0">
+                        <span className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${focusAreaChip(p.focusArea)}`}>
+                            {focusAreaLabel(p.focusArea)}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {p.subjectName} · {p.adherence.logged} logged
+                          </span>
+                        </span>
+                        <span className="block text-sm text-gray-800 mt-1 line-clamp-2">{p.priority}</span>
+                      </span>
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={() => setPrescriptionId('')}
+                    className={`w-full flex items-start gap-3 p-3 rounded-lg border text-left transition-colors ${
+                      prescriptionId === ''
+                        ? 'border-gray-400 bg-gray-50 ring-1 ring-gray-200'
+                        : 'border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <ChevronRight size={16} className="flex-shrink-0 mt-0.5 text-gray-400" />
+                    <span>
+                      <span className="block text-sm font-medium text-gray-800">Something else</span>
+                      <span className="block text-xs text-gray-500">
+                        Maintenance reps or general work. Still logged — just not counted toward a priority.
+                      </span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-blue-800 bg-blue-50 border border-blue-200 rounded px-2 py-1.5 mt-2 inline-flex items-start gap-1.5">
+                <Info size={14} className="flex-shrink-0 mt-0.5" />
+                Nothing active to attach this to yet. Get a priority from What to Work On and home sessions
+                start counting toward it.
+              </p>
+            )
           )}
         </Step>
 

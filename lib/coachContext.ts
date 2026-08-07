@@ -13,6 +13,7 @@
 //   5. Home session logs  — primarily an adherence signal
 
 import { SupabaseClient } from '@supabase/supabase-js'
+import { focusAreaLabel, focusAreaRank } from './focusAreas'
 
 export interface CoachContext {
   player?: {
@@ -85,15 +86,19 @@ export interface CoachContext {
     outcome_note: string | null
     adherence_sessions: number
   }>
-  activePrescription?: {
+  // Several at a time — one per focus area. A player works pitching, hitting
+  // and fielding in the same week; the surfaces need to see all of it so they
+  // don't contradict a plan that's already running in another area.
+  activePrescriptions?: Array<{
     id: string
+    focus_area: string | null
     priority: string | null
     success_criteria: string | null
     issued_at: string
     review_due_at: string | null
     min_hold_until: string | null
     adherence_sessions: number
-  } | null
+  }>
 }
 
 // Number of plate appearances below which a batting line is an observation,
@@ -294,10 +299,10 @@ export async function assembleCoachContext(
   try {
     let pq = supabase
       .from('prescriptions')
-      .select('id, priority, problem_id, status, issued_at, review_due_at, min_hold_until, success_criteria, outcome_note')
+      .select('id, priority, problem_id, focus_area, status, issued_at, review_due_at, min_hold_until, success_criteria, outcome_note')
       .eq('coach_id', coachId)
       .order('issued_at', { ascending: false })
-      .limit(6)
+      .limit(12)
 
     if (playerId) pq = pq.eq('player_id', playerId)
     else if (teamId) pq = pq.eq('team_id', teamId)
@@ -319,19 +324,19 @@ export async function assembleCoachContext(
         countByPrescription[pid] = (countByPrescription[pid] || 0) + 1
       }
 
-      const active = pres.find((p: any) => p.status === 'active')
-      if (active) {
-        const a = active as any
-        ctx.activePrescription = {
+      ctx.activePrescriptions = pres
+        .filter((p: any) => p.status === 'active')
+        .sort((a: any, b: any) => focusAreaRank(a.focus_area) - focusAreaRank(b.focus_area))
+        .map((a: any) => ({
           id: a.id,
+          focus_area: a.focus_area ?? null,
           priority: a.priority,
           success_criteria: a.success_criteria,
           issued_at: a.issued_at,
           review_due_at: a.review_due_at,
           min_hold_until: a.min_hold_until,
           adherence_sessions: countByPrescription[a.id] || 0,
-        }
-      }
+        }))
 
       ctx.pastPrescriptions = pres
         .filter((p: any) => p.status !== 'active')
@@ -346,7 +351,7 @@ export async function assembleCoachContext(
     }
   } catch {
     ctx.pastPrescriptions = []
-    ctx.activePrescription = null
+    ctx.activePrescriptions = []
   }
 
   return ctx
@@ -450,16 +455,22 @@ export function renderCoachContext(ctx: CoachContext): string {
     )
   }
 
-  if (ctx.activePrescription) {
-    const a = ctx.activePrescription
+  if (ctx.activePrescriptions?.length) {
     parts.push(
-      `CURRENTLY WORKING ON (issued ${a.issued_at?.slice(0, 10)}, review due ${a.review_due_at?.slice(0, 10)}):\n` +
-      `  Priority: ${a.priority}\n` +
-      `  Success criteria set at the time: ${a.success_criteria}\n` +
-      `  Home sessions logged against it: ${a.adherence_sessions}` +
-      (a.adherence_sessions === 0
-        ? ' — nothing logged yet, so we cannot tell whether the plan failed or was never run.'
-        : '')
+      `CURRENTLY WORKING ON — ${ctx.activePrescriptions.length} ` +
+      `${ctx.activePrescriptions.length === 1 ? 'priority' : 'priorities'} running in parallel, ` +
+      `one per area. These do not compete with each other: different skills, different practice slots. ` +
+      `Do not tell the coach to drop one to work another.\n\n` +
+      ctx.activePrescriptions.map(a =>
+        `  [${focusAreaLabel(a.focus_area)}] issued ${a.issued_at?.slice(0, 10)}, ` +
+        `review due ${a.review_due_at?.slice(0, 10)}\n` +
+        `    Priority: ${a.priority}\n` +
+        `    Success criteria set at the time: ${a.success_criteria}\n` +
+        `    Home sessions logged against it: ${a.adherence_sessions}` +
+        (a.adherence_sessions === 0
+          ? ' — nothing logged yet, so we cannot tell whether the plan failed or was never run.'
+          : '')
+      ).join('\n\n')
     )
   }
 
