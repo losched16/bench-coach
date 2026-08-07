@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { Plus, Calendar, Shield, RotateCcw, Save, Trash2, ChevronDown, ChevronUp, Users, AlertCircle } from 'lucide-react'
 import { usePageView } from '@/lib/tracking'
+import { LINEUP_MODES, STRATEGIES, LineupMode, Strategy } from '@/lib/lineup'
 
 // Types
 interface Player {
@@ -100,6 +101,13 @@ export default function LineupPage() {
   const [pitchingType, setPitchingType] = useState('coach_pitch')
   const [fieldPositions, setFieldPositions] = useState(10)
   const [everyoneBats, setEveryoneBats] = useState(true)
+  // Travel varies game to game — 9, 10 with an EH/DH, or everyone bats — and
+  // fairness stops being the goal in a bracket game. Both are per-lineup
+  // choices rather than team settings.
+  const [lineupMode, setLineupMode] = useState<LineupMode>('continuous')
+  const [strategy, setStrategy] = useState<Strategy>('development')
+  const [dhPlayerId, setDhPlayerId] = useState<string>('')
+  const [unavailableIds, setUnavailableIds] = useState<string[]>([])
 
   // Eligibility editor state
   const [showEligibility, setShowEligibility] = useState(false)
@@ -224,7 +232,11 @@ export default function LineupPage() {
           innings,
           pitchingType,
           fieldPositions,
-          everyoneBats,
+          everyoneBats: lineupMode === 'continuous',
+          lineupMode,
+          strategy,
+          dhPlayerId: lineupMode === 'fixed_10' ? dhPlayerId || null : null,
+          unavailableIds,
           opponent: opponent || null,
           gameDate: gameDate || null,
         }),
@@ -265,7 +277,7 @@ export default function LineupPage() {
           innings,
           pitching_type: pitchingType,
           field_positions: fieldPositions,
-          everyone_bats: everyoneBats,
+          everyone_bats: lineupMode === 'continuous',
           notes: generatedLineup.notes,
           status: 'draft',
         })
@@ -611,22 +623,97 @@ export default function LineupPage() {
               </div>
             </div>
 
-            {/* Everyone Bats */}
-            <div className="flex items-center space-x-3 pt-6">
-              <button
-                onClick={() => setEveryoneBats(!everyoneBats)}
-                className={`w-12 h-7 rounded-full transition-colors ${
-                  everyoneBats ? 'bg-blue-600' : 'bg-gray-300'
-                }`}
-              >
-                <div
-                  className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                    everyoneBats ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-              <span className="text-sm font-medium text-gray-700">Everyone Bats (continuous order)</span>
+            {/* Batting order shape — varies tournament to tournament in travel */}
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Batting order</label>
+              <div className="grid sm:grid-cols-3 gap-2">
+                {(Object.keys(LINEUP_MODES) as LineupMode[]).map(m => (
+                  <button
+                    key={m}
+                    onClick={() => setLineupMode(m)}
+                    className={`px-3 py-2.5 rounded-lg border text-left transition-colors ${
+                      lineupMode === m
+                        ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200'
+                        : 'border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="block text-sm font-medium text-gray-900">{LINEUP_MODES[m].label}</span>
+                    <span className="block text-xs text-gray-500 mt-0.5">{LINEUP_MODES[m].hint}</span>
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {/* The objective function. Rec and travel want opposite things. */}
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">How should we build it?</label>
+              <div className="grid sm:grid-cols-2 gap-2">
+                {(Object.keys(STRATEGIES) as Strategy[]).map(st => (
+                  <button
+                    key={st}
+                    onClick={() => setStrategy(st)}
+                    className={`px-3 py-2.5 rounded-lg border text-left transition-colors ${
+                      strategy === st
+                        ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200'
+                        : 'border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="block text-sm font-medium text-gray-900">{STRATEGIES[st].label}</span>
+                    <span className="block text-xs text-gray-500 mt-0.5">{STRATEGIES[st].hint}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Who isn't here. Nothing else in the app knows this, and a lineup
+                built around a kid who didn't travel is worse than useless. */}
+            {roster.length > 0 && (
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Anyone missing?{' '}
+                  <span className="font-normal text-gray-500">Tap to mark them out</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {roster.map((p: any) => {
+                    const isOut = unavailableIds.includes(p.id)
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => setUnavailableIds(prev =>
+                          isOut ? prev.filter(x => x !== p.id) : [...prev, p.id]
+                        )}
+                        className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+                          isOut
+                            ? 'border-red-300 bg-red-50 text-red-700 line-through'
+                            : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {p.player?.name || 'Unknown'}
+                      </button>
+                    )
+                  })}
+                </div>
+                {lineupMode === 'fixed_10' && (
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      DH <span className="font-normal text-gray-500">(bats, doesn&apos;t field — optional)</span>
+                    </label>
+                    <select
+                      value={dhPlayerId}
+                      onChange={e => setDhPlayerId(e.target.value)}
+                      className="w-full sm:w-64 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    >
+                      <option value="">Everyone in the order fields</option>
+                      {roster
+                        .filter((p: any) => !unavailableIds.includes(p.id))
+                        .map((p: any) => (
+                          <option key={p.id} value={p.id}>{p.player?.name || 'Unknown'}</option>
+                        ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Eligibility reminder */}
@@ -690,6 +777,55 @@ export default function LineupPage() {
                 )}
                 {generatedLineup.notes && (
                   <p className="text-sm text-gray-600 mt-2 italic">{generatedLineup.notes}</p>
+                )}
+
+                {/* Why, not just what. The order is only worth more than a
+                    coin flip if the coach can see the thinking and overrule it. */}
+                {generatedLineup.reasoning && (
+                  <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-1">
+                      Why this order
+                    </div>
+                    <p className="text-sm text-blue-900 leading-relaxed">{generatedLineup.reasoning}</p>
+                    {generatedLineup.meta?.evidence_used?.length > 0 && (
+                      <p className="text-xs text-blue-700 mt-2">
+                        Built from: {generatedLineup.meta.evidence_used.join(', ')}.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Constraints we couldn't satisfy, said out loud rather than
+                    quietly compromised — usually fixable on the grid. */}
+                {generatedLineup.warnings?.length > 0 && (
+                  <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-1.5">
+                    {generatedLineup.warnings.map((w: string, i: number) => (
+                      <p key={i} className="text-sm text-amber-900 flex items-start gap-2">
+                        <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                        <span>{w}</span>
+                      </p>
+                    ))}
+                  </div>
+                )}
+
+                {/* The fairness claim, shown rather than asserted */}
+                {generatedLineup.innings_by_player && (
+                  <details className="mt-3">
+                    <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
+                      Field innings per player
+                    </summary>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {generatedLineup.batting_order.map((b: any) => {
+                        const n = generatedLineup.innings_by_player[b.team_player_id]
+                        if (n === undefined) return null
+                        return (
+                          <span key={b.team_player_id} className="text-xs px-2 py-1 bg-gray-100 rounded">
+                            {b.name}: {n}
+                          </span>
+                        )
+                      })}
+                    </div>
+                  </details>
                 )}
               </div>
               <div className="flex space-x-3">

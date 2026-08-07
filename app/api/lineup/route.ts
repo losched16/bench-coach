@@ -1,260 +1,417 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
+import { COACH_VOICE } from '@/lib/coachVoice'
+import {
+  buildFieldingPlan, validateFieldingPlan, battingSlots,
+  LineupPlayer, LineupMode, Strategy, positionsFor,
+} from '@/lib/lineup'
 
-// Use service role for server-side operations (bypasses RLS)
+// Two different problems, solved two different ways.
+//
+// FIELDING is a constraint problem: every player accounted for every inning,
+// nobody at two positions, key positions only to flagged players, innings
+// balanced (or deliberately not, in competitive mode). That belongs in code,
+// where the constraints hold. It used to be a model call whose prompt ended in
+// a list of pleadings, and a model satisfies constraints usually, not always.
+//
+// THE BATTING ORDER is judgment, and it is where the value actually is. It
+// used to be built from a subjective 1-5 hitting rating and nothing else. Now
+// it gets on-base numbers, recent form, what the coach wrote down during the
+// game, and the opposing pitcher when we've scouted them.
+
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-})
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
+
+export const maxDuration = 120
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { teamId, innings, pitchingType, fieldPositions, everyoneBats, opponent, gameDate } = body
+    const {
+      teamId, innings = 6, pitchingType = 'coach_pitch', fieldPositions = 10,
+      everyoneBats, lineupMode, strategy, dhPlayerId, unavailableIds,
+      opponent, gameDate,
+    } = body
 
-    console.log('=== LINEUP API START ===')
-    console.log('teamId:', teamId)
-    console.log('innings:', innings, 'pitchingType:', pitchingType, 'fieldPositions:', fieldPositions)
+    if (!teamId) return NextResponse.json({ error: 'Missing teamId' }, { status: 400 })
 
-    if (!teamId) {
-      return NextResponse.json({ error: 'Missing teamId' }, { status: 400 })
-    }
+    // Older clients send everyoneBats; newer ones send lineupMode.
+    const mode: LineupMode = (['continuous', 'fixed_9', 'fixed_10'] as const).includes(lineupMode)
+      ? lineupMode
+      : everyoneBats === false ? 'fixed_9' : 'continuous'
+    const strat: Strategy = strategy === 'competitive' ? 'competitive' : 'development'
+    const needsPitcher = pitchingType === 'live_pitch' || pitchingType === 'player_pitch'
 
-    if (!process.env.ANTHROPIC_API_KEY) {
-      console.error('ANTHROPIC_API_KEY is not set')
-      return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
-    }
+    // ── Team + roster ──
+    const { data: team } = await supabaseAdmin
+      .from('teams').select('*, season:seasons(name, league_type)').eq('id', teamId).single()
+    if (!team) return NextResponse.json({ error: 'Team not found' }, { status: 404 })
 
-    // ── 1. Load team ──────────────────────────────────────────
-    const { data: team, error: teamError } = await supabaseAdmin
-      .from('teams')
-      .select('*, season:seasons(name)')
-      .eq('id', teamId)
-      .single()
-
-    if (teamError) {
-      console.error('Team query error:', teamError)
-      return NextResponse.json({ error: 'Failed to load team' }, { status: 500 })
-    }
-    if (!team) {
-      return NextResponse.json({ error: 'Team not found' }, { status: 404 })
-    }
-    console.log('Team loaded:', team.name, 'age_group:', team.age_group)
-
-    // ── 2. Load roster ────────────────────────────────────────
-    const { data: roster, error: rosterError } = await supabaseAdmin
+    const { data: roster } = await supabaseAdmin
       .from('team_players')
-      .select(`*, player:players(id, name, jersey_number)`)
+      .select('*, player:players(id, name, jersey_number)')
       .eq('team_id', teamId)
 
-    if (rosterError) {
-      console.error('Roster query error:', rosterError)
-      return NextResponse.json({ error: 'Failed to load roster' }, { status: 500 })
-    }
     if (!roster || roster.length === 0) {
       return NextResponse.json({ error: 'No players on roster' }, { status: 400 })
     }
-    console.log('Roster loaded:', roster.length, 'players')
 
-    // ── 3. Load position eligibility (OK if table doesn't exist yet) ──
-    let eligibility: any[] = []
-    try {
-      const playerIds = roster.map(r => r.id)
-      const { data: eligData, error: eligError } = await supabaseAdmin
-        .from('position_eligibility')
-        .select('*')
-        .in('team_player_id', playerIds)
+    const playerIds = roster.map((r: any) => r.id)
+    const out = new Set<string>(Array.isArray(unavailableIds) ? unavailableIds : [])
 
-      if (eligError) {
-        console.warn('Eligibility query error (non-fatal):', eligError.message)
-      } else {
-        eligibility = eligData || []
-      }
-    } catch (e) {
-      console.warn('Eligibility table may not exist yet, skipping')
-    }
-    console.log('Eligibility entries:', eligibility.length)
+    // ── Eligibility + position history ──
+    const { data: eligData } = await supabaseAdmin
+      .from('position_eligibility')
+      .select('team_player_id, position, eligible')
+      .in('team_player_id', playerIds)
 
-    // ── 4. Load past lineups for fairness (OK if table doesn't exist) ──
-    let pastAssignments: any[] = []
-    try {
-      const { data: pastLineups, error: pastError } = await supabaseAdmin
-        .from('game_lineups')
-        .select('id, game_date')
-        .eq('team_id', teamId)
-        .order('game_date', { ascending: false })
-        .limit(5)
-
-      if (!pastError && pastLineups && pastLineups.length > 0) {
-        const lineupIds = pastLineups.map(l => l.id)
-        const { data: assignments } = await supabaseAdmin
-          .from('lineup_assignments')
-          .select('*')
-          .in('lineup_id', lineupIds)
-
-        pastAssignments = assignments || []
-      }
-    } catch (e) {
-      console.warn('Past lineups table may not exist yet, skipping')
-    }
-    console.log('Past assignments loaded:', pastAssignments.length)
-
-    // ── 5. Build position history for fairness ────────────────
-    const positionHistory: Record<string, Record<string, number>> = {}
-    for (const player of roster) {
-      positionHistory[player.id] = {}
-      const playerAssignments = pastAssignments.filter(a => a.team_player_id === player.id)
-      for (const assignment of playerAssignments) {
-        positionHistory[player.id][assignment.position] =
-          (positionHistory[player.id][assignment.position] || 0) + 1
-      }
-    }
-
-    // ── 6. Build eligibility map ──────────────────────────────
     const eligibilityMap: Record<string, string[]> = {}
-    for (const player of roster) {
-      eligibilityMap[player.id] = []
+    for (const e of (eligData || []) as any[]) {
+      if (!e.eligible) continue
+      ;(eligibilityMap[e.team_player_id] ||= []).push(e.position)
     }
-    for (const e of eligibility) {
-      if (e.eligible) {
-        eligibilityMap[e.team_player_id]?.push(e.position)
+
+    const { data: pastLineups } = await supabaseAdmin
+      .from('game_lineups').select('id').eq('team_id', teamId)
+      .order('game_date', { ascending: false }).limit(5)
+
+    const positionHistory: Record<string, Record<string, number>> = {}
+    if (pastLineups && pastLineups.length > 0) {
+      const { data: assignments } = await supabaseAdmin
+        .from('lineup_assignments')
+        .select('team_player_id, position')
+        .in('game_lineup_id', pastLineups.map((l: any) => l.id))
+      for (const a of (assignments || []) as any[]) {
+        if (!a.position) continue
+        const h = (positionHistory[a.team_player_id] ||= {})
+        h[a.position] = (h[a.position] || 0) + 1
       }
     }
 
-    // ── 7. Build prompt ───────────────────────────────────────
-    const rosterInfo = roster.map(p => {
-      const playerData = p.player as any
-      const name = playerData?.name || 'Unknown'
-      const jersey = playerData?.jersey_number || '?'
-      const eligible = eligibilityMap[p.id] || []
-      const history = positionHistory[p.id] || {}
-      const historyStr = Object.entries(history)
-        .map(([pos, count]) => `${pos}:${count}`)
-        .join(', ')
+    const players: LineupPlayer[] = roster.map((r: any) => ({
+      id: r.id,
+      name: r.player?.name || 'Unknown',
+      jersey_number: r.player?.jersey_number ?? null,
+      hitting_level: r.hitting_level,
+      throwing_level: r.throwing_level,
+      fielding_level: r.fielding_level,
+      pitching_level: r.pitching_level,
+      eligiblePositions: eligibilityMap[r.id] || [],
+      positionHistory: positionHistory[r.id] || {},
+      out: out.has(r.id),
+    }))
 
-      return `- ${name} (#${jersey}) [ID: ${p.id}]
-  Skill: Hit ${p.hitting_level || '?'}/5, Throw ${p.throwing_level || '?'}/5, Field ${p.fielding_level || '?'}/5
-  Key position eligible: ${eligible.length > 0 ? eligible.join(', ') : 'none flagged'}
-  Recent position history (last 5 games): ${historyStr || 'no history'}`
-    }).join('\n')
+    const availablePlayers = players.filter(p => !p.out)
+    if (availablePlayers.length === 0) {
+      return NextResponse.json({ error: 'Everyone is marked unavailable' }, { status: 400 })
+    }
 
-    const allPositions = fieldPositions === 10
-      ? ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'LCF', 'RCF', 'RF']
-      : fieldPositions === 9
-        ? ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF']
-        : Array.from({ length: fieldPositions }, (_, i) => `POS${i + 1}`)
+    // ── The batting order: the part that is actually judgment ──
+    const evidence = await gatherHittingEvidence(teamId, playerIds, opponent)
+    const slots = battingSlots(mode, availablePlayers.length)
+    const order = await buildBattingOrder(
+      availablePlayers, evidence, {
+        slots, mode, strategy: strat, team, opponent, gameDate,
+      }
+    )
 
-    const systemPrompt = `You are Bench Coach's lineup generator for youth baseball. You create fair, smart game-day lineups.
-
-RULES FOR ${team.age_group || '8U'} BASEBALL:
-1. ${everyoneBats ? 'EVERYONE BATS every inning - continuous batting order' : 'Standard batting lineup'}
-2. ${innings} innings
-3. ${fieldPositions} fielding positions per inning
-4. Pitching type: ${pitchingType === 'coach_pitch' ? 'Coach pitch (no player pitcher needed)' : pitchingType === 'machine_pitch' ? 'Machine pitch (no player pitcher needed)' : 'Live pitch (need eligible pitcher)'}
-5. Players rotate positions each inning for development
-6. KEY POSITIONS (C, P if live pitch, 1B) should ONLY be assigned to players flagged as eligible
-7. Every player should get roughly equal innings in the field
-8. Rotate infield/outfield — don't stick a kid in RF every inning
-9. Use position history to ensure fairness across games
-10. If there are more players than field positions, rotate bench innings fairly
-
-AVAILABLE POSITIONS: ${allPositions.join(', ')}
-${pitchingType === 'coach_pitch' || pitchingType === 'machine_pitch' ? 'NOTE: No player pitcher needed. Skip P position or use it as an extra fielder near the mound if the league allows.' : ''}
-
-ROSTER (${roster.length} players):
-${rosterInfo}
-
-Generate a lineup for ${innings} innings. Return ONLY a JSON object in this exact format with no markdown formatting, no backticks, and no extra text:
-{
-  "batting_order": [
-    {"team_player_id": "uuid-here", "name": "Player Name", "order": 1}
-  ],
-  "field_assignments": {
-    "1": [
-      {"team_player_id": "uuid-here", "name": "Player Name", "position": "SS"}
-    ],
-    "2": []
-  },
-  "bench_by_inning": {
-    "1": [{"team_player_id": "uuid-here", "name": "Player Name"}]
-  },
-  "notes": "Brief explanation of key decisions"
-}
-
-IMPORTANT:
-- Every player must appear in EVERY inning, either in field_assignments or bench_by_inning
-- Only assign C, P, 1B to eligible players
-- Distribute bench time as equally as possible
-- Vary positions across innings — maximum development
-- The batting_order is the continuous order for the whole game
-- Return ONLY valid JSON. No markdown. No backticks. No explanation outside the JSON.`
-
-    console.log('Calling Claude API...')
-
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-5',
-      max_tokens: 12000,
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: `Generate the game day lineup for our game${opponent ? ` against ${opponent}` : ''}${gameDate ? ` on ${gameDate}` : ''}. Make it fair and smart.`,
-        },
-      ],
+    // ── The fielding plan: solved, then checked ──
+    const orderedIds = order.batting_order.map(o => o.team_player_id)
+    const plan = buildFieldingPlan(players, {
+      innings,
+      fieldPositions,
+      strategy: strat,
+      lineupMode: mode,
+      battingOrderIds: orderedIds,
+      dhPlayerId: mode === 'fixed_10' ? dhPlayerId || null : null,
+      needsPitcher,
     })
 
-    console.log('Claude response received, stop_reason:', response.stop_reason)
-
-    // Parse the response
-    const textContent = response.content.find(c => c.type === 'text')
-    if (!textContent || textContent.type !== 'text') {
-      console.error('No text content in response:', JSON.stringify(response.content))
-      throw new Error('No text response from AI')
+    // Belt and braces: the reason this moved out of the model is that invalid
+    // plans reached coaches. Catch it here rather than at the fence.
+    const errors = validateFieldingPlan(plan, players, {
+      innings, fieldPositions, strategy: strat, lineupMode: mode,
+      dhPlayerId: mode === 'fixed_10' ? dhPlayerId || null : null,
+      needsPitcher,
+    })
+    if (errors.length > 0) {
+      console.error('Fielding plan failed validation:', errors)
     }
 
-    const rawText = textContent.text
-    console.log('Raw response length:', rawText.length)
-    console.log('First 200 chars:', rawText.substring(0, 200))
-
-    // Extract JSON - strip markdown fences if present
-    let jsonStr = rawText
-    // Remove ```json ... ``` wrapping
-    jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '')
-    // Find the outermost JSON object
-    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
-
-    if (!jsonMatch) {
-      console.error('No JSON found in response. Full text:', rawText)
-      throw new Error('No JSON found in lineup response')
-    }
-
-    let lineupData
-    try {
-      lineupData = JSON.parse(jsonMatch[0])
-    } catch (parseError: any) {
-      console.error('JSON parse error:', parseError.message)
-      console.error('Attempted to parse:', jsonMatch[0].substring(0, 500))
-      throw new Error('Failed to parse lineup JSON')
-    }
-
-    console.log('=== LINEUP API SUCCESS ===')
-    console.log('Batting order:', lineupData.batting_order?.length, 'players')
-    console.log('Innings generated:', Object.keys(lineupData.field_assignments || {}).length)
-
-    return NextResponse.json(lineupData)
+    return NextResponse.json({
+      batting_order: order.batting_order,
+      field_assignments: plan.field_assignments,
+      bench_by_inning: plan.bench_by_inning,
+      innings_by_player: plan.innings_by_player,
+      notes: order.notes,
+      reasoning: order.reasoning,
+      warnings: [...plan.warnings, ...errors],
+      meta: {
+        mode, strategy: strat, slots,
+        positions: positionsFor(fieldPositions, needsPitcher),
+        evidence_used: evidence.summary,
+      },
+    })
   } catch (error: any) {
-    console.error('=== LINEUP API ERROR ===')
-    console.error('Error name:', error.name)
-    console.error('Error message:', error.message)
-    console.error('Full error:', error)
+    console.error('Lineup API error:', error)
     return NextResponse.json(
       { error: error.message || 'Failed to generate lineup' },
       { status: 500 }
     )
+  }
+}
+
+// --- evidence ---------------------------------------------------------------
+// A 1-to-5 rating typed in during setup is the weakest possible input to a
+// batting order. Everything here is stronger than that.
+
+interface HittingEvidence {
+  byPlayer: Record<string, string[]>
+  opponentPitching: string | null
+  summary: string[]
+}
+
+async function gatherHittingEvidence(
+  teamId: string,
+  teamPlayerIds: string[],
+  opponent?: string | null
+): Promise<HittingEvidence> {
+  const byPlayer: Record<string, string[]> = {}
+  const summary: string[] = []
+
+  // Season line — on-base is what a batting order is actually built on
+  try {
+    const { data: season } = await supabaseAdmin
+      .from('player_season_batting')
+      .select('team_player_id, games_played, total_ab, total_hits, total_walks, total_strikeouts, total_sb, batting_avg, obp, slg')
+      .in('team_player_id', teamPlayerIds)
+
+    for (const s of (season || []) as any[]) {
+      const pa = (s.total_ab || 0) + (s.total_walks || 0)
+      const line = `season: ${s.total_hits || 0}-for-${s.total_ab || 0}` +
+        ` (AVG ${Number(s.batting_avg || 0).toFixed(3)}, OBP ${Number(s.obp || 0).toFixed(3)}, SLG ${Number(s.slg || 0).toFixed(3)})` +
+        `, ${s.total_walks || 0}BB ${s.total_strikeouts || 0}K, ${s.total_sb || 0}SB` +
+        (pa < 15 ? ` — only ~${pa} PA, treat as an observation not a tendency` : '')
+      ;(byPlayer[s.team_player_id] ||= []).push(line)
+    }
+    if ((season || []).length > 0) summary.push('season stats')
+  } catch { /* stats optional */ }
+
+  // Recent form — a hot week matters more than a season average at this age
+  try {
+    const { data: recent } = await supabaseAdmin
+      .from('player_game_stats')
+      .select('team_player_id, hits, at_bats, walks, strikeouts, game:games(game_date)')
+      .in('team_player_id', teamPlayerIds)
+      .order('created_at', { ascending: false })
+      .limit(120)
+
+    const recentByPlayer: Record<string, any[]> = {}
+    for (const g of (recent || []) as any[]) {
+      const list = (recentByPlayer[g.team_player_id] ||= [])
+      if (list.length < 4) list.push(g)
+    }
+    for (const [id, games] of Object.entries(recentByPlayer)) {
+      const h = games.reduce((s, g) => s + (g.hits || 0), 0)
+      const ab = games.reduce((s, g) => s + (g.at_bats || 0), 0)
+      const bb = games.reduce((s, g) => s + (g.walks || 0), 0)
+      const k = games.reduce((s, g) => s + (g.strikeouts || 0), 0)
+      ;(byPlayer[id] ||= []).push(`last ${games.length} games: ${h}-for-${ab}, ${bb}BB ${k}K`)
+    }
+    if (Object.keys(recentByPlayer).length > 0) summary.push('recent form')
+  } catch { /* optional */ }
+
+  // What the coach actually saw — including notes tapped out mid-game, which
+  // outrank the box score and are the only place "hit it hard right at
+  // somebody" ever gets recorded.
+  try {
+    const { data: obs } = await supabaseAdmin
+      .from('observations')
+      .select('player_id, body, prompt_key, observed_on')
+      .eq('team_id', teamId)
+      .order('observed_on', { ascending: false })
+      .limit(60)
+
+    const { data: linkRows } = await supabaseAdmin
+      .from('team_players')
+      .select('id, player_id')
+      .in('id', teamPlayerIds)
+
+    const byPlayerId: Record<string, string> = {}
+    for (const l of (linkRows || []) as any[]) byPlayerId[l.player_id] = l.id
+
+    let used = 0
+    for (const o of (obs || []) as any[]) {
+      const tpId = byPlayerId[o.player_id]
+      if (!tpId) continue
+      const list = (byPlayer[tpId] ||= [])
+      if (list.filter(x => x.startsWith('coach saw')).length >= 3) continue
+      const live = String(o.prompt_key || '').startsWith('in_game_')
+      list.push(`coach saw${live ? ' (live, during a game)' : ''} ${o.observed_on}: ${o.body}`)
+      used++
+    }
+    if (used > 0) summary.push('coach observations')
+  } catch { /* optional */ }
+
+  // The opposing pitcher, if we've logged them. Nobody else has this.
+  let opponentPitching: string | null = null
+  if (opponent?.trim()) {
+    try {
+      const { data: oppTeam } = await supabaseAdmin
+        .from('opponent_teams').select('id, name').ilike('name', opponent.trim()).maybeSingle()
+
+      if (oppTeam) {
+        const { data: oppPlayers } = await supabaseAdmin
+          .from('opponent_players')
+          .select('id, name, jersey_number, throws, notes, positions')
+          .eq('opponent_team_id', (oppTeam as any).id)
+
+        const pitchers = (oppPlayers || []).filter((p: any) =>
+          (p.positions || []).includes('P') || p.notes?.toLowerCase().includes('pitch'))
+
+        if (pitchers.length > 0) {
+          opponentPitching = pitchers.map((p: any) =>
+            `${p.name}${p.jersey_number ? ` (#${p.jersey_number})` : ''}` +
+            `${p.throws ? ` throws ${p.throws}` : ''}${p.notes ? ` — ${p.notes}` : ''}`
+          ).join('\n')
+          summary.push('scouted opposing pitchers')
+        }
+      }
+    } catch { /* optional */ }
+  }
+
+  return { byPlayer, opponentPitching, summary }
+}
+
+// --- the order --------------------------------------------------------------
+
+interface OrderResult {
+  batting_order: Array<{ team_player_id: string; name: string; order: number }>
+  notes: string
+  reasoning: string
+}
+
+async function buildBattingOrder(
+  players: LineupPlayer[],
+  evidence: HittingEvidence,
+  opts: {
+    slots: number
+    mode: LineupMode
+    strategy: Strategy
+    team: any
+    opponent?: string | null
+    gameDate?: string | null
+  }
+): Promise<OrderResult> {
+  // Rating-only fallback, used if the model is unavailable or returns junk.
+  // Never leaves the coach without a lineup.
+  const fallback = (): OrderResult => ({
+    batting_order: [...players]
+      .sort((a, b) => (b.hitting_level || 0) - (a.hitting_level || 0))
+      .slice(0, opts.slots)
+      .map((p, i) => ({ team_player_id: p.id, name: p.name, order: i + 1 })),
+    notes: 'Ordered by your hitting ratings.',
+    reasoning: '',
+  })
+
+  if (!process.env.ANTHROPIC_API_KEY) return fallback()
+
+  const roster = players.map(p =>
+    `- ${p.name} (#${p.jersey_number || '?'}) [ID: ${p.id}]\n` +
+    `    your ratings — hit ${p.hitting_level || '?'}/5, run/field ${p.fielding_level || '?'}/5\n` +
+    (evidence.byPlayer[p.id]?.length
+      ? evidence.byPlayer[p.id].map(l => `    ${l}`).join('\n')
+      : '    no game data logged yet')
+  ).join('\n')
+
+  const system = `${COACH_VOICE}
+
+WHAT THIS SURFACE IS
+
+You are setting a batting order. The output is JSON, but the standard above still governs the reasoning you write — name the actual reason, not "he's a good hitter".
+
+HOW A BATTING ORDER IS ACTUALLY BUILT
+
+On-base ability at the top, because the top of the order gets the most plate appearances and every runner in front of your best contact hitters is a run. Strikeout rate matters more than average at this age — a ball in play is an error waiting to happen. Speed matters where it can be used, not as a headline.
+
+Weigh the evidence in the order you always do: what the coach saw outranks the box score, and a small sample is an observation, not a tendency. Twelve at-bats is twelve at-bats — if that is all you have, say so and lean on the coach's ratings rather than pretending the numbers mean something.
+
+${opts.strategy === 'competitive'
+  ? 'This is a game they are trying to win. Build the order that scores the most runs.'
+  : 'This is a development context. Build a sensible order, but do not bury a kid at the bottom every week — say so if you are rotating someone up.'}`
+
+  const prompt = `Set the batting order for ${opts.team.name}${opts.team.age_group ? ` (${opts.team.age_group}` : ''}${opts.team.season?.league_type ? `, ${opts.team.season.league_type}` : ''}${opts.team.age_group ? ')' : ''}${opts.opponent ? ` vs ${opts.opponent}` : ''}${opts.gameDate ? ` on ${opts.gameDate}` : ''}.
+
+${opts.mode === 'continuous'
+  ? `Everyone bats — a continuous order of all ${players.length} available players. Nobody is left out; the question is purely the sequence.`
+  : `${opts.slots} batters only. Choosing WHO IS IN THE ORDER is part of the job and matters more than the sequence — say who you left out and why, in one line, without being unkind about a child.`}
+
+AVAILABLE PLAYERS:
+${roster}
+
+${evidence.opponentPitching ? `THE PITCHER(S) YOU'RE LIKELY TO SEE (from your own scouting):
+${evidence.opponentPitching}
+
+Use this if it changes anything — a hard thrower argues for your short-swing contact hitters up top; someone who walks people argues for patience at the top. If it does not change anything, ignore it rather than inventing a reason.
+` : ''}
+Return ONLY JSON, no markdown fences:
+{
+  "batting_order": [{"team_player_id": "uuid", "name": "Name", "order": 1}],
+  "notes": "One or two sentences a coach could read on the way to the field.",
+  "reasoning": "Two to four sentences on the decisions that were not obvious — why this player at the top, why someone moved, what you'd change if the first two innings go badly. Name the evidence you used. If the data is too thin to justify much, say that plainly instead of inventing analysis."
+}`
+
+  try {
+    const res = await anthropic.messages.create({
+      model: 'claude-sonnet-5',
+      max_tokens: 4000,
+      system,
+      messages: [{ role: 'user', content: prompt }],
+    })
+
+    const text = res.content.find(c => c.type === 'text')
+    if (!text || text.type !== 'text') return fallback()
+
+    const match = text.text.replace(/```(?:json)?/g, '').match(/\{[\s\S]*\}/)
+    if (!match) return fallback()
+
+    const parsed = JSON.parse(match[0]) as Partial<OrderResult>
+    const valid = new Map(players.map(p => [p.id, p]))
+
+    const order = (parsed.batting_order || [])
+      .filter(o => valid.has(o.team_player_id))
+      .slice(0, opts.slots)
+      .map((o, i) => ({
+        team_player_id: o.team_player_id,
+        name: valid.get(o.team_player_id)!.name,
+        order: i + 1,
+      }))
+
+    // A continuous order that dropped somebody is a bug the coach would only
+    // find at the plate. Append anyone missing rather than shipping it.
+    if (opts.mode === 'continuous' && order.length < players.length) {
+      const included = new Set(order.map(o => o.team_player_id))
+      for (const p of players) {
+        if (!included.has(p.id)) {
+          order.push({ team_player_id: p.id, name: p.name, order: order.length + 1 })
+        }
+      }
+    }
+
+    if (order.length === 0) return fallback()
+
+    return {
+      batting_order: order,
+      notes: parsed.notes || '',
+      reasoning: parsed.reasoning || '',
+    }
+  } catch (e: any) {
+    console.warn('Batting order generation failed, using ratings:', e?.message)
+    return fallback()
   }
 }
