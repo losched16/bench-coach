@@ -13,6 +13,7 @@ import {
   ClipboardList, ChevronRight, Trash2, Info, Target,
 } from 'lucide-react'
 import { focusAreaLabel, focusAreaChip, focusAreaRank } from '@/lib/focusAreas'
+import { prepareImages, imagesFromClipboard } from '@/lib/imagePrep'
 
 // ── Types ──────────────────────────────────────────────
 
@@ -229,16 +230,6 @@ function LogContent() {
 
   // ── Background parse ──
   // Fires the moment files are chosen so it runs while the user types notes.
-  const fileToBase64 = (file: File): Promise<{ data: string; mimeType: string }> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => {
-        const result = reader.result as string
-        resolve({ data: result.split(',')[1], mimeType: file.type || 'image/png' })
-      }
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
 
   const startParse = useCallback((selected: File[]) => {
     if (selected.length === 0) return
@@ -249,7 +240,15 @@ function LogContent() {
 
     const run = async (): Promise<ParsedGame[] | null> => {
       try {
-        const images = await Promise.all(selected.map(fileToBase64))
+        // Downscales phone screenshots under the API's limit and reports
+        // formats it can't read (HEIC) with a fix rather than a failure.
+        const { images, errors: imageErrors } = await prepareImages(selected)
+        if (images.length === 0) {
+          setParseMessage(imageErrors[0] || "Couldn't read those images.")
+          setParsing(false)
+          return null
+        }
+        if (imageErrors.length > 0) setParseMessage(imageErrors.join(' '))
         const res = await fetch('/api/log/parse', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -290,6 +289,21 @@ function LogContent() {
     setParseMessage(null)
     if (selected.length > 0 && config.parses) startParse(selected)
   }
+
+  // Pasting a screenshot is the gesture people actually use. The page ignored
+  // it entirely before, silently — no image, no error, nothing.
+  useEffect(() => {
+    if (config.screenshots === 'none') return
+    const onPaste = (e: ClipboardEvent) => {
+      const pasted = imagesFromClipboard(e)
+      if (pasted.length === 0) return
+      e.preventDefault()
+      handleFiles([...files, ...pasted])
+    }
+    window.addEventListener('paste', onPaste)
+    return () => window.removeEventListener('paste', onPaste)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entryType, files])
 
   // ── Editing the parse ──
   const updatePlayer = (gi: number, pi: number, field: string, value: any) => {
@@ -613,13 +627,13 @@ function LogContent() {
           <Step
             n={3}
             title={config.screenshots === 'expected' ? 'Screenshots' : 'Screenshots (optional)'}
-            subtitle={config.screenshotHint}
+            subtitle={`${config.screenshotHint || ''} You can paste them straight in (Cmd/Ctrl+V).`.trim()}
           >
             <input
               type="file"
               accept="image/*"
               multiple
-              onChange={e => handleFiles(Array.from(e.target.files || []))}
+              onChange={e => { handleFiles([...files, ...Array.from(e.target.files || [])]); e.target.value = '' }}
               className="block w-full text-sm text-gray-600 file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border-0 file:bg-red-50 file:text-red-700 file:font-medium hover:file:bg-red-100"
             />
 

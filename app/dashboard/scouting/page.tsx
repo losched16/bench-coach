@@ -6,6 +6,8 @@ import { Suspense } from 'react'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { usePageView, useTracker } from '@/lib/tracking'
 import { nameSimilarity, stalenessLabel, stalenessOf, aggregateBattingLines, MIN_PA_FOR_TENDENCY } from '@/lib/scouting'
+import { prepareImages, imagesFromClipboard } from '@/lib/imagePrep'
+import { OpponentAnalysis } from '@/components/OpponentAnalysis'
 import {
   Search, Plus, Camera, Loader2, ChevronLeft, Trash2, Calendar,
   AlertTriangle, CheckCircle2, XCircle, HelpCircle, Merge,
@@ -299,6 +301,7 @@ function ScoutingContent() {
         <OpponentDetail
           detail={detail}
           loading={detailLoading}
+          coachId={coachId}
           mergeMode={mergeMode}
           mergeSelection={mergeSelection}
           merging={merging}
@@ -451,11 +454,12 @@ function OpponentList({
 // ── Opponent detail ────────────────────────────────────
 
 function OpponentDetail({
-  detail, loading, mergeMode, mergeSelection, merging,
+  detail, loading, coachId, mergeMode, mergeSelection, merging,
   onBack, onToggleMergeMode, onToggleMergeSelect, onMerge, onClearReview, onDeleteEntry, onViewBoard,
 }: {
   detail: { team: OpponentTeam; players: OpponentPlayer[]; entries: ScoutingEntry[]; matchups: Matchup[] } | null
   loading: boolean
+  coachId: string | null
   mergeMode: boolean
   mergeSelection: string[]
   merging: boolean
@@ -510,6 +514,15 @@ function OpponentDetail({
         </div>
         {team.notes && <p className="mt-3 text-sm text-gray-700 whitespace-pre-wrap">{team.notes}</p>}
       </div>
+
+      {/* The synthesis, directly under the header — it's the reason to open
+          this page, not a footnote below the roster table. */}
+      <OpponentAnalysis
+        coachId={coachId}
+        opponentTeamId={team.id}
+        opponentName={team.name}
+        entryCount={entries.length}
+      />
 
       {needsReview.length > 0 && !mergeMode && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
@@ -730,23 +743,42 @@ function CaptureForm({
         .sort((a, b) => b.sim - a.sim)[0]
     : null
 
-  const fileToBase64 = (file: File): Promise<{ data: string; mimeType: string }> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => {
-        const result = reader.result as string
-        resolve({ data: result.split(',')[1], mimeType: file.type || 'image/png' })
+  // Screenshots arrive by paste far more often than by file picker — it's the
+  // gesture people already use — and the page used to ignore them entirely.
+  const addFiles = (incoming: File[]) => {
+    if (incoming.length === 0) return
+    setFiles(prev => [...prev, ...incoming])
+    setParsed(null)
+    setParsedPlayers([])
+    setParseError(null)
+  }
+
+  useEffect(() => {
+    if (entryType === 'observation') return
+    const onPaste = (e: ClipboardEvent) => {
+      const pasted = imagesFromClipboard(e)
+      if (pasted.length > 0) {
+        e.preventDefault()
+        addFiles(pasted)
       }
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
+    }
+    window.addEventListener('paste', onPaste)
+    return () => window.removeEventListener('paste', onPaste)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entryType])
 
   const handleParse = async () => {
     if (files.length === 0 && !pastedText.trim()) return
     setParsing(true)
     setParseError(null)
     try {
-      const images = await Promise.all(files.map(fileToBase64))
+      // Downscales and rejects formats the API can't read, with a message
+      // that says what to do rather than failing opaquely.
+      const { images, errors: imageErrors } = await prepareImages(files)
+      if (images.length === 0 && imageErrors.length > 0) {
+        throw new Error(imageErrors.join(' '))
+      }
+      if (imageErrors.length > 0) setParseError(imageErrors.join(' '))
       const res = await fetch('/api/scouting/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -957,14 +989,32 @@ function CaptureForm({
       {/* 4. Screenshots + pasted recap text */}
       {entryType !== 'observation' && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Screenshots</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Screenshots <span className="font-normal text-gray-500">— or just paste them (Cmd/Ctrl+V)</span>
+          </label>
           <input
             type="file"
             accept="image/*"
             multiple
-            onChange={e => { setFiles(Array.from(e.target.files || [])); setParsed(null); setParsedPlayers([]) }}
+            onChange={e => { addFiles(Array.from(e.target.files || [])); e.target.value = '' }}
             className="block w-full text-sm text-gray-600 file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border-0 file:bg-red-50 file:text-red-700 file:font-medium hover:file:bg-red-100"
           />
+
+          {files.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {files.map((f, i) => (
+                <span key={i} className="inline-flex items-center gap-1.5 px-2 py-1 bg-gray-100 rounded text-xs text-gray-700">
+                  {f.name || `pasted image ${i + 1}`}
+                  <button
+                    onClick={() => { setFiles(prev => prev.filter((_, j) => j !== i)); setParsed(null); setParsedPlayers([]) }}
+                    className="text-gray-400 hover:text-red-600"
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
 
           {(entryType === 'recap' || entryType === 'box_score') && (
             <div className="mt-3">

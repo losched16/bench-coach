@@ -374,3 +374,7 @@ export function aggregateBattingLines(lines: any[]): BattingTotals {
   }
   return t
 }
+
+// Marks the end of a streamed opponent analysis and the start of its JSON
+// tail. Shared so the client splits on exactly the same token.
+export const SCOUT_META_SENTINEL = '\n<<<BENCHCOACH_SCOUT_META>>>'
