@@ -693,14 +693,14 @@ export default function LineupPage() {
 
             {/* Who isn't here. Nothing else in the app knows this, and a lineup
                 built around a kid who didn't travel is worse than useless. */}
-            {roster.length > 0 && (
+            {players.length > 0 && (
               <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Anyone missing?{' '}
                   <span className="font-normal text-gray-500">Tap to mark them out</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {roster.map((p: any) => {
+                  {players.map((p: any) => {
                     const isOut = unavailableIds.includes(p.id)
                     return (
                       <button
@@ -730,7 +730,7 @@ export default function LineupPage() {
                       className="w-full sm:w-64 px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     >
                       <option value="">Everyone in the order fields</option>
-                      {roster
+                      {players
                         .filter((p: any) => !unavailableIds.includes(p.id))
                         .map((p: any) => (
                           <option key={p.id} value={p.id}>{p.player?.name || 'Unknown'}</option>
