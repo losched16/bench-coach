@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
           )
 
           for await (const event of analysisStream) {
-            if (event.type === 'content_block_delta' && (event.delta as any).type === 'text_delta') {
+            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
               const chunk = (event.delta as any).text as string
               markdown += chunk
               controller.enqueue(encoder.encode(chunk))
@@ -549,6 +549,6 @@ Write it now. No preamble, no sign-off, no "I hope this helps".`
     system: ANALYSIS_SYSTEM,
     messages: [{ role: 'user', content: prompt }],
     output_config: { effort: ANALYSIS_EFFORT },
-  } as any)
+  })
 }
 

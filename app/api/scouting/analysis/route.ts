@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
         try {
           const gen = writeAnalysis(evidence, previous)
           for await (const event of gen) {
-            if (event.type === 'content_block_delta' && (event.delta as any).type === 'text_delta') {
+            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
               const chunk = (event.delta as any).text as string
               markdown += chunk
               controller.enqueue(encoder.encode(chunk))
@@ -389,5 +389,5 @@ Write it now. No preamble, no sign-off.`
     system: SCOUT_SYSTEM,
     messages: [{ role: 'user', content: prompt }],
     output_config: { effort: 'medium' },
-  } as any)
+  })
 }

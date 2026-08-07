@@ -10,7 +10,7 @@
     "verify:claude": "node scripts/verify-claude-calls.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.20.0",
+    "@anthropic-ai/sdk": "^0.116.0",
     "@supabase/ssr": "^0.1.0",
     "@supabase/supabase-js": "^2.39.0",
     "class-variance-authority": "^0.7.0",

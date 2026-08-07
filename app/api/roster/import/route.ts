@@ -65,7 +65,7 @@ Important:
       // Reading names off a roster screenshot is not a reasoning problem;
       // thinking spend here is pure latency.
       output_config: { effort: 'low' },
-    } as any)
+    })
 
     const text = textFrom(response)
     if (!text) {

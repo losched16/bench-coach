@@ -629,12 +629,17 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (!thread) {
-      const { data: newThread } = await supabaseAdmin
+      const { data: newThread, error: threadErr } = await supabaseAdmin
         .from('chat_threads')
         .insert({ team_id: teamId })
         .select()
         .single()
       thread = newThread
+      // Without this the next line throws "Cannot read properties of null",
+      // which tells nobody that the conversation table is what failed.
+      if (!thread) {
+        throw new Error(`Could not open a chat thread for this team: ${threadErr?.message || 'unknown error'}`)
+      }
     }
 
     // Save messages
@@ -710,12 +715,17 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (!thread) {
-      const { data: newThread } = await supabaseAdmin
+      const { data: newThread, error: threadErr } = await supabaseAdmin
         .from('chat_threads')
         .insert({ team_id: teamId })
         .select()
         .single()
       thread = newThread
+      // Without this the next line throws "Cannot read properties of null",
+      // which tells nobody that the conversation table is what failed.
+      if (!thread) {
+        throw new Error(`Could not open a chat thread for this team: ${threadErr?.message || 'unknown error'}`)
+      }
     }
 
     if (!thread) {

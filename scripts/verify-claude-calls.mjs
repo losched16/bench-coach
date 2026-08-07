@@ -20,6 +20,10 @@ const files = execSync(
   { encoding: 'utf8' }
 ).trim().split('\n').filter(Boolean)
 
+// The SDK estimates a non-streaming request at 60 minutes per 128k tokens and
+// throws outright if that lands over ten minutes. 128000 * (10/60) = 21333.
+const NONSTREAMING_CEILING = 21333
+
 const problems = []
 
 for (const file of files) {
@@ -42,6 +46,21 @@ for (const file of files) {
   const src = lines.join('\n')
   if (src.includes('messages.create(') && !src.includes('claudeText')) {
     problems.push(`${file}  calls messages.create() but never imports textFrom/requireText`)
+  }
+
+  // The SDK refuses a non-streaming request whose max_tokens implies a run
+  // longer than ten minutes, and it throws client-side before sending — so a
+  // routine bump to the budget takes the route down with an error that reads
+  // like a network problem. Switch to messages.stream().finalMessage() instead.
+  for (const call of src.split('messages.create(').slice(1)) {
+    const head = call.slice(0, 600)
+    const m = head.match(/max_tokens:\s*(\d+)/)
+    if (m && Number(m[1]) > NONSTREAMING_CEILING) {
+      problems.push(
+        `${file}  non-streaming call with max_tokens ${m[1]} — over the SDK's ` +
+        `${NONSTREAMING_CEILING} ceiling; use messages.stream().finalMessage()`
+      )
+    }
   }
 }
 

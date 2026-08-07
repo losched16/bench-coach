@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
       max_tokens: 16000,
       messages: [{ role: 'user', content }],
       output_config: { effort: 'low' },
-    } as any)
+    })
 
     const raw = textFrom(response)
     const jsonMatch = raw.match(/\{[\s\S]*\}/)

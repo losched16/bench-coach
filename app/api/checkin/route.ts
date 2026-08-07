@@ -195,7 +195,7 @@ export async function POST(request: NextRequest) {
         try {
           const gen = writeCheckin(evidence)
           for await (const event of gen) {
-            if (event.type === 'content_block_delta' && (event.delta as any).type === 'text_delta') {
+            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
               const chunk = (event.delta as any).text as string
               raw += chunk
               controller.enqueue(encoder.encode(chunk))
@@ -387,5 +387,5 @@ Write it now. No preamble, no sign-off.`
     system: CHECKIN_SYSTEM,
     messages: [{ role: 'user', content: prompt }],
     output_config: { effort: CHECKIN_EFFORT },
-  } as any)
+  })
 }

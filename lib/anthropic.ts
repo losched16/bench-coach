@@ -583,7 +583,7 @@ export async function generateChatResponse(
       // carries the structure and the evidence. Low effort keeps thinking from
       // dominating both the token budget and the coach's wait.
       output_config: { effort: 'low' },
-    } as any)
+    })
 
     const response = await stream.finalMessage()
 
@@ -766,7 +766,7 @@ Always return valid JSON. No text outside the JSON.`,
       // Medium is the balance point between a thoughtful plan and a coach
       // staring at a spinner.
       output_config: { effort: 'medium' },
-    } as any).finalMessage()
+    }).finalMessage()
 
     const content = textFrom(response)
 
@@ -853,7 +853,7 @@ Return ONLY valid JSON for a single block:
       system: `You are Coach Mike, a 25-year veteran youth baseball coach. You create incredibly detailed drill instructions that a first-time volunteer parent-coach can follow perfectly. Every drill has exact distances, reps, words to say, and a YouTube video when available. Always return valid JSON. No text outside the JSON.`,
       messages: [{ role: 'user', content: prompt }],
       output_config: { effort: 'low' },
-    } as any)
+    })
 
     const content = textFrom(response)
 
