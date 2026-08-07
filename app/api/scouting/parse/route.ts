@@ -85,6 +85,11 @@ const PROMPTS: Record<string, string> = {
   bracket: BRACKET_PROMPT,
 }
 
+// Vision and generation calls take real time now that thinking is on by
+// default. Without this the platform kills the function at its 15s default
+// and the user sees a failure that has nothing to do with their input.
+export const maxDuration = 120
+
 export async function POST(request: NextRequest) {
   try {
     const { images, text, entryType } = await request.json()
@@ -128,7 +133,8 @@ export async function POST(request: NextRequest) {
       // low and the object truncates mid-array and never parses.
       max_tokens: 16000,
       messages: [{ role: 'user', content }],
-    })
+      output_config: { effort: 'low' },
+    } as any)
 
     const responseText = textFrom(response)
     const jsonMatch = responseText.match(/\{[\s\S]*\}/)

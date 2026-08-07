@@ -373,7 +373,8 @@ Return ONLY JSON, no markdown fences:
       max_tokens: 8000,
       system,
       messages: [{ role: 'user', content: prompt }],
-    })
+      output_config: { effort: 'low' },
+    } as any)
 
     const text = textFrom(res)
     if (!text) return fallback()

@@ -9,6 +9,11 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+// Vision and generation calls take real time now that thinking is on by
+// default. Without this the platform kills the function at its 15s default
+// and the user sees a failure that has nothing to do with their input.
+export const maxDuration = 180
+
 export async function POST(request: NextRequest) {
   try {
     const { teamId, duration, focus, constraints } = await request.json()

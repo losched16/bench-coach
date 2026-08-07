@@ -112,9 +112,14 @@ export default function ChatPage() {
         }),
       })
 
-      if (!response.ok) throw new Error('Failed to send message')
+      const data = await response.json().catch(() => ({}))
 
-      const data = await response.json()
+      // Show what actually failed. Replacing every server error with one
+      // generic sentence is why a broken chat took a week to diagnose — the
+      // reason was already in the response body and got thrown away here.
+      if (!response.ok) {
+        throw new Error(data?.error || `The server returned ${response.status}.`)
+      }
 
       const assistantMsg: Message = {
         id: data.id || `temp-${Date.now()}-assistant`,
@@ -128,14 +133,15 @@ export default function ChatPage() {
         { ...tempUserMsg, id: data.user_message_id },
         assistantMsg,
       ])
-    } catch (error) {
+    } catch (error: any) {
       console.error('Chat error:', error)
+      const detail = error?.message ? `\n\n\`${error.message}\`` : ''
       setMessages(prev => [
         ...prev,
         {
           id: `error-${Date.now()}`,
           role: 'assistant',
-          content: 'Sorry, something went wrong. Please try again.',
+          content: `That didn't go through. Try again — if it keeps happening, this is why:${detail}`,
         },
       ])
     } finally {

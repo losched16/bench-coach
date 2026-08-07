@@ -17,6 +17,12 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+// Every other AI route got one of these and chat never did. The platform
+// default is 15 seconds; a coach question that assembles context, reads the
+// scouting data and then thinks before answering blows past that routinely,
+// and the function is killed with no error the user can act on.
+export const maxDuration = 120
+
 export async function POST(request: NextRequest) {
   try {
     const { teamId, message, history } = await request.json()

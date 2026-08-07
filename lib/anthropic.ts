@@ -567,14 +567,35 @@ export async function generateChatResponse(
       { role: 'user' as const, content: userMessage }
     ]
 
-    const response = await anthropic.messages.create({
+    // Streamed even though the caller wants the whole message at once. A
+    // non-streaming request that runs long gets killed at the platform timeout
+    // with nothing to show for it, and thinking made these replies markedly
+    // slower than they were before.
+    const stream = anthropic.messages.stream({
       model: 'claude-sonnet-5',
-      // Thinking tokens count against this, so it has to cover the reasoning
-      // and the answer. A coach asking a real question is worth the room.
+      // A hard cap on thinking AND the answer together. Thinking is on by
+      // default on this model, so a budget sized for the answer alone gets
+      // spent before the answer starts — which is how this surface broke.
       max_tokens: 10000,
       system: systemPrompt,
       messages: messages,
-    })
+      // A chat reply doesn't need deep reasoning; the system prompt already
+      // carries the structure and the evidence. Low effort keeps thinking from
+      // dominating both the token budget and the coach's wait.
+      output_config: { effort: 'low' },
+    } as any)
+
+    const response = await stream.finalMessage()
+
+    if (!textFrom(response)) {
+      // Log the shape before throwing. "Failed to generate response" with no
+      // detail is what let the empty-reply bug live in production.
+      console.error('Chat returned no text.', {
+        stop_reason: response.stop_reason,
+        blocks: response.content.map((b: any) => b.type),
+        usage: response.usage,
+      })
+    }
 
     // An empty reply is a failure here, not a valid answer — throw rather than
     // save a blank message to the conversation.
@@ -722,7 +743,9 @@ Format as JSON:
   ]
 }`
 
-    const response = await anthropic.messages.create({
+    // Streamed for the length, not for the UI: a plan this long is exactly the
+    // kind of request that gets cut off at a platform timeout mid-generation.
+    const response = await anthropic.messages.stream({
       model: 'claude-sonnet-5',
       // Thinking counts against this and a full plan is long JSON; too low and
       // the response truncates mid-object and fails to parse.
@@ -739,7 +762,11 @@ When a drill video library is available, match drills to videos so the coach can
 
 Always return valid JSON. No text outside the JSON.`,
       messages: [{ role: 'user', content: prompt }],
-    })
+      // The plan's quality lives in the prompt, which is long and specific.
+      // Medium is the balance point between a thoughtful plan and a coach
+      // staring at a spinner.
+      output_config: { effort: 'medium' },
+    } as any).finalMessage()
 
     const content = textFrom(response)
 
@@ -825,7 +852,8 @@ Return ONLY valid JSON for a single block:
       max_tokens: 10000,
       system: `You are Coach Mike, a 25-year veteran youth baseball coach. You create incredibly detailed drill instructions that a first-time volunteer parent-coach can follow perfectly. Every drill has exact distances, reps, words to say, and a YouTube video when available. Always return valid JSON. No text outside the JSON.`,
       messages: [{ role: 'user', content: prompt }],
-    })
+      output_config: { effort: 'low' },
+    } as any)
 
     const content = textFrom(response)
 

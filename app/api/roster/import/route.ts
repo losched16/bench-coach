@@ -6,6 +6,11 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
 })
 
+// Vision and generation calls take real time now that thinking is on by
+// default. Without this the platform kills the function at its 15s default
+// and the user sees a failure that has nothing to do with their input.
+export const maxDuration = 120
+
 export async function POST(request: NextRequest) {
   try {
     const { image, mimeType } = await request.json()
@@ -57,7 +62,10 @@ Important:
           ],
         },
       ],
-    })
+      // Reading names off a roster screenshot is not a reasoning problem;
+      // thinking spend here is pure latency.
+      output_config: { effort: 'low' },
+    } as any)
 
     const text = textFrom(response)
     if (!text) {

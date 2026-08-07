@@ -63,6 +63,11 @@ Rules that matter:
 - If the images are not box scores at all, return {"games": [], "warnings": ["not a box score"]}.`
 }
 
+// Vision and generation calls take real time now that thinking is on by
+// default. Without this the platform kills the function at its 15s default
+// and the user sees a failure that has nothing to do with their input.
+export const maxDuration = 120
+
 export async function POST(request: NextRequest) {
   try {
     const { images, teamId, teamName } = await request.json()
@@ -114,7 +119,8 @@ export async function POST(request: NextRequest) {
       // unparseable JSON rather than a partial result.
       max_tokens: 16000,
       messages: [{ role: 'user', content }],
-    })
+      output_config: { effort: 'low' },
+    } as any)
 
     const raw = textFrom(response)
     const jsonMatch = raw.match(/\{[\s\S]*\}/)
