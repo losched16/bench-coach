@@ -4,10 +4,11 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   ChevronLeft, ChevronRight, Loader2, AlertCircle, Target, Check,
-  ClipboardList, User, Play, Sparkles, Trash2,
+  ClipboardList, User, Play, Sparkles, Trash2, Repeat,
 } from 'lucide-react'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { focusAreaLabel, focusAreaChip, FOCUS_AREAS, FocusArea } from '@/lib/focusAreas'
+import { DrillSwap } from './DrillSwap'
 
 // Plans, as cards.
 //
@@ -48,6 +49,7 @@ interface Drill {
   youtube_url: string | null
   youtube_video_id: string | null
   equipment_needed: string[] | null
+  skill_category: string | null
 }
 
 interface PracticePlan {
@@ -314,6 +316,8 @@ function PlanDetail({
   onClosedOut: () => void
 }) {
   const [removing, setRemoving] = useState(false)
+  // Which drill the coach is replacing, if any.
+  const [swapping, setSwapping] = useState<Drill | null>(null)
   const [drills, setDrills] = useState<Drill[]>([])
   const [loading, setLoading] = useState(true)
   const [logging, setLogging] = useState(false)
@@ -324,20 +328,18 @@ function PlanDetail({
   const [area, setArea_] = useState<string | null>(plan.focusArea)
   const [savingArea, setSavingArea] = useState(false)
 
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetch(
-          `/api/prescribe/drills?prescriptionId=${plan.id}&coachId=${coachId}`
-        )
-        const d = await res.json()
-        if (!cancelled) setDrills(d.drills || [])
-      } catch { /* the plan still reads without them */ }
-      finally { if (!cancelled) setLoading(false) }
-    })()
-    return () => { cancelled = true }
+  const loadDrills = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `/api/prescribe/drills?prescriptionId=${plan.id}&coachId=${coachId}`
+      )
+      const d = await res.json()
+      setDrills(d.drills || [])
+    } catch { /* the plan still reads without them */ }
+    finally { setLoading(false) }
   }, [plan.id, coachId])
+
+  useEffect(() => { loadDrills() }, [loadDrills])
 
   const logSession = async () => {
     setLogging(true)
@@ -499,22 +501,46 @@ function PlanDetail({
                       You need: {d.equipment_needed.join(', ')}
                     </p>
                   )}
-                  {(d.youtube_url || d.youtube_video_id) && (
-                    <a
-                      href={d.youtube_url || `https://www.youtube.com/watch?v=${d.youtube_video_id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-3 inline-flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-xl font-bold text-sm"
+                  <div className="mt-3 flex items-center gap-2 flex-wrap">
+                    {(d.youtube_url || d.youtube_video_id) && (
+                      <a
+                        href={d.youtube_url || `https://www.youtube.com/watch?v=${d.youtube_video_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-xl font-bold text-sm"
+                      >
+                        <Play size={16} /> Watch it
+                      </a>
+                    )}
+                    {/* One drill, not the whole set. A coach who dislikes one
+                        drill wants that drill changed, not a new plan. */}
+                    <button
+                      onClick={() => setSwapping(d)}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-xl font-bold text-sm active:bg-gray-100"
                     >
-                      <Play size={16} /> Watch it
-                    </a>
-                  )}
+                      <Repeat size={15} /> Swap it
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           ))
         )}
       </div>
+
+      {swapping && (
+        <DrillSwap
+          coachId={coachId}
+          prescriptionId={plan.id}
+          replacing={{
+            id: swapping.id,
+            drill_name: swapping.drill_name,
+            skill_category: swapping.skill_category,
+          }}
+          onCancel={() => setSwapping(null)}
+          onSwapped={async () => { setSwapping(null); await loadDrills() }}
+        />
+      )}
 
       {error && (
         <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">{error}</p>

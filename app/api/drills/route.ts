@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       
       const { data: drills } = await supabaseAdmin
         .from('drill_resources')
-        .select('drill_name, youtube_video_id, youtube_url, thumbnail_url, channel, description, skill_category, difficulty_level, common_flaws_fixed, ai_coaching_notes')
+        .select('id, drill_name, youtube_video_id, youtube_url, thumbnail_url, channel, description, skill_category, difficulty_level, common_flaws_fixed, ai_coaching_notes')
         .or('status.eq.approved,status.is.null')
       
       // Fuzzy match each name
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     if (name) {
       const { data: drills } = await supabaseAdmin
         .from('drill_resources')
-        .select('drill_name, youtube_video_id, youtube_url, thumbnail_url, channel, description, skill_category, difficulty_level, common_flaws_fixed, ai_coaching_notes')
+        .select('id, drill_name, youtube_video_id, youtube_url, thumbnail_url, channel, description, skill_category, difficulty_level, common_flaws_fixed, ai_coaching_notes')
         .or('status.eq.approved,status.is.null')
       
       // Fuzzy match
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     // Get all drills (optionally filtered by category)
     let query = supabaseAdmin
       .from('drill_resources')
-      .select('drill_name, youtube_video_id, youtube_url, thumbnail_url, channel, description, skill_category, difficulty_level, common_flaws_fixed, ai_coaching_notes')
+      .select('id, drill_name, youtube_video_id, youtube_url, thumbnail_url, channel, description, skill_category, difficulty_level, common_flaws_fixed, ai_coaching_notes')
       .or('status.eq.approved,status.is.null')
       .order('skill_category')
       .order('drill_name')
