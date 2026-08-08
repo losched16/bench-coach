@@ -15,8 +15,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'clint@mybenchcoach.com'
-
 export const maxDuration = 60
 
 async function oembedStatus(videoId: string): Promise<number | string> {
@@ -33,10 +31,9 @@ export async function GET(request: NextRequest) {
   const denied = await requireAdmin()
   if (denied) return denied
 
+  // The ?email= check that used to live here was the same published-password
+  // pattern as /api/admin — requireAdmin() above replaces it with the session.
   const { searchParams } = new URL(request.url)
-  if (searchParams.get('email') !== ADMIN_EMAIL) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
   const scope = searchParams.get('scope') || 'pending'
   const write = searchParams.get('write') === '1'
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { authorizeTeam, authzResponse, can, Capability, Role } from '@/lib/authz'
+import { authorizeTeam, authzResponse, can } from '@/lib/authz'
+import type { Capability, Role } from '@/lib/authz'
 
 // What am I allowed to do on this team?
 //
