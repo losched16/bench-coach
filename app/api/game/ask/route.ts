@@ -7,6 +7,10 @@ import {
   SubRuleSet, DEFAULT_SUB_RULES, PlayerGameState, renderSubstitutionState,
 } from '@/lib/substitutions'
 
+// Same shape as the check-in verdict: prose the coach reads, then a machine
+// tail. One call rather than a second model pass to classify what they said.
+const RULE_SENTINEL = '\n<<<BENCHCOACH_RULE>>>'
+
 // The dugout assistant.
 //
 // "Can I bring RJ back in?" is a question with a right answer, and the coach
@@ -64,7 +68,31 @@ HARD RULES
 4. Pitch counts are a safety matter. If a pitcher is near or past a limit and
    the question touches them, say it whether or not they asked.
 
-5. Never suggest a move the state says is illegal, even as an option.`
+5. Never suggest a move the state says is illegal, even as an option.
+
+HOUSE RULES
+
+The coach may state a rule their league uses that the app does not model. Treat
+anything under HOUSE RULES below as true, and answer with it.
+
+When a house rule CONTRADICTS the ruleset the app is enforcing, say so in one
+sentence: the app will still flag that move, and they can use the override or
+change the ruleset setting. Never imply a button will allow something it will
+refuse — a coach who is told "yes" and then blocked stops trusting both.
+
+AFTER YOUR ANSWER
+
+If the coach's message states a durable rule — something that should hold for
+the rest of this game rather than a one-off question — end your reply with the
+line ${RULE_SENTINEL.trim()} followed by JSON:
+
+{"houseRule": "<the rule, in one plain sentence, or null>",
+ "proposedRuleSet": "starter_reentry" | "continuous_free" | "no_reentry" | null}
+
+Set proposedRuleSet ONLY when what they described plainly IS one of those three
+— "everybody bats and we sub freely" is continuous_free. If it is a quirk on
+top of a ruleset, leave it null and put it in houseRule. If they asked a
+question rather than stating a rule, omit the line entirely.`
 
 export async function POST(request: NextRequest) {
   try {
@@ -79,7 +107,7 @@ export async function POST(request: NextRequest) {
     const [{ data: game }, { data: rows }, { data: pitches }, { data: notes }] = await Promise.all([
       supabaseAdmin
         .from('games')
-        .select('id, opponent, current_inning, total_innings, team_score, opponent_score, sub_rules, team_id')
+        .select('id, opponent, current_inning, total_innings, team_score, opponent_score, sub_rules, team_id, house_rules')
         .eq('id', gameId)
         .maybeSingle(),
       supabaseAdmin
@@ -138,6 +166,12 @@ export async function POST(request: NextRequest) {
       '',
       renderSubstitutionState(players, rules),
       '',
+      g.house_rules
+        ? `HOUSE RULES the coach has told us about this game:\n${
+            String(g.house_rules).split('\n').map((l: string) => `    ${l}`).join('\n')
+          }`
+        : 'HOUSE RULES: none stated.',
+      '',
       'PITCH COUNTS THIS GAME:',
       pitchBlock,
       '',
@@ -155,7 +189,56 @@ export async function POST(request: NextRequest) {
       output_config: { effort: 'low' },
     })
 
-    return NextResponse.json({ answer: requireText(response, 'dugout answer') })
+    const raw = requireText(response, 'dugout answer')
+
+    // Split the prose from the tail. The coach never sees the JSON.
+    const at = raw.indexOf(RULE_SENTINEL.trim())
+    const answer = (at === -1 ? raw : raw.slice(0, at)).trim()
+
+    let houseRuleAdded: string | null = null
+    let proposedRuleSet: SubRuleSet | null = null
+
+    if (at !== -1) {
+      try {
+        const m = raw.slice(at).match(/\{[\s\S]*\}/)
+        if (m) {
+          const parsed = JSON.parse(m[0]) as { houseRule?: string | null; proposedRuleSet?: string | null }
+
+          if (parsed.houseRule?.trim()) {
+            // Appended, not replaced: a coach states rules one at a time as
+            // they come up, and losing the first one when they mention the
+            // second is exactly the failure this feature exists to prevent.
+            const existing = (g.house_rules || '').trim()
+            const line = parsed.houseRule.trim()
+            const alreadyThere = existing
+              .split('\n')
+              .some((l: string) => l.trim().toLowerCase() === line.toLowerCase())
+            if (!alreadyThere) {
+              houseRuleAdded = line
+              await supabaseAdmin
+                .from('games')
+                .update({ house_rules: existing ? `${existing}\n${line}` : line })
+                .eq('id', gameId)
+            }
+          }
+
+          // Proposed, never applied here. Changing which rules a game is
+          // played under from a chat message, without confirmation, is how a
+          // coach ends up in the wrong ruleset in the fourth inning.
+          if (
+            parsed.proposedRuleSet === 'starter_reentry' ||
+            parsed.proposedRuleSet === 'continuous_free' ||
+            parsed.proposedRuleSet === 'no_reentry'
+          ) {
+            if (parsed.proposedRuleSet !== rules) proposedRuleSet = parsed.proposedRuleSet
+          }
+        }
+      } catch {
+        // A malformed tail costs the rule capture, not the answer.
+      }
+    }
+
+    return NextResponse.json({ answer, houseRuleAdded, proposedRuleSet })
   } catch (error: any) {
     console.error('Game ask error:', error)
     return NextResponse.json({ error: error.message || 'Could not answer that' }, { status: 500 })

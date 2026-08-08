@@ -20,12 +20,13 @@ const supabaseAdmin = createClient(
 
 async function loadState(gameId: string): Promise<{
   rules: SubRuleSet
+  houseRules: string
   players: PlayerGameState[]
   positions: Record<number, Record<string, string>>
   inning: number
 }> {
   const [{ data: game }, { data: rows }, { data: log }] = await Promise.all([
-    supabaseAdmin.from('games').select('id, sub_rules, current_inning, lineup_locked_at').eq('id', gameId).maybeSingle(),
+    supabaseAdmin.from('games').select('id, sub_rules, current_inning, lineup_locked_at, house_rules').eq('id', gameId).maybeSingle(),
     supabaseAdmin
       .from('game_participation')
       .select('*, team_player:team_players(id, player:players(name, jersey_number))')
@@ -52,6 +53,7 @@ async function loadState(gameId: string): Promise<{
 
   return {
     rules: ((game as any)?.sub_rules as SubRuleSet) || DEFAULT_SUB_RULES,
+    houseRules: ((game as any)?.house_rules as string) || '',
     players,
     positions,
     inning: (game as any)?.current_inning || 1,
@@ -67,10 +69,11 @@ export async function GET(request: NextRequest) {
   if (!gameId) return NextResponse.json({ error: 'gameId required' }, { status: 400 })
 
   try {
-    const { rules, players, positions, inning } = await loadState(gameId)
+    const { rules, houseRules, players, positions, inning } = await loadState(gameId)
 
     return NextResponse.json({
       rules,
+      houseRules,
       inning,
       // Legality is computed here rather than in the browser so the answer
       // cannot drift from what the write path will accept.
@@ -86,7 +89,7 @@ export async function GET(request: NextRequest) {
     console.error('Game lineup GET error:', error)
     const hint = migrationHintFor(error)
     return NextResponse.json({
-      rules: DEFAULT_SUB_RULES, inning: 1, players: [], positionsByInning: {},
+      rules: DEFAULT_SUB_RULES, houseRules: '', inning: 1, players: [], positionsByInning: {},
       needsMigration: !!hint, migrationMessage: hint?.message || null,
     })
   }
@@ -183,6 +186,21 @@ export async function PATCH(request: NextRequest) {
     // Moving someone around the field is not a substitution and never needs a
     // rules check — in every ruleset a player already in the game can play
     // anywhere.
+    // Changing which rules the game is played under, or editing the house
+    // rules the assistant reads. Confirmed by the coach — never applied
+    // straight from a chat message.
+    if (action === 'rules') {
+      const patch: Record<string, any> = {}
+      if (body.subRules) patch.sub_rules = body.subRules
+      if ('houseRules' in body) patch.house_rules = body.houseRules?.trim() || null
+      if (Object.keys(patch).length === 0) {
+        return NextResponse.json({ error: 'Nothing to change' }, { status: 400 })
+      }
+      const { error } = await supabaseAdmin.from('games').update(patch).eq('id', gameId)
+      if (error) throw error
+      return NextResponse.json({ success: true })
+    }
+
     if (action === 'position') {
       const { teamPlayerId, inning, position } = body
       if (!teamPlayerId || !inning) {

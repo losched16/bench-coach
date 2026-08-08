@@ -48,6 +48,11 @@ export function LiveLineup({ gameId, inning }: Props) {
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState<string | null>(null)
   const [asking, setAsking] = useState(false)
+  // Rules the coach stated in chat. Kept on the game, shown here, and read
+  // back into every later answer.
+  const [houseRules, setHouseRules] = useState('')
+  const [ruleAdded, setRuleAdded] = useState<string | null>(null)
+  const [proposedRuleSet, setProposedRuleSet] = useState<SubRuleSet | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -55,6 +60,7 @@ export function LiveLineup({ gameId, inning }: Props) {
       const d = await res.json()
       setPlayers(d.players || [])
       setRules(d.rules || 'starter_reentry')
+      setHouseRules(d.houseRules || '')
       if (d.needsMigration) setMigrationMessage(d.migrationMessage || 'Run migration 028.')
     } catch {
       /* the rest of the game screen still works */
@@ -108,6 +114,16 @@ export function LiveLineup({ gameId, inning }: Props) {
     })
   }
 
+  const changeRules = async (patch: { subRules?: SubRuleSet; houseRules?: string }) => {
+    await fetch('/api/game/lineup', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gameId, action: 'rules', ...patch }),
+    })
+    setProposedRuleSet(null)
+    await load()
+  }
+
   const ask = async () => {
     if (!question.trim()) return
     setAsking(true)
@@ -122,6 +138,10 @@ export function LiveLineup({ gameId, inning }: Props) {
       if (!res.ok) throw new Error(d.error || 'Could not answer that')
       setAnswer(d.answer)
       setQuestion('')
+      // A rule they stated is now on the game and will shape every later
+      // answer — say so, rather than letting it happen invisibly.
+      if (d.houseRuleAdded) { setRuleAdded(d.houseRuleAdded); load() }
+      if (d.proposedRuleSet) setProposedRuleSet(d.proposedRuleSet)
     } catch (e: any) {
       setAnswer(`Couldn't answer that: ${e.message}`)
     } finally {
@@ -162,9 +182,74 @@ export function LiveLineup({ gameId, inning }: Props) {
 
   return (
     <div className="p-4 space-y-4">
-      <div className="flex items-start gap-2 text-xs text-gray-600 bg-gray-50 rounded-lg p-2.5">
-        <Lock size={13} className="shrink-0 mt-0.5 text-gray-400" />
-        <span><strong>{SUB_RULES[rules].label}.</strong> {SUB_RULES[rules].hint}</span>
+      <div className="space-y-2">
+        <div className="flex items-start gap-2 text-xs text-gray-600 bg-gray-50 rounded-lg p-2.5">
+          <Lock size={13} className="shrink-0 mt-0.5 text-gray-400" />
+          <span className="flex-1">
+            <strong>{SUB_RULES[rules].label}.</strong> {SUB_RULES[rules].hint}
+          </span>
+          <select
+            value={rules}
+            onChange={e => changeRules({ subRules: e.target.value as SubRuleSet })}
+            className="shrink-0 text-xs border border-gray-300 rounded px-1.5 py-1 bg-white"
+            aria-label="Substitution rules"
+          >
+            {(Object.keys(SUB_RULES) as SubRuleSet[]).map(r => (
+              <option key={r} value={r}>{SUB_RULES[r].label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Anything the coach told the assistant about this league. Visible
+            and removable, because a rule you can't see is one you can't
+            correct when it was mis-transcribed. */}
+        {houseRules && (
+          <div className="text-xs bg-blue-50 border border-blue-200 rounded-lg p-2.5">
+            <div className="flex items-start gap-2">
+              <Sparkles size={13} className="shrink-0 mt-0.5 text-blue-500" />
+              <div className="flex-1">
+                <p className="font-medium text-blue-900 mb-1">Your rules for this game</p>
+                {houseRules.split('\n').map((line, i) => (
+                  <p key={i} className="text-blue-900">• {line}</p>
+                ))}
+              </div>
+              <button
+                onClick={() => changeRules({ houseRules: '' })}
+                className="shrink-0 text-blue-400 hover:text-blue-700"
+                aria-label="Clear house rules"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-blue-700 mt-1.5">
+              Used in every answer below. The buttons still enforce the ruleset above — where the two
+              disagree, use &ldquo;Do it anyway&rdquo;.
+            </p>
+          </div>
+        )}
+
+        {proposedRuleSet && (
+          <div className="text-xs bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+            <p className="text-amber-900 mb-2">
+              That sounds like <strong>{SUB_RULES[proposedRuleSet].label}</strong>. Switch this game
+              over so the buttons match?
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => changeRules({ subRules: proposedRuleSet })}
+                className="px-3 py-1.5 bg-amber-600 text-white rounded-lg"
+              >
+                Switch
+              </button>
+              <button
+                onClick={() => setProposedRuleSet(null)}
+                className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg"
+              >
+                Leave it
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {error && <p className="text-sm text-red-700">{error}</p>}
@@ -322,6 +407,11 @@ export function LiveLineup({ gameId, inning }: Props) {
             {asking ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />}
           </button>
         </div>
+        {ruleAdded && (
+          <p className="mt-2 text-xs text-blue-800 bg-blue-50 border border-blue-200 rounded p-2">
+            Saved for this game: &ldquo;{ruleAdded}&rdquo;
+          </p>
+        )}
         {answer && (
           <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-900 flex gap-2">
             <Sparkles size={15} className="shrink-0 mt-0.5 text-blue-500" />

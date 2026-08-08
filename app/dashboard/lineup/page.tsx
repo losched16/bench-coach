@@ -358,6 +358,44 @@ export default function LineupPage() {
         if (assignError) throw assignError
       }
 
+      // Hand it to the game. Without this the builder produced a plan the game
+      // screen had never heard of, and the coach re-entered the whole lineup
+      // on their phone at the field.
+      //
+      // Starters are whoever is on the field in the first inning, plus anyone
+      // in the batting order — in a continuous order the bench is still
+      // batting, which makes them starters for substitution purposes.
+      if (gameId) {
+        const firstInning = generatedLineup.field_assignments['1'] || []
+        const startingIds = new Set(firstInning.map(fp => fp.team_player_id))
+        const batting = generatedLineup.batting_order || []
+
+        const starters = batting
+          .filter(b => startingIds.has(b.team_player_id) || lineupMode === 'continuous')
+          .map(b => ({
+            teamPlayerId: b.team_player_id,
+            battingSlot: b.order,
+            position: firstInning.find(fp => fp.team_player_id === b.team_player_id)?.position,
+          }))
+
+        const bench = players
+          .map(p => p.id)
+          .filter(id => !starters.some(s => s.teamPlayerId === id))
+
+        // Best-effort: a failure here must not lose the lineup that just
+        // saved. The game screen can still have its lineup set by hand.
+        await fetch('/api/game/lineup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            gameId,
+            subRules: lineupMode === 'continuous' ? 'continuous_free' : 'starter_reentry',
+            starters,
+            bench,
+          }),
+        }).catch(() => {})
+      }
+
       // Refresh saved lineups
       await loadData()
       alert('Lineup saved!')
