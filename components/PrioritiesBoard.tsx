@@ -5,13 +5,15 @@ import { createSupabaseComponentClient } from '@/lib/supabase'
 import {
   CalendarCheck, Loader2, AlertCircle, Target, History, Search,
   CheckCircle2, RotateCcw, XCircle, ChevronRight, ListChecks, MessageSquarePlus, ChevronDown,
+  ClipboardList,
 } from 'lucide-react'
 import { useTracker } from '@/lib/tracking'
 import { PrescriptionSections } from './PrescriptionSections'
 import { ActivePriority } from './ActivePriority'
 import { PriorityDrills } from './PriorityDrills'
+import { DevelopmentPlan } from './DevelopmentPlan'
 import { splitSections } from '@/lib/analysis'
-import { focusAreaRank, focusAreaLabel, focusAreaChip } from '@/lib/focusAreas'
+import { focusAreaRank, focusAreaLabel, focusAreaChip, practiceFocusFor } from '@/lib/focusAreas'
 import { VERDICT_SENTINEL, visibleMarkdown, AdherenceRead, DueState, Verdict, VerdictStatus } from '@/lib/checkin'
 
 interface OpenPrescription {
@@ -273,6 +275,38 @@ export function PrioritiesBoard({ teamId, focusId = null }: Props) {
                   coachId={coachId!}
                   onSwapped={() => load(coachId!)}
                 />
+              </div>
+
+              {/* Turning the priority into something you can actually run.
+                  A team priority becomes a practice; a player's becomes three
+                  weeks of sessions. */}
+              <div className="pt-3 border-t border-gray-100">
+                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  {p.scope === 'team' ? 'Run it at practice' : 'The plan'}
+                </h4>
+                {p.scope === 'team' ? (
+                  <div>
+                    <a
+                      href={`/dashboard/practice?teamId=${teamId || ''}${
+                        practiceFocusFor(p.focusArea) ? `&focus=${practiceFocusFor(p.focusArea)}` : ''
+                      }`}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800"
+                    >
+                      <ClipboardList size={15} />
+                      Build a practice around this
+                    </a>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Opens the practice builder with {focusAreaLabel(p.focusArea).toLowerCase()}{' '}
+                      preselected. It already reads your active priorities, so this one shows up as a block.
+                    </p>
+                  </div>
+                ) : (
+                  <DevelopmentPlan
+                    prescriptionId={p.id}
+                    coachId={coachId!}
+                    subjectName={p.subjectName}
+                  />
+                )}
               </div>
 
               <div className="pt-3 border-t border-gray-100">

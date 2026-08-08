@@ -81,6 +81,17 @@ export default function PracticePage() {
     if (searchParams.get('start') === 'template') setShowTemplateModal(true)
   }, [searchParams])
 
+  // Arriving from a team priority: preselect what it's about so the coach
+  // isn't re-picking a focus area the app already decided on.
+  useEffect(() => {
+    const preset = searchParams.get('focus')
+    if (!preset) return
+    const wanted = preset.split(',').map(x => x.trim().toLowerCase()).filter(Boolean)
+    const matched = FOCUS_OPTIONS.filter(o => wanted.includes(o.toLowerCase()))
+    if (matched.length) setFocusAreas(matched.slice(0, 3))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
   useEffect(() => {
     if (teamId) {
       loadPlans()

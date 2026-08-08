@@ -143,3 +143,22 @@ export function focusAreaRank(area: string | null | undefined): number {
   const i = isFocusArea(area) ? FOCUS_AREA_ORDER.indexOf(area) : -1
   return i === -1 ? FOCUS_AREA_ORDER.length : i
 }
+
+// The practice builder's focus vocabulary is older and shaped around what a
+// team runs stations for, not the areas a priority occupies. This is the
+// bridge, so "build a practice around this" arrives with the right box ticked.
+const PRACTICE_FOCUS: Record<string, string> = {
+  hitting: 'hitting',
+  pitching: 'throwing',
+  throwing: 'throwing',
+  fielding: 'infield',
+  catching: 'catching',
+  baserunning: 'baserunning',
+  // athleticism has no practice-station equivalent — better to preselect
+  // nothing than to tick a box the coach didn't mean.
+}
+
+export function practiceFocusFor(area: string | null | undefined): string | null {
+  if (!area) return null
+  return PRACTICE_FOCUS[area] || null
+}
