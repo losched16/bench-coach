@@ -43,7 +43,13 @@ const OBJECT_TO_MIGRATION: Array<{ match: RegExp; file: string; what: string }> 
   // 029 — league quirks the coach states in the dugout chat
   { match: /\bhouse_rules\b/, file: '029_house_rules.sql', what: 'house rules on a game' },
   // 030 — the book
-  { match: /\b(game_events|is_home|scorebook_started_at|outs_after|bases_after|runs_scored)\b/, file: '030_scorebook.sql', what: 'the scorebook' },
+  { match: /\b(game_events|scorebook_started_at|outs_after|bases_after|runs_scored)\b/, file: '030_scorebook.sql', what: 'the scorebook' },
+  // 031 — halves, their pitchers, and eligibility for one game
+  { match: /\b(current_half|is_opponent|opponent_pitcher_name)\b/, file: '031_half_innings_and_eligibility.sql', what: 'half-innings and opponent pitch counts' },
+  { match: /\b(game_position_eligibility|eligibility_reviewed_at)\b/, file: '031_half_innings_and_eligibility.sql', what: 'per-game position eligibility' },
+  // is_home is added by 030 but read by the half logic in 031 — name the
+  // earlier file, which is the one that actually creates it.
+  { match: /\bis_home\b/, file: '030_scorebook.sql', what: 'home and away on a game' },
 ]
 
 export interface MigrationHint {

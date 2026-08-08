@@ -6,7 +6,7 @@ import { createSupabaseComponentClient } from '@/lib/supabase'
 import {
   Plus, Minus, ChevronDown, ChevronUp, X, Trophy, Clock,
   ThumbsUp, AlertTriangle, Target, Shield, Zap,
-  MapPin, Send, Trash2, Activity, ChevronLeft, Users, BookOpen
+  MapPin, Send, Trash2, Activity, ChevronLeft, ChevronRight, Users, BookOpen
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { findExistingGame } from '@/lib/games'
@@ -33,6 +33,11 @@ interface Game {
   result: string | null
   total_innings: number
   current_inning: number
+  // The other half of the cursor. Without it "top of the third" and "bottom of
+  // the third" were the same place, which is why changing pitchers meant
+  // moving the inning.
+  current_half: 'top' | 'bottom'
+  is_home: boolean | null
   notes: string
   created_at: string
 }
@@ -51,8 +56,12 @@ interface GameNote {
 interface PitchCount {
   id: string
   game_id: string
-  player_id: string
+  // Null for the other team's pitcher — nobody rosters them.
+  player_id: string | null
   inning: number
+  half: 'top' | 'bottom'
+  is_opponent: boolean
+  opponent_pitcher_name: string | null
   pitch_count: number
   player?: { name: string }
 }
@@ -81,6 +90,9 @@ function GamePageContent() {
   const [setupLocation, setSetupLocation] = useState('')
   const [setupDate, setSetupDate] = useState(new Date().toISOString().split('T')[0])
   const [setupInnings, setSetupInnings] = useState(6)
+  // Which dugout. This decides which half we bat and which half we pitch, so
+  // the pitch counter and the scorebook both need it before the first pitch.
+  const [setupIsHome, setSetupIsHome] = useState(true)
 
   // Live game state
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null)
@@ -89,6 +101,10 @@ function GamePageContent() {
   const [showNoteInput, setShowNoteInput] = useState(false)
   const [pitchPanelOpen, setPitchPanelOpen] = useState(true)
   const [currentPitcher, setCurrentPitcher] = useState<string | null>(null)
+  // Their arm, by name — nobody rosters the other team. Tracked in the same
+  // panel with the same buttons, because it is the same act.
+  const [opponentPitcher, setOpponentPitcher] = useState('')
+  const [addingOpponentPitcher, setAddingOpponentPitcher] = useState(false)
   const [saving, setSaving] = useState(false)
   // Shown when a note or a pitch fails to land. Silence here cost real
   // observations — a coach types during an inning and does not go back to
@@ -177,6 +193,8 @@ function GamePageContent() {
             location: setupLocation.trim() || null,
             total_innings: setupInnings,
             current_inning: 1,
+            current_half: 'top',
+            is_home: setupIsHome,
             status: 'live',
           })
           .eq('id', existing.id)
@@ -192,6 +210,8 @@ function GamePageContent() {
           location: setupLocation.trim() || null,
           total_innings: setupInnings,
           current_inning: 1,
+          current_half: 'top',
+          is_home: setupIsHome,
           status: 'live',
         }).select().single()
         if (error) throw error
@@ -247,11 +267,23 @@ function GamePageContent() {
   }
 
   const handlePitchIncrement = async (delta: number) => {
-    if (!activeGame || !currentPitcher) return
+    if (!activeGame) return
     const inning = activeGame.current_inning
+    const half = activeGame.current_half
 
-    // Find existing count for this pitcher/inning
-    const existing = pitchCounts.find(pc => pc.player_id === currentPitcher && pc.inning === inning)
+    // Whose arm this half belongs to. Ours only throws when we're in the
+    // field, theirs only when we're at bat — so the same buttons serve both
+    // and neither can land on the wrong pitcher.
+    const ours = weArePitching
+    const pitcherId = ours ? currentPitcher : null
+    const oppName = ours ? null : (opponentPitcher.trim() || null)
+    if (ours && !pitcherId) return
+    if (!ours && !oppName) return
+
+    const existing = pitchCounts.find(pc =>
+      pc.inning === inning && pc.half === half &&
+      (ours ? pc.player_id === pitcherId : pc.opponent_pitcher_name === oppName)
+    )
     const newCount = Math.max(0, (existing?.pitch_count || 0) + delta)
 
     try {
@@ -265,8 +297,11 @@ function GamePageContent() {
         if (delta < 1) return
         const { data, error } = await supabase.from('game_pitch_counts').insert({
           game_id: activeGame.id,
-          player_id: currentPitcher,
+          player_id: pitcherId,
           inning,
+          half,
+          is_opponent: !ours,
+          opponent_pitcher_name: oppName,
           pitch_count: delta,
         }).select('*, player:players(name)').single()
         if (error) throw error
@@ -284,6 +319,54 @@ function GamePageContent() {
     const newInning = Math.max(1, Math.min(activeGame.total_innings + 3, activeGame.current_inning + delta))
     const { error } = await supabase.from('games').update({ current_inning: newInning }).eq('id', activeGame.id)
     if (!error) setActiveGame(prev => prev ? { ...prev, current_inning: newInning } : null)
+  }
+
+  // Half the inning, which is the move a coach actually makes: we finish
+  // batting, they come up, my pitcher goes back on. Top -> bottom stays in the
+  // same inning; bottom -> top is the next one. This is the shared cursor —
+  // the lineup panel and the scorebook both read it.
+  const handleHalfChange = async (delta: number) => {
+    if (!activeGame) return
+    const forward = delta > 0
+    let half: 'top' | 'bottom' = activeGame.current_half === 'top' ? 'bottom' : 'top'
+    let inning = activeGame.current_inning
+    if (forward && activeGame.current_half === 'bottom') inning = Math.min(activeGame.total_innings + 3, inning + 1)
+    if (!forward && activeGame.current_half === 'top') inning = Math.max(1, inning - 1)
+
+    const { error } = await supabase
+      .from('games')
+      .update({ current_inning: inning, current_half: half })
+      .eq('id', activeGame.id)
+    if (!error) {
+      setActiveGame(prev => prev ? { ...prev, current_inning: inning, current_half: half } : null)
+      // Whoever was throwing in the half we just left stays paused with their
+      // count intact; the arm for the half we just entered comes back.
+      setCurrentPitcher(null)
+      setOpponentPitcher('')
+    }
+  }
+
+  // Which side is on the mound right now. Away teams pitch in the bottom,
+  // home teams in the top — the same fact the scorebook uses to decide who is
+  // batting, so the two can never disagree about it.
+  const weArePitching = activeGame
+    ? (activeGame.is_home !== false ? activeGame.current_half === 'top' : activeGame.current_half === 'bottom')
+    : true
+
+  // The book moved the inning or the half. Pull it back so the header, the
+  // pitch panel and the lineup are all looking at the same place — that sync
+  // is the whole point, and it must not require the coach to reload.
+  const refreshCursor = async () => {
+    if (!activeGame) return
+    const { data } = await supabase
+      .from('games')
+      .select('current_inning, current_half, team_score, opponent_score')
+      .eq('id', activeGame.id)
+      .maybeSingle()
+    const g = data as any
+    if (!g) return
+    setActiveGame(prev => prev ? { ...prev, ...g } : null)
+    await loadGameData(activeGame.id)
   }
 
   const handleEndGame = async () => {
@@ -356,8 +439,8 @@ function GamePageContent() {
       [
         ...[...pitchCounts]
           .sort((a, b) => a.inning - b.inning)
-          .filter(pc => pc.pitch_count > 0)
-          .map(pc => pc.player_id),
+          .filter(pc => pc.pitch_count > 0 && !pc.is_opponent && pc.player_id)
+          .map(pc => pc.player_id as string),
         // Someone just brought in belongs on the strip before their first
         // pitch, or the panel shows no active arm at all.
         ...(currentPitcher ? [currentPitcher] : []),
@@ -365,23 +448,67 @@ function GamePageContent() {
     )
   )
 
-  // Coming back to a game in progress, the arm on the mound is whoever threw
-  // most recently. Making the coach re-pick them is a step for nothing.
-  useEffect(() => {
-    if (currentPitcher || pitchCounts.length === 0) return
-    const latest = [...pitchCounts]
-      .filter(pc => pc.pitch_count > 0)
-      .sort((a, b) => b.inning - a.inning)[0]
-    if (latest) setCurrentPitcher(latest.player_id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pitchCounts])
+  // Their arms, in the order they appeared. Same strip, so going back to a
+  // pitcher who was pulled and returned is one tap on either side.
+  const opponentPitchersUsed = Array.from(
+    new Set(
+      [
+        ...[...pitchCounts]
+          .sort((a, b) => a.inning - b.inning)
+          .filter(pc => pc.pitch_count > 0 && pc.is_opponent && pc.opponent_pitcher_name)
+          .map(pc => pc.opponent_pitcher_name as string),
+        ...(opponentPitcher.trim() ? [opponentPitcher.trim()] : []),
+      ]
+    )
+  )
 
+  // Coming back to a half in progress, the arm on the mound is whoever threw
+  // most recently IN THIS HALF. Making the coach re-pick them is a step for
+  // nothing, and picking the wrong side would put pitches on the wrong kid.
+  useEffect(() => {
+    if (!activeGame || pitchCounts.length === 0) return
+    const half = activeGame.current_half
+    if (weArePitching) {
+      if (currentPitcher) return
+      const latest = [...pitchCounts]
+        .filter(pc => pc.pitch_count > 0 && !pc.is_opponent && pc.player_id && pc.half === half)
+        .sort((a, b) => b.inning - a.inning)[0]
+      if (latest?.player_id) setCurrentPitcher(latest.player_id)
+    } else {
+      if (opponentPitcher) return
+      const latest = [...pitchCounts]
+        .filter(pc => pc.pitch_count > 0 && pc.is_opponent && pc.half === half)
+        .sort((a, b) => b.inning - a.inning)[0]
+      if (latest?.opponent_pitcher_name) setOpponentPitcher(latest.opponent_pitcher_name)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pitchCounts, activeGame?.current_half, activeGame?.current_inning])
+
+  // Totals are for the whole game and ignore the half — an arm's workload is
+  // an arm's workload, and this is the number a pitch limit is measured
+  // against.
   const getPitcherTotal = (playerId: string) => {
-    return pitchCounts.filter(pc => pc.player_id === playerId).reduce((sum, pc) => sum + pc.pitch_count, 0)
+    return pitchCounts
+      .filter(pc => !pc.is_opponent && pc.player_id === playerId)
+      .reduce((sum, pc) => sum + pc.pitch_count, 0)
+  }
+
+  const getOpponentTotal = (name: string) => {
+    return pitchCounts
+      .filter(pc => pc.is_opponent && pc.opponent_pitcher_name === name)
+      .reduce((sum, pc) => sum + pc.pitch_count, 0)
   }
 
   const getPitcherInningCount = (playerId: string, inning: number) => {
-    return pitchCounts.find(pc => pc.player_id === playerId && pc.inning === inning)?.pitch_count || 0
+    return pitchCounts
+      .filter(pc => !pc.is_opponent && pc.player_id === playerId && pc.inning === inning)
+      .reduce((sum, pc) => sum + pc.pitch_count, 0)
+  }
+
+  const getOpponentInningCount = (name: string, inning: number) => {
+    return pitchCounts
+      .filter(pc => pc.is_opponent && pc.opponent_pitcher_name === name && pc.inning === inning)
+      .reduce((sum, pc) => sum + pc.pitch_count, 0)
   }
 
   const getNoteTypeInfo = (type: string) => NOTE_TYPES.find(t => t.key === type) || NOTE_TYPES[6]
@@ -594,6 +721,31 @@ function GamePageContent() {
             </select>
           </div>
 
+          {/* Home bats last. It decides which half we're in the field, which
+              is what tells the pitch counter whose arm is on. */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Are we home or away?</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { v: true, label: 'Home', hint: 'we bat second' },
+                { v: false, label: 'Away', hint: 'we bat first' },
+              ].map(o => (
+                <button
+                  key={String(o.v)}
+                  onClick={() => setSetupIsHome(o.v)}
+                  className={`px-3 py-3 rounded-xl border text-left ${
+                    setupIsHome === o.v
+                      ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200'
+                      : 'border-gray-300'
+                  }`}
+                >
+                  <span className="block text-sm font-medium text-gray-900">{o.label}</span>
+                  <span className="block text-xs text-gray-500">{o.hint}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <button
             onClick={handleStartGame}
             disabled={!setupOpponent.trim() || saving}
@@ -696,16 +848,31 @@ function GamePageContent() {
                 <span className="text-xs bg-red-500 px-2 py-0.5 rounded-full font-bold animate-pulse">LIVE</span>
               </div>
             </div>
+            {/* The cursor. One button moves the game on by a half-inning,
+                which is the move a coach actually makes — we finish batting,
+                they come up. Everything else on the screen follows it. */}
             <div className="flex items-center gap-2">
-              <button onClick={() => handleInningChange(-1)} className="w-8 h-8 flex items-center justify-center bg-white/20 rounded-lg active:bg-white/30">
-                <Minus size={16} />
+              <button
+                onClick={() => handleHalfChange(-1)}
+                className="w-8 h-8 flex items-center justify-center bg-white/20 rounded-lg active:bg-white/30"
+                aria-label="Back a half-inning"
+              >
+                <ChevronLeft size={16} />
               </button>
-              <div className="text-center min-w-[60px]">
-                <div className="text-2xl font-bold">{activeGame.current_inning}</div>
-                <div className="text-[10px] uppercase opacity-70">Inning</div>
+              <div className="text-center min-w-[84px]">
+                <div className="text-2xl font-bold leading-tight">
+                  {activeGame.current_half === 'top' ? '▲' : '▼'} {activeGame.current_inning}
+                </div>
+                <div className="text-[10px] uppercase opacity-70">
+                  {activeGame.current_half} {activeGame.current_inning} · {weArePitching ? 'field' : 'bat'}
+                </div>
               </div>
-              <button onClick={() => handleInningChange(1)} className="w-8 h-8 flex items-center justify-center bg-white/20 rounded-lg active:bg-white/30">
-                <Plus size={16} />
+              <button
+                onClick={() => handleHalfChange(1)}
+                className="w-8 h-8 flex items-center justify-center bg-white/20 rounded-lg active:bg-white/30"
+                aria-label="On a half-inning"
+              >
+                <ChevronRight size={16} />
               </button>
             </div>
           </div>
@@ -825,8 +992,9 @@ function GamePageContent() {
           {scorebookOpen && activeGame && (
             <Scorebook
               gameId={activeGame.id}
-              currentPitcher={currentPitcher}
-              pitcherName={currentPitcher ? getPlayerName(currentPitcher) : null}
+              currentPitcher={weArePitching ? currentPitcher : null}
+              pitcherName={weArePitching && currentPitcher ? getPlayerName(currentPitcher) : null}
+              onCursorChange={refreshCursor}
             />
           )}
         </div>
@@ -839,72 +1007,140 @@ function GamePageContent() {
             <span className="flex items-center gap-2">
               <Zap size={16} />
               Pitch Count
-              {currentPitcher && ` — ${getPlayerName(currentPitcher)}: ${getPitcherTotal(currentPitcher)}`}
+              {weArePitching
+                ? currentPitcher && ` — ${getPlayerName(currentPitcher)}: ${getPitcherTotal(currentPitcher)}`
+                : opponentPitcher && ` — ${opponentPitcher}: ${getOpponentTotal(opponentPitcher)}`}
             </span>
             {pitchPanelOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
 
           {pitchPanelOpen && (
             <div className="px-4 pb-4">
-              {/* Who has thrown in this game, with their totals. Going back to
-                  a pitcher who came out in the third used to mean scrolling a
-                  roster dropdown; a pitching change is a two-second job and
-                  this is the part that has to keep up. */}
-              {pitchersUsed.length > 0 && (
-                <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-1 px-1">
-                  {pitchersUsed.map(pid => {
-                    const isActive = pid === currentPitcher
-                    const thisInning = getPitcherInningCount(pid, activeGame.current_inning)
-                    return (
-                      <button
-                        key={pid}
-                        onClick={() => setCurrentPitcher(pid)}
-                        className={`shrink-0 px-3 py-2 rounded-lg border text-left transition-colors ${
-                          isActive
-                            ? 'bg-purple-700 text-white border-purple-700'
-                            : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        <div className="text-xs font-medium truncate max-w-[8rem]">
-                          {getPlayerName(pid)}
-                        </div>
-                        <div className="text-lg font-bold tabular-nums leading-tight">
-                          {getPitcherTotal(pid)}
-                          {/* This inning vs the game. The limit is the game
-                              total; the split is what a coach reads to decide
-                              whether to leave them in. */}
-                          <span className={`text-xs font-normal ml-1 ${isActive ? 'text-purple-200' : 'text-gray-500'}`}>
-                            {thisInning > 0 ? `+${thisInning} this inn` : 'resting'}
-                          </span>
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
+              {/* Which side is throwing, and why. The half decides it, so the
+                  coach never picks the wrong team's pitcher — moving the game
+                  on by a half is what swaps the panel over, and the arm they
+                  were counting stays exactly where it was. */}
+              <div className={`mb-3 rounded-lg px-3 py-2 text-xs flex items-center justify-between gap-2 ${
+                weArePitching ? 'bg-purple-50 text-purple-900' : 'bg-gray-100 text-gray-700'
+              }`}>
+                <span>
+                  <strong>{activeGame.current_half === 'top' ? 'Top' : 'Bottom'} {activeGame.current_inning}</strong>
+                  {' — '}
+                  {weArePitching ? 'our pitcher is on' : 'their pitcher is on'}
+                </span>
+                <button
+                  onClick={() => handleHalfChange(1)}
+                  className="shrink-0 px-2 py-1 rounded bg-white border border-gray-300 text-gray-700 font-medium"
+                >
+                  Next half →
+                </button>
+              </div>
+
+              {weArePitching ? (
+                <>
+                  {/* Our arms. Someone pulled in the second and back in the
+                      fifth keeps their total; tapping them resumes it. */}
+                  {pitchersUsed.length > 0 && (
+                    <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-1 px-1">
+                      {pitchersUsed.map(pid => {
+                        const isActive = pid === currentPitcher
+                        const thisInning = getPitcherInningCount(pid, activeGame.current_inning)
+                        return (
+                          <button
+                            key={pid}
+                            onClick={() => setCurrentPitcher(pid)}
+                            className={`shrink-0 px-3 py-2 rounded-lg border text-left transition-colors ${
+                              isActive
+                                ? 'bg-purple-700 text-white border-purple-700'
+                                : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            <div className="text-xs font-medium truncate max-w-[8rem]">
+                              {getPlayerName(pid)}
+                            </div>
+                            <div className="text-lg font-bold tabular-nums leading-tight">
+                              {getPitcherTotal(pid)}
+                              <span className={`text-xs font-normal ml-1 ${isActive ? 'text-purple-200' : 'text-gray-500'}`}>
+                                {thisInning > 0 ? `+${thisInning} this inn` : 'resting'}
+                              </span>
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  <select
+                    value=""
+                    onChange={e => { if (e.target.value) setCurrentPitcher(e.target.value) }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl mb-3 text-sm focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="">
+                      {pitchersUsed.length > 0 ? 'Bring in another pitcher…' : 'Who is pitching?'}
+                    </option>
+                    {players
+                      .filter(p => !pitchersUsed.includes(p.player.id))
+                      .map(p => (
+                        <option key={p.player.id} value={p.player.id}>
+                          {p.player.jersey_number ? `#${p.player.jersey_number} ` : ''}{p.player.name}
+                        </option>
+                      ))}
+                  </select>
+                </>
+              ) : (
+                <>
+                  {/* Theirs. Names, because nobody rosters the other team —
+                      and the ones already seen are one tap away, so a coach
+                      types a name once per game at most. */}
+                  {opponentPitchersUsed.length > 0 && (
+                    <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-1 px-1">
+                      {opponentPitchersUsed.map(name => {
+                        const isActive = name === opponentPitcher.trim()
+                        const thisInning = getOpponentInningCount(name, activeGame.current_inning)
+                        return (
+                          <button
+                            key={name}
+                            onClick={() => { setOpponentPitcher(name); setAddingOpponentPitcher(false) }}
+                            className={`shrink-0 px-3 py-2 rounded-lg border text-left transition-colors ${
+                              isActive
+                                ? 'bg-gray-800 text-white border-gray-800'
+                                : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            <div className="text-xs font-medium truncate max-w-[8rem]">{name}</div>
+                            <div className="text-lg font-bold tabular-nums leading-tight">
+                              {getOpponentTotal(name)}
+                              <span className={`text-xs font-normal ml-1 ${isActive ? 'text-gray-300' : 'text-gray-500'}`}>
+                                {thisInning > 0 ? `+${thisInning} this inn` : 'resting'}
+                              </span>
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  {addingOpponentPitcher || opponentPitchersUsed.length === 0 ? (
+                    <input
+                      value={opponentPitcher}
+                      onChange={e => setOpponentPitcher(e.target.value)}
+                      onBlur={() => setAddingOpponentPitcher(false)}
+                      placeholder="Their pitcher — name or number"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl mb-3 text-sm focus:ring-2 focus:ring-gray-400"
+                    />
+                  ) : (
+                    <button
+                      onClick={() => { setOpponentPitcher(''); setAddingOpponentPitcher(true) }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl mb-3 text-sm text-left text-gray-600"
+                    >
+                      They brought someone else in…
+                    </button>
+                  )}
+                </>
               )}
 
-              {/* Bringing someone in. Only the roster members who have not
-                  thrown yet — the ones who have are one tap away above. */}
-              <select
-                value=""
-                onChange={e => { if (e.target.value) setCurrentPitcher(e.target.value) }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-xl mb-3 text-sm focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="">
-                  {pitchersUsed.length > 0 ? 'Bring in another pitcher…' : 'Who is pitching?'}
-                </option>
-                {players
-                  .filter(p => !pitchersUsed.includes(p.player.id))
-                  .map(p => (
-                    <option key={p.player.id} value={p.player.id}>
-                      {p.player.jersey_number ? `#${p.player.jersey_number} ` : ''}{p.player.name}
-                    </option>
-                  ))}
-              </select>
-
-              {currentPitcher && (
+              {(weArePitching ? !!currentPitcher : !!opponentPitcher.trim()) && (
                 <>
-                  {/* Big Counter */}
                   <div className="flex items-center justify-center gap-6 mb-4">
                     <button
                       onClick={() => handlePitchIncrement(-1)}
@@ -913,42 +1149,49 @@ function GamePageContent() {
                       -1
                     </button>
                     <div className="text-center">
-                      <div className="text-5xl font-bold text-purple-700">
-                        {getPitcherInningCount(currentPitcher, activeGame.current_inning)}
+                      <div className={`text-5xl font-bold ${weArePitching ? 'text-purple-700' : 'text-gray-800'}`}>
+                        {weArePitching
+                          ? getPitcherInningCount(currentPitcher!, activeGame.current_inning)
+                          : getOpponentInningCount(opponentPitcher.trim(), activeGame.current_inning)}
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5">This Inning</div>
                     </div>
                     <button
                       onClick={() => handlePitchIncrement(1)}
-                      className="w-14 h-14 flex items-center justify-center bg-purple-600 rounded-full text-white active:bg-purple-700 text-xl font-bold shadow-lg"
+                      className={`w-14 h-14 flex items-center justify-center rounded-full text-white text-xl font-bold shadow-lg ${
+                        weArePitching ? 'bg-purple-600 active:bg-purple-700' : 'bg-gray-700 active:bg-gray-800'
+                      }`}
                     >
                       +1
                     </button>
                   </div>
 
-                  {/* Total */}
                   <div className="text-center mb-3">
                     <span className="text-sm text-gray-500">Game Total: </span>
-                    <span className="text-lg font-bold text-purple-700">{getPitcherTotal(currentPitcher)} pitches</span>
+                    <span className={`text-lg font-bold ${weArePitching ? 'text-purple-700' : 'text-gray-800'}`}>
+                      {weArePitching
+                        ? getPitcherTotal(currentPitcher!)
+                        : getOpponentTotal(opponentPitcher.trim())} pitches
+                    </span>
                   </div>
 
                   {/* Per-Inning Breakdown */}
-                  {pitchCounts.filter(pc => pc.player_id === currentPitcher).length > 0 && (
-                    <div className="flex gap-2 overflow-x-auto pb-1">
-                      {Array.from({ length: activeGame.current_inning }, (_, i) => i + 1).map(inn => {
-                        const count = getPitcherInningCount(currentPitcher, inn)
-                        if (count === 0 && inn !== activeGame.current_inning) return null
-                        return (
-                          <div key={inn} className={`flex-shrink-0 text-center px-3 py-1.5 rounded-lg border ${
-                            inn === activeGame.current_inning ? 'bg-purple-50 border-purple-200' : 'bg-gray-50 border-gray-200'
-                          }`}>
-                            <div className="text-[10px] text-gray-500">Inn {inn}</div>
-                            <div className="text-sm font-bold">{count}</div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {Array.from({ length: activeGame.current_inning }, (_, i) => i + 1).map(inn => {
+                      const count = weArePitching
+                        ? getPitcherInningCount(currentPitcher!, inn)
+                        : getOpponentInningCount(opponentPitcher.trim(), inn)
+                      if (count === 0 && inn !== activeGame.current_inning) return null
+                      return (
+                        <div key={inn} className={`flex-shrink-0 text-center px-3 py-1.5 rounded-lg border ${
+                          inn === activeGame.current_inning ? 'bg-purple-50 border-purple-200' : 'bg-gray-50 border-gray-200'
+                        }`}>
+                          <div className="text-[10px] text-gray-500">Inn {inn}</div>
+                          <div className="text-sm font-bold">{count}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </>
               )}
             </div>

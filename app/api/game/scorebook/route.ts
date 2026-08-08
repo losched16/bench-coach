@@ -57,8 +57,22 @@ function toStored(row: any): StoredEvent {
 
 // Where the game stands: the last event's snapshot, rolled forward if that
 // event was the third out. Derived in exactly one place.
-function stateFrom(rows: any[], isHome: boolean): GameState {
-  if (rows.length === 0) return { inning: 1, half: 'top', outs: 0, bases: { ...EMPTY_BASES }, awayRuns: 0, homeRuns: 0 }
+//
+// With no events yet, the book picks up the game's own cursor rather than
+// assuming the top of the first. A coach who ran two innings on the pitch
+// panel and then opened the book would otherwise find it scoring the wrong
+// inning — the scorebook is optional, so it has to be able to join late.
+function stateFrom(rows: any[], isHome: boolean, cursor?: { inning: number; half: Half }): GameState {
+  if (rows.length === 0) {
+    return {
+      inning: cursor?.inning || 1,
+      half: cursor?.half || 'top',
+      outs: 0,
+      bases: { ...EMPTY_BASES },
+      awayRuns: 0,
+      homeRuns: 0,
+    }
+  }
   const last = rows[rows.length - 1]
 
   let away = 0
@@ -90,7 +104,7 @@ export async function GET(request: NextRequest) {
   try {
     const { data: game } = await supabaseAdmin
       .from('games')
-      .select('id, team_id, opponent, is_home, total_innings, current_inning')
+      .select('id, team_id, opponent, is_home, total_innings, current_inning, current_half')
       .eq('id', gameId)
       .maybeSingle()
     if (!game) return NextResponse.json({ error: 'Game not found' }, { status: 404 })
@@ -108,7 +122,10 @@ export async function GET(request: NextRequest) {
     if (error) throw error
 
     const all = rows || []
-    const state = stateFrom(all, isHome)
+    const state = stateFrom(all, isHome, {
+      inning: g.current_inning || 1,
+      half: (g.current_half as Half) || 'top',
+    })
 
     // Our batting order, so the book knows who is due up without being told.
     const order = (participation || [])
@@ -185,7 +202,7 @@ export async function POST(request: NextRequest) {
 
     const { data: game } = await supabaseAdmin
       .from('games')
-      .select('id, is_home, current_inning, scorebook_started_at')
+      .select('id, is_home, current_inning, current_half, scorebook_started_at')
       .eq('id', gameId)
       .maybeSingle()
     if (!game) return NextResponse.json({ error: 'Game not found' }, { status: 404 })
@@ -207,7 +224,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const before = stateFrom(all, isHome)
+    const cursor = {
+      inning: (game as any).current_inning || 1,
+      half: ((game as any).current_half as Half) || 'top',
+    }
+    const before = stateFrom(all, isHome, cursor)
     const weBatting = weAreBatting(before.half, isHome)
 
     const outsAfter = Math.max(0, Math.min(3, Number(body.outsAfter ?? before.outs)))
@@ -274,12 +295,17 @@ export async function POST(request: NextRequest) {
 
     // Keep the game in step: the score, and the inning that pitch counts and
     // notes key off elsewhere in Game Day.
-    const after = stateFrom([...all, row], isHome)
+    // The book moves the shared cursor when it is being kept, so the pitch
+    // panel and the lineup follow it without the coach touching anything. When
+    // it is not being kept, the manual control owns the cursor and this never
+    // runs.
+    const after = stateFrom([...all, row], isHome, cursor)
     const patch: Record<string, any> = {
       team_score: isHome ? after.homeRuns : after.awayRuns,
       opponent_score: isHome ? after.awayRuns : after.homeRuns,
+      current_inning: after.inning,
+      current_half: after.half,
     }
-    if (after.inning !== (game as any).current_inning) patch.current_inning = after.inning
     if (!(game as any).scorebook_started_at) patch.scorebook_started_at = new Date().toISOString()
     await supabaseAdmin.from('games').update(patch).eq('id', gameId)
 
@@ -365,12 +391,15 @@ export async function DELETE(request: NextRequest) {
       .from('games').select('is_home').eq('id', gameId).maybeSingle()
     const isHome = (game as any)?.is_home !== false
     const rest = all.slice(0, -1)
-    const state = stateFrom(rest, isHome)
+    // Undoing back past the first event hands the cursor back to where the
+    // undone event happened, not to the top of the first.
+    const state = stateFrom(rest, isHome, { inning: last.inning, half: last.half as Half })
 
     await supabaseAdmin.from('games').update({
       team_score: isHome ? state.homeRuns : state.awayRuns,
       opponent_score: isHome ? state.awayRuns : state.homeRuns,
       current_inning: state.inning,
+      current_half: state.half,
     }).eq('id', gameId)
 
     return NextResponse.json({ success: true, state })

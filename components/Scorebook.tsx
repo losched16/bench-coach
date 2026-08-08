@@ -36,6 +36,9 @@ interface Props {
   // rather than asking again.
   currentPitcher: string | null
   pitcherName?: string | null
+  // The book moves the shared cursor (inning + half). Everything else on the
+  // game screen reads that, so it has to be told when it changes.
+  onCursorChange?: () => void
 }
 
 type Slot = 'out' | '1' | '2' | '3' | 'home'
@@ -61,7 +64,7 @@ const SLOTS: Array<{ v: Slot; label: string }> = [
 // off these are unearned against our pitcher.
 const UNEARNED_RESULTS = new Set<string>(['E'])
 
-export function Scorebook({ gameId, currentPitcher, pitcherName }: Props) {
+export function Scorebook({ gameId, currentPitcher, pitcherName, onCursorChange }: Props) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -274,6 +277,7 @@ export function Scorebook({ gameId, currentPitcher, pitcherName }: Props) {
       }
       setSheet(null)
       await load()
+      onCursorChange?.()
       if (navigator.vibrate) navigator.vibrate(40)
     } catch (e: any) {
       setError(e.message)
@@ -306,6 +310,7 @@ export function Scorebook({ gameId, currentPitcher, pitcherName }: Props) {
       if (!res.ok) throw new Error(d.error || 'Could not undo that')
       setCount(NEW_COUNT)
       await load()
+      onCursorChange?.()
     } catch (e: any) {
       setError(e.message)
     } finally {

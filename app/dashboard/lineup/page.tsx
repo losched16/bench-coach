@@ -8,6 +8,7 @@ import { usePageView } from '@/lib/tracking'
 import { LINEUP_MODES, STRATEGIES, LineupMode, Strategy } from '@/lib/lineup'
 import { LineupRules } from '@/components/LineupRules'
 import { ManualLineup, BuiltLineup } from '@/components/ManualLineup'
+import { PositionEligibility } from '@/components/PositionEligibility'
 import { findExistingGame } from '@/lib/games'
 
 // Types
@@ -122,6 +123,8 @@ export default function LineupPage() {
 
   // Eligibility editor state
   const [showEligibility, setShowEligibility] = useState(false)
+  // The pre-game review, inside the setup form.
+  const [reviewOpen, setReviewOpen] = useState(false)
 
   // Generated lineup state
   const [generatedLineup, setGeneratedLineup] = useState<GeneratedLineup | null>(null)
@@ -135,6 +138,12 @@ export default function LineupPage() {
 
   const searchParams = useSearchParams()
   const teamId = searchParams.get('teamId')
+  // Arriving from a game in progress. Without this the builder had no idea
+  // which game it was building for, so it asked for the date and opponent the
+  // coach had already entered and then went looking for a matching game by
+  // name — which is why it felt like starting over.
+  const forGameId = searchParams.get('gameId')
+  const [forGame, setForGame] = useState<any>(null)
   const supabase = createSupabaseComponentClient()
 
   useEffect(() => {
@@ -142,6 +151,30 @@ export default function LineupPage() {
       loadData()
     }
   }, [teamId])
+
+  // Prefill from the game we were sent here for, and go straight to the setup
+  // rather than the list of old lineups — a coach who tapped "set the lineup"
+  // from the dugout is not browsing.
+  useEffect(() => {
+    if (!forGameId) return
+    let cancelled = false
+    ;(async () => {
+      const { data } = await supabase
+        .from('games')
+        .select('id, game_date, opponent, total_innings, status')
+        .eq('id', forGameId)
+        .maybeSingle()
+      const g = data as any
+      if (!g || cancelled) return
+      setForGame(g)
+      setGameDate(g.game_date || '')
+      setOpponent(g.opponent || '')
+      if (g.total_innings) setInnings(g.total_innings)
+      setShowSetup(true)
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forGameId])
 
   const loadData = async () => {
     try {
@@ -252,6 +285,7 @@ export default function LineupPage() {
           unavailableIds,
           opponent: opponent || null,
           gameDate: gameDate || null,
+          gameId: forGameId || null,
         }),
       })
 
@@ -303,9 +337,13 @@ export default function LineupPage() {
       // Attach to the actual game, creating it if it doesn't exist yet. Before
       // this, a lineup and the game you played with it were two unrelated rows
       // joined by an opponent name you typed twice.
-      const existing = await findExistingGame(supabase, {
-        teamId, gameDate: forDate, opponent,
-      })
+      //
+      // When we were sent here FROM a game, that game is the answer and there
+      // is nothing to look up — matching on date and opponent could otherwise
+      // pick a different row and hand the lineup to the wrong game.
+      const existing = forGameId
+        ? { id: forGameId }
+        : await findExistingGame(supabase, { teamId, gameDate: forDate, opponent })
       let gameId: string | null = existing?.id || null
       if (!gameId) {
         const { data: newGame } = await supabase
@@ -550,6 +588,25 @@ export default function LineupPage() {
 
   return (
     <div className="space-y-6">
+      {/* Where this lineup is going. Arriving from a live game with no sign
+          of that game is what made this feel like a different app. */}
+      {forGame && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 flex items-center justify-between gap-3">
+          <p className="text-sm text-blue-900">
+            Setting the lineup for{' '}
+            <strong>{forGame.opponent ? `the game vs ${forGame.opponent}` : 'your game'}</strong>
+            {forGame.status === 'live' && ' — in progress right now'}. It&apos;ll be on the game
+            screen as soon as you save.
+          </p>
+          <a
+            href={`/dashboard/game?teamId=${teamId || ''}`}
+            className="shrink-0 text-sm font-medium text-blue-700 underline whitespace-nowrap"
+          >
+            Back to the game
+          </a>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Game Day Lineup</h2>
@@ -571,64 +628,11 @@ export default function LineupPage() {
         </div>
       </div>
 
-      {/* Position Eligibility Editor */}
-      {showEligibility && (
+      {/* Position Eligibility — the team's standing answer. Same component
+          the Team page uses, so there is one place this behaves. */}
+      {showEligibility && teamId && (
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Position Eligibility</h3>
-              <p className="text-sm text-gray-600 mt-1">
-                Flag which players can handle key positions. The AI will only assign Catcher, Pitcher, and 1st Base to eligible players.
-              </p>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 pr-4 text-sm font-medium text-gray-700">Player</th>
-                  {KEY_POSITIONS.map(pos => (
-                    <th key={pos} className="px-4 py-3 text-center text-sm font-medium text-gray-700">{pos}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {players.map(player => (
-                  <tr key={player.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 pr-4">
-                      <div className="font-medium text-gray-900">{player.player.name}</div>
-                      {player.player.jersey_number && (
-                        <span className="text-xs text-gray-500">#{player.player.jersey_number}</span>
-                      )}
-                    </td>
-                    {KEY_POSITIONS.map(pos => (
-                      <td key={pos} className="px-4 py-3 text-center">
-                        <button
-                          onClick={() => toggleEligibility(player.id, pos)}
-                          className={`w-8 h-8 rounded-full border-2 transition-all ${
-                            isEligible(player.id, pos)
-                              ? 'bg-green-500 border-green-500 text-white'
-                              : 'bg-white border-gray-300 text-gray-300 hover:border-gray-400'
-                          }`}
-                        >
-                          {isEligible(player.id, pos) ? '✓' : ''}
-                        </button>
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg flex items-start space-x-2">
-            <AlertCircle size={16} className="text-blue-600 mt-0.5 flex-shrink-0" />
-            <p className="text-sm text-blue-800">
-              Players without any eligibility flags can play all other positions (2B, 3B, SS, OF). 
-              Only flag players who are comfortable and capable at catcher, pitcher, or first base.
-            </p>
-          </div>
+          <PositionEligibility teamId={teamId} players={players as any} />
         </div>
       )}
 
@@ -817,19 +821,38 @@ export default function LineupPage() {
             )}
           </div>
 
-          {/* Eligibility reminder */}
-          {eligibility.length === 0 && (
-            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start space-x-2">
-              <AlertCircle size={16} className="text-yellow-600 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-yellow-800">
-                You haven't set position eligibility yet. The AI won't know which kids can play catcher or first base.{' '}
-                <button
-                  onClick={() => { setShowEligibility(true); setShowSetup(false) }}
-                  className="underline font-medium"
-                >
-                  Set eligibility first
-                </button>
-              </p>
+          {/* The pre-game review. Eligibility is a team setting and stays
+              one — this is the chance to depart from it for tonight, which is
+              the case that used to require changing the team and remembering
+              to change it back. */}
+          {teamId && players.length > 0 && (
+            <div className="mt-5 border-t border-gray-200 pt-4">
+              <button
+                onClick={() => setReviewOpen(!reviewOpen)}
+                className="w-full flex items-center justify-between text-left"
+              >
+                <span className="text-sm font-medium text-gray-900">
+                  Position eligibility
+                  <span className="font-normal text-gray-500">
+                    {' — '}
+                    {eligibility.length === 0
+                      ? "nothing flagged yet, so we won't assign catcher, pitcher or first"
+                      : 'using your team settings'}
+                  </span>
+                </span>
+                {reviewOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+              </button>
+              {reviewOpen && (
+                <div className="mt-4">
+                  <PositionEligibility
+                    teamId={teamId}
+                    players={players as any}
+                    gameId={forGameId}
+                    gameLabel={opponent ? `the game vs ${opponent}` : 'this game'}
+                    onReviewed={() => setReviewOpen(false)}
+                  />
+                </div>
+              )}
             </div>
           )}
 

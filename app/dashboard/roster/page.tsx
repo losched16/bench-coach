@@ -6,6 +6,7 @@ import { createSupabaseComponentClient } from '@/lib/supabase'
 import { Plus, User, Trash2, ChevronRight, StickyNote, Upload, Camera, Check, X, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { usePageView } from '@/lib/tracking'
+import { PositionEligibility } from '@/components/PositionEligibility'
 
 interface Player {
   id: string
@@ -404,6 +405,15 @@ function RosterPageContent() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Position eligibility lives with the roster, because that is what it
+          is: a fact about your players, not about a game. The lineup builder
+          reads it and can depart from it for one night without changing it. */}
+      {teamId && players.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <PositionEligibility teamId={teamId} players={players as any} />
         </div>
       )}
 

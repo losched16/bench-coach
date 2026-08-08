@@ -37,6 +37,9 @@ export async function POST(request: NextRequest) {
       teamId, innings = 6, pitchingType = 'coach_pitch', fieldPositions = 10,
       everyoneBats, lineupMode, strategy, dhPlayerId, unavailableIds,
       opponent, gameDate,
+      // Set when the lineup is being built for a known game, which is what
+      // makes tonight-only eligibility possible.
+      gameId,
     } = body
 
     if (!teamId) return NextResponse.json({ error: 'Missing teamId' }, { status: 400 })
@@ -72,15 +75,39 @@ export async function POST(request: NextRequest) {
     const out = new Set<string>(Array.isArray(unavailableIds) ? unavailableIds : [])
 
     // ── Eligibility + position history ──
-    const { data: eligData } = await supabaseAdmin
-      .from('position_eligibility')
-      .select('team_player_id, position, eligible')
-      .in('team_player_id', playerIds)
+    //
+    // The team setting is the standing answer. A row in game_position_
+    // eligibility overrides it for THIS game only — which is how a coach tries
+    // a kid at catcher for one week without promising he catches from now on.
+    const [{ data: eligData }, gameElig] = await Promise.all([
+      supabaseAdmin
+        .from('position_eligibility')
+        .select('team_player_id, position, eligible')
+        .in('team_player_id', playerIds),
+      gameId
+        ? supabaseAdmin
+            .from('game_position_eligibility')
+            .select('team_player_id, position, eligible')
+            .eq('game_id', gameId)
+        // Not scoped to a game, or the override table isn't there yet. Either
+        // way the team setting alone is a correct answer, so this never fails
+        // the lineup.
+        : Promise.resolve({ data: [] as any[] }),
+    ])
+
+    const eligible: Record<string, Record<string, boolean>> = {}
+    for (const e of (eligData || []) as any[]) {
+      ;(eligible[e.team_player_id] ||= {})[e.position] = !!e.eligible
+    }
+    for (const e of ((gameElig as any)?.data || []) as any[]) {
+      ;(eligible[e.team_player_id] ||= {})[e.position] = !!e.eligible
+    }
 
     const eligibilityMap: Record<string, string[]> = {}
-    for (const e of (eligData || []) as any[]) {
-      if (!e.eligible) continue
-      ;(eligibilityMap[e.team_player_id] ||= []).push(e.position)
+    for (const [tp, positions] of Object.entries(eligible)) {
+      for (const [pos, ok] of Object.entries(positions)) {
+        if (ok) (eligibilityMap[tp] ||= []).push(pos)
+      }
     }
 
     const { data: pastLineups } = await supabaseAdmin

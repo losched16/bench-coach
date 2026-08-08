@@ -178,7 +178,7 @@ export function LiveLineup({ gameId, inning, teamId }: Props) {
           here with the subs.
         </p>
         <a
-          href={`/dashboard/lineup${teamId ? `?teamId=${teamId}` : ''}`}
+          href={`/dashboard/lineup?gameId=${gameId}${teamId ? `&teamId=${teamId}` : ''}`}
           className="inline-block px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg active:bg-blue-700"
         >
           Set the lineup
