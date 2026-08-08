@@ -132,6 +132,8 @@ function ScoutingContent() {
   const [matchups, setMatchups] = useState<Matchup[]>([])
   const [rules, setRules] = useState<RuleSet[]>([])
   const [boardPrefillId, setBoardPrefillId] = useState<string | null>(null)
+  // Why the list is empty, when it is empty for a reason other than "no data".
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   // Detail view
   const [selectedOpponentId, setSelectedOpponentId] = useState<string | null>(null)
@@ -176,18 +178,36 @@ function ScoutingContent() {
   }, [teamId])
 
   const loadOpponents = async (cid: string) => {
-    const res = await fetch(`/api/scouting?coachId=${cid}`)
-    const data = await res.json()
-    if (res.ok) {
+    // A failed load used to leave the list empty and say nothing, which is
+    // indistinguishable from having no opponents — so a refused request or a
+    // server error read as "my scouting data was erased". Never again: if the
+    // list is empty because something broke, the page says so.
+    try {
+      const res = await fetch(`/api/scouting?coachId=${cid}`)
+      const data = await res.json()
+      if (!res.ok) {
+        setLoadError(
+          data.error ||
+          `Couldn't load your opponents (${res.status}). Nothing has been deleted — this is a loading problem.`
+        )
+        return
+      }
+      setLoadError(null)
       setOpponents(data.teams || [])
       setMatchups(data.matchups || [])
+    } catch (e: any) {
+      setLoadError(
+        `Couldn't reach the server to load your opponents. Nothing has been deleted. (${e?.message || 'network error'})`
+      )
     }
   }
 
   const loadRules = async (cid: string) => {
-    const res = await fetch(`/api/scouting/rules?coachId=${cid}`)
-    const data = await res.json()
-    if (res.ok) setRules(data.rules || [])
+    try {
+      const res = await fetch(`/api/scouting/rules?coachId=${cid}`)
+      const data = await res.json()
+      if (res.ok) setRules(data.rules || [])
+    } catch { /* rules are a detail; the opponents list is the headline */ }
   }
 
   const loadDetail = useCallback(async (opponentId: string) => {
@@ -288,6 +308,22 @@ function ScoutingContent() {
           </button>
         ))}
       </div>
+
+      {loadError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-2">
+          <Info size={16} className="text-red-600 shrink-0 mt-0.5" />
+          <div className="text-sm text-red-800">
+            <p className="font-medium">Your scouting data is still there.</p>
+            <p className="mt-0.5">{loadError}</p>
+            <button
+              onClick={() => coachId && loadOpponents(coachId)}
+              className="mt-2 underline font-medium"
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+      )}
 
       {tab === 'opponents' && !selectedOpponentId && (
         <OpponentList
