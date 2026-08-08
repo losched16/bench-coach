@@ -146,6 +146,11 @@ function CountContent() {
     if (!active || !coachId) return
     const next = Math.max(0, (optimistic ?? active.pitches) + delta)
     setOptimistic(next)
+    // `open` is what every OTHER view reads from — the chip strip, the "Still
+    // counting" list, the resume path. Without this it holds whatever the last
+    // server load said, so switching away from a pitcher showed the number
+    // from before you counted them.
+    setOpen(prev => prev.map(o => (o.id === active.id ? { ...o, pitches: next } : o)))
     if (delta > 0 && navigator.vibrate) navigator.vibrate(25)
 
     inflight.current += 1
@@ -162,6 +167,7 @@ function CountContent() {
       if (data.session && inflight.current === 0) {
         setActive(data.session)
         setOptimistic(data.session.pitches)
+        setOpen(prev => prev.map(o => (o.id === data.session.id ? { ...o, ...data.session } : o)))
       }
     } catch {
       inflight.current -= 1
@@ -184,10 +190,19 @@ function CountContent() {
     await load(coachId)
   }
 
-  const resume = (s: Session) => {
+  const resume = async (s: Session) => {
+    // Optimistic first so the tap feels instant, then reconciled — a count
+    // shown from a stale list is the bug this whole path had.
     setActive(s)
     setOptimistic(s.pitches)
     setAvailability(null)
+    if (!coachId) return
+    const data = await load(coachId)
+    const fresh = (data.open || []).find((o: Session) => o.id === s.id)
+    if (fresh) {
+      setActive(fresh)
+      setOptimistic(fresh.pitches)
+    }
   }
 
   // Switching mid-game: park the current count and pick up another one without
@@ -195,15 +210,22 @@ function CountContent() {
   // server holds the numbers, so a mis-tap costs a tap, not a count.
   const switchTo = async (s: Session) => {
     if (!coachId || s.id === active?.id) return
-    // Take the server's number rather than the list's: the list was loaded
-    // before the last few taps landed.
-    const data = await load(coachId)
-    const fresh = (data.open || []).find((o: Session) => o.id === s.id) || s
-    setActive(fresh)
-    setOptimistic(fresh.pitches)
+    // Switch on the local number first: `open` is kept current by every tap
+    // now, so it is already right, and a round trip before the screen changes
+    // is a pause in the middle of an inning.
+    setActive(s)
+    setOptimistic(s.pitches)
     setAvailability(null)
     setResumedNote(null)
-    track('pitch_count_switched', { subject_type: fresh.subject_type })
+    track('pitch_count_switched', { subject_type: s.subject_type })
+
+    // Reconcile behind it, in case another device has been counting too.
+    const data = await load(coachId)
+    const fresh = (data.open || []).find((o: Session) => o.id === s.id)
+    if (fresh && inflight.current === 0) {
+      setActive(fresh)
+      setOptimistic(fresh.pitches)
+    }
   }
 
   // Undo a Done. The count keeps accumulating on the same row and the same
@@ -349,7 +371,7 @@ function CountContent() {
             <Minus size={18} /> Undo
           </button>
           <button
-            onClick={() => setActive(null)}
+            onClick={() => { setActive(null); if (coachId) void load(coachId) }}
             className="flex items-center justify-center gap-2 py-4 rounded-xl bg-gray-900 text-white active:bg-gray-800"
           >
             <Users size={18} /> Switch pitcher
