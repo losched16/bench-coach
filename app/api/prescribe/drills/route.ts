@@ -73,9 +73,39 @@ export async function GET(request: NextRequest) {
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
   try {
-    const { prescriptionId, coachId, reason } = await request.json()
-    if (!prescriptionId || !coachId) {
-      return NextResponse.json({ error: 'prescriptionId and coachId required' }, { status: 400 })
+    const body = await request.json()
+    const { prescriptionId, coachId, reason } = body
+    if (!coachId) {
+      return NextResponse.json({ error: 'coachId required' }, { status: 400 })
+    }
+
+    // Draft mode: the analysis has been read but not committed yet, so there is
+    // no prescriptions row holding the exclusion list. The caller supplies what
+    // to avoid and what the priority is about, and nothing is written — the
+    // whole point of the review step is that nothing is committed until the
+    // coach says so.
+    if (!prescriptionId) {
+      const { searchText, excludeIds, playerAge: draftAge, problemSlug } = body
+      if (!searchText) {
+        return NextResponse.json({ error: 'searchText required in draft mode' }, { status: 400 })
+      }
+      const pool = await gatherCandidates({
+        problemSlug: problemSlug || null,
+        exclude: new Set<string>(excludeIds || []),
+        playerAge: draftAge,
+        searchText,
+      })
+      if (pool.length === 0) {
+        return NextResponse.json({
+          drills: [],
+          exhausted: true,
+          message:
+            'The library is out of drills for this one that you haven’t already turned down. ' +
+            'Make it the priority as it stands and attack it your own way, or reword what you asked about.',
+        })
+      }
+      const picked = await pickReplacements(searchText, reason, pool)
+      return NextResponse.json({ drills: (picked.length ? picked : pool.slice(0, 3)).slice(0, 4) })
     }
 
     const { data: p } = await supabaseAdmin
@@ -103,42 +133,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Same source as the original prescription: the problem mapping first,
-    // then a direct library search when the taxonomy comes up short.
-    let candidates: any[] = []
-
-    if (pres.problem_id) {
-      const { data: mapRows } = await supabaseAdmin
-        .from('drill_problem_map')
-        .select(`problem_slug, sort_order, curated, drill:drill_resources(${DRILL_FIELDS})`)
-        .eq('problem_slug', pres.problem_id)
-        .or('status.eq.approved,status.is.null', { foreignTable: 'drill' })
-
-      for (const row of (mapRows || []) as any[]) {
-        const d = Array.isArray(row.drill) ? row.drill[0] : row.drill
-        if (d && !exclude.has(d.id)) candidates.push(d)
-      }
-    }
-
-    if (candidates.length < 3) {
-      const { data: pool } = await supabaseAdmin
-        .from('drill_resources')
-        .select(DRILL_FIELDS)
-        .or('status.eq.approved,status.is.null')
-        .limit(400)
-
-      for (const d of (pool || []) as any[]) {
-        if (!exclude.has(d.id) && !candidates.some(c => c.id === d.id)) candidates.push(d)
-      }
-    }
-
     const searchText = [pres.priority, pres.summary, pres.focus_area].filter(Boolean).join(' ')
 
-    const eligible = candidates
-      .filter(d => !(playerAge && d.min_age && d.max_age && (playerAge < d.min_age || playerAge > d.max_age)))
-      .map(d => ({ ...d, _relevance: scoreDrillRelevance(searchText, d) }))
-      .sort((a, b) => b._relevance - a._relevance)
-      .slice(0, 30)
+    const eligible = await gatherCandidates({
+      problemSlug: pres.problem_id || null,
+      exclude,
+      playerAge,
+      searchText,
+    })
 
     if (eligible.length === 0) {
       return NextResponse.json({
@@ -179,6 +181,54 @@ export async function POST(request: NextRequest) {
     console.error('Priority drills POST error:', error)
     return NextResponse.json({ error: error.message || 'Could not find different drills' }, { status: 500 })
   }
+}
+
+
+// Candidate drills for a priority: the problem mapping first, then a direct
+// library search when the taxonomy comes up short. Shared by the committed and
+// the draft path so a refresh returns the same quality of suggestion whether or
+// not the priority has been saved yet.
+async function gatherCandidates(opts: {
+  problemSlug: string | null
+  exclude: Set<string>
+  playerAge?: number
+  searchText: string
+}): Promise<any[]> {
+  const { problemSlug, exclude, playerAge, searchText } = opts
+  const candidates: any[] = []
+
+  if (problemSlug) {
+    const { data: mapRows } = await supabaseAdmin
+      .from('drill_problem_map')
+      .select(`problem_slug, sort_order, curated, drill:drill_resources(${DRILL_FIELDS})`)
+      .eq('problem_slug', problemSlug)
+      .or('status.eq.approved,status.is.null', { foreignTable: 'drill' })
+
+    for (const row of (mapRows || []) as any[]) {
+      const d = Array.isArray(row.drill) ? row.drill[0] : row.drill
+      if (d && !exclude.has(d.id)) candidates.push(d)
+    }
+  }
+
+  if (candidates.length < 3) {
+    const { data: pool } = await supabaseAdmin
+      .from('drill_resources')
+      .select(DRILL_FIELDS)
+      .or('status.eq.approved,status.is.null')
+      .limit(400)
+
+    for (const d of (pool || []) as any[]) {
+      if (!exclude.has(d.id) && !candidates.some(c => c.id === d.id)) candidates.push(d)
+    }
+  }
+
+  // Keyword score only bounds the pool sent to the model — it must not decide
+  // inclusion, or drills it cannot read get dropped before anything judges them.
+  return candidates
+    .filter(d => !(playerAge && d.min_age && d.max_age && (playerAge < d.min_age || playerAge > d.max_age)))
+    .map(d => ({ ...d, _relevance: scoreDrillRelevance(searchText, d) }))
+    .sort((a, b) => b._relevance - a._relevance)
+    .slice(0, 30)
 }
 
 // Which of the remaining drills actually help. Keyword scoring only bounds the

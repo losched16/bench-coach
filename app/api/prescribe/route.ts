@@ -6,6 +6,7 @@ import { AnalysisSection, splitSections, ageGuidanceFor, scoreDrillRelevance, ME
 import { COACH_VOICE } from '@/lib/coachVoice'
 import { resolveFocusArea, focusAreaLabel } from '@/lib/focusAreas'
 import { textFrom } from '@/lib/claudeText'
+import { commitPrescription } from '@/lib/prescriptions'
 
 // Service role for server-side reads (bypasses RLS), matching the other API routes.
 const supabaseAdmin = createClient(
@@ -303,62 +304,34 @@ export async function POST(request: NextRequest) {
 
           const sections = splitSections(markdown)
 
-          // 7. Persist. Without a saved prescription there is no return visit,
-          //    no reassessment, and no compounding value.
+          // 7. Persist — but only when the caller asked for it.
+          //
+          // The analysis and the commit are two acts now. `persist: false`
+          // streams the read and returns everything the commit needs, so the
+          // coach can drop a drill they're already running, or reject the read
+          // outright, before anything becomes a tracked priority.
+          //
+          // Defaults to true: the older single-step surface still posts
+          // without the flag and must keep working.
+          const persist = body.persist !== false
           let prescriptionId: string | null = null
-          if (coachId && markdown.trim()) {
-            const priority = sections.find(x => x.key.startsWith('the_one_thing'))?.body || null
-            const successCriteria = sections.find(x => x.key.startsWith('what_to_watch'))?.body || null
-            const summary = sections.find(x => x.key.startsWith('what_the_data'))?.body || null
-            // A lesson diagnosis means this priority came from an instructor,
-            // and is exempt from AI override during the hold window.
-            const origin = (ctx.lessonDiagnoses?.length || 0) > 0 ? 'instructor' : 'ai'
+          const origin: 'ai' | 'instructor' =
+            (ctx.lessonDiagnoses?.length || 0) > 0 ? 'instructor' : 'ai'
 
-            const { data: saved } = await supabaseAdmin
-              .from('prescriptions')
-              .insert({
-                coach_id: coachId,
-                scope,
-                player_id: scope === 'player' ? playerId : null,
-                team_id: teamId || null,
-                problem_id: primary?.slug || null,
-                focus_area: focusArea,
-                origin,
-                summary,
-                priority,
-                success_criteria: successCriteria,
-                drill_ids: selected.map(d => d.id),
-                sessions: { markdown, sections },
-                status: 'active',
-              })
-              .select('id')
-              .single()
-
-            if (saved) prescriptionId = (saved as any).id
-
-            // A new priority replaces the one already running IN THE SAME AREA
-            // only. Hitting and fielding run in parallel all week; two swing
-            // corrections at once mean you can't tell which cue failed.
-            if (prescriptionId && focusArea) {
-              let sq = supabaseAdmin
-                .from('prescriptions')
-                .update({
-                  status: 'abandoned',
-                  superseded_by: prescriptionId,
-                  outcome_note: `Replaced by a newer ${focusAreaLabel(focusArea).toLowerCase()} priority.`,
-                  resolved_at: new Date().toISOString(),
-                })
-                .eq('coach_id', coachId)
-                .eq('status', 'active')
-                .eq('focus_area', focusArea)
-                .neq('id', prescriptionId)
-
-              sq = scope === 'player'
-                ? sq.eq('player_id', playerId)
-                : sq.eq('team_id', teamId).eq('scope', 'team')
-
-              await sq
-            }
+          if (persist && coachId && markdown.trim()) {
+            const result = await commitPrescription(supabaseAdmin, {
+              coachId,
+              scope,
+              playerId,
+              teamId,
+              markdown,
+              sections,
+              focusArea,
+              problemSlug: primary?.slug || null,
+              drillIds: selected.map(d => d.id),
+              origin,
+            })
+            prescriptionId = result.prescriptionId
           }
 
           controller.enqueue(encoder.encode(META_SENTINEL + JSON.stringify({
@@ -366,6 +339,19 @@ export async function POST(request: NextRequest) {
             matchedProblems: slugs.map((x: string) => tax.find(t => t.slug === x)).filter(Boolean),
             drills: drillPayload,
             prescriptionId,
+            // Everything /api/prescribe/commit needs, so confirming never
+            // re-runs the analysis and never returns different words than the
+            // ones the coach just read and agreed to.
+            draft: prescriptionId ? null : {
+              scope,
+              playerId: playerId || null,
+              teamId: teamId || null,
+              focusArea,
+              problemSlug: primary?.slug || null,
+              origin,
+              markdown,
+              sections,
+            },
           })))
         } catch (e: any) {
           console.error('Analysis stream error:', e)

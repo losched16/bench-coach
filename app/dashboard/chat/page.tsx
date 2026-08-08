@@ -10,6 +10,7 @@ import { PrescriptionSections } from '@/components/PrescriptionSections'
 import { PriorityDrills } from '@/components/PriorityDrills'
 import { ChatThreadList, ChatThread } from '@/components/ChatThreadList'
 import { SupersedeConfirm, Superseding } from '@/components/SupersedeConfirm'
+import { DrillReview, ReviewDrill, DrillVerdict } from '@/components/DrillReview'
 import { META_SENTINEL, splitSections } from '@/lib/analysis'
 import { usePageView, useTracker } from '@/lib/tracking'
 
@@ -31,12 +32,23 @@ interface RosterPlayer {
 
 // A pending commit: which question it came from, and whether it is waiting on
 // the coach to confirm replacing an existing priority.
+// A read in progress. It exists from the moment the coach asks for a plan
+// until they either confirm it or walk away — nothing is written to the
+// database anywhere in between.
 interface Commit {
   complaint: string
   confirming: Superseding | null
   focusAreaLabel: string
   running: boolean
   error: string | null
+  // Populated once the analysis has finished streaming. Everything the commit
+  // endpoint needs, so confirming never re-runs the read.
+  draft: any | null
+  drills: ReviewDrill[]
+  verdicts: Record<string, DrillVerdict>
+  refreshing: boolean
+  saving: boolean
+  messageId: string | null
 }
 
 export default function ChatPage() {
@@ -179,14 +191,14 @@ export default function ChatPage() {
 
   const selectedPlayer = roster.find(r => r.player_id === playerId)
 
-  const runCommit = async (complaint: string, confirmSupersede: boolean) => {
-    setCommit(prev => ({
-      complaint,
-      confirming: confirmSupersede ? null : prev?.confirming ?? null,
-      focusAreaLabel: prev?.focusAreaLabel || '',
-      running: true,
-      error: null,
-    }))
+  // Step one: write the read. Nothing is saved — the coach has not agreed to
+  // anything yet, and a priority they never confirmed would start a three-week
+  // clock they never set.
+  const runAnalysis = async (complaint: string) => {
+    setCommit({
+      complaint, confirming: null, focusAreaLabel: '', running: true, error: null,
+      draft: null, drills: [], verdicts: {}, refreshing: false, saving: false, messageId: null,
+    })
 
     const playerAge = selectedPlayer?.birth_year
       ? new Date().getFullYear() - selectedPlayer.birth_year
@@ -201,33 +213,19 @@ export default function ChatPage() {
           teamId,
           playerId: playerId || undefined,
           playerAge,
-          confirmSupersede,
+          persist: false,
         }),
       })
-
-      // 409 means there is already a priority in this area. The server checks
-      // before spending anything on the analysis, so backing out is free.
-      if (res.status === 409) {
-        const data = await res.json()
-        setCommit({
-          complaint,
-          confirming: data.replacing,
-          focusAreaLabel: data.focusAreaLabel || 'this area',
-          running: false,
-          error: null,
-        })
-        return
-      }
 
       const contentType = res.headers.get('content-type') || ''
       if (contentType.includes('application/json')) {
         const data = await res.json()
-        throw new Error(data.error || 'Could not set the priority.')
+        throw new Error(data.error || 'Could not write the read.')
       }
       if (!res.body) throw new Error('No response from the server')
 
-      // Stream it into the conversation as it is written — a read takes 20-40
-      // seconds and a spinner that long reads as broken.
+      // Stream it into the conversation — a read takes 20-40 seconds and a
+      // spinner that long reads as broken.
       const liveId = `commit-${Date.now()}`
       setMessages(prev => [
         ...prev,
@@ -248,10 +246,7 @@ export default function ChatPage() {
 
         const sentinelAt = buffer.indexOf(META_SENTINEL)
         markdown = sentinelAt === -1 ? buffer : buffer.slice(0, sentinelAt)
-
-        setMessages(prev =>
-          prev.map(m => (m.id === liveId ? { ...m, content: markdown } : m))
-        )
+        setMessages(prev => prev.map(m => (m.id === liveId ? { ...m, content: markdown } : m)))
 
         if (sentinelAt !== -1) {
           try {
@@ -264,52 +259,123 @@ export default function ChatPage() {
 
       if (meta?.error) throw new Error(meta.error)
 
-      // Persist it into the thread so the conversation reads as the whole
-      // story: the question, the answer, and the decision.
+      setCommit(prev => prev && ({
+        ...prev,
+        running: false,
+        draft: meta?.draft || null,
+        drills: meta?.drills || [],
+        messageId: liveId,
+      }))
+    } catch (error: any) {
+      console.error('Analysis error:', error)
+      setCommit(prev => prev && ({ ...prev, running: false, error: error?.message || 'Could not write the read.' }))
+    }
+  }
+
+  // Step two: the coach agrees. Sends the exact text they read — regenerating
+  // would cost a second analysis and could come back saying something else.
+  const confirmPriority = async (confirmSupersede: boolean) => {
+    if (!commit?.draft || !coachId) return
+    setCommit(prev => prev && ({ ...prev, saving: true, error: null }))
+
+    const keptIds = commit.drills
+      .filter(d => (commit.verdicts[d.id] || 'keep') === 'keep')
+      .map(d => d.id)
+    const rejectedIds = commit.drills
+      .filter(d => (commit.verdicts[d.id] || 'keep') !== 'keep')
+      .map(d => d.id)
+
+    try {
+      const res = await fetch('/api/prescribe/commit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coachId,
+          draft: commit.draft,
+          drillIds: keptIds,
+          rejectedDrillIds: rejectedIds,
+          confirmSupersede,
+        }),
+      })
+      const data = await res.json()
+
+      if (res.status === 409) {
+        setCommit(prev => prev && ({
+          ...prev,
+          saving: false,
+          confirming: data.replacing,
+          focusAreaLabel: data.focusAreaLabel || 'this area',
+        }))
+        return
+      }
+      if (!res.ok) throw new Error(data.error || 'Could not save the priority.')
+
+      // Persist the read into the thread now that it is a real priority, so
+      // reopening the conversation shows the decision alongside the question.
       const saved = await fetch('/api/chat/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           threadId,
           role: 'assistant',
-          content: markdown,
+          content: messages.find(m => m.id === commit.messageId)?.content || '',
           meta: {
             kind: 'priority',
-            prescriptionId: meta?.prescriptionId || null,
+            prescriptionId: data.prescriptionId,
             playerName: selectedPlayer?.name || null,
           },
         }),
       }).then(r => r.json()).catch(() => null)
 
-      setMessages(prev =>
-        prev.map(m =>
-          m.id === liveId
-            ? {
-                ...m,
-                id: saved?.message?.id || liveId,
-                content: markdown,
-                meta: {
-                  kind: 'priority',
-                  prescriptionId: meta?.prescriptionId || null,
-                  playerName: selectedPlayer?.name || null,
-                },
-              }
-            : m
-        )
-      )
+      setMessages(prev => prev.map(m => m.id === commit.messageId ? {
+        ...m,
+        id: saved?.message?.id || m.id,
+        meta: {
+          kind: 'priority',
+          prescriptionId: data.prescriptionId,
+          playerName: selectedPlayer?.name || null,
+        },
+      } : m))
 
-      track('prescription_generated', { source: 'chat', from_chat: true })
+      track('prescription_generated', { source: 'chat', drills_kept: keptIds.length, drills_rejected: rejectedIds.length })
       setCommit(null)
       loadThreads()
     } catch (error: any) {
       console.error('Commit error:', error)
-      setCommit({
-        complaint,
-        confirming: null,
-        focusAreaLabel: '',
-        running: false,
-        error: error?.message || 'Could not set the priority.',
+      setCommit(prev => prev && ({ ...prev, saving: false, error: error?.message || 'Could not save the priority.' }))
+    }
+  }
+
+  const refreshDraftDrills = async (reason: string) => {
+    if (!commit?.draft || !coachId) return
+    setCommit(prev => prev && ({ ...prev, refreshing: true }))
+    try {
+      const res = await fetch('/api/prescribe/drills', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coachId,
+          reason: reason || undefined,
+          // No prescription yet, so the exclusion list is everything shown so
+          // far plus everything already turned down.
+          searchText: [commit.draft.markdown?.slice(0, 600), commit.complaint].filter(Boolean).join(' '),
+          problemSlug: commit.draft.problemSlug,
+          excludeIds: commit.drills.map(d => d.id),
+        }),
       })
+      const data = await res.json()
+      if (data.drills?.length) {
+        setCommit(prev => prev && ({
+          ...prev,
+          refreshing: false,
+          // Keep the rejections: they are why we are here.
+          drills: [...prev.drills.filter(d => (prev.verdicts[d.id] || 'keep') !== 'keep'), ...data.drills],
+        }))
+      } else {
+        setCommit(prev => prev && ({ ...prev, refreshing: false, error: data.message || 'No other drills matched.' }))
+      }
+    } catch (error: any) {
+      setCommit(prev => prev && ({ ...prev, refreshing: false, error: error?.message }))
     }
   }
 
@@ -702,18 +768,18 @@ export default function ChatPage() {
                           <p className="text-sm text-red-700 mb-2">{commit.error}</p>
                         )}
                         <button
-                          onClick={() => runCommit(sourceQuestion!, false)}
+                          onClick={() => runAnalysis(sourceQuestion!)}
                           disabled={commit?.running}
                           className="inline-flex items-center gap-2 px-3 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50"
                         >
                           {commit?.running
                             ? <Loader2 className="animate-spin" size={15} />
                             : <Target size={15} />}
-                          {commit?.running ? 'Working on the read…' : 'Make this the priority'}
+                          {commit?.running ? 'Working on the read…' : 'Work this up into a plan'}
                         </button>
                         <p className="text-xs text-gray-500 mt-2">
-                          Runs the full read on {selectedPlayer?.name || 'the team'}, sets it as
-                          the priority, and checks back in three weeks to see whether it moved.
+                          Full read on {selectedPlayer?.name || 'the team'} with drills. You decide
+                          afterwards whether it becomes a tracked priority — nothing is saved yet.
                         </p>
                       </div>
                     )}
@@ -749,14 +815,62 @@ export default function ChatPage() {
                 </div>
                 )
               })}
-              {/* Raised before anything is written, and before the analysis
-                  costs anything — the server checks and returns 409 first. */}
+              {/* The review step. The read is on screen, nothing is saved, and
+                  this is where the coach agrees to it — or doesn't. */}
+              {commit?.draft && !commit.confirming && (
+                <div className="bg-white rounded-lg border-2 border-red-200 p-4 space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                      <Target size={17} className="text-red-600" />
+                      Does this look right?
+                    </h4>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Nothing is saved yet. Set aside any drill you&apos;re already running or
+                      don&apos;t want, then make it the priority — that&apos;s what starts the
+                      three-week clock and the check-in.
+                    </p>
+                  </div>
+
+                  <DrillReview
+                    drills={commit.drills}
+                    verdicts={commit.verdicts}
+                    onVerdict={(id, v) => setCommit(prev => prev && ({
+                      ...prev, verdicts: { ...prev.verdicts, [id]: v },
+                    }))}
+                    onRefresh={refreshDraftDrills}
+                    refreshing={commit.refreshing}
+                  />
+
+                  {commit.error && <p className="text-sm text-red-700">{commit.error}</p>}
+
+                  <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-100">
+                    <button
+                      onClick={() => confirmPriority(false)}
+                      disabled={commit.saving}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {commit.saving ? <Loader2 className="animate-spin" size={15} /> : <Target size={15} />}
+                      {commit.saving ? 'Saving…' : 'Make this the priority'}
+                    </button>
+                    <button
+                      onClick={() => setCommit(null)}
+                      disabled={commit.saving}
+                      className="px-4 py-2 bg-white border border-gray-300 text-sm rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      Not quite — let me rephrase
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Raised before anything is written — the commit endpoint checks
+                  and returns 409 before it inserts. */}
               {commit?.confirming && (
                 <SupersedeConfirm
                   replacing={commit.confirming}
                   focusAreaLabel={commit.focusAreaLabel}
-                  busy={commit.running}
-                  onConfirm={() => runCommit(commit.complaint, true)}
+                  busy={commit.saving}
+                  onConfirm={() => confirmPriority(true)}
                   onCancel={() => setCommit(null)}
                 />
               )}

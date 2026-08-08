@@ -390,18 +390,35 @@ export function PrioritiesBoard({ teamId, focusId = null }: Props) {
       {verdict && !streaming && activePrescription && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
           {resolvedAs ? (
-            <div className="flex items-start gap-2 text-sm text-gray-700">
-              <CheckCircle2 className="text-green-600 flex-shrink-0 mt-0.5" size={18} />
-              <span>
-                Recorded.{' '}
-                {resolvedAs === 'active'
-                  ? "We'll hold this priority and come back in another three weeks."
-                  : resolvedAs === 'resolved'
-                    ? 'Closed out. Head to What to Work On when you want the next one.'
-                    : resolvedAs === 'stalled'
-                      ? 'Marked as stalled — go to What to Work On and we\'ll build the next plan knowing this one did not take.'
-                      : 'Set aside. It stays in the history so we don\'t suggest it again blindly.'}
-              </span>
+            <div className="space-y-3">
+              <div className="flex items-start gap-2 text-sm text-gray-700">
+                <CheckCircle2 className="text-green-600 flex-shrink-0 mt-0.5" size={18} />
+                <span>
+                  Recorded.{' '}
+                  {resolvedAs === 'active'
+                    ? "We'll hold this priority and come back in another three weeks."
+                    : resolvedAs === 'resolved'
+                      ? 'Closed out — it stays in the history, so the next read knows this one worked.'
+                      : resolvedAs === 'stalled'
+                        ? 'Marked as stalled. The next read will know this one did not take, which is worth as much as a win.'
+                        : "Set aside. It stays in the history so we don't suggest it again blindly."}
+                </span>
+              </div>
+
+              {/* "We're done with this, here's the next issue" — the moment a
+                  coach knows exactly what they want to work on next, and until
+                  now the copy just told them to go find another screen. */}
+              {resolvedAs !== 'active' && activePrescription && (
+                <a
+                  href={`/dashboard/chat?teamId=${teamId || ''}${
+                    activePrescription.playerId ? `&playerId=${activePrescription.playerId}` : ''
+                  }`}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700"
+                >
+                  <MessageSquarePlus size={15} />
+                  What&apos;s next for {activePrescription.subjectName}?
+                </a>
+              )}
             </div>
           ) : (
             <>
