@@ -17,9 +17,12 @@ interface Props {
   prescriptionId: string
   coachId: string
   subjectName: string
+  // 'Hitting', 'Pitching' — the plan is named after the area it works on,
+  // because with several running at once 'The plan' identifies nothing.
+  areaLabel?: string
 }
 
-export function DevelopmentPlan({ prescriptionId, coachId, subjectName }: Props) {
+export function DevelopmentPlan({ prescriptionId, coachId, subjectName , areaLabel }: Props) {
   const [markdown, setMarkdown] = useState<string | null>(null)
   const [generatedAt, setGeneratedAt] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -142,6 +145,7 @@ export function DevelopmentPlan({ prescriptionId, coachId, subjectName }: Props)
           coachId={coachId}
           prescriptionId={prescriptionId}
           sessions={sessions}
+          areaLabel={areaLabel}
         />
       )}
 
@@ -151,7 +155,9 @@ export function DevelopmentPlan({ prescriptionId, coachId, subjectName }: Props)
             onClick={() => setProseOpen(!proseOpen)}
             className="w-full px-3 py-2.5 flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg"
           >
-            {sessions.length > 0 ? 'The thinking behind it' : 'The plan'}
+            {sessions.length > 0
+              ? 'The thinking behind it'
+              : `${areaLabel ? areaLabel + ' plan' : 'The plan'}`}
             <ChevronDown
               size={15}
               className={`ml-auto text-gray-400 transition-transform ${proseOpen ? 'rotate-180' : ''}`}

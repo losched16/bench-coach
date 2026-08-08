@@ -277,7 +277,7 @@ export function PrioritiesBoard({ teamId, focusId = null }: Props) {
             className="w-full px-4 py-2.5 flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg"
           >
             <ListChecks size={15} className="text-gray-400" />
-            Drills and updates
+            Open the {focusAreaLabel(p.focusArea).toLowerCase()} plan
             <ChevronDown
               size={15}
               className={`ml-auto text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
@@ -325,6 +325,7 @@ export function PrioritiesBoard({ teamId, focusId = null }: Props) {
                     prescriptionId={p.id}
                     coachId={coachId!}
                     subjectName={p.subjectName}
+                    areaLabel={focusAreaLabel(p.focusArea)}
                   />
                 )}
               </div>
@@ -535,9 +536,6 @@ export function PrioritiesBoard({ teamId, focusId = null }: Props) {
               return acc
             }, {})
             const keys = Object.keys(groups).sort((a, b) => focusAreaRank(a) - focusAreaRank(b))
-            if (keys.length <= 1) {
-              return holdingList.map(p => renderPriority(p, { due: false }))
-            }
             return keys.map(key => (
               <div key={key} className="space-y-3">
                 <div className="flex items-center gap-2">

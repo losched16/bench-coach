@@ -139,13 +139,16 @@ export function ActivePriority({
         {readyToCheckIn
           ? <CalendarCheck className="text-amber-600" size={20} />
           : <Target className="text-red-600" size={20} />}
+        {/* The area IS the name of the thing. With several running at once,
+            "Working on" as a heading told a coach nothing — every card said it.
+            The state moved to a pill, where state belongs. */}
         <h3 className="font-semibold text-gray-900">
-          {readyToCheckIn ? 'Ready to review' : 'Working on'}
+          {focusAreaLabel(item.focusArea)} plan
         </h3>
-        {/* The area is the unit. Several run at once and a coach needs to see
-            at a glance which one this card is. */}
-        <span className={`text-xs px-2 py-0.5 rounded-full ${focusAreaChip(item.focusArea)}`}>
-          {focusAreaLabel(item.focusArea)}
+        <span className={`text-xs px-2 py-0.5 rounded-full ${
+          readyToCheckIn ? 'bg-amber-100 text-amber-800' : focusAreaChip(item.focusArea)
+        }`}>
+          {readyToCheckIn ? 'Ready to review' : 'Working on'}
         </span>
         <span className="text-xs text-gray-500 ml-auto">
           Day {item.daysElapsed} of {HOLD_DAYS}

@@ -32,9 +32,14 @@ interface Props {
   sessions: PlanSession[]
   // Contributors can tick; viewers cannot.
   canRecord?: boolean
+  // 'Hitting', 'Pitching'. With several plans running at once, a checklist
+  // headed "The plan" is the one thing a coach cannot act on.
+  areaLabel?: string
 }
 
-export function ActionPlan({ coachId, prescriptionId, sessions, canRecord = true }: Props) {
+export function ActionPlan({
+  coachId, prescriptionId, sessions, canRecord = true, areaLabel,
+}: Props) {
   const [done, setDone] = useState<DoneRow[]>([])
   const [busy, setBusy] = useState<string | null>(null)
   const [openKey, setOpenKey] = useState<string | null>(null)
@@ -103,7 +108,9 @@ export function ActionPlan({ coachId, prescriptionId, sessions, canRecord = true
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <h4 className="text-sm font-semibold text-gray-900">The plan</h4>
+        <h4 className="text-sm font-semibold text-gray-900">
+          {areaLabel ? `${areaLabel} plan` : 'The plan'}
+        </h4>
         <span className="text-xs text-gray-500 tabular-nums">
           {completed} of {sessions.length} done
         </span>
