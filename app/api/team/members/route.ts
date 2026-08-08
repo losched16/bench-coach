@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { sessionClient } from '@/lib/authz'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -26,18 +25,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Get current user
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-        },
-      }
-    )
+    // Shared adapter: this project is on @supabase/ssr 0.1.x, which wants
+    // get/set/remove. A getAll-only adapter reads no cookies at all and
+    // reports every signed-in user as signed out.
+    const supabase = await sessionClient()
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -140,18 +131,10 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Get current user
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-        },
-      }
-    )
+    // Shared adapter: this project is on @supabase/ssr 0.1.x, which wants
+    // get/set/remove. A getAll-only adapter reads no cookies at all and
+    // reports every signed-in user as signed out.
+    const supabase = await sessionClient()
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -222,18 +205,10 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Get current user
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-        },
-      }
-    )
+    // Shared adapter: this project is on @supabase/ssr 0.1.x, which wants
+    // get/set/remove. A getAll-only adapter reads no cookies at all and
+    // reports every signed-in user as signed out.
+    const supabase = await sessionClient()
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {

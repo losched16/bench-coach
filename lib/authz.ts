@@ -93,15 +93,42 @@ export class AuthzError extends Error {
   }
 }
 
+/**
+ * A Supabase client that reads the caller's session from the request cookies.
+ *
+ * The adapter shape is VERSION SPECIFIC and getting it wrong fails silently as
+ * "not signed in" — which is the worst possible way for an auth bug to
+ * present, because it looks like the user's data is gone.
+ *
+ * @supabase/ssr 0.1.x (what this project is on) wants get/set/remove.
+ * 0.4+ wants getAll/setAll. Supplying BOTH means an upgrade cannot quietly
+ * log everybody out, and the unused pair is ignored either way.
+ *
+ * The writers are no-ops on purpose: these callers only ever READ who you are.
+ * A route handler that rotated the session cookie without returning it would
+ * hand back a token the browser never receives.
+ */
+export async function sessionClient() {
+  const cookieStore = await cookies()
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) { return cookieStore.get(name)?.value },
+        set() { /* read-only */ },
+        remove() { /* read-only */ },
+        getAll() { return cookieStore.getAll() },
+        setAll() { /* read-only */ },
+      } as any,
+    }
+  )
+}
+
 async function currentUserId(): Promise<string | null> {
   // Reads the session cookie rather than trusting anything in the request
   // body. This is the whole point: the caller does not get to say who they are.
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll() { return cookieStore.getAll() } } }
-  )
+  const supabase = await sessionClient()
   const { data: { user } } = await supabase.auth.getUser()
   return user?.id || null
 }
@@ -369,12 +396,7 @@ export async function requireSession() {
  * requires a real signed-in session whose verified email matches.
  */
 export async function requireAdmin() {
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll() { return cookieStore.getAll() } } }
-  )
+  const supabase = await sessionClient()
   const { data: { user } } = await supabase.auth.getUser()
   const allowed = (process.env.ADMIN_EMAIL || '').trim().toLowerCase()
 
