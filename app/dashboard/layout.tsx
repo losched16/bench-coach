@@ -251,12 +251,16 @@ function DashboardContent({
     {
       label: '',
       items: [
-        // The whole loop is two destinations now. Home IS the priorities board
-        // — it was already rendering the same cards from the same data, so
+        // The whole loop is two destinations now. Home IS the plan board — it
+        // was already rendering the same cards from the same data, so
         // "Dashboard" and "Priorities" were two URLs for one screen. CoachAI is
-        // where you ask, and making an answer a priority is a button inside it.
+        // where you ask, and making an answer a plan is a button inside it.
         // Capture is the "+" in the header, because it happens from anywhere.
-        { label: 'Priorities', href: '/dashboard', icon: Target },
+        //
+        // Named for the outcome rather than the mechanism: a parent looking for
+        // where the drills live is looking for skill development, not for a
+        // ranked list.
+        { label: 'Skill Development', href: '/dashboard', icon: Target },
         { label: 'CoachAI', href: '/dashboard/chat', icon: MessageSquare },
       ],
     },
