@@ -44,6 +44,11 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const coachId = searchParams.get('coachId')
   const teamId = searchParams.get('teamId')
+  // The player page asks for one player's history. Team-wide entries (a
+  // practice logged against the whole roster) carry no player_id and are
+  // deliberately excluded — "Charlie's history" showing every team practice
+  // is the noise that made the old journal tab readable in the first place.
+  const playerId = searchParams.get('playerId')
   const limit = Number(searchParams.get('limit') || 10)
 
   if (!coachId) {
@@ -60,6 +65,7 @@ export async function GET(request: NextRequest) {
       .limit(Math.min(limit, 50))
 
     if (teamId) query = query.eq('team_id', teamId)
+    if (playerId) query = query.eq('player_id', playerId)
 
     const { data, error } = await query
     if (error) throw error

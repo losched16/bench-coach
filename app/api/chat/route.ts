@@ -115,10 +115,14 @@ export async function POST(request: NextRequest) {
       `)
       .eq('team_id', teamId)
 
-    // Load player journal entries (recent entries for each player)
-    const { data: journalEntries } = await supabaseAdmin
-      .from('player_journal_entries')
-      .select(`
+    // Legacy journal entries — only the ones migration 037 has not folded into
+    // entries + observations yet. A migrated row is already reaching the model
+    // through the activity log, and sending it twice reads as two independent
+    // sources agreeing when it is one note counted twice.
+    //
+    // Two attempts, because migrated_at only exists once 037 has run and a
+    // failed select here would silently drop every lesson from the context.
+    const JOURNAL_FIELDS = `
         id,
         player_id,
         session_date,
@@ -132,10 +136,20 @@ export async function POST(request: NextRequest) {
         notes,
         skills,
         player:players(name)
-      `)
-      .eq('team_id', teamId)
-      .order('session_date', { ascending: false })
-      .limit(20) // Last 20 entries across all players
+      `
+    const journalQuery = (filterMigrated: boolean) => {
+      let q = supabaseAdmin
+        .from('player_journal_entries')
+        .select(JOURNAL_FIELDS)
+        .eq('team_id', teamId)
+      // .is(), not .eq(): `= NULL` is never true in Postgres.
+      if (filterMigrated) q = q.is('migrated_at', null)
+      return q.order('session_date', { ascending: false }).limit(20)
+    }
+
+    let journalAttempt = await journalQuery(true)
+    if (journalAttempt.error) journalAttempt = await journalQuery(false)
+    const journalEntries = journalAttempt.data as any[] | null
 
     // Group journal entries by player
     const journalByPlayer: Record<string, any[]> = {}

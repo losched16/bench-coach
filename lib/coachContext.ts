@@ -283,16 +283,37 @@ export async function assembleCoachContext(
     ctx.lessonDiagnoses = []
   }
 
-  // ── Development journal (pre-dates the activity log; still valuable) ──
+  // ── Development journal — only what has not been folded into entries yet ──
+  //
+  // Migration 037 moved these rows into entries + observations, where the rest
+  // of the log lives. Anything with migrated_at set is therefore ALREADY in
+  // ctx.observations, and reading it here as well would hand the model every
+  // lesson twice — which reads as corroboration ("two sources say the front
+  // shoulder flies open") when it is one note counted twice.
+  //
+  // Still read at all, because a database that has not run 037 must not lose
+  // its lesson history from the model's context. Two attempts for the same
+  // reason as the prescriptions block: the filter column may not exist.
   if (playerId && teamId) {
     try {
-      const { data: journal } = await supabase
-        .from('player_journal_entries')
-        .select('session_date, session_type, instructor_name, focus_areas, went_well, needs_work')
-        .eq('player_id', playerId)
-        .eq('team_id', teamId)
-        .order('session_date', { ascending: false })
-        .limit(6)
+      const JOURNAL_FIELDS =
+        'session_date, session_type, instructor_name, focus_areas, went_well, needs_work'
+
+      const journalQuery = (filterMigrated: boolean) => {
+        let q = supabase
+          .from('player_journal_entries')
+          .select(JOURNAL_FIELDS)
+          .eq('player_id', playerId)
+          .eq('team_id', teamId)
+        // .is(), not .eq(): `= NULL` is never true in Postgres and would
+        // return nothing at all rather than the un-migrated rows.
+        if (filterMigrated) q = q.is('migrated_at', null)
+        return q.order('session_date', { ascending: false }).limit(6)
+      }
+
+      let attempt = await journalQuery(true)
+      if (attempt.error) attempt = await journalQuery(false)
+      const journal = attempt.data as any[] | null
 
       ctx.journal = (journal || []).map((j: any) => ({
         date: j.session_date,

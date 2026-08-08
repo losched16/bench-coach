@@ -202,6 +202,9 @@ function LogContent() {
     if (t && (ENTRY_TYPE_ORDER as readonly string[]).includes(t)) setEntryType(t as EntryType)
     const d = searchParams.get('date')
     if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) setOccurredOn(d)
+    // Arriving from a player's history: they already said who this is about.
+    const p = searchParams.get('playerId')
+    if (p) setPlayerId(p)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
