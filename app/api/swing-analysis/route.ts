@@ -3,6 +3,12 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { guard } from '@/lib/authz'
 
+// Never prerendered. This route reads the session cookie to decide who is
+// calling, which is only meaningful per-request — and Next's build-time
+// prerender pass hands the handler a stand-in Request whose .url and .method
+// throw when touched.
+export const dynamic = 'force-dynamic'
+
 const PROCESSING_SERVICE_URL = process.env.SWING_ANALYZER_URL || 'http://localhost:8080'
 
 export async function POST(request: Request) {

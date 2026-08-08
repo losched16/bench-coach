@@ -4,6 +4,12 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import crypto from 'crypto'
 
+// Never prerendered. This route reads the session cookie to decide who is
+// calling, which is only meaningful per-request — and Next's build-time
+// prerender pass hands the handler a stand-in Request whose .url and .method
+// throw when touched.
+export const dynamic = 'force-dynamic'
+
 // Use service role for admin operations
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -4,6 +4,12 @@ import { commitPrescription } from '@/lib/prescriptions'
 import { focusAreaLabel } from '@/lib/focusAreas'
 import { guard } from '@/lib/authz'
 
+// Never prerendered. This route reads the session cookie to decide who is
+// calling, which is only meaningful per-request — and Next's build-time
+// prerender pass hands the handler a stand-in Request whose .url and .method
+// throw when touched.
+export const dynamic = 'force-dynamic'
+
 // Confirming a read the coach has already seen.
 //
 // Takes the exact markdown that was on screen rather than regenerating, so

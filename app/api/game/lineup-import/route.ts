@@ -6,6 +6,12 @@ import { matchRosterPlayer, RosterCandidate } from '@/lib/entries'
 import { migrationHintFor } from '@/lib/migrationHints'
 import { guard } from '@/lib/authz'
 
+// Never prerendered. This route reads the session cookie to decide who is
+// calling, which is only meaningful per-request — and Next's build-time
+// prerender pass hands the handler a stand-in Request whose .url and .method
+// throw when touched.
+export const dynamic = 'force-dynamic'
+
 // Reading a lineup off a picture.
 //
 // Before a game a coach is handed, or shown, a batting order: a GameChanger

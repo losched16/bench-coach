@@ -4,6 +4,12 @@ import { createClient } from '@supabase/supabase-js'
 import { challengeValue, MetricType, MetricReading } from '@/lib/metrics'
 import { guard } from '@/lib/authz'
 
+// Never prerendered. This route reads the session cookie to decide who is
+// calling, which is only meaningful per-request — and Next's build-time
+// prerender pass hands the handler a stand-in Request whose .url and .method
+// throw when touched.
+export const dynamic = 'force-dynamic'
+
 // Measurements: the types a coach tracks, and the readings themselves.
 //
 // Types are coach-scoped with system presets available to everyone, because

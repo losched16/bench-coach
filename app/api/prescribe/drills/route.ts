@@ -6,6 +6,12 @@ import { scoreDrillRelevance } from '@/lib/analysis'
 import { textFrom } from '@/lib/claudeText'
 import { guard } from '@/lib/authz'
 
+// Never prerendered. This route reads the session cookie to decide who is
+// calling, which is only meaningful per-request — and Next's build-time
+// prerender pass hands the handler a stand-in Request whose .url and .method
+// throw when touched.
+export const dynamic = 'force-dynamic'
+
 // Different drills for a priority that is already running.
 //
 // The important thing this route does is NOT hand out more drills. It records

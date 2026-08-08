@@ -7,6 +7,12 @@ import { focusAreaLabel } from '@/lib/focusAreas'
 import { migrationHintFor } from '@/lib/migrationHints'
 import { guard } from '@/lib/authz'
 
+// Never prerendered. This route reads the session cookie to decide who is
+// calling, which is only meaningful per-request — and Next's build-time
+// prerender pass hands the handler a stand-in Request whose .url and .method
+// throw when touched.
+export const dynamic = 'force-dynamic'
+
 // The personal development plan.
 //
 // A priority says what to fix and hands over drills. This says what to do on

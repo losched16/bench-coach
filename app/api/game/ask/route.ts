@@ -8,6 +8,12 @@ import {
 } from '@/lib/substitutions'
 import { guard } from '@/lib/authz'
 
+// Never prerendered. This route reads the session cookie to decide who is
+// calling, which is only meaningful per-request — and Next's build-time
+// prerender pass hands the handler a stand-in Request whose .url and .method
+// throw when touched.
+export const dynamic = 'force-dynamic'
+
 // Same shape as the check-in verdict: prose the coach reads, then a machine
 // tail. One call rather than a second model pass to classify what they said.
 const RULE_SENTINEL = '\n<<<BENCHCOACH_RULE>>>'

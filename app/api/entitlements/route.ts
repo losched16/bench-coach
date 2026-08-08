@@ -4,6 +4,12 @@ import { tierOf, tierConfig, canAdd, isPurchasable, Usage, Tier, TIERS, PAID_TIE
 import { migrationHintFor } from '@/lib/migrationHints'
 import { guard } from '@/lib/authz'
 
+// Never prerendered. This route reads the session cookie to decide who is
+// calling, which is only meaningful per-request — and Next's build-time
+// prerender pass hands the handler a stand-in Request whose .url and .method
+// throw when touched.
+export const dynamic = 'force-dynamic'
+
 // What this coach's plan allows, and what they are using.
 //
 // One endpoint so the answer is the same everywhere. Counting teams on one

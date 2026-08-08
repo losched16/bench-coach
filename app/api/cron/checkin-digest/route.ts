@@ -3,6 +3,12 @@ import { createClient } from '@supabase/supabase-js'
 import { trackCheckinDue } from '@/lib/gohighlevel'
 import { dueState } from '@/lib/checkin'
 
+// Never prerendered. This route reads the session cookie to decide who is
+// calling, which is only meaningful per-request — and Next's build-time
+// prerender pass hands the handler a stand-in Request whose .url and .method
+// throw when touched.
+export const dynamic = 'force-dynamic'
+
 // Weekly nudge: a priority has run its three weeks and there is a read waiting.
 //
 // Rules this route exists to enforce, in order of how badly they hurt if broken:

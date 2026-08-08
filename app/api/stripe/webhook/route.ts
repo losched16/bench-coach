@@ -9,6 +9,12 @@ import {
   trackPaymentFailed,
 } from '@/lib/gohighlevel'
 
+// Never prerendered. This route reads the session cookie to decide who is
+// calling, which is only meaningful per-request — and Next's build-time
+// prerender pass hands the handler a stand-in Request whose .url and .method
+// throw when touched.
+export const dynamic = 'force-dynamic'
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   // Matched to checkout and portal. The SDK's types are for this version, so
   // declaring an older one meant Stripe sending event shapes the code was

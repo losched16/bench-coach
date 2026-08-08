@@ -294,10 +294,19 @@ async function idsFrom(request: Request): Promise<Record<string, string | null>>
     }
   } catch { /* not a URL we can parse */ }
 
+  // Reading .method can THROW, which is not something a Request is supposed to
+  // do. Next's build-time prerender pass hands the handler a stand-in whose
+  // accessors are proxied onto an object undici refuses to read private fields
+  // from, and the getter blows up. Every route now sets force-dynamic so that
+  // pass never runs — this is the belt to that pair of braces, because the
+  // failure mode was a green local build and a broken deploy.
+  let method = 'GET'
+  try { method = request.method } catch { /* treat as GET: no body to read */ }
+
   // Bodies are read from a CLONE. The handler still gets to call request.json()
   // itself, which is what makes this a one-line addition rather than a rewrite
   // of forty handlers.
-  if (request.method !== 'GET' && request.method !== 'HEAD') {
+  if (method !== 'GET' && method !== 'HEAD') {
     try {
       const body = await request.clone().json()
       if (body && typeof body === 'object') {

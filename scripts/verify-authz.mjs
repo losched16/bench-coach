@@ -46,6 +46,13 @@ for (const file of walk('app/api').sort()) {
   const src = readFileSync(file, 'utf8')
   checked++
 
+  // A guarded route MUST be dynamic. Without it, Next tries to prerender the
+  // handler at build time with a stand-in Request whose .url and .method throw
+  // — which passed locally and failed the deploy.
+  if (!src.includes("export const dynamic")) {
+    problems.push(`${file} — no \`export const dynamic = 'force-dynamic'\` (auth reads cookies; it must never be prerendered)`)
+  }
+
   for (const m of METHODS) {
     const re = new RegExp(`export async function ${m}\\s*\\(`)
     const at = src.search(re)
@@ -65,4 +72,4 @@ if (problems.length > 0) {
   process.exit(1)
 }
 
-console.log(`Checked ${checked} route files (${exempted} exempt) — every handler authorizes its caller.`)
+console.log(`Checked ${checked} route files (${exempted} exempt) — every handler authorizes its caller, and none can be prerendered.`)

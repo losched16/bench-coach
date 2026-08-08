@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAdmin } from '@/lib/authz'
 
+// Never prerendered. This route reads the session cookie to decide who is
+// calling, which is only meaningful per-request — and Next's build-time
+// prerender pass hands the handler a stand-in Request whose .url and .method
+// throw when touched.
+export const dynamic = 'force-dynamic'
+
 // Build 0 link-integrity check, runnable from a phone: hits YouTube oEmbed
 // for each drill video server-side (the deployed environment has open
 // egress; local sandboxes may not). Mirrors scripts/verify-drill-links.mjs.

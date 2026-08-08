@@ -3,6 +3,12 @@ import { createClient } from '@supabase/supabase-js'
 import { tierOf, canAdd, Usage, LimitKind } from '@/lib/tiers'
 import { guard } from '@/lib/authz'
 
+// Never prerendered. This route reads the session cookie to decide who is
+// calling, which is only meaningful per-request — and Next's build-time
+// prerender pass hands the handler a stand-in Request whose .url and .method
+// throw when touched.
+export const dynamic = 'force-dynamic'
+
 // The gate in front of creating a team or a personal player.
 //
 // Server-side because a limit enforced only in the browser is a suggestion.
