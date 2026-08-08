@@ -195,6 +195,16 @@ function LogContent() {
     }
   }
 
+  // Arriving from a finished game: type, date and opponent are already known,
+  // so the coach lands on the one thing that isn't — the box score.
+  useEffect(() => {
+    const t = searchParams.get('type')
+    if (t && (ENTRY_TYPE_ORDER as readonly string[]).includes(t)) setEntryType(t as EntryType)
+    const d = searchParams.get('date')
+    if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) setOccurredOn(d)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // ── Init ──
   useEffect(() => {
     const init = async () => {

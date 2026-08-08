@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, Suspense, useRef } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import {
   Plus, Minus, ChevronDown, ChevronUp, X, Trophy, Clock,
@@ -88,6 +88,12 @@ function GamePageContent() {
   const [pitchPanelOpen, setPitchPanelOpen] = useState(true)
   const [currentPitcher, setCurrentPitcher] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  // Shown when a note or a pitch fails to land. Silence here cost real
+  // observations — a coach types during an inning and does not go back to
+  // check whether it stuck.
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [showHandoff, setShowHandoff] = useState(false)
+  const router = useRouter()
 
   // End game state
   const [showEndModal, setShowEndModal] = useState(false)
@@ -218,8 +224,12 @@ function GamePageContent() {
       setNoteType(null)
       // Haptic feedback on mobile
       if (navigator.vibrate) navigator.vibrate(50)
-    } catch (e) {
+    } catch (e: any) {
+      // This used to console.error and return, so a note that failed to save
+      // looked exactly like a note that saved. The coach kept coaching and
+      // lost the observation.
       console.error('Error adding note:', e)
+      setActionError(e?.message || 'That note did not save. Try again.')
     } finally {
       setSaving(false)
     }
@@ -243,9 +253,8 @@ function GamePageContent() {
         const { error } = await supabase.from('game_pitch_counts')
           .update({ pitch_count: newCount })
           .eq('id', existing.id)
-        if (!error) {
-          setPitchCounts(prev => prev.map(pc => pc.id === existing.id ? { ...pc, pitch_count: newCount } : pc))
-        }
+        if (error) throw error
+        setPitchCounts(prev => prev.map(pc => pc.id === existing.id ? { ...pc, pitch_count: newCount } : pc))
       } else {
         if (delta < 1) return
         const { data, error } = await supabase.from('game_pitch_counts').insert({
@@ -254,11 +263,13 @@ function GamePageContent() {
           inning,
           pitch_count: delta,
         }).select('*, player:players(name)').single()
-        if (!error && data) setPitchCounts(prev => [...prev, data])
+        if (error) throw error
+        if (data) setPitchCounts(prev => [...prev, data])
       }
       if (navigator.vibrate) navigator.vibrate(30)
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error updating pitch count:', e)
+      setActionError(e?.message || 'That pitch did not save. Try again.')
     }
   }
 
@@ -293,6 +304,11 @@ function GamePageContent() {
       setGames(prev => prev.map(g => g.id === activeGame.id ? updatedGame as Game : g))
       setView('completed')
       setShowEndModal(false)
+      // Every note taken during the game is already an observation the AI can
+      // read — that happens on insert. What is missing after a game is the box
+      // score, and this is the only moment the coach is holding their phone
+      // thinking about the game.
+      setShowHandoff(true)
     } catch (e) {
       console.error('Error ending game:', e)
       alert('Failed to end game')
@@ -866,6 +882,15 @@ function GamePageContent() {
           )}
         </div>
 
+        {actionError && (
+          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 max-w-sm w-[92%] bg-red-600 text-white text-sm rounded-lg px-4 py-3 shadow-lg flex items-start gap-2">
+            <span className="flex-1">{actionError}</span>
+            <button onClick={() => setActionError(null)} className="shrink-0 opacity-80 hover:opacity-100">
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Sticky Footer - End Game */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-30">
           <button
@@ -877,6 +902,53 @@ function GamePageContent() {
         </div>
 
         {/* End Game Modal */}
+        {/* After the final out. The notes are already saved and already
+            visible to the AI; the box score is the only thing that isn't, and
+            this is the one moment the coach is thinking about this game. */}
+        {showHandoff && activeGame && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+              <h3 className="text-xl font-bold text-gray-900 mb-1">Game saved</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                {gameNotes.length > 0
+                  ? `Your ${gameNotes.length} note${gameNotes.length === 1 ? '' : 's'} from this game ${
+                      gameNotes.length === 1 ? 'is' : 'are'
+                    } already in — they'll show up in the next read on these players.`
+                  : 'No notes were taken during this one, so there is nothing from the game itself to go on yet.'}
+              </p>
+
+              <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                <p className="text-sm text-gray-800 font-medium mb-1">Add the box score?</p>
+                <p className="text-xs text-gray-600">
+                  A screenshot from GameChanger takes about ten seconds and gives every read after
+                  this one real numbers to work from instead of impressions.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => {
+                    const params = new URLSearchParams({ teamId: teamId || '' })
+                    params.set('type', 'game')
+                    if (activeGame.game_date) params.set('date', String(activeGame.game_date).slice(0, 10))
+                    if (activeGame.opponent) params.set('opponent', activeGame.opponent)
+                    router.push(`/dashboard/log?${params}`)
+                  }}
+                  className="w-full py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700"
+                >
+                  Add the box score
+                </button>
+                <button
+                  onClick={() => setShowHandoff(false)}
+                  className="w-full py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Not now
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showEndModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50">
             <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md p-6">
