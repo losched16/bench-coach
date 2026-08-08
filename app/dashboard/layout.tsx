@@ -5,6 +5,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
+import { CaptureMenu } from '@/components/CaptureMenu'
 import { MessageSquare, Users, StickyNote, ClipboardList, Home, LogOut, Plus, UserPlus, Trash2, Settings, Bookmark, HelpCircle, Brain, UsersRound, UserCircle, Menu, X, Calendar, BarChart3, Activity, Target, Search, CalendarCheck, Timer } from 'lucide-react'
 
 
@@ -221,20 +222,13 @@ function DashboardContent({
     {
       label: '',
       items: [
-        { label: 'Dashboard', href: '/dashboard', icon: Home },
-      ],
-    },
-    {
-      label: 'Coaching',
-      items: [
-        // The front door. Ask anything; making it a priority is a button
-        // inside the answer, not a different screen you had to pick first.
+        // The whole loop is two destinations now. Home IS the priorities board
+        // — it was already rendering the same cards from the same data, so
+        // "Dashboard" and "Priorities" were two URLs for one screen. CoachAI is
+        // where you ask, and making an answer a priority is a button inside it.
+        // Capture is the "+" in the header, because it happens from anywhere.
+        { label: 'Priorities', href: '/dashboard', icon: Target },
         { label: 'CoachAI', href: '/dashboard/chat', icon: MessageSquare },
-        { label: 'Log an Entry', href: '/dashboard/log', icon: ClipboardList },
-        // Was two items — "What to Work On" (an input box) and "Check-In"
-        // (the list). CoachAI is the input now, and a check-in is one action
-        // you take on a priority, not a place you go.
-        { label: 'Priorities', href: '/dashboard/checkin', icon: Target },
       ],
     },
     {
@@ -327,50 +321,23 @@ function DashboardContent({
                     ))}
                   </select>
                   
-                  {canCreate && (
-                    <div className="relative">
-                      <button
-                        onClick={() => setShowNewMenu(!showNewMenu)}
-                        className="flex items-center space-x-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
-                      >
-                        <Plus size={16} />
-                        <span>New</span>
-                      </button>
-                      
-                      {showNewMenu && (
-                        <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-50">
-                          <Link
-                            href="/dashboard/new-team"
-                            className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-100"
-                            onClick={() => setShowNewMenu(false)}
-                          >
-                            <Users size={16} />
-                            <span>New Team</span>
-                          </Link>
-                          <Link
-                            href="/dashboard/new-player"
-                            className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-100"
-                            onClick={() => setShowNewMenu(false)}
-                          >
-                            <UserPlus size={16} />
-                            <span>New Player</span>
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </>
               )}
             </div>
 
-            {/* Right side - Logout */}
-            <button
+            {/* Right side — capture, then logout. The capture button lives
+                here rather than in the desktop-only team block because logging
+                something happens on a phone at a field. */}
+            <div className="flex items-center gap-2">
+              <CaptureMenu teamId={selectedTeamId} canCreate={canCreate} />
+              <button
               onClick={handleLogout}
               className="flex items-center space-x-1 text-slate-300 hover:text-white transition-colors p-2"
             >
               <LogOut size={20} />
               <span className="text-sm hidden sm:inline">Logout</span>
-            </button>
+              </button>
+            </div>
           </div>
         </div>
 

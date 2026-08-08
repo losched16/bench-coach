@@ -161,7 +161,7 @@ export function ActivePriority({
           </button>
         ) : (
           <Link
-            href={`/dashboard/checkin?teamId=${teamId}&prescriptionId=${item.id}`}
+            href={`/dashboard?teamId=${teamId}&prescriptionId=${item.id}`}
             className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors font-medium"
           >
             See whether it moved
@@ -238,7 +238,7 @@ export function ActivePriority({
             <button onClick={() => onCheckIn(item.id)} className="underline">read it anyway</button>
           ) : (
             <Link
-              href={`/dashboard/checkin?teamId=${teamId}&prescriptionId=${item.id}`}
+              href={`/dashboard?teamId=${teamId}&prescriptionId=${item.id}`}
               className="underline"
             >
               read it anyway

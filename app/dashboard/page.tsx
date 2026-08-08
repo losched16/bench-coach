@@ -5,10 +5,9 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import Link from 'next/link'
 
-import { MessageSquare, ClipboardList, Users, FileText, Calendar, Target } from 'lucide-react'
+import { MessageSquare, ClipboardList, Users, Calendar, Target, FileText } from 'lucide-react'
 import { usePageView } from '@/lib/tracking'
-import { ActivePriority, ActivePriorityItem } from '@/components/ActivePriority'
-import { focusAreaRank } from '@/lib/focusAreas'
+import { PrioritiesBoard } from '@/components/PrioritiesBoard'
 
 interface TeamData {
   team: any
@@ -19,15 +18,13 @@ interface TeamData {
 
 function DashboardContent() {
   const [data, setData] = useState<TeamData | null>(null)
-  // What's live: the priority being worked, with the log button on it, and the
-  // check-in CTA once there's something to check. If this isn't on the
-  // dashboard the loop only closes when someone remembers it exists.
-  const [priorities, setPriorities] = useState<ActivePriorityItem[]>([])
   const [coachId, setCoachId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const searchParams = useSearchParams()
   const router = useRouter()
   const teamId = searchParams.get('teamId')
+  // Redirected here from the old /dashboard/checkin deep links.
+  const focusId = searchParams.get('prescriptionId')
   const supabase = createSupabaseComponentClient()
 
   useEffect(() => {
@@ -78,36 +75,10 @@ function DashboardContent() {
         topIssues: topIssues || [],
       })
 
-      loadPriorities()
     } catch (error) {
       console.error('Error loading dashboard:', error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  // Deliberately separate and non-blocking: a missing check-in table or a slow
-  // response must never keep the dashboard from rendering.
-  const loadPriorities = async (cid?: string) => {
-    try {
-      let id = cid || coachId
-      if (!id) {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-        const { data: coach } = await supabase
-          .from('coaches').select('id').eq('user_id', user.id).single() as { data: { id: string } | null }
-        if (!coach) return
-        id = coach.id
-        setCoachId(coach.id)
-      }
-
-      const params = new URLSearchParams({ coachId: id })
-      if (teamId) params.set('teamId', teamId)
-      const res = await fetch(`/api/checkin?${params}`)
-      const json = await res.json()
-      setPriorities(json.prescriptions || [])
-    } catch {
-      // no card is the correct failure mode here
     }
   }
 
@@ -124,126 +95,51 @@ function DashboardContent() {
     )
   }
 
+  // A row, not a screen. Anything that is its own destination lives in the
+  // sidebar; this is just the short path to the three things a coach opens the
+  // app to do that aren't already on this page.
   const quickActions = [
-    // First, because it's the front door to the loop: ask anything, and make
-    // it a priority from inside the answer if you want to.
-    {
-      label: 'Ask CoachAI',
-      icon: MessageSquare,
-      href: `/dashboard/chat?teamId=${teamId}`,
-      color: 'red',
-    },
-    {
-      label: 'Log an Entry',
-      icon: ClipboardList,
-      href: `/dashboard/log?teamId=${teamId}`,
-      color: 'red',
-    },
-    {
-      label: 'Priorities',
-      icon: Target,
-      href: `/dashboard/checkin?teamId=${teamId}`,
-      color: 'blue',
-    },
-    {
-      label: 'Plan Practice',
-      icon: ClipboardList,
-      href: `/dashboard/practice?teamId=${teamId}`,
-      color: 'green',
-    },
-    {
-      label: 'Game Day',
-      icon: Calendar,
-      href: `/dashboard/lineup?teamId=${teamId}`,
-      color: 'red',
-    },
-    {
-      label: 'View Roster',
-      icon: Users,
-      href: `/dashboard/roster?teamId=${teamId}`,
-      color: 'purple',
-    },
-    {
-      label: 'Team Notes',
-      icon: FileText,
-      href: `/dashboard/notes?teamId=${teamId}`,
-      color: 'orange',
-    },
+    { label: 'Ask CoachAI', icon: MessageSquare, href: `/dashboard/chat?teamId=${teamId}` },
+    { label: 'Log an Entry', icon: ClipboardList, href: `/dashboard/log?teamId=${teamId}` },
+    { label: 'Plan Practice', icon: FileText, href: `/dashboard/practice?teamId=${teamId}` },
+    { label: 'Game Day', icon: Calendar, href: `/dashboard/game?teamId=${teamId}` },
+    { label: 'Roster', icon: Users, href: `/dashboard/roster?teamId=${teamId}` },
   ]
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      {/* Welcome */}
       <div>
-        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
           {data.team.name}
         </h2>
-        <p className="text-sm sm:text-base text-gray-600">
+        <p className="text-sm text-gray-600 mt-1">
           {data.team.season?.name || 'Season'} • {data.team.age_group} • {data.team.skill_level}
         </p>
-      </div>
 
-      {/* The live priority (or priorities), each with its log button. Ready-to-
-          check-in ones sort first — that's the action that matters most. */}
-      {coachId && priorities.length > 0 && (
-        <div className="space-y-4">
-          {priorities
-            .slice()
-            // Ready-to-check-in first; then a stable order by area, so a weekly
-            // rotation doesn't reshuffle itself every time the page loads.
-            .sort((a, b) => {
-              const rank = (p: ActivePriorityItem) => (p.due !== 'holding' && p.hasEvidence ? 0 : 1)
-              return rank(a) - rank(b) || focusAreaRank(a.focusArea) - focusAreaRank(b.focusArea)
-            })
-            .map((p) => (
-              <ActivePriority
-                key={p.id}
-                item={p}
-                coachId={coachId}
-                teamId={teamId}
-                onLogged={() => loadPriorities(coachId)}
-              />
-            ))}
-        </div>
-      )}
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-3 gap-3 sm:gap-6">
-        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-          <div className="text-xs sm:text-sm text-gray-600 mb-1">Players</div>
-          <div className="text-2xl sm:text-3xl font-bold text-gray-900">{data.playerCount}</div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-          <div className="text-xs sm:text-sm text-gray-600 mb-1">Duration</div>
-          <div className="text-2xl sm:text-3xl font-bold text-gray-900">{data.team.practice_duration_minutes || 60}<span className="text-sm sm:text-base font-normal">m</span></div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-          <div className="text-xs sm:text-sm text-gray-600 mb-1">Plans</div>
-          <div className="text-2xl sm:text-3xl font-bold text-gray-900">{data.recentPlans.length}</div>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div>
-        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          {quickActions.map((action) => {
+        {/* Above the fold and out of the way. A grid of large tiles pushed the
+            actual work below the scroll. */}
+        <div className="flex gap-2 overflow-x-auto mt-4 -mx-1 px-1 pb-1">
+          {quickActions.map(action => {
             const Icon = action.icon
             return (
               <Link
                 key={action.label}
                 href={action.href}
-                className={`bg-white rounded-lg shadow p-4 sm:p-6 hover:shadow-md transition-shadow flex flex-col items-center text-center space-y-2 sm:space-y-3`}
+                className="shrink-0 inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-800 hover:bg-gray-50 hover:border-gray-300 transition-colors"
               >
-                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-${action.color}-100 flex items-center justify-center`}>
-                  <Icon className={`text-${action.color}-600`} size={20} />
-                </div>
-                <span className="font-medium text-gray-900 text-sm sm:text-base">{action.label}</span>
+                <Icon size={15} className="text-gray-400" />
+                {action.label}
               </Link>
             )
           })}
         </div>
       </div>
+
+      {/* What's being worked on, with the drills, the log button, and the read
+          on whether it moved. This is the answer to "what am I looking at" —
+          it belongs above everything else on the page rather than on a second
+          screen you have to remember to visit. */}
+      <PrioritiesBoard teamId={teamId} focusId={focusId} />
 
       {/* Primary Goals */}
       {data.team.primary_goals && data.team.primary_goals.length > 0 && (
