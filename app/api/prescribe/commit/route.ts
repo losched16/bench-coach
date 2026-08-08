@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { commitPrescription } from '@/lib/prescriptions'
-import { focusAreaLabel } from '@/lib/focusAreas'
+import { focusAreaLabel, isFocusArea } from '@/lib/focusAreas'
 import { guard } from '@/lib/authz'
 
 // Never prerendered. This route reads the session cookie to decide who is
@@ -108,5 +108,42 @@ export async function POST(request: NextRequest) {
       { error: error.message || 'Could not save the priority' },
       { status: 500 }
     )
+  }
+}
+
+// ---------------------------------------------------------------------------
+// PATCH { coachId, prescriptionId, focusArea } — say what a plan is about
+//
+// Priorities written before areas existed have none, and the classifier cannot
+// always tell from the text. Rather than leave them labelled "General" forever,
+// the coach can just say. Setting it is a decision about what the plan IS, so
+// it needs 'decide'.
+// ---------------------------------------------------------------------------
+export async function PATCH(request: NextRequest) {
+  const denied = await guard(request, 'decide')
+  if (denied) return denied
+
+  try {
+    const { coachId, prescriptionId, focusArea } = await request.json()
+    if (!coachId || !prescriptionId) {
+      return NextResponse.json(
+        { error: 'coachId and prescriptionId are required' }, { status: 400 }
+      )
+    }
+    if (focusArea !== null && !isFocusArea(focusArea)) {
+      return NextResponse.json({ error: 'Not an area we know' }, { status: 400 })
+    }
+
+    const { error } = await supabaseAdmin
+      .from('prescriptions')
+      .update({ focus_area: focusArea })
+      .eq('id', prescriptionId)
+      .eq('coach_id', coachId)
+    if (error) throw error
+
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
+    console.error('Set focus area error:', error)
+    return NextResponse.json({ error: error.message || 'Could not set that' }, { status: 500 })
   }
 }

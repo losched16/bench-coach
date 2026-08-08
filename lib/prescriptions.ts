@@ -9,7 +9,7 @@
 //
 // Both callers land here so the supersede rule can't drift between them.
 
-import { focusAreaLabel } from './focusAreas'
+import { focusAreaLabel, resolveFocusArea } from './focusAreas'
 import type { AnalysisSection } from './analysis'
 
 type AnySupabase = { from: (table: string) => any }
@@ -49,6 +49,19 @@ export async function commitPrescription(
 
   const find = (prefix: string) => sections.find(x => x.key.startsWith(prefix))?.body || null
 
+  // A second attempt at naming the area, against the text the model actually
+  // wrote rather than the complaint that started it.
+  //
+  // The complaint is often too vague to classify — "he's been struggling" names
+  // nothing — but the priority it produces says "front-foot strike" and "arm
+  // action", which do. Without this, the area stays null, and a null area is
+  // not a cosmetic problem: the supersede below is skipped entirely, so every
+  // new priority piles up beside the old one instead of replacing it. Four
+  // identical plans on one player is what that looks like.
+  const area = focusArea || resolveFocusArea(null, [
+    find('the_one_thing'), find('what_the_data'), find('what_to_watch'), markdown,
+  ].filter(Boolean).join(' '))
+
   const { data: saved, error } = await supabase
     .from('prescriptions')
     .insert({
@@ -57,7 +70,7 @@ export async function commitPrescription(
       player_id: scope === 'player' ? playerId || null : null,
       team_id: teamId || null,
       problem_id: problemSlug || null,
-      focus_area: focusArea,
+      focus_area: area,
       origin,
       summary: find('what_the_data'),
       priority: find('the_one_thing'),
@@ -79,19 +92,27 @@ export async function commitPrescription(
   // Hitting and fielding run in parallel all week; two swing corrections at
   // once mean you can't tell which cue failed.
   let supersededCount = 0
-  if (focusArea) {
+  {
     let sq = supabase
       .from('prescriptions')
       .update({
         status: 'abandoned',
         superseded_by: prescriptionId,
-        outcome_note: `Replaced by a newer ${focusAreaLabel(focusArea).toLowerCase()} priority.`,
+        outcome_note: area
+          ? `Replaced by a newer ${focusAreaLabel(area).toLowerCase()} priority.`
+          : 'Replaced by a newer priority.',
         resolved_at: new Date().toISOString(),
       })
       .eq('coach_id', coachId)
       .eq('status', 'active')
-      .eq('focus_area', focusArea)
       .neq('id', prescriptionId)
+
+    // `.eq('focus_area', null)` matches NOTHING in Postgres — NULL = NULL is
+    // never true — so unclassified priorities never superseded each other and
+    // accumulated without limit. An unknown area still supersedes another
+    // unknown area for the same player: two priorities on one kid at once is
+    // the thing this rule exists to prevent, whether or not we can name them.
+    sq = area ? sq.eq('focus_area', area) : sq.is('focus_area', null)
 
     sq = scope === 'player'
       ? sq.eq('player_id', playerId)

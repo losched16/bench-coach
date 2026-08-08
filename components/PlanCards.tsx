@@ -7,7 +7,7 @@ import {
   ClipboardList, User, Play, Sparkles,
 } from 'lucide-react'
 import { createSupabaseComponentClient } from '@/lib/supabase'
-import { focusAreaLabel, focusAreaChip } from '@/lib/focusAreas'
+import { focusAreaLabel, focusAreaChip, FOCUS_AREAS, FocusArea } from '@/lib/focusAreas'
 
 // Plans, as cards.
 //
@@ -137,12 +137,6 @@ export function PlanCards({ teamId }: Props) {
     )
   }
 
-  // A plan's name is what it works on. When no area was recorded — priorities
-  // written before areas existed — the player's name is the honest label
-  // rather than the word "General", which names nothing.
-  const nameOf = (p: PlanSummary) =>
-    p.focusArea ? `${focusAreaLabel(p.focusArea)} plan` : `${p.subjectName}'s plan`
-
   return (
     <div className="space-y-8 max-w-3xl">
       {migrationMessage && (
@@ -189,15 +183,19 @@ export function PlanCards({ teamId }: Props) {
             >
               <div className="flex items-center gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-lg font-bold text-gray-900">{nameOf(p)}</span>
-                    {p.focusArea && (
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${focusAreaChip(p.focusArea)}`}>
-                        {focusAreaLabel(p.focusArea)}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-500 mt-0.5">{p.subjectName}</p>
+                  <span className="block text-lg font-bold text-gray-900">
+                    {p.subjectName}
+                  </span>
+                  {/* The subcategory. Which part of the game this plan is
+                      about, directly under the name — four plans on one kid all
+                      titled the same thing is unreadable. */}
+                  <span
+                    className={`inline-block mt-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      p.focusArea ? focusAreaChip(p.focusArea) : 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    {p.focusArea ? focusAreaLabel(p.focusArea) : 'Set the area'}
+                  </span>
                   {p.priority && (
                     <p className="text-sm text-gray-700 mt-1.5 line-clamp-2">{p.priority}</p>
                   )}
@@ -276,6 +274,9 @@ function PlanDetail({
   const [logged, setLogged] = useState(false)
   const [closing, setClosing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Locally, so picking one updates the heading without a reload.
+  const [area, setArea_] = useState<string | null>(plan.focusArea)
+  const [savingArea, setSavingArea] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -342,7 +343,25 @@ function PlanDetail({
     }
   }
 
-  const title = plan.focusArea ? `${focusAreaLabel(plan.focusArea)} plan` : `${plan.subjectName}'s plan`
+  const setArea = async (area: FocusArea) => {
+    setSavingArea(true)
+    try {
+      const res = await fetch('/api/prescribe/commit', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coachId, prescriptionId: plan.id, focusArea: area }),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        throw new Error(d.error || 'Could not set that')
+      }
+      setArea_(area)
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setSavingArea(false)
+    }
+  }
 
   return (
     <div className="space-y-5 max-w-3xl">
@@ -354,8 +373,31 @@ function PlanDetail({
       </button>
 
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-        <p className="text-sm text-gray-600 mt-0.5">{plan.subjectName}</p>
+        <h2 className="text-2xl font-bold text-gray-900">{plan.subjectName}</h2>
+        {area ? (
+          <span className={`inline-block mt-1.5 text-sm font-semibold px-2.5 py-1 rounded-full ${focusAreaChip(area)}`}>
+            {focusAreaLabel(area)}
+          </span>
+        ) : (
+          // Priorities written before areas existed have none, and the
+          // classifier cannot always tell from the text. Rather than leave it
+          // labelled "General" forever, just ask — it is one tap.
+          <div className="mt-2">
+            <p className="text-sm text-gray-600 mb-1.5">What is this plan about?</p>
+            <div className="flex flex-wrap gap-1.5">
+              {(Object.keys(FOCUS_AREAS) as FocusArea[]).map(k => (
+                <button
+                  key={k}
+                  onClick={() => setArea(k)}
+                  disabled={savingArea}
+                  className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-800 active:bg-gray-100 disabled:opacity-50"
+                >
+                  {FOCUS_AREAS[k].label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* What we're fixing. One box, plain words, at the top. */}

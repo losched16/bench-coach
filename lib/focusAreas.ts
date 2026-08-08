@@ -100,9 +100,14 @@ const KEYWORD_TO_AREA: Array<[RegExp, FocusArea]> = [
   [/\b(pitch(er|ing)?|mound|velo(city)?|delivery|changeup|curve|arm care)\b/i, 'pitching'],
   [/\b(hit(ting)?|swing|bat(ting)?|tee|bunt|contact|plate|at.?bat)\b/i, 'hitting'],
   [/\b(outfield|infield|ground ?ball|fly ?ball|glove|field(ing)?|defen[cs]e|double play)\b/i, 'fielding'],
-  [/\b(throw(ing)?|arm action|long toss|accuracy|transfer)\b/i, 'throwing'],
+  [/\b(throw(ing)?|arm action|long toss|accuracy|transfer|arm slot|arm path)\b/i, 'throwing'],
   [/\b(baserun|base ?running|steal(ing)?|lead ?off|first step|round(ing)? (the )?bag)\b/i, 'baserunning'],
   [/\b(agility|speed|quick(ness)?|mobility|conditioning|athletic|footwork|sprint)\b/i, 'athleticism'],
+  // Delivery mechanics. These phrases name no skill on their own, but nobody
+  // says "front-foot strike" or "belt buckle to the target" about anything but
+  // a throwing motion. They sit last so a sentence that also says "swing" is
+  // read as hitting first.
+  [/\b(front.?foot strike|belt buckle|stride (foot|leg)|hip.?shoulder separation|landing foot)\b/i, 'pitching'],
 ]
 
 export function isFocusArea(value: unknown): value is FocusArea {
