@@ -754,7 +754,7 @@ function LogContent() {
             ))}
           </div>
           <button
-            onClick={() => router.push(`/dashboard/prescribe?teamId=${teamId}`)}
+            onClick={() => router.push(`/dashboard/chat?teamId=${teamId}`)}
             className="mt-3 text-sm text-red-600 hover:text-red-700 font-medium flex items-center gap-1"
           >
             See what to work on <ChevronRight size={14} />

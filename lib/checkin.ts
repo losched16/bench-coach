@@ -200,12 +200,23 @@ export interface CheckinEvidence {
   observationsSince: Array<{ date: string | null; prompt_key: string | null; entry_type: string | null; instructor: string | null; body: string }>
   otherEntriesSince: Array<{ date: string; type: string; title: string | null }>
   metricsSince: Array<{ date: string; metric: string; value: number; unit: string | null }>
+  // What the coach typed when they asked for this read, if they asked for it
+  // rather than waiting for the clock. The most valuable evidence in the
+  // bundle — it is the only piece that comes from someone who was there.
+  coachUpdate?: string | null
+  // How many times the drills have been swapped out. Two swaps on one
+  // priority usually means the read was wrong, not that the drills were
+  // boring, and the check-in should be willing to say so.
+  drillSwaps?: number
 }
 
 export async function gatherCheckinEvidence(
   supabase: SupabaseClient,
   prescriptionId: string,
-  coachId: string
+  coachId: string,
+  // Passed when the coach asked for this read rather than waiting for the
+  // clock, and typed something about what they're seeing.
+  coachUpdate?: string | null
 ): Promise<CheckinEvidence | null> {
   const { data: pres } = await supabase
     .from('prescriptions')
@@ -375,6 +386,8 @@ export async function gatherCheckinEvidence(
     observationsSince,
     otherEntriesSince,
     metricsSince,
+    coachUpdate: coachUpdate?.trim() || null,
+    drillSwaps: (p as any).drill_swaps || 0,
   }
 }
 
@@ -401,6 +414,11 @@ export function renderCheckinEvidence(ev: CheckinEvidence): string {
     `  What we said to watch for: ${p.success_criteria || '(no criteria recorded — say so, and set some this time)'}\n` +
     (p.summary ? `  Our read at the time: ${p.summary}\n` : '') +
     (p.drill_names.length ? `  Drills we sent: ${p.drill_names.join(', ')}\n` : '') +
+    ((ev.drillSwaps || 0) > 0
+      ? `  The coach has asked for different drills ${ev.drillSwaps} time${ev.drillSwaps === 1 ? '' : 's'} on this priority. ` +
+        `Treat that as evidence about the READ, not about the drills — if the work is being done and nothing is moving, ` +
+        `the cause we named is the thing most likely to be wrong.\n`
+      : '') +
     (p.origin === 'instructor'
       ? `  This came from an in-person instructor diagnosis, not from us. Do not overturn it on box-score evidence alone.\n`
       : '')
@@ -481,6 +499,20 @@ export function renderCheckinEvidence(ev: CheckinEvidence): string {
       `\n\n  Where a number moved and the priority was about that quality, say so — it is the cleanest ` +
       `evidence in this whole check-in. Where it did not move, that is equally decisive and you should ` +
       `say that too. Never celebrate a single good session.`
+    )
+  }
+
+  // Last, because it should be the freshest thing in mind when the verdict
+  // gets written — and above everything else in weight. A box score is a
+  // proxy; this is a person who watched it happen.
+  if (ev.coachUpdate?.trim()) {
+    parts.push(
+      `WHAT THE COACH SAYS RIGHT NOW (they asked for this read, it is not a scheduled one):\n` +
+      `  "${ev.coachUpdate.trim()}"\n\n` +
+      `  This outranks everything above. They were at the field and you were not. If it contradicts ` +
+      `the box scores, believe them and say what the numbers were probably measuring instead. If it says ` +
+      `the problem has changed, the priority should change with it — do not defend the earlier read ` +
+      `because it was yours.`
     )
   }
 

@@ -5,11 +5,12 @@ import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import {
   CalendarCheck, Loader2, AlertCircle, Target, History, Search,
-  CheckCircle2, RotateCcw, XCircle, ChevronRight,
+  CheckCircle2, RotateCcw, XCircle, ChevronRight, ListChecks, MessageSquarePlus, ChevronDown,
 } from 'lucide-react'
 import { usePageView, useTracker } from '@/lib/tracking'
 import { AnalysisProse } from '@/components/AnalysisProse'
 import { ActivePriority } from '@/components/ActivePriority'
+import { PriorityDrills } from '@/components/PriorityDrills'
 import { splitSections } from '@/lib/analysis'
 import { focusAreaRank, focusAreaLabel, focusAreaChip } from '@/lib/focusAreas'
 import { VERDICT_SENTINEL, visibleMarkdown, AdherenceRead, DueState, Verdict, VerdictStatus } from '@/lib/checkin'
@@ -69,7 +70,7 @@ const ACTIONS: Array<{ status: VerdictStatus; label: string; icon: any; classNam
 ]
 
 function CheckinContent() {
-  usePageView('checkin')
+  usePageView('priorities')
   const track = useTracker()
   const searchParams = useSearchParams()
   const teamId = searchParams.get('teamId')
@@ -89,6 +90,10 @@ function CheckinContent() {
   const [checkinId, setCheckinId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [resolvedAs, setResolvedAs] = useState<VerdictStatus | null>(null)
+  // Which priority has its drills-and-updates panel open, and what the coach
+  // has typed into it.
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [updateDraft, setUpdateDraft] = useState('')
 
   useEffect(() => {
     const init = async () => {
@@ -122,7 +127,10 @@ function CheckinContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusId, coachId, open])
 
-  const run = async (prescriptionId: string) => {
+  // coachUpdate is set when the coach asked for this read instead of waiting
+  // for the clock. It goes into the evidence bundle and outranks everything
+  // else in it — they were at the field.
+  const run = async (prescriptionId: string, coachUpdate?: string) => {
     if (!coachId) return
     setActiveId(prescriptionId)
     setRunning(true)
@@ -136,7 +144,7 @@ function CheckinContent() {
       const res = await fetch('/api/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ coachId, prescriptionId }),
+        body: JSON.stringify({ coachId, prescriptionId, coachUpdate }),
       })
 
       const contentType = res.headers.get('content-type') || ''
@@ -224,15 +232,90 @@ function CheckinContent() {
     )
   }
 
+
+  // Everything you can do to a priority that is already running: see the
+  // drills it prescribed, swap them when they aren't landing, or say what
+  // you're actually seeing and have it re-read on the spot.
+  const renderPriority = (p: OpenPrescription, opts: { due: boolean }) => {
+    const isOpen = expandedId === p.id
+    return (
+      <div key={p.id}>
+        <ActivePriority
+          item={p}
+          coachId={coachId!}
+          teamId={teamId}
+          busy={opts.due ? running : undefined}
+          onCheckIn={opts.due ? run : undefined}
+          onLogged={() => load(coachId!)}
+        />
+
+        <div className="mt-1.5 bg-white border border-gray-200 rounded-lg">
+          <button
+            onClick={() => { setExpandedId(isOpen ? null : p.id); setUpdateDraft('') }}
+            className="w-full px-4 py-2.5 flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg"
+          >
+            <ListChecks size={15} className="text-gray-400" />
+            Drills and updates
+            <ChevronDown
+              size={15}
+              className={`ml-auto text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+
+          {isOpen && (
+            <div className="px-4 pb-4 pt-1 space-y-4 border-t border-gray-100">
+              <div>
+                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  What to run
+                </h4>
+                <PriorityDrills
+                  prescriptionId={p.id}
+                  coachId={coachId!}
+                  onSwapped={() => load(coachId!)}
+                />
+              </div>
+
+              <div className="pt-3 border-t border-gray-100">
+                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                  Something changed?
+                </h4>
+                <p className="text-xs text-gray-600 mb-2">
+                  Tell it what you&apos;re seeing and it re-reads now instead of waiting for the
+                  three weeks. What you say outweighs the box scores — you were there.
+                </p>
+                <textarea
+                  value={isOpen ? updateDraft : ''}
+                  onChange={e => setUpdateDraft(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  placeholder="e.g. He's staying back now but he's pulling everything foul, or the lesson coach says it's his front shoulder, not timing"
+                />
+                <button
+                  onClick={() => { run(p.id, updateDraft.trim() || undefined); setExpandedId(null) }}
+                  disabled={running || !updateDraft.trim()}
+                  className="mt-2 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50 inline-flex items-center gap-2"
+                >
+                  {running ? <Loader2 className="animate-spin" size={14} /> : <MessageSquarePlus size={14} />}
+                  {running ? 'Reading…' : 'Send the update'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
         <div className="flex items-center gap-2">
           <CalendarCheck className="text-red-600" size={26} />
-          <h1 className="text-2xl font-bold text-gray-900">Check-In</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Priorities</h1>
         </div>
         <p className="text-gray-600 mt-1">
-          We said in advance what improvement would look like. This goes back and tells you whether it happened.
+          Everything being worked on right now — the drills for each one, and a read on whether it&apos;s
+          moving. Close one out when it has.
         </p>
       </div>
 
@@ -252,9 +335,9 @@ function CheckinContent() {
           <Target className="mx-auto text-gray-300 mb-3" size={32} />
           <p className="text-gray-800 font-medium">Nothing to check in on yet</p>
           <p className="text-sm text-gray-600 mt-1 max-w-md mx-auto">
-            Once you&apos;ve got a priority from{' '}
-            <a href={`/dashboard/prescribe?teamId=${teamId}`} className="text-red-600 underline">What to Work On</a>,
-            it shows up here three weeks later with a read on whether it moved.
+            Ask <a href={`/dashboard/chat?teamId=${teamId}`} className="text-red-600 underline">CoachAI</a> about
+            something you want to fix, then hit &ldquo;Make this the priority&rdquo; on the answer. It shows
+            up here with its drills, and gets a read on whether it moved.
           </p>
         </div>
       )}
@@ -266,17 +349,7 @@ function CheckinContent() {
         <div className="space-y-4">
           {dueList
             .filter(p => p.id !== activeId || !sections)
-            .map(p => (
-              <ActivePriority
-                key={p.id}
-                item={p}
-                coachId={coachId}
-                teamId={teamId}
-                busy={running}
-                onCheckIn={run}
-                onLogged={() => load(coachId)}
-              />
-            ))}
+            .map(p => renderPriority(p, { due: true }))}
         </div>
       )}
 
@@ -399,15 +472,7 @@ function CheckinContent() {
               how long it takes to move something at this age.
             </p>
           </div>
-          {holdingList.map(p => (
-            <ActivePriority
-              key={p.id}
-              item={p}
-              coachId={coachId}
-              teamId={teamId}
-              onLogged={() => load(coachId)}
-            />
-          ))}
+          {holdingList.map(p => renderPriority(p, { due: false }))}
         </div>
       )}
     </div>

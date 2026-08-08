@@ -621,7 +621,7 @@ export default function ChatPage() {
 
                     {isPriority && message.meta?.prescriptionId && (
                       <Link
-                        href={`/dashboard/prescribe?teamId=${teamId}`}
+                        href={`/dashboard/checkin?teamId=${teamId}`}
                         className="mt-3 inline-flex items-center gap-1 text-sm text-red-700 hover:text-red-800"
                       >
                         See all active priorities <ExternalLink size={13} />

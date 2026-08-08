@@ -231,8 +231,10 @@ function DashboardContent({
         // inside the answer, not a different screen you had to pick first.
         { label: 'CoachAI', href: '/dashboard/chat', icon: MessageSquare },
         { label: 'Log an Entry', href: '/dashboard/log', icon: ClipboardList },
-        { label: 'What to Work On', href: '/dashboard/prescribe', icon: Target },
-        { label: 'Check-In', href: '/dashboard/checkin', icon: CalendarCheck },
+        // Was two items — "What to Work On" (an input box) and "Check-In"
+        // (the list). CoachAI is the input now, and a check-in is one action
+        // you take on a priority, not a place you go.
+        { label: 'Priorities', href: '/dashboard/checkin', icon: Target },
       ],
     },
     {

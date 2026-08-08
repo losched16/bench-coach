@@ -125,12 +125,12 @@ function DashboardContent() {
   }
 
   const quickActions = [
-    // First, because it's the front door to the loop — and until now the only
-    // way to reach it from here was the sidebar.
+    // First, because it's the front door to the loop: ask anything, and make
+    // it a priority from inside the answer if you want to.
     {
-      label: 'What to Work On',
-      icon: Target,
-      href: `/dashboard/prescribe?teamId=${teamId}`,
+      label: 'Ask CoachAI',
+      icon: MessageSquare,
+      href: `/dashboard/chat?teamId=${teamId}`,
       color: 'red',
     },
     {
@@ -140,9 +140,9 @@ function DashboardContent() {
       color: 'red',
     },
     {
-      label: 'Open Chat',
-      icon: MessageSquare,
-      href: `/dashboard/chat?teamId=${teamId}`,
+      label: 'Priorities',
+      icon: Target,
+      href: `/dashboard/checkin?teamId=${teamId}`,
       color: 'blue',
     },
     {

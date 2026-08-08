@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
   try {
-    const { coachId, prescriptionId } = await request.json()
+    const { coachId, prescriptionId, coachUpdate } = await request.json()
 
     if (!coachId || !prescriptionId) {
       return NextResponse.json({ error: 'coachId and prescriptionId are required' }, { status: 400 })
@@ -183,7 +183,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
     }
 
-    const evidence = await gatherCheckinEvidence(supabaseAdmin, prescriptionId, coachId)
+    // An on-demand read carries the coach's own words as evidence, and they
+    // outrank everything else in the bundle — they were at the field.
+    const evidence = await gatherCheckinEvidence(supabaseAdmin, prescriptionId, coachId, coachUpdate)
     if (!evidence) {
       return NextResponse.json({ error: 'Prescription not found' }, { status: 404 })
     }
@@ -216,6 +218,7 @@ export async function POST(request: NextRequest) {
               adherence_logged: evidence.adherence.logged,
               adherence_expected: evidence.adherence.expected,
               days_elapsed: evidence.daysElapsed,
+              coach_update: evidence.coachUpdate || null,
             })
             .select('id')
             .single()
