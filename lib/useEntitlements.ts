@@ -14,17 +14,26 @@ import type { Tier } from '@/lib/tiers'
 // navigation appear a beat late on every page load is worse than a Personal
 // subscriber briefly seeing a menu item that then disappears.
 
+export interface Workspace {
+  id: string
+  name: string
+  kind: 'team' | 'personal'
+}
+
 export interface Entitlements {
   tier: Tier
   label: string
   teamFeatures: boolean
   ai: boolean
+  // Every workspace this coach owns. Carried here because the screens that
+  // need a team are exactly the screens that have to offer one.
+  workspaces: Workspace[]
   loading: boolean
 }
 
 export function useEntitlements(coachId: string | null | undefined): Entitlements {
   const [state, setState] = useState<Omit<Entitlements, 'loading'>>({
-    tier: 'team', label: 'Coach', teamFeatures: true, ai: true,
+    tier: 'team', label: 'Coach', teamFeatures: true, ai: true, workspaces: [],
   })
   const [loading, setLoading] = useState(true)
 
@@ -41,6 +50,7 @@ export function useEntitlements(coachId: string | null | undefined): Entitlement
           label: d.label || 'Coach',
           teamFeatures: d.teamFeatures !== false,
           ai: d.ai !== false,
+          workspaces: Array.isArray(d.workspaces) ? d.workspaces : [],
         })
       } catch {
         // Leaving it permissive is safe: the server is what enforces.

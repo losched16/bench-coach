@@ -8,6 +8,7 @@ import {
   Crown, Link2, RefreshCw, Clock, UserMinus, ChevronDown
 } from 'lucide-react'
 import { usePageView } from '@/lib/tracking'
+import { TeamOnly } from '@/components/TeamOnly'
 
 interface TeamMember {
   id: string
@@ -669,7 +670,16 @@ export default function TeamMembersPage() {
   usePageView('team')
   return (
     <Suspense fallback={<div className="text-gray-600">Loading...</div>}>
-      <TeamMembersContent />
+      <StaffGate />
     </Suspense>
+  )
+}
+
+function StaffGate() {
+  const teamId = useSearchParams().get('teamId')
+  return (
+    <TeamOnly feature="staff" teamId={teamId}>
+      <TeamMembersContent />
+    </TeamOnly>
   )
 }

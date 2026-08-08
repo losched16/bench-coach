@@ -10,6 +10,7 @@ import { DrillVideo, DrillVideoLookup } from '@/components/DrillVideo'
 import { useDrillResources } from '@/lib/useDrillResources'
 import { usePageView } from '@/lib/tracking'
 import { TemplateGallery } from '@/components/TemplateGallery'
+import { TeamOnly } from '@/components/TeamOnly'
 
 
 interface PracticePlan {
@@ -22,7 +23,7 @@ interface PracticePlan {
   created_at: string
 }
 
-export default function PracticePage() {
+function PracticeContent() {
   usePageView('practice')
   const [plans, setPlans] = useState<PracticePlan[]>([])
   const [loading, setLoading] = useState(true)
@@ -1225,5 +1226,17 @@ export default function PracticePage() {
         </div>
       )}
     </div>
+  )
+}
+
+// The page only makes sense on a team. On the Personal plan there is nothing
+// to unlock here, and on the Coach plan sitting in a personal workspace the
+// answer is a workspace switch, not an error.
+export default function PracticePage() {
+  const teamId = useSearchParams().get('teamId')
+  return (
+    <TeamOnly feature="practice" teamId={teamId}>
+      <PracticeContent />
+    </TeamOnly>
   )
 }

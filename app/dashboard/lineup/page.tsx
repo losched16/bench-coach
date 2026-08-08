@@ -11,6 +11,7 @@ import { ManualLineup, BuiltLineup } from '@/components/ManualLineup'
 import { PositionEligibility } from '@/components/PositionEligibility'
 import { LineupImport, ImportRow } from '@/components/LineupImport'
 import { findExistingGame } from '@/lib/games'
+import { TeamOnly } from '@/components/TeamOnly'
 
 // Types
 interface Player {
@@ -96,7 +97,7 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
-export default function LineupPage() {
+function LineupContent() {
   usePageView('lineup')
   // State
   const [players, setPlayers] = useState<Player[]>([])
@@ -1405,5 +1406,17 @@ export default function LineupPage() {
         </div>
       )}
     </div>
+  )
+}
+
+// The page only makes sense on a team. On the Personal plan there is nothing
+// to unlock here, and on the Coach plan sitting in a personal workspace the
+// answer is a workspace switch, not an error.
+export default function LineupPage() {
+  const teamId = useSearchParams().get('teamId')
+  return (
+    <TeamOnly feature="lineup" teamId={teamId}>
+      <LineupContent />
+    </TeamOnly>
   )
 }

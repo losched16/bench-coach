@@ -48,8 +48,9 @@ export async function GET(request: NextRequest) {
 
     const { data: teams, error: teamErr } = await supabaseAdmin
       .from('teams')
-      .select('id, workspace_kind')
+      .select('id, name, workspace_kind')
       .eq('coach_id', (coach as any).id)
+      .order('created_at', { ascending: false })
 
     if (teamErr) throw teamErr
 
@@ -65,6 +66,13 @@ export async function GET(request: NextRequest) {
       teamFeatures: cfg.teamFeatures,
       limits: { maxTeams: cfg.maxTeams, maxPersonalPlayers: cfg.maxPersonalPlayers },
       usage,
+      // So a screen that needs a team can name the ones this coach has,
+      // rather than telling them to go and find the switcher.
+      workspaces: (teams || []).map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        kind: t.workspace_kind === 'personal' ? 'personal' : 'team',
+      })),
       can: {
         addTeam: canAdd(tier, 'team', usage),
         addPersonalPlayer: canAdd(tier, 'personalPlayer', usage),
@@ -94,6 +102,7 @@ export async function GET(request: NextRequest) {
       teamFeatures: true,
       limits: { maxTeams: null, maxPersonalPlayers: null },
       usage: { teams: 0, personalPlayers: 0 },
+      workspaces: [],
       can: { addTeam: { allowed: true }, addPersonalPlayer: { allowed: true } },
       purchasable: {},
       plans: [],

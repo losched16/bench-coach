@@ -14,6 +14,8 @@ import {
   AlertTriangle, CheckCircle2, XCircle, HelpCircle, Merge,
   ClipboardList, Users, X, Eye, Info,
 } from 'lucide-react'
+import { TeamOnly } from '@/components/TeamOnly'
+import Link from 'next/link'
 
 // ── Types ──────────────────────────────────────────────
 
@@ -134,6 +136,7 @@ function ScoutingContent() {
   const [boardPrefillId, setBoardPrefillId] = useState<string | null>(null)
   // Why the list is empty, when it is empty for a reason other than "no data".
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [loadErrorIsPlan, setLoadErrorIsPlan] = useState(false)
 
   // Detail view
   const [selectedOpponentId, setSelectedOpponentId] = useState<string | null>(null)
@@ -186,12 +189,18 @@ function ScoutingContent() {
       const res = await fetch(`/api/scouting?coachId=${cid}`)
       const data = await res.json()
       if (!res.ok) {
+        // A 402 is not a failure to load, so it must not borrow the "nothing
+        // has been deleted" reassurance — that headline over a plan message
+        // reads as two unrelated sentences stapled together. TeamOnly normally
+        // catches this before the page renders; this is the belt to its braces.
+        setLoadErrorIsPlan(res.status === 402)
         setLoadError(
           data.error ||
           `Couldn't load your opponents (${res.status}). Nothing has been deleted — this is a loading problem.`
         )
         return
       }
+      setLoadErrorIsPlan(false)
       setLoadError(null)
       setOpponents(data.teams || [])
       setMatchups(data.matchups || [])
@@ -313,14 +322,24 @@ function ScoutingContent() {
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-2">
           <Info size={16} className="text-red-600 shrink-0 mt-0.5" />
           <div className="text-sm text-red-800">
-            <p className="font-medium">Your scouting data is still there.</p>
+            <p className="font-medium">
+              {loadErrorIsPlan
+                ? 'Scouting comes with the Coach plan.'
+                : 'Your scouting data is still there.'}
+            </p>
             <p className="mt-0.5">{loadError}</p>
-            <button
-              onClick={() => coachId && loadOpponents(coachId)}
-              className="mt-2 underline font-medium"
-            >
-              Try again
-            </button>
+            {loadErrorIsPlan ? (
+              <Link href="/subscribe" className="mt-2 inline-block underline font-medium">
+                See the Coach plan
+              </Link>
+            ) : (
+              <button
+                onClick={() => coachId && loadOpponents(coachId)}
+                className="mt-2 underline font-medium"
+              >
+                Try again
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -1708,7 +1727,18 @@ export default function ScoutingPage() {
         <Loader2 className="animate-spin text-gray-400" size={32} />
       </div>
     }>
-      <ScoutingContent />
+      <ScoutingGate />
     </Suspense>
+  )
+}
+
+// Inside the boundary, because reading the workspace out of the URL is what
+// tells us whether this page can work at all.
+function ScoutingGate() {
+  const teamId = useSearchParams().get('teamId')
+  return (
+    <TeamOnly feature="scouting" teamId={teamId}>
+      <ScoutingContent />
+    </TeamOnly>
   )
 }
