@@ -7,7 +7,7 @@ import Link from 'next/link'
 
 import { MessageSquare, ClipboardList, Users, Calendar, Target, FileText } from 'lucide-react'
 import { usePageView } from '@/lib/tracking'
-import { PrioritiesBoard } from '@/components/PrioritiesBoard'
+import { PlanCards } from '@/components/PlanCards'
 
 interface TeamData {
   team: any
@@ -139,7 +139,7 @@ function DashboardContent() {
           on whether it moved. This is the answer to "what am I looking at" —
           it belongs above everything else on the page rather than on a second
           screen you have to remember to visit. */}
-      <PrioritiesBoard teamId={teamId} focusId={focusId} />
+      <PlanCards teamId={teamId} />
 
       {/* Team reference. Real information, but not the job — three cards
           stacked under the plans turned the page into a scroll where the thing
