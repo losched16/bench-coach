@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { guard } from '@/lib/authz'
 
 // Use service role for server-side operations (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -9,6 +10,9 @@ const supabaseAdmin = createClient(
 
 // GET: pitch count rule sets visible to a coach (system defaults + their own)
 export async function GET(request: NextRequest) {
+  const denied = await guard(request, 'read')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const coachId = searchParams.get('coachId')
 
@@ -34,6 +38,9 @@ export async function GET(request: NextRequest) {
 
 // POST: create a custom rule set for a local circuit
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'decide')
+  if (denied) return denied
+
   try {
     const { coachId, sanctioningBody, ageGroup, dailyMax, thresholds } = await request.json()
 
@@ -78,6 +85,9 @@ export async function POST(request: NextRequest) {
 
 // DELETE: remove a coach's custom rule set (system defaults are protected)
 export async function DELETE(request: NextRequest) {
+  const denied = await guard(request, 'decide')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const ruleId = searchParams.get('ruleId')
   const coachId = searchParams.get('coachId')

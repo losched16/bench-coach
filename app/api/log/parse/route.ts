@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 import { textFrom } from '@/lib/claudeText'
 import { matchRosterPlayer, RosterCandidate } from '@/lib/entries'
+import { guard } from '@/lib/authz'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
@@ -69,6 +70,9 @@ Rules that matter:
 export const maxDuration = 120
 
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const { images, teamId, teamName } = await request.json()
 

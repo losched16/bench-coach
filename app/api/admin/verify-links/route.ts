@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { requireAdmin } from '@/lib/authz'
 
 // Build 0 link-integrity check, runnable from a phone: hits YouTube oEmbed
 // for each drill video server-side (the deployed environment has open
@@ -29,6 +30,9 @@ async function oembedStatus(videoId: string): Promise<number | string> {
 }
 
 export async function GET(request: NextRequest) {
+  const denied = await requireAdmin()
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   if (searchParams.get('email') !== ADMIN_EMAIL) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

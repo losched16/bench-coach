@@ -1,10 +1,14 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { guard } from '@/lib/authz'
 
 const PROCESSING_SERVICE_URL = process.env.SWING_ANALYZER_URL || 'http://localhost:8080'
 
 export async function POST(request: Request) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const cookieStore = cookies()
     const supabase = createServerClient(
@@ -112,6 +116,9 @@ export async function POST(request: Request) {
 
 // Get analysis by ID
 export async function GET(request: Request) {
+  const denied = await guard(request, 'read')
+  if (denied) return denied
+
   try {
     const cookieStore = cookies()
     const supabase = createServerClient(

@@ -5,6 +5,7 @@ import { COACH_VOICE } from '@/lib/coachVoice'
 import { assembleCoachContext, renderCoachContext } from '@/lib/coachContext'
 import { focusAreaLabel } from '@/lib/focusAreas'
 import { migrationHintFor } from '@/lib/migrationHints'
+import { guard } from '@/lib/authz'
 
 // The personal development plan.
 //
@@ -86,6 +87,9 @@ Write it now. No preamble, no sign-off.`
 // GET ?prescriptionId=&coachId= — the plan, if one has been written
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
+  const denied = await guard(request, 'read')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const prescriptionId = searchParams.get('prescriptionId')
   const coachId = searchParams.get('coachId')
@@ -129,6 +133,9 @@ export async function GET(request: NextRequest) {
 // POST { prescriptionId, coachId } — write it, stream it, save it
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'decide')
+  if (denied) return denied
+
   try {
     const { prescriptionId, coachId } = await request.json()
 

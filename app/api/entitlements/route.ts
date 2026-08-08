@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { tierOf, tierConfig, canAdd, isPurchasable, Usage, Tier, TIERS, PAID_TIERS } from '@/lib/tiers'
 import { migrationHintFor } from '@/lib/migrationHints'
+import { guard } from '@/lib/authz'
 
 // What this coach's plan allows, and what they are using.
 //
@@ -15,6 +16,9 @@ const supabaseAdmin = createClient(
 )
 
 export async function GET(request: NextRequest) {
+  const denied = await guard(request, 'read')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const coachId = searchParams.get('coachId')
   const userId = searchParams.get('userId')

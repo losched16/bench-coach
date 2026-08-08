@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { migrationHintFor } from '@/lib/migrationHints'
+import { guard } from '@/lib/authz'
 
 // Their batting order, for one game.
 //
@@ -15,6 +16,9 @@ const supabaseAdmin = createClient(
 )
 
 export async function GET(request: NextRequest) {
+  const denied = await guard(request, 'read')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const gameId = searchParams.get('gameId')
   if (!gameId) return NextResponse.json({ error: 'gameId required' }, { status: 400 })
@@ -42,6 +46,9 @@ export async function GET(request: NextRequest) {
 // Replace the whole order. A lineup is one object to a coach, and saving it
 // row by row leaves half an order behind when something fails midway.
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const { gameId, players, source } = await request.json()
     if (!gameId || !Array.isArray(players)) {

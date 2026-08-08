@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { commitPrescription } from '@/lib/prescriptions'
 import { focusAreaLabel } from '@/lib/focusAreas'
+import { guard } from '@/lib/authz'
 
 // Confirming a read the coach has already seen.
 //
@@ -16,6 +17,9 @@ const supabaseAdmin = createClient(
 )
 
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'decide')
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const {

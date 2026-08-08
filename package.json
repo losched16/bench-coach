@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "verify:claude": "node scripts/verify-claude-calls.mjs",
-    "test:scorebook": "npx --yes tsx --tsconfig tsconfig.json scripts/test-scorebook.ts"
+    "test:scorebook": "npx --yes tsx --tsconfig tsconfig.json scripts/test-scorebook.ts",
+    "verify:authz": "node scripts/verify-authz.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { guard } from '@/lib/authz'
 
 // Append a message to a conversation.
 //
@@ -14,6 +15,9 @@ const supabaseAdmin = createClient(
 )
 
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'ask')
+  if (denied) return denied
+
   try {
     const { threadId, role, content, meta } = await request.json()
 

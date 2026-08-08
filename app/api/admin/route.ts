@@ -1,29 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { requireAdmin } from '@/lib/authz'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-// Your admin email — only this user can access the dashboard
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'clint@mybenchcoach.com'
-
-async function isAdmin(request: NextRequest): Promise<boolean> {
-  // Check for admin email via auth
-  const authHeader = request.headers.get('x-user-email')
-  return authHeader === ADMIN_EMAIL
-}
+// Access is decided by requireAdmin() in lib/authz, which checks the signed-in
+// session's verified email against ADMIN_EMAIL.
+//
+// This route used to accept ?email=<the address hardcoded right here>, and a
+// header of the same shape. Neither is authentication — they are a password
+// published in the repository, and anyone reading it could have pulled the
+// subscriber list. Set ADMIN_EMAIL in the environment; with it unset, this
+// route answers 404 to everyone.
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const email = searchParams.get('email')
-  const section = searchParams.get('section') || 'overview'
+  const denied = await requireAdmin()
+  if (denied) return denied
 
-  // Simple email-based auth check
-  if (email !== ADMIN_EMAIL) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { searchParams } = new URL(request.url)
+  const section = searchParams.get('section') || 'overview'
 
   try {
     if (section === 'overview') {

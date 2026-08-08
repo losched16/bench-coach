@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { requireSession } from '@/lib/authz'
 
 // Use service role for server-side operations
 const supabaseAdmin = createClient(
@@ -8,6 +9,9 @@ const supabaseAdmin = createClient(
 )
 
 export async function GET(request: NextRequest) {
+  const denied = await requireSession()
+  if (denied) return denied
+
   try {
     const { searchParams } = new URL(request.url)
     const name = searchParams.get('name')

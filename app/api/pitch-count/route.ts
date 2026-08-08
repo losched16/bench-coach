@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { migrationHintFor } from '@/lib/migrationHints'
 import { createClient } from '@supabase/supabase-js'
 import { computePitcherAvailability, PitchCountRuleSet, AppearanceLite } from '@/lib/scouting'
+import { guard } from '@/lib/authz'
 
 // Standalone pitch counting — no game required.
 //
@@ -24,6 +25,9 @@ const supabaseAdmin = createClient(
 //   ?coachId=&teamId=
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
+  const denied = await guard(request, 'read')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const coachId = searchParams.get('coachId')
 
@@ -61,6 +65,9 @@ export async function GET(request: NextRequest) {
 // first, and if we make them, they'll just not count.
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const {
@@ -225,6 +232,9 @@ export async function POST(request: NextRequest) {
 // asleep, so two devices counting the same kid can't clobber each other.
 // ---------------------------------------------------------------------------
 export async function PATCH(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const { coachId, sessionId, delta, pitches, innings, notes, finish, reopen } = await request.json()
 
@@ -323,6 +333,9 @@ export async function PATCH(request: NextRequest) {
 // DELETE — remove a counter (mis-tapped, wrong kid)
 // ---------------------------------------------------------------------------
 export async function DELETE(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const sessionId = searchParams.get('sessionId')
   const coachId = searchParams.get('coachId')

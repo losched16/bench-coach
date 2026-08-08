@@ -3,6 +3,7 @@ import { migrationHintFor } from '@/lib/migrationHints'
 import { createClient } from '@supabase/supabase-js'
 import { normalizeStatLine } from '@/lib/entries'
 import { findExistingGame } from '@/lib/games'
+import { guard } from '@/lib/authz'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,6 +32,9 @@ function normalizeResult(
 
 // GET: recent entries for a team (the "you've logged this" trail)
 export async function GET(request: NextRequest) {
+  const denied = await guard(request, 'read')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const coachId = searchParams.get('coachId')
   const teamId = searchParams.get('teamId')
@@ -64,6 +68,9 @@ export async function GET(request: NextRequest) {
 
 // POST: create an entry, its observations, and (for games) normalized stats
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const {
@@ -354,6 +361,9 @@ export async function POST(request: NextRequest) {
 // nothing logged at all. The optional "how did it go" arrives afterwards, if
 // they feel like it, and lands here.
 export async function PATCH(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const { coachId, entryId, notes } = await request.json()
 
@@ -396,6 +406,9 @@ export async function PATCH(request: NextRequest) {
 
 // DELETE: remove an entry (observations cascade)
 export async function DELETE(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const entryId = searchParams.get('entryId')
   const coachId = searchParams.get('coachId')

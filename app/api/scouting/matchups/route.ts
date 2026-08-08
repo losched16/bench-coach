@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { guard } from '@/lib/authz'
 
 // Use service role for server-side operations (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -9,6 +10,9 @@ const supabaseAdmin = createClient(
 
 // GET: matchups for a coach (optionally filtered by status)
 export async function GET(request: NextRequest) {
+  const denied = await guard(request, 'read')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const coachId = searchParams.get('coachId')
   const status = searchParams.get('status')
@@ -38,6 +42,9 @@ export async function GET(request: NextRequest) {
 
 // POST: create a matchup
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const { coachId, teamId, opponentTeamId, scheduledAt, tournamentName, bracketPosition, status } =
       await request.json()
@@ -70,6 +77,9 @@ export async function POST(request: NextRequest) {
 
 // PUT: update a matchup (schedule, status)
 export async function PUT(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const { coachId, matchupId, updates } = await request.json()
     if (!coachId || !matchupId) {
@@ -97,6 +107,9 @@ export async function PUT(request: NextRequest) {
 
 // DELETE: remove a matchup
 export async function DELETE(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const matchupId = searchParams.get('matchupId')
   const coachId = searchParams.get('coachId')

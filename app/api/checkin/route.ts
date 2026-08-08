@@ -14,6 +14,7 @@ import {
   renderCheckinEvidence,
   splitVerdict,
 } from '@/lib/checkin'
+import { guard } from '@/lib/authz'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -34,6 +35,9 @@ const CHECKIN_EFFORT = 'medium'
 //   ?coachId=&prescriptionId=    → the evidence bundle + last check-in
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
+  const denied = await guard(request, 'read')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const coachId = searchParams.get('coachId')
   const teamId = searchParams.get('teamId')
@@ -185,6 +189,9 @@ export async function GET(request: NextRequest) {
 //   body: { coachId, prescriptionId }
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'decide')
+  if (denied) return denied
+
   try {
     const { coachId, prescriptionId, coachUpdate } = await request.json()
 
@@ -278,6 +285,9 @@ export async function POST(request: NextRequest) {
 // another three weeks rather than asking again tomorrow.
 // ---------------------------------------------------------------------------
 export async function PUT(request: NextRequest) {
+  const denied = await guard(request, 'decide')
+  if (denied) return denied
+
   try {
     const { coachId, prescriptionId, status, outcomeNote, checkinId } = await request.json()
 

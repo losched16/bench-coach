@@ -6,6 +6,7 @@ import { requireText } from '@/lib/claudeText'
 import {
   SubRuleSet, DEFAULT_SUB_RULES, PlayerGameState, renderSubstitutionState,
 } from '@/lib/substitutions'
+import { guard } from '@/lib/authz'
 
 // Same shape as the check-in verdict: prose the coach reads, then a machine
 // tail. One call rather than a second model pass to classify what they said.
@@ -95,6 +96,9 @@ top of a ruleset, leave it null and put it in houseRule. If they asked a
 question rather than stating a rule, omit the line entirely.`
 
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'ask')
+  if (denied) return denied
+
   try {
     const { gameId, question } = await request.json()
     if (!gameId || !question?.trim()) {

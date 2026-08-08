@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 import { scoreDrillRelevance } from '@/lib/analysis'
 import { textFrom } from '@/lib/claudeText'
+import { guard } from '@/lib/authz'
 
 // Different drills for a priority that is already running.
 //
@@ -32,6 +33,9 @@ const DRILL_FIELDS =
 // GET ?prescriptionId=&coachId=  — the drills currently prescribed
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
+  const denied = await guard(request, 'read')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const prescriptionId = searchParams.get('prescriptionId')
   const coachId = searchParams.get('coachId')
@@ -72,6 +76,9 @@ export async function GET(request: NextRequest) {
 // POST { prescriptionId, coachId, reason? } — swap in different drills
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'decide')
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const { prescriptionId, coachId, reason } = body
@@ -301,6 +308,9 @@ ${list}`
 // Slot-level, so the other drills keep their position. Swapping the whole set
 // to change one of them is how a coach loses the two they liked.
 export async function PATCH(request: NextRequest) {
+  const denied = await guard(request, 'decide')
+  if (denied) return denied
+
   try {
     const { prescriptionId, coachId, replaceDrillId, withDrillId } = await request.json()
     if (!prescriptionId || !coachId || !withDrillId) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { requireSession } from '@/lib/authz'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,6 +9,9 @@ const supabaseAdmin = createClient(
 
 // POST: Log a user event
 export async function POST(request: NextRequest) {
+  const denied = await requireSession()
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const { userId, eventType, eventName, pagePath, metadata } = body

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { guard } from '@/lib/authz'
 
 // Use service role for server-side operations (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -20,6 +21,9 @@ async function playerBelongsToCoach(playerId: string, coachId: string): Promise<
 
 // PUT: edit an opponent player (name, jersey, bats/throws, notes, confidence)
 export async function PUT(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const { coachId, playerId, updates } = await request.json()
     if (!coachId || !playerId) {
@@ -54,6 +58,9 @@ export async function PUT(request: NextRequest) {
 // deleted. This is deliberately manual-only — auto-merging below a high
 // confidence bar corrupts pitch-count math, which is the feature's value.
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const { coachId, action, keepId, mergeId } = await request.json()
     if (action !== 'merge') {
@@ -117,6 +124,9 @@ export async function POST(request: NextRequest) {
 
 // DELETE: remove an opponent player (appearances cascade)
 export async function DELETE(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const playerId = searchParams.get('playerId')
   const coachId = searchParams.get('coachId')

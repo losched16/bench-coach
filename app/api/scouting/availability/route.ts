@@ -5,6 +5,7 @@ import {
   PitchCountRuleSet,
   daysBetween,
 } from '@/lib/scouting'
+import { guard } from '@/lib/authz'
 
 // Use service role for server-side operations (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -45,6 +46,9 @@ async function loadRuleSet(coachId: string, ruleId: string | null): Promise<Pitc
 }
 
 export async function GET(request: NextRequest) {
+  const denied = await guard(request, 'read')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const coachId = searchParams.get('coachId')
   const opponentTeamId = searchParams.get('opponentTeamId')

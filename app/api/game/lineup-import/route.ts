@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { textFrom } from '@/lib/claudeText'
 import { matchRosterPlayer, RosterCandidate } from '@/lib/entries'
 import { migrationHintFor } from '@/lib/migrationHints'
+import { guard } from '@/lib/authz'
 
 // Reading a lineup off a picture.
 //
@@ -88,6 +89,9 @@ Rules that matter:
 }
 
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const { images, side, teamId, gameId } = await request.json()
 

@@ -11,6 +11,7 @@ import {
   MIN_PA_FOR_TENDENCY,
   PitchCountRuleSet,
 } from '@/lib/scouting'
+import { guard, authorizeTeam, can } from '@/lib/authz'
 
 // Use service role for server-side operations (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -25,6 +26,9 @@ const supabaseAdmin = createClient(
 export const maxDuration = 120
 
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'ask')
+  if (denied) return denied
+
   try {
     const {
       teamId, message, history, threadId: requestedThreadId, playerId,
@@ -721,8 +725,17 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
-    // Auto-save high-confidence coach preferences
-    if (response.memory_suggestions.coach_preferences) {
+    // Auto-save high-confidence coach preferences.
+    //
+    // Gated on 'remember', which contributors and viewers do not have. This
+    // happens as a SIDE EFFECT of a conversation: an assistant coach asking a
+    // question would otherwise reshape how the app understands the head coach,
+    // invisibly and without either of them choosing it. They still get the
+    // answer — the app just doesn't learn from them.
+    const actor = await authorizeTeam(teamId, 'ask')
+    const mayRemember = can(actor.role, 'remember')
+
+    if (mayRemember && response.memory_suggestions.coach_preferences) {
       for (const pref of response.memory_suggestions.coach_preferences) {
         if (pref.confidence > 0.75) {
           await supabaseAdmin
@@ -774,6 +787,9 @@ export async function POST(request: NextRequest) {
 
 // GET endpoint to load chat history (bypasses RLS)
 export async function GET(request: NextRequest) {
+  const denied = await guard(request, 'read')
+  if (denied) return denied
+
   try {
     const { searchParams } = new URL(request.url)
     const teamId = searchParams.get('teamId')
@@ -861,6 +877,9 @@ export async function GET(request: NextRequest) {
 
 // DELETE endpoint to clear chat history (bypasses RLS)
 export async function DELETE(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const { searchParams } = new URL(request.url)
     const threadId = searchParams.get('threadId')

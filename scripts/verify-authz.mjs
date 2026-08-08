@@ -1,0 +1,68 @@
+// Every API route must decide who is calling.
+//
+// The routes use the service-role client, which bypasses RLS — so RLS protects
+// nothing on these paths and each handler is on its own. For a long time most
+// of them took a teamId from the request body and trusted it, which meant any
+// signed-in user could read and write another coach's team.
+//
+// This fails the build-time check if a handler has no guard. The exemptions are
+// listed with a reason each; adding to that list is a deliberate act.
+//
+//   npm run verify:authz
+
+import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { join } from 'node:path'
+
+// Routes that authenticate by some other means, each with the reason.
+const EXEMPT = {
+  'app/api/cron/checkin-digest/route.ts': 'CRON_SECRET header — no user session exists',
+  'app/api/stripe/webhook/route.ts':      'Stripe signature verification',
+  'app/api/stripe/checkout/route.ts':     'own session; creates a checkout for the caller',
+  'app/api/stripe/portal/route.ts':       'own session; opens the caller’s own portal',
+  'app/api/ghl/track-signup/route.ts':    'runs at signup, before a session exists',
+  'app/api/team/invite/accept/route.ts':  'a token IS the credential — the caller is not a member yet',
+  'app/api/team/invite/route.ts':         'checks the session and owner/admin role inline',
+  'app/api/team/members/route.ts':        'checks the session and owner/admin role inline',
+}
+
+const GUARDS = ['guard(', 'requireSession(', 'requireAdmin(', 'authorizeTeam(', 'authorizeGame(', 'authorizeCoach(', 'authorizeThread(']
+const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+
+function walk(dir, out = []) {
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name)
+    if (statSync(p).isDirectory()) walk(p, out)
+    else if (name === 'route.ts') out.push(p)
+  }
+  return out
+}
+
+const problems = []
+let checked = 0
+let exempted = 0
+
+for (const file of walk('app/api').sort()) {
+  if (EXEMPT[file]) { exempted++; continue }
+  const src = readFileSync(file, 'utf8')
+  checked++
+
+  for (const m of METHODS) {
+    const re = new RegExp(`export async function ${m}\\s*\\(`)
+    const at = src.search(re)
+    if (at === -1) continue
+    // The guard has to be the first thing the handler does, before any query.
+    const head = src.slice(at, at + 500)
+    if (!GUARDS.some(g => head.includes(g))) {
+      problems.push(`${file} — ${m} has no authorization guard`)
+    }
+  }
+}
+
+if (problems.length > 0) {
+  console.error('Unguarded API handlers:\n')
+  for (const p of problems) console.error(`  ${p}`)
+  console.error(`\nAdd a guard from lib/authz, or add the file to EXEMPT in this script with a reason.`)
+  process.exit(1)
+}
+
+console.log(`Checked ${checked} route files (${exempted} exempt) — every handler authorizes its caller.`)

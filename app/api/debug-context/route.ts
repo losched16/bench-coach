@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { requireAdmin } from '@/lib/authz'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -7,6 +8,9 @@ const supabaseAdmin = createClient(
 )
 
 export async function GET(request: NextRequest) {
+  const denied = await requireAdmin()
+  if (denied) return denied
+
   const teamId = '9dca2403-3a4a-480c-be46-3d9a4b45877f'
   
   const { data: teamPlayers, error } = await supabaseAdmin

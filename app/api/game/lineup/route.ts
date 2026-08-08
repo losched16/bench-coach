@@ -5,6 +5,7 @@ import {
   canEnter, canExit, canSwap, applyEntry, applyExit,
 } from '@/lib/substitutions'
 import { migrationHintFor } from '@/lib/migrationHints'
+import { guard } from '@/lib/authz'
 
 // The live lineup: who is in, who is where, and what a change would cost.
 //
@@ -64,6 +65,9 @@ async function loadState(gameId: string): Promise<{
 // GET ?gameId= — the lineup, plus what each player is allowed to do next
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
+  const denied = await guard(request, 'read')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const gameId = searchParams.get('gameId')
   if (!gameId) return NextResponse.json({ error: 'gameId required' }, { status: 400 })
@@ -101,6 +105,9 @@ export async function GET(request: NextRequest) {
 //     bench?: [teamPlayerId] }
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'decide')
+  if (denied) return denied
+
   try {
     const { gameId, subRules, starters, bench } = await request.json()
     if (!gameId || !Array.isArray(starters)) {
@@ -176,6 +183,9 @@ export async function POST(request: NextRequest) {
 //   { ..., force: true } to override a refusal
 // ---------------------------------------------------------------------------
 export async function PATCH(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const { gameId, action, force } = body

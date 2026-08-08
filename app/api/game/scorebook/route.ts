@@ -5,6 +5,7 @@ import {
   advanceIfHalfOver, weAreBatting, boxScore,
 } from '@/lib/scorebook'
 import { migrationHintFor } from '@/lib/migrationHints'
+import { guard } from '@/lib/authz'
 
 // The book.
 //
@@ -111,6 +112,9 @@ function stateFrom(rows: any[], isHome: boolean, cursor?: { inning: number; half
 // GET ?gameId= — the book, where the game stands, and the box score
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
+  const denied = await guard(request, 'read')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const gameId = searchParams.get('gameId')
   if (!gameId) return NextResponse.json({ error: 'gameId required' }, { status: 400 })
@@ -207,6 +211,9 @@ export async function GET(request: NextRequest) {
 // second phone, and it is refused rather than written twice.
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const { gameId, kind, result, expectedSeq } = body
@@ -343,6 +350,9 @@ export async function POST(request: NextRequest) {
 // happens next without rewriting what already happened.
 // ---------------------------------------------------------------------------
 export async function PATCH(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const { gameId, isHome } = await request.json()
     if (!gameId || typeof isHome !== 'boolean') {
@@ -367,6 +377,9 @@ export async function PATCH(request: NextRequest) {
 // One tap, no replay: the row before it already holds the state to go back to.
 // ---------------------------------------------------------------------------
 export async function DELETE(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const gameId = searchParams.get('gameId')
   if (!gameId) return NextResponse.json({ error: 'gameId required' }, { status: 400 })

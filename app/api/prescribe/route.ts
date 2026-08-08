@@ -7,6 +7,7 @@ import { COACH_VOICE } from '@/lib/coachVoice'
 import { resolveFocusArea, focusAreaLabel } from '@/lib/focusAreas'
 import { textFrom } from '@/lib/claudeText'
 import { commitPrescription } from '@/lib/prescriptions'
+import { guard, requireSession } from '@/lib/authz'
 
 // Service role for server-side reads (bypasses RLS), matching the other API routes.
 const supabaseAdmin = createClient(
@@ -49,6 +50,11 @@ interface TaxonomyRow {
 // GET — returns the problem taxonomy for the quick-pick chips on the UI.
 // ---------------------------------------------------------------------------
 export async function GET() {
+  // The problem taxonomy is the same for every coach — there is no team to
+  // scope to, so a signed-in session is the whole check.
+  const denied = await requireSession()
+  if (denied) return denied
+
   const { data, error } = await supabaseAdmin
     .from('problem_taxonomy')
     .select('slug, label, skill_category')
@@ -67,6 +73,9 @@ export async function GET() {
 //   body: { complaint, teamId?, playerId?, playerAge?, competitionLevel? }
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'ask')
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const { complaint, teamId, playerId } = body

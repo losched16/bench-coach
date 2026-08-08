@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { textFrom } from '@/lib/claudeText'
+import { requireSession } from '@/lib/authz'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -12,6 +13,9 @@ const anthropic = new Anthropic({
 export const maxDuration = 120
 
 export async function POST(request: NextRequest) {
+  const denied = await requireSession()
+  if (denied) return denied
+
   try {
     const { image, mimeType } = await request.json()
 

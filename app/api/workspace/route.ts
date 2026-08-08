@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { tierOf, canAdd, Usage, LimitKind } from '@/lib/tiers'
+import { guard } from '@/lib/authz'
 
 // The gate in front of creating a team or a personal player.
 //
@@ -47,6 +48,9 @@ export async function checkWorkspaceLimit(
 // POST { coachId, kind } — may I add one of these?
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'decide')
+  if (denied) return denied
+
   try {
     const { coachId, kind } = await request.json()
     if (!coachId || (kind !== 'team' && kind !== 'personalPlayer')) {

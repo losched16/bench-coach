@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { migrationHintFor } from '@/lib/migrationHints'
+import { guard } from '@/lib/authz'
 
 // Lineup rules a coach sets once and expects to hold all season.
 //
@@ -17,6 +18,9 @@ const supabaseAdmin = createClient(
 // GET ?teamId= — the rules currently in force
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
+  const denied = await guard(request, 'read')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const teamId = searchParams.get('teamId')
   if (!teamId) return NextResponse.json({ error: 'teamId required' }, { status: 400 })
@@ -71,6 +75,9 @@ export async function GET(request: NextRequest) {
 //   player: { teamPlayerId, lockedPosition?, excludedPositions?, minInnings?, maxInnings? }
 // ---------------------------------------------------------------------------
 export async function PATCH(request: NextRequest) {
+  const denied = await guard(request, 'decide')
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const { teamId, team, player } = body

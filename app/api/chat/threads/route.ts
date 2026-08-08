@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { guard } from '@/lib/authz'
 
 // The conversation list. Separate from /api/chat because that route is about
 // one exchange inside one thread; this one is about which threads exist.
@@ -26,6 +27,9 @@ export interface ThreadSummary {
 // GET ?teamId=  — every conversation for this team, most recently used first
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
+  const denied = await guard(request, 'read')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const teamId = searchParams.get('teamId')
   // The opponent's own list. Without the filter, a sidebar on Springfield's
@@ -106,6 +110,9 @@ export async function GET(request: NextRequest) {
 // Deliberately creates an empty thread with no title. The title is written
 // after the first message, when there is something to name it after.
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'ask')
+  if (denied) return denied
+
   try {
     const { teamId, playerId } = await request.json()
     if (!teamId) return NextResponse.json({ error: 'Missing teamId' }, { status: 400 })
@@ -128,6 +135,9 @@ export async function POST(request: NextRequest) {
 // PATCH { threadId, title } — rename
 // ---------------------------------------------------------------------------
 export async function PATCH(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const { threadId, title } = body
@@ -168,6 +178,9 @@ export async function PATCH(request: NextRequest) {
 // DELETE ?threadId=  — remove a conversation and everything in it
 // ---------------------------------------------------------------------------
 export async function DELETE(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const threadId = searchParams.get('threadId')
 

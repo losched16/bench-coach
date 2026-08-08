@@ -101,7 +101,7 @@ export default function AdminDashboard() {
   const loadOverview = useCallback(async () => {
     if (!userEmail) return
     setLoading(true)
-    const res = await fetch(`/api/admin?email=${userEmail}&section=overview`)
+    const res = await fetch(`/api/admin?section=overview`)
     const data = await res.json()
     setOverview(data.overview)
     setFeatureTotals(data.featureTotals)
@@ -113,26 +113,26 @@ export default function AdminDashboard() {
 
   const loadUsers = useCallback(async () => {
     if (!userEmail) return
-    const res = await fetch(`/api/admin?email=${userEmail}&section=users`)
+    const res = await fetch(`/api/admin?section=users`)
     const data = await res.json()
     setUsers(data.users || [])
   }, [userEmail])
 
   const loadAlerts = useCallback(async () => {
     if (!userEmail) return
-    const res = await fetch(`/api/admin?email=${userEmail}&section=alerts`)
+    const res = await fetch(`/api/admin?section=alerts`)
     const data = await res.json()
     setAlerts(data.alerts || [])
   }, [userEmail])
 
   const generateAlerts = async () => {
     if (!userEmail) return
-    await fetch(`/api/admin?email=${userEmail}&section=generate_alerts`)
+    await fetch(`/api/admin?section=generate_alerts`)
     loadAlerts()
   }
 
   const markAlertRead = async (alertId: string) => {
-    await fetch(`/api/admin?email=${userEmail}&section=mark_read&alertId=${alertId}`)
+    await fetch(`/api/admin?section=mark_read&alertId=${alertId}`)
     setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, is_read: true } : a))
   }
 

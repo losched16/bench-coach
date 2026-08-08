@@ -6,6 +6,7 @@ import { COACH_VOICE } from '@/lib/coachVoice'
 import {
   aggregateBattingLines, stalenessLabel, MIN_PA_FOR_TENDENCY, SCOUT_META_SENTINEL,
 } from '@/lib/scouting'
+import { guard } from '@/lib/authz'
 
 // The standing read on an opponent.
 //
@@ -36,6 +37,9 @@ const ANALYSIS_MODEL = 'claude-opus-5'
 //   ?coachId=&opponentTeamId=
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
+  const denied = await guard(request, 'read')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const coachId = searchParams.get('coachId')
   const opponentTeamId = searchParams.get('opponentTeamId')
@@ -76,6 +80,9 @@ export async function GET(request: NextRequest) {
 //   { coachId, opponentTeamId }
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const { coachId, opponentTeamId } = await request.json()
 

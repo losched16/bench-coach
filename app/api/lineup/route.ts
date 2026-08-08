@@ -7,6 +7,7 @@ import {
   buildFieldingPlan, validateFieldingPlan, battingSlots,
   LineupPlayer, LineupMode, Strategy, positionsFor,
 } from '@/lib/lineup'
+import { guard } from '@/lib/authz'
 
 // Two different problems, solved two different ways.
 //
@@ -31,6 +32,9 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 export const maxDuration = 120
 
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'decide')
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const {

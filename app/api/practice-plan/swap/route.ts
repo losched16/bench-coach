@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { generateReplacementBlock } from '@/lib/anthropic'
+import { guard } from '@/lib/authz'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,6 +14,9 @@ const supabaseAdmin = createClient(
 export const maxDuration = 120
 
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'decide')
+  if (denied) return denied
+
   try {
     const { teamId, ageGroup, blockToReplace, otherBlocks, coachNote, count } = await request.json()
 

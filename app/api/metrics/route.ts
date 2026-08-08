@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { migrationHintFor } from '@/lib/migrationHints'
 import { createClient } from '@supabase/supabase-js'
 import { challengeValue, MetricType, MetricReading } from '@/lib/metrics'
+import { guard } from '@/lib/authz'
 
 // Measurements: the types a coach tracks, and the readings themselves.
 //
@@ -20,6 +21,9 @@ const supabaseAdmin = createClient(
 //   ?coachId=&playerId=       → types plus every reading for that player
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
+  const denied = await guard(request, 'read')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const coachId = searchParams.get('coachId')
   const playerId = searchParams.get('playerId')
@@ -70,6 +74,9 @@ export async function GET(request: NextRequest) {
 // than making the coach pick one at capture time.
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const { coachId, kind } = body
@@ -193,6 +200,9 @@ export async function POST(request: NextRequest) {
 //   ?coachId=&readingId=   |   ?coachId=&typeId=
 // ---------------------------------------------------------------------------
 export async function DELETE(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const coachId = searchParams.get('coachId')
   const readingId = searchParams.get('readingId')

@@ -6,6 +6,7 @@ import {
   nameSimilarity,
   OpponentPlayerLite,
 } from '@/lib/scouting'
+import { guard } from '@/lib/authz'
 
 // Use service role for server-side operations (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -15,6 +16,9 @@ const supabaseAdmin = createClient(
 
 // GET: list opponent teams for a coach, or full detail for one opponent
 export async function GET(request: NextRequest) {
+  const denied = await guard(request, 'read')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const coachId = searchParams.get('coachId')
   const opponentTeamId = searchParams.get('opponentTeamId')
@@ -177,6 +181,9 @@ async function resolveOpponentPlayer(
 
 // POST: create a scouting entry (and its players/appearances/matchups)
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const {
@@ -402,6 +409,9 @@ export async function POST(request: NextRequest) {
 
 // PUT: update opponent team notes/details
 export async function PUT(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const { opponentTeamId, coachId, updates } = await request.json()
     if (!opponentTeamId || !coachId) {
@@ -429,6 +439,9 @@ export async function PUT(request: NextRequest) {
 
 // DELETE: remove a scouting entry (appearances cascade) or an opponent team
 export async function DELETE(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const entryId = searchParams.get('entryId')
   const opponentTeamId = searchParams.get('opponentTeamId')

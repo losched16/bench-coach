@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { generatePracticePlan, TeamContext } from '@/lib/anthropic'
 import { assembleCoachContext, renderCoachContext } from '@/lib/coachContext'
 import { categoriesForPracticeFocus } from '@/lib/focusAreas'
+import { guard } from '@/lib/authz'
 
 // Use service role for server-side operations (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -16,6 +17,9 @@ const supabaseAdmin = createClient(
 export const maxDuration = 180
 
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'decide')
+  if (denied) return denied
+
   try {
     const { teamId, duration, focus, constraints } = await request.json()
 

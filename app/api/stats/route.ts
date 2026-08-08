@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { guard } from '@/lib/authz'
 
 // Use service role for server-side operations (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -9,6 +10,9 @@ const supabaseAdmin = createClient(
 
 // GET: Fetch games + stats for a team, or single game detail
 export async function GET(request: NextRequest) {
+  const denied = await guard(request, 'read')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const teamId = searchParams.get('teamId')
   const gameId = searchParams.get('gameId')
@@ -116,6 +120,9 @@ export async function GET(request: NextRequest) {
 
 // POST: Create a game + bulk player stats
 export async function POST(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const { game, playerStats } = body
@@ -199,6 +206,9 @@ export async function POST(request: NextRequest) {
 
 // PUT: Update game or player stats
 export async function PUT(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const { game, playerStats } = body
@@ -277,6 +287,9 @@ export async function PUT(request: NextRequest) {
 
 // DELETE: Remove a game (cascades to stats)
 export async function DELETE(request: NextRequest) {
+  const denied = await guard(request, 'record')
+  if (denied) return denied
+
   const { searchParams } = new URL(request.url)
   const gameId = searchParams.get('gameId')
 
