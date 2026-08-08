@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
-import { Plus, Calendar, Shield, RotateCcw, Save, Trash2, ChevronDown, ChevronUp, Users, AlertCircle } from 'lucide-react'
+import { Plus, Calendar, Shield, RotateCcw, Save, Trash2, ChevronDown, ChevronUp, Users, AlertCircle, PencilLine } from 'lucide-react'
 import { usePageView } from '@/lib/tracking'
 import { LINEUP_MODES, STRATEGIES, LineupMode, Strategy } from '@/lib/lineup'
 import { LineupRules } from '@/components/LineupRules'
+import { ManualLineup, BuiltLineup } from '@/components/ManualLineup'
 import { findExistingGame } from '@/lib/games'
 
 // Types
@@ -59,6 +60,14 @@ interface GeneratedLineup {
   field_assignments: Record<string, Assignment[]>
   bench_by_inning: Record<string, BenchPlayer[]>
   notes: string
+  // Present on solver output, and on a hand-set lineup where they apply.
+  reasoning?: string
+  warnings?: string[]
+  innings_by_player?: Record<string, number>
+  meta?: { evidence_used?: string[] }
+  // Where it came from. A hand-set lineup is not regenerated, and it is not
+  // labelled as something the app decided.
+  source?: 'manual' | 'generated'
 }
 
 // Position colors for the grid
@@ -117,6 +126,8 @@ export default function LineupPage() {
   // Generated lineup state
   const [generatedLineup, setGeneratedLineup] = useState<GeneratedLineup | null>(null)
   const [activeInning, setActiveInning] = useState(1)
+  // Setting it by hand instead of solving for it.
+  const [manualOpen, setManualOpen] = useState(false)
 
   // View saved lineup state
   const [viewingLineup, setViewingLineup] = useState<GameLineup | null>(null)
@@ -261,6 +272,24 @@ export default function LineupPage() {
     }
   }
 
+  // A hand-set lineup joins the same pipeline as a solved one: same shape, so
+  // the grid, the drag-to-swap, saving and the handoff into Game Day all work
+  // without knowing which way it was made.
+  const handleManualDone = (built: BuiltLineup) => {
+    setGeneratedLineup(built)
+    setActiveInning(1)
+    setManualOpen(false)
+    setShowSetup(false)
+  }
+
+  const openManual = () => {
+    setManualOpen(true)
+    setShowSetup(false)
+    setShowEligibility(false)
+    setGeneratedLineup(null)
+    setViewingLineup(null)
+  }
+
   // ── Save Lineup ──────────────────────────────────────────
 
   const handleSaveLineup = async () => {
@@ -362,21 +391,19 @@ export default function LineupPage() {
       // screen had never heard of, and the coach re-entered the whole lineup
       // on their phone at the field.
       //
-      // Starters are whoever is on the field in the first inning, plus anyone
-      // in the batting order — in a continuous order the bench is still
-      // batting, which makes them starters for substitution purposes.
+      // The batting order IS the lineup card, so everyone in it is a starter —
+      // including a DH who never fields and, in a hand-set lineup, a kid the
+      // coach batted but started on the bench. Both are in the game, and both
+      // get a starter's re-entry. Only the field position is optional.
       if (gameId) {
         const firstInning = generatedLineup.field_assignments['1'] || []
-        const startingIds = new Set(firstInning.map(fp => fp.team_player_id))
         const batting = generatedLineup.batting_order || []
 
-        const starters = batting
-          .filter(b => startingIds.has(b.team_player_id) || lineupMode === 'continuous')
-          .map(b => ({
-            teamPlayerId: b.team_player_id,
-            battingSlot: b.order,
-            position: firstInning.find(fp => fp.team_player_id === b.team_player_id)?.position,
-          }))
+        const starters = batting.map(b => ({
+          teamPlayerId: b.team_player_id,
+          battingSlot: b.order,
+          position: firstInning.find(fp => fp.team_player_id === b.team_player_id)?.position,
+        }))
 
         const bench = players
           .map(p => p.id)
@@ -528,14 +555,14 @@ export default function LineupPage() {
         <h2 className="text-2xl font-bold text-gray-900">Game Day Lineup</h2>
         <div className="flex space-x-3">
           <button
-            onClick={() => { setShowEligibility(!showEligibility); setShowSetup(false) }}
+            onClick={() => { setShowEligibility(!showEligibility); setShowSetup(false); setManualOpen(false) }}
             className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <Shield size={18} />
             <span>Position Eligibility</span>
           </button>
           <button
-            onClick={() => { setShowSetup(!showSetup); setShowEligibility(false) }}
+            onClick={() => { setShowSetup(!showSetup); setShowEligibility(false); setManualOpen(false) }}
             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Plus size={20} />
@@ -807,12 +834,23 @@ export default function LineupPage() {
           )}
 
           {/* Generate Button */}
-          <div className="mt-6 flex justify-end space-x-3">
+          <div className="mt-6 flex flex-wrap justify-end gap-3">
             <button
               onClick={() => setShowSetup(false)}
               className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
             >
               Cancel
+            </button>
+            {/* Equal footing with Generate, not a fallback. A coach who has
+                already decided the lineup should not have to run the solver
+                first and then undo it. */}
+            <button
+              onClick={openManual}
+              disabled={generating}
+              className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <PencilLine size={18} />
+              <span>Set it myself</span>
             </button>
             <button
               onClick={handleGenerate}
@@ -835,6 +873,19 @@ export default function LineupPage() {
         </div>
       )}
 
+      {/* Setting it by hand */}
+      {manualOpen && (
+        <ManualLineup
+          players={players.filter(p => !unavailableIds.includes(p.id)) as any}
+          innings={innings}
+          fieldPositions={fieldPositions}
+          needsPitcher={pitchingType === 'live_pitch' || pitchingType === 'mixed'}
+          everyoneBats={lineupMode === 'continuous'}
+          onCancel={() => { setManualOpen(false); setShowSetup(true) }}
+          onDone={handleManualDone}
+        />
+      )}
+
       {/* Generated Lineup View */}
       {generatedLineup && (
         <div className="space-y-6">
@@ -843,7 +894,7 @@ export default function LineupPage() {
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">
-                  Generated Lineup
+                  {generatedLineup.source === 'manual' ? 'Your Lineup' : 'Generated Lineup'}
                   {opponent && <span className="text-gray-600"> vs {opponent}</span>}
                 </h3>
                 {gameDate && (
@@ -861,9 +912,9 @@ export default function LineupPage() {
                       Why this order
                     </div>
                     <p className="text-sm text-blue-900 leading-relaxed">{generatedLineup.reasoning}</p>
-                    {generatedLineup.meta?.evidence_used?.length > 0 && (
+                    {(generatedLineup.meta?.evidence_used?.length || 0) > 0 && (
                       <p className="text-xs text-blue-700 mt-2">
-                        Built from: {generatedLineup.meta.evidence_used.join(', ')}.
+                        Built from: {generatedLineup.meta?.evidence_used?.join(', ')}.
                       </p>
                     )}
                   </div>
@@ -871,9 +922,9 @@ export default function LineupPage() {
 
                 {/* Constraints we couldn't satisfy, said out loud rather than
                     quietly compromised — usually fixable on the grid. */}
-                {generatedLineup.warnings?.length > 0 && (
+                {(generatedLineup.warnings?.length || 0) > 0 && (
                   <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-1.5">
-                    {generatedLineup.warnings.map((w: string, i: number) => (
+                    {(generatedLineup.warnings || []).map((w: string, i: number) => (
                       <p key={i} className="text-sm text-amber-900 flex items-start gap-2">
                         <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
                         <span>{w}</span>
@@ -890,7 +941,7 @@ export default function LineupPage() {
                     </summary>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {generatedLineup.batting_order.map((b: any) => {
-                        const n = generatedLineup.innings_by_player[b.team_player_id]
+                        const n = generatedLineup.innings_by_player?.[b.team_player_id]
                         if (n === undefined) return null
                         return (
                           <span key={b.team_player_id} className="text-xs px-2 py-1 bg-gray-100 rounded">
@@ -903,14 +954,26 @@ export default function LineupPage() {
                 )}
               </div>
               <div className="flex space-x-3">
-                <button
-                  onClick={handleGenerate}
-                  disabled={generating}
-                  className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <RotateCcw size={16} className={generating ? 'animate-spin' : ''} />
-                  <span>Regenerate</span>
-                </button>
+                {/* Regenerating a lineup the coach typed in by hand would throw
+                    their work away, so that button is not offered here. */}
+                {generatedLineup.source === 'manual' ? (
+                  <button
+                    onClick={openManual}
+                    className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <PencilLine size={16} />
+                    <span>Start over</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleGenerate}
+                    disabled={generating}
+                    className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <RotateCcw size={16} className={generating ? 'animate-spin' : ''} />
+                    <span>Regenerate</span>
+                  </button>
+                )}
                 <button
                   onClick={handleSaveLineup}
                   disabled={saving}
@@ -1174,14 +1237,17 @@ export default function LineupPage() {
       )}
 
       {/* Saved Lineups List */}
-      {!generatedLineup && !viewingLineup && (
+      {!generatedLineup && !viewingLineup && !manualOpen && (
         <div>
           {savedLineups.length === 0 ? (
             <div className="bg-white rounded-lg shadow p-12 text-center">
               <Calendar className="mx-auto text-gray-400 mb-4" size={48} />
               <p className="text-gray-600 mb-2">No game lineups yet</p>
+              {/* Both paths start from the same game setup — innings, players
+                  on the field, batting order — so there is one entry point
+                  rather than two that diverge and have to be reconciled. */}
               <p className="text-sm text-gray-500 mb-4">
-                Set position eligibility, then generate your first game day lineup
+                Set the game up, then either let us build it or set it yourself
               </p>
               <button
                 onClick={() => setShowSetup(true)}

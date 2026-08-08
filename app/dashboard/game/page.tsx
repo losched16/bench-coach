@@ -801,7 +801,7 @@ function GamePageContent() {
             {lineupPanelOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
           {lineupPanelOpen && activeGame && (
-            <LiveLineup gameId={activeGame.id} inning={activeGame.current_inning} />
+            <LiveLineup gameId={activeGame.id} inning={activeGame.current_inning} teamId={teamId} />
           )}
         </div>
 

@@ -31,9 +31,11 @@ interface LivePlayer {
 interface Props {
   gameId: string
   inning: number
+  // Only used to link to the builder from the empty state.
+  teamId?: string | null
 }
 
-export function LiveLineup({ gameId, inning }: Props) {
+export function LiveLineup({ gameId, inning, teamId }: Props) {
   const [players, setPlayers] = useState<LivePlayer[]>([])
   const [rules, setRules] = useState<SubRuleSet>('starter_reentry')
   const [loading, setLoading] = useState(true)
@@ -167,10 +169,21 @@ export function LiveLineup({ gameId, inning }: Props) {
   }
 
   if (players.length === 0) {
+    // Telling a coach at the field to go somewhere else, without a way to get
+    // there, is how a feature gets abandoned mid-game.
     return (
-      <p className="text-sm text-gray-500 p-4">
-        No lineup set for this game yet. Build one in the Lineup Builder and it&apos;ll show up here.
-      </p>
+      <div className="p-4 space-y-3">
+        <p className="text-sm text-gray-500">
+          No lineup set for this game yet. Build one or set it yourself, and it&apos;ll show up
+          here with the subs.
+        </p>
+        <a
+          href={`/dashboard/lineup${teamId ? `?teamId=${teamId}` : ''}`}
+          className="inline-block px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg active:bg-blue-700"
+        >
+          Set the lineup
+        </a>
+      </div>
     )
   }
 
