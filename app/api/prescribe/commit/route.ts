@@ -147,3 +147,47 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: error.message || 'Could not set that' }, { status: 500 })
   }
 }
+
+// ---------------------------------------------------------------------------
+// DELETE ?coachId=&prescriptionId= — remove a plan outright
+//
+// Distinct from closing one out. Closing means it worked and the record stays;
+// deleting means it should not exist — a duplicate, a mistake, something
+// started and thought better of.
+//
+// Safe to hard-delete: entries.prescription_id is ON DELETE SET NULL, so
+// everything the coach actually LOGGED survives and simply stops pointing at a
+// plan. Only the check-ins and session ticks for this plan go with it, and both
+// are meaningless without it.
+// ---------------------------------------------------------------------------
+export async function DELETE(request: NextRequest) {
+  const denied = await guard(request, 'decide')
+  if (denied) return denied
+
+  const { searchParams } = new URL(request.url)
+  const coachId = searchParams.get('coachId')
+  const prescriptionId = searchParams.get('prescriptionId')
+  if (!coachId || !prescriptionId) {
+    return NextResponse.json(
+      { error: 'coachId and prescriptionId are required' }, { status: 400 }
+    )
+  }
+
+  try {
+    // Scoped to the coach as well as the id: a valid prescription id from
+    // another account is not a licence to delete it.
+    const { error } = await supabaseAdmin
+      .from('prescriptions')
+      .delete()
+      .eq('id', prescriptionId)
+      .eq('coach_id', coachId)
+    if (error) throw error
+
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
+    console.error('Delete prescription error:', error)
+    return NextResponse.json(
+      { error: error.message || 'Could not delete that plan' }, { status: 500 }
+    )
+  }
+}

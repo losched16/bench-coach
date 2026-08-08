@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   ChevronLeft, ChevronRight, Loader2, AlertCircle, Target, Check,
-  ClipboardList, User, Play, Sparkles,
+  ClipboardList, User, Play, Sparkles, Trash2,
 } from 'lucide-react'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { focusAreaLabel, focusAreaChip, FOCUS_AREAS, FocusArea } from '@/lib/focusAreas'
@@ -72,6 +72,7 @@ export function PlanCards({ teamId }: Props) {
   const [migrationMessage, setMigrationMessage] = useState<string | null>(null)
 
   const [openId, setOpenId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
 
   const load = useCallback(async (cid: string) => {
     try {
@@ -115,6 +116,36 @@ export function PlanCards({ teamId }: Props) {
     init()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId])
+
+  // Deleting is not closing out. Closing means it worked and the record stays;
+  // this is for a duplicate or a mistake. Said plainly in the confirm, because
+  // the two live next to each other and only one is reversible by starting
+  // over.
+  const remove = async (p: PlanSummary) => {
+    if (!coachId) return
+    const ok = confirm(
+      `Delete this plan for ${p.subjectName}?\n\n` +
+      `Sessions you've already logged are kept — only the plan itself goes. ` +
+      `If it worked, use "close this plan" instead so the result is on the record.`
+    )
+    if (!ok) return
+    setDeleting(p.id)
+    try {
+      const res = await fetch(
+        `/api/prescribe/commit?coachId=${coachId}&prescriptionId=${p.id}`,
+        { method: 'DELETE' }
+      )
+      if (!res.ok) {
+        const d = await res.json()
+        throw new Error(d.error || 'Could not delete that')
+      }
+      setPlans(prev => prev.filter(x => x.id !== p.id))
+    } catch (e: any) {
+      setLoadError(e.message)
+    } finally {
+      setDeleting(null)
+    }
+  }
 
   if (loading) {
     return (
@@ -176,12 +207,15 @@ export function PlanCards({ teamId }: Props) {
           </div>
         ) : (
           plans.map(p => (
-            <button
+            <div
               key={p.id}
-              onClick={() => setOpenId(p.id)}
-              className="w-full text-left bg-white border border-gray-200 rounded-xl p-4 hover:border-red-300 active:bg-gray-50 transition-colors"
+              className="bg-white border border-gray-200 rounded-xl hover:border-red-300 transition-colors"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1 p-4">
+                <button
+                  onClick={() => setOpenId(p.id)}
+                  className="flex-1 min-w-0 text-left flex items-center gap-3"
+                >
                 <div className="flex-1 min-w-0">
                   <span className="block text-lg font-bold text-gray-900">
                     {p.subjectName}
@@ -200,9 +234,20 @@ export function PlanCards({ teamId }: Props) {
                     <p className="text-sm text-gray-700 mt-1.5 line-clamp-2">{p.priority}</p>
                   )}
                 </div>
-                <ChevronRight size={22} className="shrink-0 text-gray-400" />
+                  <ChevronRight size={22} className="shrink-0 text-gray-400" />
+                </button>
+                <button
+                  onClick={() => remove(p)}
+                  disabled={deleting === p.id}
+                  className="shrink-0 p-2 text-gray-300 hover:text-red-600 disabled:opacity-50"
+                  aria-label={`Delete ${p.subjectName}'s plan`}
+                >
+                  {deleting === p.id
+                    ? <Loader2 size={18} className="animate-spin" />
+                    : <Trash2 size={18} />}
+                </button>
               </div>
-            </button>
+            </div>
           ))
         )}
       </section>
@@ -268,6 +313,7 @@ function PlanDetail({
   onBack: () => void
   onClosedOut: () => void
 }) {
+  const [removing, setRemoving] = useState(false)
   const [drills, setDrills] = useState<Drill[]>([])
   const [loading, setLoading] = useState(true)
   const [logging, setLogging] = useState(false)
@@ -505,6 +551,39 @@ function PlanDetail({
         >
           <Sparkles size={16} /> Ask about this plan
         </Link>
+
+        {/* Last, quiet, and worded so it cannot be mistaken for the green
+            button above it. Closing means it worked; this means it should not
+            exist. */}
+        <button
+          onClick={async () => {
+            const ok = confirm(
+              `Delete this plan for ${plan.subjectName}?\n\n` +
+              `Sessions you've already logged are kept — only the plan itself goes. ` +
+              `If it worked, close it out instead so the result is on the record.`
+            )
+            if (!ok) return
+            setRemoving(true)
+            try {
+              const res = await fetch(
+                `/api/prescribe/commit?coachId=${coachId}&prescriptionId=${plan.id}`,
+                { method: 'DELETE' }
+              )
+              if (!res.ok) {
+                const d = await res.json()
+                throw new Error(d.error || 'Could not delete that')
+              }
+              onClosedOut()
+            } catch (e: any) {
+              setError(e.message)
+              setRemoving(false)
+            }
+          }}
+          disabled={removing}
+          className="w-full py-3 rounded-xl text-red-600 font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          <Trash2 size={16} /> {removing ? 'Deleting…' : 'Delete this plan'}
+        </button>
       </div>
     </div>
   )
