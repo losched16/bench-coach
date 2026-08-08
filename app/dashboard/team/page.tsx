@@ -337,7 +337,7 @@ function TeamMembersContent() {
         <div>
           <h2 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
             <Users className="text-red-600" size={28} />
-            <span>Team Members</span>
+            <span>Staff</span>
           </h2>
           <p className="text-gray-600 mt-1">
             Manage who has access to {teamName}
@@ -382,7 +382,7 @@ function TeamMembersContent() {
         </div>
       )}
 
-      {/* Team Members */}
+      {/* Staff */}
       <div className="bg-white rounded-lg shadow">
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
           <h3 className="font-semibold text-gray-900">

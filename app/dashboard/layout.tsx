@@ -237,7 +237,7 @@ function DashboardContent({
         { label: 'Roster', href: '/dashboard/roster', icon: Users },
         { label: 'Stats', href: '/dashboard/stats', icon: BarChart3 },
         { label: 'Notes', href: '/dashboard/notes', icon: StickyNote },
-        { label: 'Team Members', href: '/dashboard/team', icon: UsersRound },
+        { label: 'Staff', href: '/dashboard/team', icon: UsersRound },
       ],
     },
     {
