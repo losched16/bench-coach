@@ -328,7 +328,17 @@ function DashboardContent({
             {/* Right side — capture, then logout. The capture button lives
                 here rather than in the desktop-only team block because logging
                 something happens on a phone at a field. */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
+              {/* The two things reached most often, at every breakpoint. On a
+                  phone both used to cost a hamburger tap first. */}
+              <Link
+                href={`/dashboard/chat?teamId=${selectedTeamId}`}
+                className="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                aria-label="CoachAI"
+                title="CoachAI"
+              >
+                <MessageSquare size={20} />
+              </Link>
               <CaptureMenu teamId={selectedTeamId} canCreate={canCreate} />
               <button
               onClick={handleLogout}

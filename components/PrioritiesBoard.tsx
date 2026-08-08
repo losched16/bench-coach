@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import {
   CalendarCheck, Loader2, AlertCircle, Target, History, Search,
@@ -92,7 +92,12 @@ export function PrioritiesBoard({ teamId, focusId = null }: Props) {
   const [resolvedAs, setResolvedAs] = useState<VerdictStatus | null>(null)
   // Which priority has its drills-and-updates panel open, and what the coach
   // has typed into it.
+  // Which card is open. One is open from the start: the drills are what a
+  // coach came to see before a session, and hiding all of them behind a tap
+  // charged a click for the most common thing on the screen. One expanded is
+  // not a wall; all of them would be.
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const autoExpanded = useRef(false)
   const [updateDraft, setUpdateDraft] = useState('')
 
   useEffect(() => {
@@ -120,6 +125,21 @@ export function PrioritiesBoard({ teamId, focusId = null }: Props) {
     setLoadError(data.needsMigration ? null : (data.error || null))
     setOpen(data.prescriptions || [])
   }
+
+  useEffect(() => {
+    if (autoExpanded.current || open.length === 0) return
+    autoExpanded.current = true
+    // A deep link names the one they came for; otherwise the list is already
+    // sorted with the most actionable first.
+    const rank = (p: OpenPrescription) => (p.due !== 'holding' ? 0 : 1)
+    const wanted = focusId && open.some(p => p.id === focusId)
+      ? focusId
+      : [...open].sort(
+          (a, b) => rank(a) - rank(b) || focusAreaRank(a.focusArea) - focusAreaRank(b.focusArea)
+        )[0]?.id
+    if (wanted) setExpandedId(wanted)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, focusId])
 
   // Deep link from the dashboard card / email lands straight on the read
   useEffect(() => {
