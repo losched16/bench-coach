@@ -24,7 +24,7 @@ const supabaseAdmin = createClient(
 // GET ?teamId= — the rules currently in force
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
-  const denied = await guard(request, 'read')
+  const denied = await guard(request, 'read', { needs: 'teamFeatures' })
   if (denied) return denied
 
   const { searchParams } = new URL(request.url)
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
 //   player: { teamPlayerId, lockedPosition?, excludedPositions?, minInnings?, maxInnings? }
 // ---------------------------------------------------------------------------
 export async function PATCH(request: NextRequest) {
-  const denied = await guard(request, 'decide')
+  const denied = await guard(request, 'decide', { needs: 'teamFeatures' })
   if (denied) return denied
 
   try {

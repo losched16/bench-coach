@@ -16,7 +16,7 @@ const supabaseAdmin = createClient(
 
 // GET: matchups for a coach (optionally filtered by status)
 export async function GET(request: NextRequest) {
-  const denied = await guard(request, 'read')
+  const denied = await guard(request, 'read', { needs: 'teamFeatures' })
   if (denied) return denied
 
   const { searchParams } = new URL(request.url)
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
 // POST: create a matchup
 export async function POST(request: NextRequest) {
-  const denied = await guard(request, 'record')
+  const denied = await guard(request, 'record', { needs: 'teamFeatures' })
   if (denied) return denied
 
   try {
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
 
 // PUT: update a matchup (schedule, status)
 export async function PUT(request: NextRequest) {
-  const denied = await guard(request, 'record')
+  const denied = await guard(request, 'record', { needs: 'teamFeatures' })
   if (denied) return denied
 
   try {
@@ -113,7 +113,7 @@ export async function PUT(request: NextRequest) {
 
 // DELETE: remove a matchup
 export async function DELETE(request: NextRequest) {
-  const denied = await guard(request, 'record')
+  const denied = await guard(request, 'record', { needs: 'teamFeatures' })
   if (denied) return denied
 
   const { searchParams } = new URL(request.url)

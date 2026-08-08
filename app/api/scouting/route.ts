@@ -22,7 +22,7 @@ const supabaseAdmin = createClient(
 
 // GET: list opponent teams for a coach, or full detail for one opponent
 export async function GET(request: NextRequest) {
-  const denied = await guard(request, 'read')
+  const denied = await guard(request, 'read', { needs: 'teamFeatures' })
   if (denied) return denied
 
   const { searchParams } = new URL(request.url)
@@ -187,7 +187,7 @@ async function resolveOpponentPlayer(
 
 // POST: create a scouting entry (and its players/appearances/matchups)
 export async function POST(request: NextRequest) {
-  const denied = await guard(request, 'record')
+  const denied = await guard(request, 'record', { needs: 'teamFeatures' })
   if (denied) return denied
 
   try {
@@ -415,7 +415,7 @@ export async function POST(request: NextRequest) {
 
 // PUT: update opponent team notes/details
 export async function PUT(request: NextRequest) {
-  const denied = await guard(request, 'record')
+  const denied = await guard(request, 'record', { needs: 'teamFeatures' })
   if (denied) return denied
 
   try {
@@ -445,7 +445,7 @@ export async function PUT(request: NextRequest) {
 
 // DELETE: remove a scouting entry (appearances cascade) or an opponent team
 export async function DELETE(request: NextRequest) {
-  const denied = await guard(request, 'record')
+  const denied = await guard(request, 'record', { needs: 'teamFeatures' })
   if (denied) return denied
 
   const { searchParams } = new URL(request.url)

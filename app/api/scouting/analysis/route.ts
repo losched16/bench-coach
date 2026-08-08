@@ -43,7 +43,7 @@ const ANALYSIS_MODEL = 'claude-opus-5'
 //   ?coachId=&opponentTeamId=
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
-  const denied = await guard(request, 'read')
+  const denied = await guard(request, 'read', { needs: 'teamFeatures' })
   if (denied) return denied
 
   const { searchParams } = new URL(request.url)
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
 //   { coachId, opponentTeamId }
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
-  const denied = await guard(request, 'record')
+  const denied = await guard(request, 'record', { needs: 'teamFeatures' })
   if (denied) return denied
 
   try {

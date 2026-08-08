@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { useRole } from '@/lib/useRole'
+import { useEntitlements } from '@/lib/useEntitlements'
 import Link from 'next/link'
 import Image from 'next/image'
 import { CaptureMenu } from '@/components/CaptureMenu'
@@ -30,6 +31,7 @@ function DashboardContent({
   const [showNewMenu, setShowNewMenu] = useState(false)
   const [showDeleteTeamModal, setShowDeleteTeamModal] = useState(false)
   const [canCreate, setCanCreate] = useState(false)
+  const [coachId, setCoachId] = useState<string>('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
@@ -40,6 +42,13 @@ function DashboardContent({
   // never use are not shown — an assistant coach hunting for Staff and finding
   // a refusal has learned nothing except that the app argues with them.
   const { role, label: roleLabel, can: allowed } = useRole(selectedTeamId)
+
+  // What the plan includes, which is a different question from what the role
+  // allows. Role says "an assistant coach may not open Staff"; this says "a
+  // Personal subscriber has no staff to manage in the first place". Both hide
+  // menu items, and both are only about what to SHOW — the routes refuse
+  // independently, so a typed URL gets the same answer.
+  const { teamFeatures } = useEntitlements(coachId)
 
   // Get teamId from URL or use first team
   const urlTeamId = searchParams.get('teamId')
@@ -105,6 +114,8 @@ function DashboardContent({
         router.push('/onboarding')
         return
       }
+
+      setCoachId(coach.id)
 
       // Get teams user OWNS
       const { data: ownedTeams } = await supabase
@@ -226,7 +237,16 @@ function DashboardContent({
   // destination. It duplicates what a priority does, without the evidence.
   const allNavGroups: Array<{
     label: string
-    items: Array<{ label: string; href: string; icon: any; needs?: 'record' | 'decide' | 'own' }>
+    items: Array<{
+      label: string
+      href: string
+      icon: any
+      needs?: 'record' | 'decide' | 'own'
+      // Coach-plan only. Game Day and the Pitch Counter deliberately are NOT
+      // marked — a parent on the Personal plan keeps a scorebook and counts
+      // pitches for their own kid. What they don't have is a team to run.
+      needsTeam?: boolean
+    }>
   }> = [
     {
       label: '',
@@ -246,7 +266,7 @@ function DashboardContent({
         { label: 'Roster', href: '/dashboard/roster', icon: Users },
         { label: 'Stats', href: '/dashboard/stats', icon: BarChart3 },
         { label: 'Notes', href: '/dashboard/notes', icon: StickyNote },
-        { label: 'Staff', href: '/dashboard/team', icon: UsersRound, needs: 'own' },
+        { label: 'Staff', href: '/dashboard/team', icon: UsersRound, needs: 'own', needsTeam: true },
       ],
     },
     {
@@ -254,14 +274,14 @@ function DashboardContent({
       items: [
         { label: 'Game Day', href: '/dashboard/game', icon: Activity },
         { label: 'Pitch Counter', href: '/dashboard/count', icon: Timer },
-        { label: 'Lineup Builder', href: '/dashboard/lineup', icon: Calendar, needs: 'decide' },
-        { label: 'Scouting', href: '/dashboard/scouting', icon: Search },
+        { label: 'Lineup Builder', href: '/dashboard/lineup', icon: Calendar, needs: 'decide', needsTeam: true },
+        { label: 'Scouting', href: '/dashboard/scouting', icon: Search, needsTeam: true },
       ],
     },
     {
       label: 'Planning',
       items: [
-        { label: 'Practice Plans', href: '/dashboard/practice', icon: ClipboardList, needs: 'decide' },
+        { label: 'Practice Plans', href: '/dashboard/practice', icon: ClipboardList, needs: 'decide', needsTeam: true },
         { label: 'Drill Library', href: '/dashboard/drills', icon: Bookmark },
       ],
     },
@@ -279,7 +299,13 @@ function DashboardContent({
   // Drop what this role can never use, then drop any heading left empty by
   // that. A group header over nothing is worse than no header.
   const navGroups = allNavGroups
-    .map(g => ({ ...g, items: g.items.filter(i => !i.needs || allowed(i.needs)) }))
+    .map(g => ({
+      ...g,
+      items: g.items.filter(i =>
+        (!i.needs || allowed(i.needs)) &&
+        (!i.needsTeam || teamFeatures)
+      ),
+    }))
     .filter(g => g.items.length > 0)
 
   if (loading) {
@@ -354,7 +380,7 @@ function DashboardContent({
               >
                 <MessageSquare size={20} />
               </Link>
-              <CaptureMenu teamId={selectedTeamId} canCreate={canCreate} />
+              <CaptureMenu teamId={selectedTeamId} canCreate={canCreate} canCreateTeams={teamFeatures} />
               <button
               onClick={handleLogout}
               className="flex items-center space-x-1 text-slate-300 hover:text-white transition-colors p-2"
@@ -385,7 +411,7 @@ function DashboardContent({
                 ))}
               </select>
               
-              {canCreate && (
+              {canCreate && teamFeatures && (
                 <Link
                   href="/dashboard/new-team"
                   className="flex items-center justify-center p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
@@ -430,14 +456,16 @@ function DashboardContent({
             {/* Mobile New Buttons */}
             {canCreate && (
               <div className="p-4 border-b border-gray-200 space-y-2">
-                <Link
-                  href="/dashboard/new-team"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center space-x-3 px-4 py-3 bg-red-50 text-red-700 rounded-lg"
-                >
-                  <Users size={20} />
-                  <span className="font-medium">New Team</span>
-                </Link>
+                {teamFeatures && (
+                  <Link
+                    href="/dashboard/new-team"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-3 bg-red-50 text-red-700 rounded-lg"
+                  >
+                    <Users size={20} />
+                    <span className="font-medium">New Team</span>
+                  </Link>
+                )}
                 <Link
                   href="/dashboard/new-player"
                   onClick={() => setMobileMenuOpen(false)}

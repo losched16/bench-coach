@@ -52,7 +52,7 @@ async function loadRuleSet(coachId: string, ruleId: string | null): Promise<Pitc
 }
 
 export async function GET(request: NextRequest) {
-  const denied = await guard(request, 'read')
+  const denied = await guard(request, 'read', { needs: 'teamFeatures' })
   if (denied) return denied
 
   const { searchParams } = new URL(request.url)

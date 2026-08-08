@@ -38,7 +38,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 export const maxDuration = 120
 
 export async function POST(request: NextRequest) {
-  const denied = await guard(request, 'decide')
+  const denied = await guard(request, 'decide', { needs: 'teamFeatures' })
   if (denied) return denied
 
   try {

@@ -22,8 +22,14 @@ export interface TierConfig {
   // Everything AI-driven: the read, the check-in, the plans, chat. Splitting
   // these across plans would be splitting the product.
   ai: boolean
-  // Coaching a roster brings its own surfaces. A parent tracking one kid has
-  // no use for a lineup card or an opponent's pitch counts.
+  // Coaching a roster brings its own surfaces: staff, lineups, practice plans,
+  // opponent scouting.
+  //
+  // Game Day and the pitch counter are deliberately NOT among them. A parent
+  // whose kid plays for a team they don't coach still sits in the stands
+  // keeping the book and counting their own kid's pitches — that is a parent
+  // job, and charging Coach money for it would be charging for the wrong
+  // thing.
   teamFeatures: boolean
   features: string[]
   // Set once the price exists in Stripe. Absent means "not purchasable yet",
@@ -68,6 +74,7 @@ export const TIERS: Record<Tier, TierConfig> = {
       'Three-week development plans',
       'Measurements — exit velo, home to first, anything you define',
       'Log lessons, games and backyard sessions',
+      'Game day notes, the scorebook and pitch counts for your own kid',
     ],
     priceEnvVar: 'STRIPE_PRICE_PERSONAL',
   },
@@ -88,8 +95,9 @@ export const TIERS: Record<Tier, TierConfig> = {
       'Unlimited teams and players',
       'Everything in Personal, for every player',
       'Practice plans built around what your team actually needs',
-      'Lineup builder, game day, pitch counts',
-      'Opponent scouting and availability',
+      'The lineup builder, with position locks and innings minimums',
+      'Opponent scouting and pitching availability',
+      'Assistant coaches, with their own logins',
     ],
     priceEnvVar: 'STRIPE_PRICE_TEAM',
   },

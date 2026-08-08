@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { sessionClient } from '@/lib/authz'
+import { sessionClient, assertTeamFeatures, authzResponse } from '@/lib/authz'
 import crypto from 'crypto'
 
 // Never prerendered. This route reads the session cookie to decide who is
@@ -112,6 +112,18 @@ export async function POST(request: NextRequest) {
 
       if (membership?.role !== 'admin') {
         return NextResponse.json({ error: 'Permission denied' }, { status: 403 })
+      }
+    }
+
+    // Assistant coaches are a Coach-plan thing. Checked here rather than only
+    // in the menu, because the menu is not a lock.
+    if (team?.coach_id) {
+      try {
+        await assertTeamFeatures(team.coach_id)
+      } catch (e) {
+        const denied = authzResponse(e)
+        if (denied) return NextResponse.json(denied.body, { status: denied.status })
+        throw e
       }
     }
 

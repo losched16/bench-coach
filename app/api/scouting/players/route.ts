@@ -27,7 +27,7 @@ async function playerBelongsToCoach(playerId: string, coachId: string): Promise<
 
 // PUT: edit an opponent player (name, jersey, bats/throws, notes, confidence)
 export async function PUT(request: NextRequest) {
-  const denied = await guard(request, 'record')
+  const denied = await guard(request, 'record', { needs: 'teamFeatures' })
   if (denied) return denied
 
   try {
@@ -64,7 +64,7 @@ export async function PUT(request: NextRequest) {
 // deleted. This is deliberately manual-only — auto-merging below a high
 // confidence bar corrupts pitch-count math, which is the feature's value.
 export async function POST(request: NextRequest) {
-  const denied = await guard(request, 'record')
+  const denied = await guard(request, 'record', { needs: 'teamFeatures' })
   if (denied) return denied
 
   try {
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
 
 // DELETE: remove an opponent player (appearances cascade)
 export async function DELETE(request: NextRequest) {
-  const denied = await guard(request, 'record')
+  const denied = await guard(request, 'record', { needs: 'teamFeatures' })
   if (denied) return denied
 
   const { searchParams } = new URL(request.url)

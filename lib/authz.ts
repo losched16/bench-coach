@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { tierOf, tierConfig } from './tiers'
 
 // Who is asking, and are they allowed.
 //
@@ -38,6 +39,13 @@ export type Role = 'owner' | 'admin' | 'contributor' | 'viewer'
 
 // Ordered weakest to strongest. Every check is "at least this".
 const RANK: Record<Role, number> = { viewer: 0, contributor: 1, admin: 2, owner: 3 }
+
+// Some surfaces are not about WHO you are but about what the workspace owner
+// pays for. A contributor on a coach's team gets the coach's features because
+// the coach pays; a Personal subscriber does not get a lineup builder however
+// senior they are on their own workspace. So this is checked separately from
+// role, against the OWNER's tier.
+export type Entitlement = 'teamFeatures'
 
 export type Capability =
   // Look at it. Every role, including viewer.
@@ -168,6 +176,29 @@ async function roleFor(userId: string, teamId: string): Promise<{
   // concerned the team does not exist, and saying otherwise confirms a guessed
   // id is real.
   return null
+}
+
+/**
+ * The workspace owner's plan includes the coaching surfaces. Throws a 402
+ * AuthzError otherwise.
+ *
+ * Keyed on the OWNER, not the caller: an assistant coach on somebody's Coach
+ * workspace gets those surfaces without paying for their own plan, which is the
+ * whole point of inviting them.
+ */
+export async function assertTeamFeatures(ownerCoachId: string): Promise<void> {
+  const { data: coach } = await supabaseAdmin
+    .from('coaches')
+    .select('subscription_tier, is_subscribed')
+    .eq('id', ownerCoachId)
+    .maybeSingle()
+
+  if (!tierConfig(tierOf(coach as any)).teamFeatures) {
+    throw new AuthzError(
+      'That is part of the Coach plan — it covers teams, lineups, practice plans and scouting.',
+      402
+    )
+  }
 }
 
 /**
@@ -360,15 +391,23 @@ async function idsFrom(request: Request): Promise<Record<string, string | null>>
  * rather than waved through, because "I could not tell what you were asking
  * about" is not a reason to allow it.
  */
-export async function guard(request: Request, capability: Capability) {
+export async function guard(
+  request: Request,
+  capability: Capability,
+  opts?: { needs?: Entitlement }
+) {
   try {
     const ids = await idsFrom(request)
     // Most specific first: a game names its team, a thread names its team.
-    if (ids.gameId) { await authorizeGame(ids.gameId, capability); return null }
-    if (ids.teamId) { await authorizeTeam(ids.teamId, capability); return null }
-    if (ids.threadId) { await authorizeThread(ids.threadId, capability); return null }
-    if (ids.coachId) { await authorizeCoach(ids.coachId, capability); return null }
-    throw new AuthzError('Missing teamId', 400)
+    let actor: Actor | null = null
+    if (ids.gameId) actor = await authorizeGame(ids.gameId, capability)
+    else if (ids.teamId) actor = await authorizeTeam(ids.teamId, capability)
+    else if (ids.threadId) actor = await authorizeThread(ids.threadId, capability)
+    else if (ids.coachId) actor = await authorizeCoach(ids.coachId, capability)
+    else throw new AuthzError('Missing teamId', 400)
+
+    if (opts?.needs === 'teamFeatures') await assertTeamFeatures(actor.ownerCoachId)
+    return null
   } catch (error) {
     const authz = authzResponse(error)
     if (authz) return NextResponse.json(authz.body, { status: authz.status })

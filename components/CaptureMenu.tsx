@@ -18,10 +18,13 @@ import { Plus, ClipboardList, Timer, UserPlus, Users } from 'lucide-react'
 interface Props {
   teamId: string
   canCreate: boolean
+  // A Personal plan has no teams to create. Defaults to true so the two other
+  // callers of this menu keep their behaviour.
+  canCreateTeams?: boolean
   className?: string
 }
 
-export function CaptureMenu({ teamId, canCreate, className = '' }: Props) {
+export function CaptureMenu({ teamId, canCreate, canCreateTeams = true, className = '' }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -75,10 +78,12 @@ export function CaptureMenu({ teamId, canCreate, className = '' }: Props) {
                 <UserPlus size={16} className="text-gray-400" />
                 New player
               </Link>
-              <Link href="/dashboard/new-team" className={item} onClick={() => setOpen(false)}>
-                <Users size={16} className="text-gray-400" />
-                New team
-              </Link>
+              {canCreateTeams && (
+                <Link href="/dashboard/new-team" className={item} onClick={() => setOpen(false)}>
+                  <Users size={16} className="text-gray-400" />
+                  New team
+                </Link>
+              )}
             </>
           )}
         </div>

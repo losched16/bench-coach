@@ -16,7 +16,7 @@ const supabaseAdmin = createClient(
 
 // GET: pitch count rule sets visible to a coach (system defaults + their own)
 export async function GET(request: NextRequest) {
-  const denied = await guard(request, 'read')
+  const denied = await guard(request, 'read', { needs: 'teamFeatures' })
   if (denied) return denied
 
   const { searchParams } = new URL(request.url)
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 
 // POST: create a custom rule set for a local circuit
 export async function POST(request: NextRequest) {
-  const denied = await guard(request, 'decide')
+  const denied = await guard(request, 'decide', { needs: 'teamFeatures' })
   if (denied) return denied
 
   try {
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
 // DELETE: remove a coach's custom rule set (system defaults are protected)
 export async function DELETE(request: NextRequest) {
-  const denied = await guard(request, 'decide')
+  const denied = await guard(request, 'decide', { needs: 'teamFeatures' })
   if (denied) return denied
 
   const { searchParams } = new URL(request.url)
