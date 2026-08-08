@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
       games,            // reviewed game rows with matched players
       rosterMappings,   // [{ source_name, team_player_id }] confirmed this session
       prescriptionId: explicitPrescriptionId, // set by the one-tap logger
+      quickLog,                                // true only from "Ran it today"
     } = body
 
     if (!coachId || !entryType || !occurredOn) {
@@ -119,6 +120,33 @@ export async function POST(request: NextRequest) {
       prescriptionId = active?.[0]?.id || null
     }
 
+    // One "Ran it today" per priority per day. Returning the existing entry
+    // rather than erroring means a double tap is invisible to the coach and
+    // still correct — they meant to record that they ran it, and it is
+    // recorded.
+    //
+    // The full Log an Entry form is deliberately NOT deduplicated: two genuine
+    // sessions in a day is a real thing, and blocking the second would be a
+    // worse bug than the one this fixes.
+    if (quickLog && prescriptionId) {
+      const { data: existing } = await supabaseAdmin
+        .from('entries')
+        .select('*')
+        .eq('coach_id', coachId)
+        .eq('prescription_id', prescriptionId)
+        .eq('occurred_on', occurredOn)
+        .eq('quick_log', true)
+        .maybeSingle()
+
+      if (existing) {
+        return NextResponse.json({
+          entry: existing,
+          alreadyLogged: true,
+          summary: { observations: 0, gamesCreated: 0, gamesAttached: 0, statLinesCreated: 0, linkedToPrescription: true },
+        })
+      }
+    }
+
     // 1. The entry itself
     const { data: entry, error: entryError } = await supabaseAdmin
       .from('entries')
@@ -136,11 +164,29 @@ export async function POST(request: NextRequest) {
         prescription_id: prescriptionId,
         instructor_name: instructorName || null,
         duration_min: durationMin ?? null,
+        quick_log: !!quickLog,
       })
       .select()
       .single()
 
-    if (entryError) throw entryError
+    if (entryError) {
+      // Two taps landing at once both pass the check above; the unique index
+      // is what actually stops the second, and this turns that race into the
+      // same quiet success as the slow path.
+      if (quickLog && prescriptionId && /duplicate|unique/i.test(String(entryError.message))) {
+        const { data: existing } = await supabaseAdmin
+          .from('entries')
+          .select('*')
+          .eq('prescription_id', prescriptionId)
+          .eq('occurred_on', occurredOn)
+          .eq('quick_log', true)
+          .maybeSingle()
+        if (existing) {
+          return NextResponse.json({ entry: existing, alreadyLogged: true })
+        }
+      }
+      throw entryError
+    }
 
     // 2. Observations — one row per answered prompt, so the engine can weight
     //    a lesson diagnosis differently from a fatigue note

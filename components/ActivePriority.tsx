@@ -60,13 +60,23 @@ export function ActivePriority({
   const [note, setNote] = useState('')
   const [noteSaved, setNoteSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [alreadyNoted, setAlreadyNoted] = useState(false)
 
   const today = todayStr()
   const alreadyToday = item.lastSessionOn === today
   const readyToCheckIn = item.due !== 'holding' && item.hasEvidence
   const pct = Math.min(100, Math.round((item.daysElapsed / HOLD_DAYS) * 100))
 
-  const logSession = async () => {
+  // `deliberate` is the "Log another" path: a real second session in one day
+  // — a morning and an evening in the cage — which must stay possible. The
+  // primary button is the accidental one, so only it is deduplicated.
+  const logSession = async (deliberate = false) => {
+    if (logging) return
+    // The disabled state only covers the in-flight window. Tapping, going
+    // back, and tapping again would otherwise write a second session for the
+    // same day — and adherence is the number that decides whether a null
+    // result means change the drill or shrink the ask.
+    if (!deliberate && entryId) return
     setLogging(true)
     setError(null)
     try {
@@ -81,11 +91,19 @@ export function ActivePriority({
           occurredOn: today,
           prescriptionId: item.id,
           title: 'Worked the priority',
+          // Marks this as the one-tap path, which is deduplicated per day.
+          // The full Log an Entry form is not — two real sessions in a day
+          // is legitimate and must still be loggable.
+          quickLog: !deliberate,
         }),
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
       setEntryId(data.entry?.id || null)
+      // A second tap returns the first entry instead of writing another. The
+      // coach meant "record that we ran it", and it is recorded — so this
+      // reads as success, not as an error.
+      if (data.alreadyLogged) setAlreadyNoted(true)
       onLogged?.()
     } catch (e: any) {
       setError(e.message || 'Could not save that. Try again.')
@@ -174,11 +192,16 @@ export function ActivePriority({
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 rounded-lg px-4 py-3">
                 <Check size={16} />
-                <span>Logged for today.</span>
+                <span>
+                  {alreadyNoted
+                    ? 'Already counted for today.'
+                    : 'Logged for today.'}
+                </span>
                 {entryId && (
                   <button
-                    onClick={logSession}
-                    className="ml-auto text-xs text-gray-500 hover:text-gray-700 underline"
+                    onClick={() => logSession(true)}
+                    disabled={logging}
+                    className="ml-auto text-xs text-gray-500 hover:text-gray-700 underline disabled:opacity-50"
                   >
                     Log another
                   </button>
@@ -214,15 +237,17 @@ export function ActivePriority({
           ) : (
             <>
               <button
-                onClick={logSession}
-                disabled={logging}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg transition-colors font-medium"
+                onClick={() => logSession()}
+                disabled={logging || alreadyToday}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
               >
                 {logging ? <Loader2 className="animate-spin" size={16} /> : <Check size={16} />}
-                Ran it today
+                {alreadyToday ? 'Already logged today' : 'Ran it today'}
               </button>
               <p className="text-xs text-gray-500 mt-2 text-center">
-                One tap. You can add a note after, if you want to.
+                {alreadyToday
+                  ? 'Counted once for today. Log another session through Add if you went out twice.'
+                  : 'One tap. You can add a note after, if you want to.'}
               </p>
             </>
           )}
