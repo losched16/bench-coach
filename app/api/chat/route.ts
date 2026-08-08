@@ -461,13 +461,20 @@ export async function POST(request: NextRequest) {
                 .from('opponent_players')
                 .select('*, appearances:opponent_appearances(game_date, batting_line, pitches_thrown, positions_played)')
                 .eq('opponent_team_id', ot.id),
+              // Every entry, not just the ones carrying a note.
+              //
+              // This used to filter on `notes IS NOT NULL` and cap at 5, and
+              // entry_count was the length of THAT — so a coach who logged six
+              // box scores without typing a note was told the app had seen
+              // zero, and one who logged a dozen games was told five. The
+              // count and the notes are different questions and are now
+              // answered separately.
               supabaseAdmin
                 .from('scouting_entries')
-                .select('entry_type, occurred_on, notes')
+                .select('entry_type, occurred_on, notes, tournament_name')
                 .eq('opponent_team_id', ot.id)
-                .not('notes', 'is', null)
                 .order('occurred_on', { ascending: false })
-                .limit(5),
+                .limit(100),
             ])
 
             const players = (playersRes.data || []).slice(0, 18).map((p: any) => {
@@ -497,7 +504,50 @@ export async function POST(request: NextRequest) {
               }
             })
 
+            // One row per date we have seen them, built from the appearances
+            // and the entries together. Aggregated batting lines alone could
+            // not answer "what happened in the games we've played them".
+            const byDate: Record<string, {
+              kinds: Set<string>; tournament: string | null
+              players: Set<string>; pitchers: Record<string, number>; note: string | null
+            }> = {}
+            const slot = (d: string) => (byDate[d] ||= {
+              kinds: new Set(), tournament: null, players: new Set(), pitchers: {}, note: null,
+            })
+
+            for (const e of (entriesRes.data || []) as any[]) {
+              const d = e.occurred_on || 'undated'
+              const g = slot(d)
+              if (e.entry_type) g.kinds.add(e.entry_type)
+              if (e.tournament_name) g.tournament = e.tournament_name
+              // The first note on a date is enough; the full set is below.
+              if (e.notes && !g.note) g.note = e.notes
+            }
+
+            for (const p of (playersRes.data || []) as any[]) {
+              for (const a of (p.appearances || []) as any[]) {
+                if (!a.game_date) continue
+                const g = slot(a.game_date)
+                g.players.add(p.name)
+                if ((a.pitches_thrown || 0) > 0) {
+                  g.pitchers[p.name] = (g.pitchers[p.name] || 0) + a.pitches_thrown
+                }
+              }
+            }
+
+            const games = Object.entries(byDate)
+              .sort((a, b) => b[0].localeCompare(a[0]))
+              .map(([date, g]) => ({
+                date: date === 'undated' ? null : date,
+                kinds: Array.from(g.kinds),
+                tournament: g.tournament,
+                players_seen: g.players.size,
+                pitchers: Object.entries(g.pitchers).map(([name, pitches]) => ({ name, pitches })),
+                note: g.note,
+              }))
+
             opponentContexts.push({
+              games,
               name: ot.name,
               age_group: ot.age_group,
               first_seen: ot.first_seen,
@@ -509,11 +559,14 @@ export async function POST(request: NextRequest) {
               team_notes: ot.notes,
               entry_count: (entriesRes.data || []).length,
               players,
-              recent_notes: (entriesRes.data || []).map((e: any) => ({
-                date: e.occurred_on,
-                type: e.entry_type,
-                note: e.notes,
-              })),
+              recent_notes: (entriesRes.data || [])
+                .filter((e: any) => e.notes)
+                .slice(0, 8)
+                .map((e: any) => ({
+                  date: e.occurred_on,
+                  type: e.entry_type,
+                  note: e.notes,
+                })),
             })
 
             // Availability board for the nearest pending matchup (or tomorrow)
@@ -559,9 +612,81 @@ export async function POST(request: NextRequest) {
             }
           }
 
+          // OUR arms, under the same rest rules we apply to theirs.
+          //
+          // "Which pitchers should we use against them" was previously
+          // answerable only by eyeballing raw pitch totals in the game log —
+          // the model had our counts but no rest arithmetic and no rule set, so
+          // it either guessed or hedged. This is the same computePitcherAvailability
+          // the scouting board uses, pointed at our own game_pitch_counts.
+          let ourAvailability = null as any
+          try {
+            const ourRule = pickRule(team.age_group)
+            const nextMatchup = (allMatchups || [])
+              .filter(m => m.scheduled_at)
+              .sort((a, b) => (a.scheduled_at || '').localeCompare(b.scheduled_at || ''))[0]
+            const tmr = new Date()
+            tmr.setDate(tmr.getDate() + 1)
+            const targetDate =
+              nextMatchup?.scheduled_at?.split('T')[0] || tmr.toISOString().split('T')[0]
+
+            if (ourRule) {
+              const { data: ourGames } = await supabaseAdmin
+                .from('games').select('id, game_date').eq('team_id', teamId)
+              const dateById: Record<string, string> = {}
+              for (const g of (ourGames || []) as any[]) dateById[g.id] = g.game_date
+
+              const { data: ourPitches } = await supabaseAdmin
+                .from('game_pitch_counts')
+                .select('player_id, game_id, pitch_count, is_opponent, player:players(name)')
+                .in('game_id', Object.keys(dateById).length ? Object.keys(dateById) : ['none'])
+
+              // Per pitcher, per DATE — a pitch count is stored per inning, and
+              // rest is measured in days off, not innings.
+              const perPitcher: Record<string, { name: string; byDate: Record<string, number> }> = {}
+              for (const pc of (ourPitches || []) as any[]) {
+                if (pc.is_opponent || !pc.player_id) continue
+                const d = dateById[pc.game_id]
+                if (!d) continue
+                const e = (perPitcher[pc.player_id] ||= { name: pc.player?.name || 'Unknown', byDate: {} })
+                e.byDate[d] = (e.byDate[d] || 0) + (pc.pitch_count || 0)
+              }
+
+              const rows = Object.values(perPitcher)
+                .filter(p => Object.keys(p.byDate).length > 0)
+                .map(p => {
+                  const apps = Object.entries(p.byDate)
+                    .map(([game_date, pitches_thrown]) => ({ game_date, pitches_thrown }))
+                    .sort((a, b) => a.game_date.localeCompare(b.game_date))
+                  const avail = computePitcherAvailability(apps as any, ourRule, targetDate)
+                  return {
+                    name: p.name,
+                    status: avail.status,
+                    explanation: avail.explanation,
+                    recent: apps.slice(-4).map(a => ({ date: a.game_date, pitches: a.pitches_thrown })),
+                  }
+                })
+
+              if (rows.length > 0) {
+                ourAvailability = {
+                  target_date: targetDate,
+                  rule_label: `${ourRule.sanctioning_body} ${ourRule.age_group}`,
+                  coverage_note:
+                    'From pitch counts logged in Game Day only. An outing thrown ' +
+                    'somewhere else, or one nobody counted, is not in here.',
+                  rows,
+                }
+              }
+            }
+          } catch {
+            // Our own availability is a bonus on top of the answer, never the
+            // reason the whole chat fails.
+          }
+
           scouting = {
             opponents: opponentContexts,
             availabilityBoards,
+            ourAvailability,
             upcomingMatchups: (allMatchups || []).slice(0, 10).map(m => ({
               opponent_name: opponentNameById[m.opponent_team_id] || 'Unknown',
               scheduled_at: m.scheduled_at,

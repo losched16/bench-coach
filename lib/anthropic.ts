@@ -25,6 +25,17 @@ export interface ScoutingOpponentContext {
   staleness_note?: string | null   // e.g. "over a season old — historical, not current"
   team_notes?: string | null
   entry_count: number
+  // Every logged sighting, one row per date. Without this the model saw
+  // aggregated batting lines and no idea how many games they came from — so
+  // "tell me about the games we've seen" had nothing to answer with.
+  games: Array<{
+    date: string | null
+    kinds: string[]                  // box_score | recap | observation | bracket
+    tournament?: string | null
+    players_seen: number
+    pitchers: Array<{ name: string; pitches: number }>
+    note?: string | null
+  }>
   players: Array<{
     name: string
     jersey_number?: string | null
@@ -56,6 +67,19 @@ export interface ScoutingAvailabilityContext {
 export interface ScoutingContext {
   opponents: ScoutingOpponentContext[]
   availabilityBoards: ScoutingAvailabilityContext[]
+  // OUR pitchers, under the same rest rules — so "who should we start against
+  // them" can be answered from both sides rather than half of one.
+  ourAvailability?: {
+    target_date: string
+    rule_label: string
+    coverage_note: string
+    rows: Array<{
+      name: string
+      status: string
+      explanation: string
+      recent: Array<{ date: string; pitches: number }>
+    }>
+  } | null
   upcomingMatchups: Array<{
     opponent_name: string
     scheduled_at: string | null
@@ -496,6 +520,19 @@ ${context.scouting.opponents.map(o => {
     parts.push(`  Recent entry notes:`)
     o.recent_notes.forEach(n => parts.push(`    ${n.date || '?'} [${n.type}]: ${n.note}`))
   }
+  if (o.games && o.games.length > 0) {
+    parts.push(`  GAMES LOGGED (${o.games.length}) — every time you've seen them:`)
+    o.games.forEach(g => {
+      const bits = [`    ${g.date || 'undated'} [${g.kinds.join(', ') || 'entry'}]`]
+      if (g.tournament) bits.push(`(${g.tournament})`)
+      if (g.players_seen > 0) bits.push(`— ${g.players_seen} players seen`)
+      if (g.pitchers.length > 0) {
+        bits.push(`— pitched: ${g.pitchers.map(p => `${p.name} ${p.pitches}`).join(', ')}`)
+      }
+      parts.push(bits.join(' '))
+      if (g.note) parts.push(`      note: ${g.note}`)
+    })
+  }
   if (o.players.length > 0) {
     parts.push(`  Known players:`)
     o.players.forEach(p => {
@@ -528,6 +565,15 @@ ${context.scouting.availabilityBoards.map(b => {
 }).join('\n\n')}
 ` : ''}
 
+${context.scouting.ourAvailability ? `
+OUR OWN PITCHERS — rest status for ${context.scouting.ourAvailability.target_date}
+Rule set: ${context.scouting.ourAvailability.rule_label}
+${context.scouting.ourAvailability.coverage_note}
+${context.scouting.ourAvailability.rows.map(r =>
+  `  ${r.name}: ${r.status.toUpperCase()} — ${r.explanation}` +
+  (r.recent.length > 0 ? ` (recent: ${r.recent.map(a => `${a.date} ${a.pitches}p`).join(', ')})` : '')
+).join('\n')}
+` : ''}
 USING SCOUTING DATA — ANSWER STYLE (follow strictly):
 1. Lead with what's known and HOW RECENTLY it was observed. If the data is one box score from four months ago, say that first.
 2. Never present a single game as a pattern. Anything under ~15 plate appearances is an observation with a small-sample caveat, not a tendency.
@@ -535,7 +581,9 @@ USING SCOUTING DATA — ANSWER STYLE (follow strictly):
 4. The coach's own written notes outweigh parsed stats when they conflict.
 5. Pitching availability claims must state the inference explicitly (e.g. "Their #12 threw 68 Saturday — under most rule sets that's 3 days rest, so he shouldn't be available Sunday") AND repeat the coverage caveats: unlogged games are not counted, so never imply the picture is complete.
 6. If a player's identity confidence is "probable" or "uncertain", say so whenever an availability or performance claim rests on them.
-7. "Who should we start against them?" — combine the coach's OWN roster, stats and lineup data with this opponent context to recommend a lineup.
+7. "Who should we start against them?" / "which pitchers should we use?" — answer from BOTH sides. Our own pitchers' rest status is above when we have logged counts: name who is available, who is short of rest and by how long, and why that pitcher suits this opponent's hitters. Never recommend an arm the rest math says is ineligible, and say plainly when nobody is available. Combine with our roster, skill ratings and lineup data for the batting order.
+
+7b. Counts are what was LOGGED, not what was thrown. Both boards say so. If the coach asks who is available and the answer rests on a thin log, say that before the recommendation, not after it.
 8. BOUNDARIES: stick to observable baseball facts about opposing players (stats, pitch counts, positions, on-field tendencies). Never characterize an opposing child's personality, attitude, body, or potential. This is the coach's organized note-taking on games they already watched, using data the tournament already published — keep your language there.
 ` : ''}
 
