@@ -12,6 +12,14 @@ interface DrillVideoProps {
   description?: string
   compact?: boolean // For inline use in lists
   autoExpand?: boolean // Start expanded
+  // Where in the video this drill actually begins.
+  //
+  // A good part of the library is anchored to compilation videos — one row is
+  // literally "10 Best Baseball Throwing Drills for Kids". Opening those at
+  // 0:00 and calling it a drill is how a plan starts feeling like a folder of
+  // general YouTube links. Undefined means start at the beginning, which is
+  // right for the single-drill videos.
+  startSeconds?: number
 }
 
 export function DrillVideo({
@@ -23,6 +31,7 @@ export function DrillVideo({
   description,
   compact = false,
   autoExpand = false,
+  startSeconds,
 }: DrillVideoProps) {
   const [isExpanded, setIsExpanded] = useState(autoExpand)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -35,6 +44,13 @@ export function DrillVideo({
   }
 
   const thumbnail = thumbnailUrl || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+
+  // youtube-nocookie honours ?start= the same as youtube.com. Guarded because a
+  // negative or non-finite value silently makes the whole embed fail rather
+  // than ignoring the parameter.
+  const start = Number.isFinite(startSeconds) && (startSeconds as number) > 0
+    ? `&start=${Math.floor(startSeconds as number)}`
+    : ''
 
   if (compact) {
     // Compact inline version - expandable
@@ -60,7 +76,7 @@ export function DrillVideo({
           <div className="border-t border-gray-200">
             <div className="aspect-video bg-black">
               <iframe
-                src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0`}
+                src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0${start}`}
                 title={drillName}
                 className="w-full h-full"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -107,7 +123,7 @@ export function DrillVideo({
         // Embedded player
         <div className="aspect-video bg-black">
           <iframe
-            src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0&autoplay=1`}
+            src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0&autoplay=1${start}`}
             title={drillName}
             className="w-full h-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -141,6 +157,7 @@ interface DrillVideoLookupProps {
     drill_name: string
     youtube_video_id?: string
     youtube_url?: string
+    youtube_start_seconds?: number | null
     thumbnail_url?: string
     channel?: string
     description?: string
@@ -174,6 +191,7 @@ export function DrillVideoLookup({
       thumbnailUrl={drill.thumbnail_url}
       channel={drill.channel}
       description={drill.description}
+      startSeconds={drill.youtube_start_seconds ?? undefined}
       compact={compact}
       autoExpand={autoExpand}
     />

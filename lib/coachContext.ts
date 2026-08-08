@@ -105,6 +105,11 @@ export interface CoachContext {
     review_due_at: string | null
     min_hold_until: string | null
     adherence_sessions: number
+    // Where in the progression the player actually is. Null on plans issued
+    // before migration 036, and on any plan nobody has stepped through yet.
+    step?: number | null
+    stepCount?: number | null
+    stepTitle?: string | null
   }>
 }
 
@@ -341,17 +346,30 @@ export async function assembleCoachContext(
 
   // ── Prescription history — what we already told them, and whether it moved ──
   try {
-    let pq = supabase
-      .from('prescriptions')
-      .select('id, priority, problem_id, focus_area, status, issued_at, review_due_at, min_hold_until, success_criteria, outcome_note')
-      .eq('coach_id', coachId)
-      .order('issued_at', { ascending: false })
-      .limit(12)
+    const BASE_FIELDS =
+      'id, priority, problem_id, focus_area, status, issued_at, review_due_at, ' +
+      'min_hold_until, success_criteria, outcome_note'
 
-    if (playerId) pq = pq.eq('player_id', playerId)
-    else if (teamId) pq = pq.eq('team_id', teamId)
+    // Two attempts, because migration 036 may not have been applied. Asking
+    // for a column that does not exist fails the whole query, and this block
+    // swallows its own errors — so one missing column would silently delete
+    // every priority from the model's context and nobody would see a stack
+    // trace saying so.
+    const runQuery = async (fields: string) => {
+      let q = supabase
+        .from('prescriptions')
+        .select(fields)
+        .eq('coach_id', coachId)
+        .order('issued_at', { ascending: false })
+        .limit(12)
+      if (playerId) q = q.eq('player_id', playerId)
+      else if (teamId) q = q.eq('team_id', teamId)
+      return q
+    }
 
-    const { data: pres } = await pq
+    let attempt = await runQuery(`${BASE_FIELDS}, plan_steps, current_step`)
+    if (attempt.error) attempt = await runQuery(BASE_FIELDS)
+    const pres = attempt.data as any[] | null
 
     if (pres && pres.length > 0) {
       // Adherence comes from home_session entries carrying the prescription_id
@@ -380,6 +398,11 @@ export async function assembleCoachContext(
           review_due_at: a.review_due_at,
           min_hold_until: a.min_hold_until,
           adherence_sessions: countByPrescription[a.id] || 0,
+          step: a.current_step ?? null,
+          stepCount: Array.isArray(a.plan_steps) ? a.plan_steps.length : null,
+          stepTitle: Array.isArray(a.plan_steps) && a.current_step
+            ? (a.plan_steps[Math.min(a.current_step, a.plan_steps.length) - 1]?.title ?? null)
+            : null,
         }))
 
       ctx.pastPrescriptions = pres
@@ -519,6 +542,13 @@ export function renderCoachContext(ctx: CoachContext): string {
         `review due ${a.review_due_at?.slice(0, 10)}\n` +
         `    Priority: ${a.priority}\n` +
         `    Success criteria set at the time: ${a.success_criteria}\n` +
+        (a.step && a.stepCount
+          ? `    Progression: on step ${a.step} of ${a.stepCount}` +
+            (a.stepTitle ? ` (${a.stepTitle})` : '') +
+            (a.step === 1 && a.adherence_sessions >= 6
+              ? ' — six or more sessions and still on the first step. Either the gate is too hard for where he is, or the drills are wrong for the cause. Say which you think it is.'
+              : '') + '\n'
+          : '') +
         `    Home sessions logged against it: ${a.adherence_sessions}` +
         (a.adherence_sessions === 0
           ? ' — nothing logged yet, so we cannot tell whether the plan failed or was never run.'

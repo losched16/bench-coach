@@ -5,7 +5,9 @@ import Link from 'next/link'
 import {
   ChevronLeft, ChevronRight, Loader2, AlertCircle, Target, Check,
   ClipboardList, User, Play, Sparkles, Trash2, Repeat,
+  ChevronUp, ChevronDown, ArrowRight,
 } from 'lucide-react'
+import { PlanStep } from '@/lib/progression'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { focusAreaLabel, focusAreaChip, FOCUS_AREAS, FocusArea } from '@/lib/focusAreas'
 import { DrillSwap } from './DrillSwap'
@@ -49,8 +51,17 @@ interface Drill {
   ai_coaching_notes: string | null
   youtube_url: string | null
   youtube_video_id: string | null
+  youtube_start_seconds?: number | null
   equipment_needed: string[] | null
   skill_category: string | null
+  // Curated in migrations 004 and 008, returned by the route since day one,
+  // and rendered nowhere until now — which is why four drills that build on
+  // each other looked like four alternatives.
+  progression_level?: number | null
+  difficulty_level?: string | null
+  reps_guidance?: string | null
+  frequency_guidance?: string | null
+  success_markers?: string[] | null
 }
 
 interface PracticePlan {
@@ -320,6 +331,12 @@ function PlanDetail({
   // Which drill the coach is replacing, if any.
   const [swapping, setSwapping] = useState<Drill | null>(null)
   const [drills, setDrills] = useState<Drill[]>([])
+  const [steps, setSteps] = useState<PlanStep[]>([])
+  const [currentStep, setCurrentStep] = useState(1)
+  const [stepping, setStepping] = useState(false)
+  // A step the coach opened to look ahead. Looking is free; it does not move
+  // the player, which is what currentStep means.
+  const [peek, setPeek] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [logging, setLogging] = useState(false)
   const [logged, setLogged] = useState(false)
@@ -336,11 +353,38 @@ function PlanDetail({
       )
       const d = await res.json()
       setDrills(d.drills || [])
+      // Falls back to a single step when migration 036 has not been applied,
+      // which renders as today's flat list rather than an error.
+      setSteps(Array.isArray(d.steps) ? d.steps : [])
+      setCurrentStep(d.currentStep || 1)
     } catch { /* the plan still reads without them */ }
     finally { setLoading(false) }
   }, [plan.id, coachId])
 
   useEffect(() => { loadDrills() }, [loadDrills])
+
+  const moveStep = async (to: number) => {
+    setStepping(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/prescribe/step', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prescriptionId: plan.id, coachId, step: to }),
+      })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error || 'Could not move to that step')
+      setCurrentStep(d.currentStep)
+      if (Array.isArray(d.steps) && d.steps.length) setSteps(d.steps)
+      // Follow them to the step they just moved to, rather than leaving the
+      // old one open under a button that has changed meaning.
+      setPeek(null)
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setStepping(false)
+    }
+  }
 
   const logSession = async () => {
     setLogging(true)
@@ -467,10 +511,25 @@ function PlanDetail({
         </div>
       )}
 
-      {/* The drills. The only part anyone acts on, so it is the body of the
-          page rather than something four disclosures down. */}
+      {/* The progression.
+          Steps, not a menu. The library already knew which drills come first —
+          progression_level was curated by hand and the route even preserved
+          the order — and this screen used to flatten all of it into four
+          identical numbered cards. A parent reading that has no way to know
+          that card three is the hard version of card one.
+
+          One step is open at a time. Later steps show their name and what has
+          to be true before you get there, so the plan is legible end to end
+          without pretending the kid is ready for it. */}
       <div className="space-y-3">
-        <h3 className="text-lg font-bold text-gray-900">The drills</h3>
+        <div className="flex items-baseline justify-between gap-3">
+          <h3 className="text-lg font-bold text-gray-900">The plan</h3>
+          {steps.length > 1 && (
+            <span className="text-sm font-semibold text-gray-500">
+              Step {currentStep} of {steps.length}
+            </span>
+          )}
+        </div>
 
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-gray-500 py-3">
@@ -480,66 +539,131 @@ function PlanDetail({
           <p className="text-sm text-gray-500">
             No drills on this plan yet.
           </p>
-        ) : (
+        ) : steps.length === 0 ? (
+          /* No progression could be worked out — show the drills plainly
+             rather than inventing stages the library cannot support. */
           drills.map((d, i) => (
-            <div key={d.id} className="bg-white border border-gray-200 rounded-xl p-4">
-              <div className="flex items-start gap-3">
-                <span className="shrink-0 w-7 h-7 rounded-full bg-gray-900 text-white text-sm font-bold flex items-center justify-center">
-                  {i + 1}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-bold text-gray-900">{d.drill_name}</h4>
-                  {d.description && (
-                    <p className="text-[15px] text-gray-700 mt-1.5 leading-relaxed">{d.description}</p>
-                  )}
-                  {d.ai_coaching_notes && (
-                    <div className="mt-2 bg-blue-50 border border-blue-100 rounded-lg p-3">
-                      <p className="text-sm text-blue-900 leading-relaxed">{d.ai_coaching_notes}</p>
-                    </div>
-                  )}
-                  {d.equipment_needed && d.equipment_needed.length > 0 && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      You need: {d.equipment_needed.join(', ')}
-                    </p>
-                  )}
-                  {/* The video plays here rather than throwing the coach into
-                      the YouTube app, which loses the plan and usually the
-                      page. Thumbnail until tapped — see DrillVideo. */}
-                  {(d.youtube_url || d.youtube_video_id) && (
-                    <div className="mt-3">
-                      <DrillVideo
-                        drillName={d.drill_name}
-                        youtubeVideoId={d.youtube_video_id || undefined}
-                        youtubeUrl={d.youtube_url || undefined}
-                        autoExpand
-                      />
-                    </div>
-                  )}
+            <DrillCard
+              key={d.id}
+              drill={d}
+              n={i + 1}
+              onSwap={() => setSwapping(d)}
+            />
+          ))
+        ) : (
+          steps.map(step => {
+            const open = (peek ?? currentStep) === step.n
+            const done = step.n < currentStep
+            const ahead = step.n > currentStep
+            const stepDrills = step.drillIds
+              .map(id => drills.find(d => d.id === id))
+              .filter(Boolean) as Drill[]
 
-                  <div className="mt-3 flex items-center gap-2 flex-wrap">
-                    {/* One drill, not the whole set. A coach who dislikes one
-                        drill wants that drill changed, not a new plan. */}
-                    <button
-                      onClick={() => setSwapping(d)}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-xl font-bold text-sm active:bg-gray-100"
-                    >
-                      <Repeat size={15} /> Swap it
-                    </button>
-                    {(d.youtube_url || d.youtube_video_id) && (
-                      <a
-                        href={d.youtube_url || `https://www.youtube.com/watch?v=${d.youtube_video_id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-gray-500 underline"
+            return (
+              <div
+                key={step.n}
+                className={`rounded-xl border ${
+                  open ? 'border-gray-300 bg-white' : 'border-gray-200 bg-gray-50'
+                }`}
+              >
+                <button
+                  onClick={() => setPeek(open ? null : step.n)}
+                  className="w-full flex items-start gap-3 p-4 text-left"
+                >
+                  <span
+                    className={`shrink-0 w-8 h-8 rounded-full text-sm font-bold flex items-center justify-center ${
+                      done ? 'bg-green-600 text-white'
+                        : ahead ? 'bg-gray-200 text-gray-500'
+                        : 'bg-gray-900 text-white'
+                    }`}
+                  >
+                    {done ? <Check size={16} /> : step.n}
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block font-bold text-gray-900">{step.title}</span>
+                    <span className="block text-xs text-gray-500 mt-0.5">
+                      {done ? 'Done'
+                        : ahead ? 'Coming up'
+                        : 'Working on this now'}
+                      {' · '}
+                      {stepDrills.length} {stepDrills.length === 1 ? 'drill' : 'drills'}
+                    </span>
+                  </span>
+                  {open
+                    ? <ChevronUp size={18} className="text-gray-400 shrink-0" />
+                    : <ChevronDown size={18} className="text-gray-400 shrink-0" />}
+                </button>
+
+                {open && (
+                  <div className="px-4 pb-4 space-y-3">
+                    <p className="text-[15px] text-gray-700 leading-relaxed">{step.why}</p>
+
+                    {stepDrills.map((d, i) => (
+                      <DrillCard
+                        key={d.id}
+                        drill={d}
+                        n={i + 1}
+                        onSwap={() => setSwapping(d)}
+                      />
+                    ))}
+
+                    {/* The gate. This is the whole difference between a
+                        progression and a list: something observable that says
+                        he is ready, rather than a date. */}
+                    {step.moveOnWhen.length > 0 && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5">
+                        <p className="text-xs font-semibold text-amber-900 uppercase tracking-wide">
+                          Move on when he can
+                        </p>
+                        <ul className="mt-1.5 space-y-1">
+                          {step.moveOnWhen.map(m => (
+                            <li key={m} className="flex gap-2 text-[15px] text-amber-900">
+                              <span className="mt-0.5">•</span>
+                              <span>{m}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {step.n === currentStep && step.n < steps.length && (
+                      <button
+                        onClick={() => moveStep(step.n + 1)}
+                        disabled={stepping}
+                        className="w-full py-3.5 rounded-xl bg-gray-900 text-white font-bold flex items-center justify-center gap-2 active:bg-gray-800 disabled:opacity-60"
                       >
-                        Open the video
-                      </a>
+                        {stepping
+                          ? <Loader2 className="animate-spin" size={17} />
+                          : <ArrowRight size={17} />}
+                        He&apos;s got this — go to step {step.n + 1}
+                      </button>
+                    )}
+
+                    {/* Going back is normal. A swing that holds up on a tee and
+                        falls apart against live pitching is the most common
+                        thing that happens in a progression, and a plan that
+                        treats that as failure teaches parents to lie to it. */}
+                    {step.n === currentStep && step.n > 1 && (
+                      <button
+                        onClick={() => moveStep(step.n - 1)}
+                        disabled={stepping}
+                        className="w-full py-2.5 text-sm text-gray-600 font-medium disabled:opacity-60"
+                      >
+                        Not holding up — go back to step {step.n - 1}
+                      </button>
+                    )}
+
+                    {ahead && (
+                      <p className="text-xs text-gray-500">
+                        You are looking ahead. He is on step {currentStep} — finish
+                        that one first.
+                      </p>
                     )}
                   </div>
-                </div>
+                )}
               </div>
-            </div>
-          ))
+            )
+          })
         )}
       </div>
 
@@ -625,6 +749,91 @@ function PlanDetail({
         >
           <Trash2 size={16} /> {removing ? 'Deleting…' : 'Delete this plan'}
         </button>
+      </div>
+    </div>
+  )
+}
+
+
+// One drill, everywhere a drill is shown.
+//
+// The dose and the marker come straight off the library row. They were being
+// fetched and dropped, which is how "3 sets of 8, and he has it when the front
+// elbow stops flaring" became a card with a name and a video on it.
+function DrillCard({
+  drill: d, n, onSwap,
+}: {
+  drill: Drill
+  n: number
+  onSwap: () => void
+}) {
+  const dose = [d.reps_guidance, d.frequency_guidance].filter(Boolean).join(' · ')
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-4">
+      <div className="flex items-start gap-3">
+        <span className="shrink-0 w-7 h-7 rounded-full bg-gray-900 text-white text-sm font-bold flex items-center justify-center">
+          {n}
+        </span>
+        <div className="flex-1 min-w-0">
+          <h4 className="font-bold text-gray-900">{d.drill_name}</h4>
+
+          {/* Above the description, because it is the thing a parent standing
+              in the backyard actually needs off this card. */}
+          {dose && (
+            <p className="text-sm font-semibold text-gray-900 mt-1">{dose}</p>
+          )}
+
+          {d.description && (
+            <p className="text-[15px] text-gray-700 mt-1.5 leading-relaxed">{d.description}</p>
+          )}
+          {d.ai_coaching_notes && (
+            <div className="mt-2 bg-blue-50 border border-blue-100 rounded-lg p-3">
+              <p className="text-sm text-blue-900 leading-relaxed">{d.ai_coaching_notes}</p>
+            </div>
+          )}
+          {d.equipment_needed && d.equipment_needed.length > 0 && (
+            <p className="text-xs text-gray-500 mt-2">
+              You need: {d.equipment_needed.join(', ')}
+            </p>
+          )}
+
+          {/* The video plays here rather than throwing the coach into the
+              YouTube app, which loses the plan and usually the page.
+              Thumbnail until tapped — see DrillVideo. */}
+          {(d.youtube_url || d.youtube_video_id) && (
+            <div className="mt-3">
+              <DrillVideo
+                drillName={d.drill_name}
+                youtubeVideoId={d.youtube_video_id || undefined}
+                youtubeUrl={d.youtube_url || undefined}
+                startSeconds={d.youtube_start_seconds ?? undefined}
+                autoExpand
+              />
+            </div>
+          )}
+
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
+            {/* One drill, not the whole set. A coach who dislikes one drill
+                wants that drill changed, not a new plan. */}
+            <button
+              onClick={onSwap}
+              className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-xl font-bold text-sm active:bg-gray-100"
+            >
+              <Repeat size={15} /> Swap it
+            </button>
+            {(d.youtube_url || d.youtube_video_id) && (
+              <a
+                href={d.youtube_url || `https://www.youtube.com/watch?v=${d.youtube_video_id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-gray-500 underline"
+              >
+                Open the video
+              </a>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )

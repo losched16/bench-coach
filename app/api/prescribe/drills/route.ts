@@ -5,6 +5,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { scoreDrillRelevance } from '@/lib/analysis'
 import { textFrom } from '@/lib/claudeText'
 import { guard } from '@/lib/authz'
+import { resolveSteps, clampStep, PlanStep } from '@/lib/progression'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -51,17 +52,35 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { data: p } = await supabaseAdmin
+    // Migration 036 may not have been applied yet, and a plan screen that
+    // 500s because the progression columns are missing is worse than one
+    // that shows a single step.
+    let p: any = null
+    const withSteps = await supabaseAdmin
       .from('prescriptions')
-      .select('id, drill_ids, drill_swaps')
+      .select('id, drill_ids, drill_swaps, plan_steps, current_step')
       .eq('id', prescriptionId)
       .eq('coach_id', coachId)
       .maybeSingle()
 
+    if (withSteps.error) {
+      const legacy = await supabaseAdmin
+        .from('prescriptions')
+        .select('id, drill_ids, drill_swaps')
+        .eq('id', prescriptionId)
+        .eq('coach_id', coachId)
+        .maybeSingle()
+      p = legacy.data
+    } else {
+      p = withSteps.data
+    }
+
     if (!p) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    const ids = ((p as any).drill_ids || []) as string[]
-    if (ids.length === 0) return NextResponse.json({ drills: [], swaps: (p as any).drill_swaps || 0 })
+    const ids = (p.drill_ids || []) as string[]
+    if (ids.length === 0) {
+      return NextResponse.json({ drills: [], swaps: p.drill_swaps || 0, steps: [], currentStep: 1 })
+    }
 
     const { data: drills } = await supabaseAdmin
       .from('drill_resources').select(DRILL_FIELDS).in('id', ids)
@@ -70,11 +89,20 @@ export async function GET(request: NextRequest) {
     const byId = new Map((drills || []).map((d: any) => [d.id, d]))
     const ordered = ids.map(id => byId.get(id)).filter(Boolean)
 
-    return NextResponse.json({ drills: ordered, swaps: (p as any).drill_swaps || 0 })
+    // Derived here rather than stored-only, so every plan ever issued stages
+    // correctly without a backfill.
+    const steps = resolveSteps((p.plan_steps || null) as PlanStep[] | null, ordered as any[])
+
+    return NextResponse.json({
+      drills: ordered,
+      swaps: p.drill_swaps || 0,
+      steps,
+      currentStep: clampStep(p.current_step, steps),
+    })
   } catch (error: any) {
     console.error('Priority drills GET error:', error)
     // The columns from migration 022 may not exist yet — the page must render.
-    return NextResponse.json({ drills: [], swaps: 0, needsMigration: true, migrationMessage: migrationHintFor(error)?.message || null })
+    return NextResponse.json({ drills: [], swaps: 0, steps: [], currentStep: 1, needsMigration: true, migrationMessage: migrationHintFor(error)?.message || null })
   }
 }
 
