@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CalendarDays, Loader2, RefreshCw, AlertCircle } from 'lucide-react'
+import { CalendarDays, Loader2, RefreshCw, AlertCircle, ChevronDown } from 'lucide-react'
 import { AnalysisProse } from './AnalysisProse'
 import { splitSections } from '@/lib/analysis'
+import { ActionPlan, PlanSession } from './ActionPlan'
 
 // The three-week plan for one player.
 //
@@ -26,6 +27,10 @@ export function DevelopmentPlan({ prescriptionId, coachId, subjectName }: Props)
   const [error, setError] = useState<string | null>(null)
   const [migrationMessage, setMigrationMessage] = useState<string | null>(null)
   const [stale, setStale] = useState(false)
+  // The same sessions as the prose, as a checklist.
+  const [sessions, setSessions] = useState<PlanSession[]>([])
+  // Read once, run every Tuesday — so the prose starts closed.
+  const [proseOpen, setProseOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -36,6 +41,7 @@ export function DevelopmentPlan({ prescriptionId, coachId, subjectName }: Props)
         if (cancelled) return
         setMarkdown(d.plan?.markdown || null)
         setGeneratedAt(d.plan?.generated_at || null)
+        setSessions(Array.isArray(d.plan?.sessions) ? d.plan.sessions : [])
         setStale(!!d.stale)
         if (d.needsMigration) setMigrationMessage(d.migrationMessage || 'Run the migrations in /migrations.')
       })
@@ -122,18 +128,45 @@ export function DevelopmentPlan({ prescriptionId, coachId, subjectName }: Props)
 
   const sections = splitSections(markdown)
 
+  // The week sections are the checklist now. What is left is the part worth
+  // reading — the shape of it, how to tell it's working, what to do when it
+  // goes sideways — and only when you want it.
+  const proseSections = sessions.length > 0
+    ? sections.filter(sec => !/^week\s*\d/i.test(sec.heading.trim()))
+    : sections
+
   return (
     <div className="space-y-3">
-      {sections.length > 0 ? (
-        sections.map((sec, i) => (
-          <div key={`${sec.key}-${i}`} className="bg-gray-50 rounded-lg p-4">
-            <h5 className="font-semibold text-gray-900 text-sm mb-2">{sec.heading}</h5>
-            <AnalysisProse body={sec.body} />
-          </div>
-        ))
-      ) : (
-        <div className="bg-gray-50 rounded-lg p-4">
-          <AnalysisProse body={markdown} />
+      {sessions.length > 0 && (
+        <ActionPlan
+          coachId={coachId}
+          prescriptionId={prescriptionId}
+          sessions={sessions}
+        />
+      )}
+
+      {proseSections.length > 0 && (
+        <div className="border border-gray-200 rounded-lg">
+          <button
+            onClick={() => setProseOpen(!proseOpen)}
+            className="w-full px-3 py-2.5 flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg"
+          >
+            {sessions.length > 0 ? 'The thinking behind it' : 'The plan'}
+            <ChevronDown
+              size={15}
+              className={`ml-auto text-gray-400 transition-transform ${proseOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+          {proseOpen && (
+            <div className="px-3 pb-3 space-y-3 border-t border-gray-100 pt-3">
+              {proseSections.map((sec, i) => (
+                <div key={`${sec.key}-${i}`} className="bg-gray-50 rounded-lg p-4">
+                  <h5 className="font-semibold text-gray-900 text-sm mb-2">{sec.heading}</h5>
+                  <AnalysisProse body={sec.body} />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

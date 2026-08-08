@@ -45,7 +45,8 @@ WITH checks(migration, feature, kind, obj, col) AS (VALUES
   ('032_opponent_lineup.sql',           'Their batting order',           'table',  'game_opponent_lineup', NULL),
   ('033_opponent_threads.sql',          'Chat about one opponent',       'column', 'chat_threads',       'opponent_team_id'),
   ('034_staff_access.sql',              'Staff can use the app',         'function', 'bc_team_role',     NULL),
-  ('034_staff_access.sql',              'Staff can use the app',         'policy', 'teams',              'bc_read_member_team')
+  ('034_staff_access.sql',              'Staff can use the app',         'policy', 'teams',              'bc_read_member_team'),
+  ('035_plan_sessions.sql',             'Action plan checklist',         'table',  'plan_session_log',   NULL)
 )
 SELECT
   c.migration,

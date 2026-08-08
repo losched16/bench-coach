@@ -37,6 +37,12 @@ export const maxDuration = 300
 
 const PLAN_MODEL = 'claude-opus-5'
 
+// The prose the parent reads, then a machine-readable tail carrying the same
+// sessions as a checklist. Same pattern as the check-in verdict and the dugout
+// assistant's rule capture: one call, two audiences, and the coach never sees
+// the JSON.
+const PLAN_SENTINEL = '\n<<<BENCHCOACH_PLAN>>>'
+
 // Three weeks because that is the priority's own window — the plan and the
 // check-in have to end on the same day or the review has nothing to judge.
 const DEFAULT_WEEKS = 3
@@ -86,6 +92,37 @@ The observable checks, by week. Concrete enough that a parent standing behind a 
 
 ## When it goes sideways
 The most likely failure and the fix. One or two, not a list.
+
+AFTER THE PROSE
+
+The week sections above are what the parent reads once. What they need in the
+driveway on a Tuesday is a checklist. So after the last section, emit this line
+exactly:
+
+${PLAN_SENTINEL.trim()}
+
+followed by JSON describing the SAME sessions you just wrote — not new ones:
+
+{"sessions": [
+  {"key": "w1s1", "week": 1, "title": "Tee work, outside third",
+   "minutes": 20,
+   "blocks": [
+     {"minutes": 5, "what": "Ten easy swings, no ball, freeze at contact",
+      "cue": "Feel the back shoulder stay under"},
+     {"minutes": 15, "what": "3 rounds of 8 off the tee at belt height, outside third",
+      "cue": "Last one of each round, hold the finish"}
+   ]}
+]}
+
+Rules for the JSON:
+- One entry per session in the plan, in order, keyed w<week>s<n>.
+- minutes on the session is the total; the blocks should roughly add up to it.
+- "what" is the instruction as you would say it out loud. "cue" is the one thing
+  to watch or say — leave it null rather than padding it.
+- No session over 30 minutes. If the prose has one, split it into blocks that a
+  parent can stop between.
+- Do NOT put "how to tell it's working" or "when it goes sideways" in here. They
+  are prose for a reason.
 
 Write it now. No preamble, no sign-off.`
 
@@ -254,20 +291,69 @@ Write the plan.`
             output_config: { effort: 'medium' },
           })
 
+          // Everything before the sentinel is the plan; everything after is the
+          // checklist. Streamed up to the sentinel and no further, so the JSON
+          // never appears on screen mid-write.
+          let sent = 0
           for await (const event of gen) {
             if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
               const chunk = (event.delta as any).text as string
               markdown += chunk
-              controller.enqueue(encoder.encode(chunk))
+
+              const at = markdown.indexOf(PLAN_SENTINEL.trim())
+              const visible = at === -1 ? markdown : markdown.slice(0, at)
+              if (visible.length > sent) {
+                controller.enqueue(encoder.encode(visible.slice(sent)))
+                sent = visible.length
+              }
             }
           }
 
-          if (markdown.trim()) {
+          const at = markdown.indexOf(PLAN_SENTINEL.trim())
+          const prose = (at === -1 ? markdown : markdown.slice(0, at)).trim()
+
+          // The checklist. A plan that streamed fine but whose tail was
+          // malformed still saves — the prose is the part that took the model
+          // eight thousand tokens, and losing it over a missing brace would be
+          // absurd.
+          let sessions: any[] = []
+          if (at !== -1) {
+            try {
+              const m = markdown.slice(at).match(/\{[\s\S]*\}/)
+              if (m) {
+                const parsed = JSON.parse(m[0])
+                if (Array.isArray(parsed.sessions)) {
+                  sessions = parsed.sessions
+                    .filter((x: any) => x && (x.title || x.what))
+                    .map((x: any, i: number) => ({
+                      key: String(x.key || `s${i + 1}`),
+                      week: Number(x.week) > 0 ? Number(x.week) : Math.floor(i / 3) + 1,
+                      title: String(x.title || 'Session'),
+                      minutes: Number(x.minutes) > 0 ? Math.min(60, Number(x.minutes)) : null,
+                      blocks: Array.isArray(x.blocks)
+                        ? x.blocks
+                            .filter((b: any) => b && b.what)
+                            .map((b: any) => ({
+                              minutes: Number(b.minutes) > 0 ? Number(b.minutes) : null,
+                              what: String(b.what),
+                              cue: b.cue ? String(b.cue) : null,
+                            }))
+                        : [],
+                    }))
+                }
+              }
+            } catch {
+              // Checklist lost, plan kept.
+            }
+          }
+
+          if (prose) {
             await supabaseAdmin
               .from('prescriptions')
               .update({
                 development_plan: {
-                  markdown,
+                  markdown: prose,
+                  sessions,
                   weeks: DEFAULT_WEEKS,
                   generated_at: new Date().toISOString(),
                   // What it was written around, so a later drill swap can be

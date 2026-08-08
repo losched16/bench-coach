@@ -514,7 +514,7 @@ export function PrioritiesBoard({ teamId, focusId = null }: Props) {
       {/* Still holding — visible so the loop feels alive between check-ins, and
           loggable from here so the three weeks actually accumulate something */}
       {coachId && holdingList.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div>
             <h2 className="font-semibold text-gray-900">Still going</h2>
             <p className="text-xs text-gray-500 mt-0.5">
@@ -523,7 +523,38 @@ export function PrioritiesBoard({ teamId, focusId = null }: Props) {
               at the end will have something to go on.
             </p>
           </div>
-          {holdingList.map(p => renderPriority(p, { due: false }))}
+
+          {/* Grouped by area of the game, because "what are we doing about his
+              pitching" is the question — not "what is priority number four".
+              With one priority per area the heading is redundant and is left
+              off; with three it is the only way to read the page. */}
+          {(() => {
+            const groups = holdingList.reduce<Record<string, OpenPrescription[]>>((acc, p) => {
+              const key = p.focusArea || 'other'
+              ;(acc[key] ||= []).push(p)
+              return acc
+            }, {})
+            const keys = Object.keys(groups).sort((a, b) => focusAreaRank(a) - focusAreaRank(b))
+            if (keys.length <= 1) {
+              return holdingList.map(p => renderPriority(p, { due: false }))
+            }
+            return keys.map(key => (
+              <div key={key} className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${focusAreaChip(key)}`}>
+                    {focusAreaLabel(key)}
+                  </span>
+                  <h3 className="text-sm font-semibold text-gray-800">
+                    {focusAreaLabel(key)} action plan
+                  </h3>
+                  <span className="text-xs text-gray-400">
+                    {groups[key].length} {groups[key].length === 1 ? 'priority' : 'priorities'}
+                  </span>
+                </div>
+                {groups[key].map(p => renderPriority(p, { due: false }))}
+              </div>
+            ))
+          })()}
         </div>
       )}
     </div>

@@ -57,6 +57,8 @@ const OBJECT_TO_MIGRATION: Array<{ match: RegExp; file: string; what: string }> 
   // 034 — staff access. A member hitting an owner-only policy sees an empty
   // screen rather than an error, so this mostly catches the helper functions.
   { match: /\bbc_(team_role|team_at_least|game_at_least|coach_at_least|rank)\b/, file: '034_staff_access.sql', what: 'staff access to a team' },
+  // 035 — ticking off the sessions in a plan
+  { match: /\bplan_session_log\b/, file: '035_plan_sessions.sql', what: 'the action plan checklist' },
 ]
 
 export interface MigrationHint {
