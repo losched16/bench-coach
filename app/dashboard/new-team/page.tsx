@@ -22,6 +22,7 @@ export default function NewTeamPage() {
   const [skillLevel, setSkillLevel] = useState('')
   const [practiceDuration, setPracticeDuration] = useState('60')
   const [loading, setLoading] = useState(false)
+  const [limitReason, setLimitReason] = useState<string | null>(null)
   const [error, setError] = useState('')
   const router = useRouter()
   const supabase = createSupabaseComponentClient()
@@ -45,6 +46,20 @@ export default function NewTeamPage() {
 
       if (!coach) throw new Error('Coach profile not found')
 
+      // Checked before anything is written — a season created for a team the
+      // coach can't have would be orphaned the moment the insert failed.
+      const gate = await fetch('/api/workspace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coachId: coach.id, kind: 'team' }),
+      }).then(r => r.json()).catch(() => ({ allowed: true }))
+
+      if (!gate.allowed) {
+        setLimitReason(gate.reason || 'Your plan does not cover another team.')
+        setLoading(false)
+        return
+      }
+
       // Create season
       const { data: season, error: seasonError } = await supabase
         .from('seasons')
@@ -67,6 +82,7 @@ export default function NewTeamPage() {
           age_group: ageGroup,
           skill_level: skillLevel,
           practice_duration_minutes: parseInt(practiceDuration),
+          workspace_kind: 'team',
         })
         .select()
         .single()
@@ -97,6 +113,29 @@ export default function NewTeamPage() {
 
       <div className="bg-white rounded-lg shadow p-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Create New Team</h1>
+
+        {limitReason && (
+
+          <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-4">
+
+            <p className="text-sm text-amber-900">{limitReason}</p>
+
+            <a
+
+              href="/subscribe"
+
+              className="inline-block mt-2 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700"
+
+            >
+
+              See plans
+
+            </a>
+
+          </div>
+
+        )}
+
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Season Name */}

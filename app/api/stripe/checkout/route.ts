@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { priceIdFor, isTier } from '@/lib/tiers'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-12-15.clover',
@@ -13,7 +14,8 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, returnUrl } = await request.json()
+    const { userId, returnUrl, tier } = await request.json()
+    const requestedTier = isTier(tier) ? tier : null
 
     if (!userId) {
       return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
@@ -50,15 +52,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Create checkout session
+    // Which plan they picked. Falls back to the single price the app shipped
+    // with, so an older client that posts no tier still checks out.
+    const price = (requestedTier && priceIdFor(requestedTier)) || process.env.STRIPE_PRICE_ID
+    if (!price) {
+      return NextResponse.json(
+        { error: 'That plan is not set up for checkout yet.' },
+        { status: 400 }
+      )
+    }
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
-      line_items: [
-        {
-          price: process.env.STRIPE_PRICE_ID!,
-          quantity: 1,
-        },
-      ],
+      line_items: [{ price, quantity: 1 }],
       subscription_data: {
         trial_period_days: 14,
       },
@@ -66,6 +73,10 @@ export async function POST(request: NextRequest) {
       cancel_url: `${returnUrl || process.env.NEXT_PUBLIC_APP_URL}/subscribe?upgrade=cancelled`,
       metadata: {
         user_id: userId,
+        // Belt and braces: the webhook resolves the tier from the price on the
+        // subscription, but if a price ever goes missing from the environment
+        // this is the record of what they actually bought.
+        tier: requestedTier || '',
       },
     })
 

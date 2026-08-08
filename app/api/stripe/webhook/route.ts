@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { tierForPriceId, isTier, Tier } from '@/lib/tiers'
 import {
   trackTrialStarted,
   trackCustomerCreated,
@@ -9,7 +10,10 @@ import {
 } from '@/lib/gohighlevel'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
+  // Matched to checkout and portal. The SDK's types are for this version, so
+  // declaring an older one meant Stripe sending event shapes the code was
+  // typechecked against but not actually receiving.
+  apiVersion: '2025-12-15.clover',
 })
 
 const supabaseAdmin = createClient(
@@ -53,12 +57,24 @@ export async function POST(request: NextRequest) {
         const customerId = session.customer as string
 
         if (userId) {
-          // Update coach subscription status
+          // Which plan they actually bought. This used to be hardcoded 'pro',
+          // which with two prices would hand coach features to everyone who
+          // paid for the parent plan.
+          let tier: Tier | null = null
+          if (session.subscription) {
+            const sub = await stripe.subscriptions.retrieve(session.subscription as string)
+            tier = tierForPriceId(sub.items.data[0]?.price?.id)
+          }
+          // The price is the source of truth; checkout metadata is the fallback
+          // for a price that has gone missing from the environment.
+          if (!tier && isTier(session.metadata?.tier)) tier = session.metadata!.tier as Tier
+
           await supabaseAdmin
             .from('coaches')
             .update({
               is_subscribed: true,
-              subscription_tier: 'pro',
+              // Never silently grant the bigger plan on an unresolvable price.
+              subscription_tier: tier || 'personal',
               stripe_customer_id: customerId,
             })
             .eq('user_id', userId)
@@ -99,13 +115,24 @@ export async function POST(request: NextRequest) {
 
         if (coach) {
           const isActive = ['active', 'trialing'].includes(subscription.status)
-          
+          // Read the plan off the subscription every time: this event also
+          // fires when someone switches between plans in the billing portal,
+          // and that is exactly when the tier must follow.
+          const priceTier = tierForPriceId(subscription.items.data[0]?.price?.id)
+
+          const update: Record<string, any> = { is_subscribed: isActive }
+          if (!isActive) {
+            update.subscription_tier = 'free'
+          } else if (priceTier) {
+            update.subscription_tier = priceTier
+          }
+          // An active subscription on an unrecognised price leaves the tier
+          // alone rather than guessing — downgrading a paying customer over a
+          // missing env var is worse than a stale tier.
+
           await supabaseAdmin
             .from('coaches')
-            .update({
-              is_subscribed: isActive,
-              subscription_tier: isActive ? 'pro' : 'free',
-            })
+            .update(update)
             .eq('stripe_customer_id', customerId)
 
           console.log(`✅ Subscription updated for customer ${customerId}: ${subscription.status}`)

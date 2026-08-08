@@ -13,6 +13,7 @@ export default function NewPlayerPage() {
   const [jerseyNumber, setJerseyNumber] = useState('')
   const [birthYear, setBirthYear] = useState('')
   const [loading, setLoading] = useState(false)
+  const [limitReason, setLimitReason] = useState<string | null>(null)
   const [error, setError] = useState('')
   const router = useRouter()
   const supabase = createSupabaseComponentClient()
@@ -41,6 +42,20 @@ export default function NewPlayerPage() {
         .single()
 
       if (!coach) throw new Error('Coach profile not found')
+
+      // Checked before anything is written, so a coach at their limit sees why
+      // rather than filling in a form that fails on save.
+      const gate = await fetch('/api/workspace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coachId: coach.id, kind: 'personalPlayer' }),
+      }).then(r => r.json()).catch(() => ({ allowed: true }))
+
+      if (!gate.allowed) {
+        setLimitReason(gate.reason || 'Your plan does not cover another player.')
+        setLoading(false)
+        return
+      }
 
       // Check if "Personal" season exists, create if not
       let personalSeason = null
@@ -79,6 +94,9 @@ export default function NewPlayerPage() {
           age_group: birthYear ? `${new Date().getFullYear() - parseInt(birthYear)}U` : 'Mixed',
           skill_level: 'mixed',
           practice_duration_minutes: 60,
+          // Explicit, so nothing has to infer "is this a parent's workspace?"
+          // by comparing a season name to the string 'Personal'.
+          workspace_kind: 'personal',
         })
         .select()
         .single()
@@ -146,6 +164,29 @@ export default function NewPlayerPage() {
             <p className="text-gray-600">For personal training & coaching</p>
           </div>
         </div>
+
+        {limitReason && (
+
+          <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-4">
+
+            <p className="text-sm text-amber-900">{limitReason}</p>
+
+            <a
+
+              href="/subscribe"
+
+              className="inline-block mt-2 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700"
+
+            >
+
+              See plans
+
+            </a>
+
+          </div>
+
+        )}
+
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Player Name */}

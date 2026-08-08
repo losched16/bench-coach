@@ -8,7 +8,10 @@ import { Check, Loader2, Shield } from 'lucide-react'
 
 function SubscribeContent() {
   const [loading, setLoading] = useState(true)
-  const [checkoutLoading, setCheckoutLoading] = useState(false)
+  // Which plan's button is spinning — two cards means a boolean can't say.
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [plans, setPlans] = useState<any[]>([])
   const [user, setUser] = useState<any>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -106,15 +109,26 @@ function SubscribeContent() {
     router.push('/onboarding')
   }
 
-  const handleCheckout = async () => {
-    setCheckoutLoading(true)
+  // Straight from lib/tiers.ts via the API, so the page can't drift from what
+  // the limits actually enforce.
+  useEffect(() => {
+    if (!user?.id) return
+    fetch(`/api/entitlements?userId=${user.id}`)
+      .then(r => r.json())
+      .then(d => setPlans(d.plans || []))
+      .catch(() => {})
+  }, [user?.id])
+
+  const handleCheckout = async (tier: string) => {
+    setCheckoutLoading(tier)
     try {
       const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           userId: user?.id,
-          returnUrl: window.location.origin 
+          tier,
+          returnUrl: window.location.origin
         }),
       })
 
@@ -127,7 +141,8 @@ function SubscribeContent() {
       window.location.href = data.url
     } catch (error: any) {
       console.error('Checkout error:', error)
-      setCheckoutLoading(false)
+      setCheckoutError(error.message || 'Could not start checkout.')
+      setCheckoutLoading(null)
     }
   }
 
@@ -210,32 +225,80 @@ function SubscribeContent() {
               </ul>
             </div>
 
-            {/* Pricing */}
-            <div className="text-center mb-6">
-              <div className="text-gray-500 text-sm mb-1">After your trial</div>
-              <div>
-                <span className="text-4xl font-bold text-gray-900">$10</span>
-                <span className="text-gray-600">/month</span>
-              </div>
-              <div className="text-sm text-gray-500 mt-1">Cancel anytime</div>
+            {/* Plans. Rendered from lib/tiers.ts rather than typed here, so
+                the card and the limit that enforces it can't disagree. */}
+            <div className="grid sm:grid-cols-2 gap-4 mb-4">
+              {plans.map(plan => (
+                <div
+                  key={plan.id}
+                  className={`rounded-xl border p-5 flex flex-col ${
+                    plan.id === 'team'
+                      ? 'border-amber-300 ring-1 ring-amber-100 bg-amber-50/40'
+                      : 'border-gray-200'
+                  }`}
+                >
+                  <div className="mb-3">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-bold text-gray-900">{plan.label}</h3>
+                      {plan.id === 'team' && (
+                        <span className="text-xs px-2 py-0.5 bg-amber-500 text-white rounded-full">
+                          Most coaches
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 mt-0.5">{plan.tagline}</p>
+                    <p className="text-xs text-gray-500 mt-1">{plan.audience}</p>
+                  </div>
+
+                  <ul className="space-y-2 mb-4 flex-1">
+                    {plan.features.map((f: string) => (
+                      <li key={f} className="flex items-start gap-2">
+                        <Check className="text-green-500 flex-shrink-0 mt-0.5" size={16} />
+                        <span className="text-sm text-gray-700">{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {plan.purchasable ? (
+                    <button
+                      onClick={() => handleCheckout(plan.id)}
+                      disabled={!!checkoutLoading}
+                      className={`w-full py-3 font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2 ${
+                        plan.id === 'team'
+                          ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600'
+                          : 'bg-slate-900 text-white hover:bg-slate-800'
+                      }`}
+                    >
+                      {checkoutLoading === plan.id
+                        ? <Loader2 className="animate-spin" size={20} />
+                        : <span>Start 14-day free trial</span>}
+                    </button>
+                  ) : (
+                    /* No price configured yet. A dead button is worse than an
+                       honest label — this is what the coach sees until
+                       STRIPE_PRICE_* is set. */
+                    <div className="w-full py-3 text-center text-sm text-gray-500 border border-dashed border-gray-300 rounded-lg">
+                      Coming soon
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
 
-            {/* CTA */}
-            <button
-              onClick={handleCheckout}
-              disabled={checkoutLoading}
-              className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
-            >
-              {checkoutLoading ? (
-                <Loader2 className="animate-spin" size={24} />
-              ) : (
-                <span>Start 14-Day Free Trial</span>
-              )}
-            </button>
+            {plans.length === 0 && (
+              <div className="text-center text-sm text-gray-500 py-6">
+                <Loader2 className="animate-spin mx-auto mb-2" size={20} />
+                Loading plans…
+              </div>
+            )}
 
-            {/* Fine print */}
-            <p className="text-xs text-gray-500 text-center mt-4">
-              You won&apos;t be charged until your trial ends. Cancel anytime.
+            {checkoutError && (
+              <p className="text-sm text-red-700 text-center mb-3">{checkoutError}</p>
+            )}
+
+            <p className="text-xs text-gray-500 text-center mt-2 mb-4">
+              You won&apos;t be charged until your trial ends. Cancel anytime, and switch plans
+              whenever you like.
             </p>
 
             {/* Logout link */}
