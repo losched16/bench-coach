@@ -226,7 +226,7 @@ export async function POST(request: NextRequest) {
 // ---------------------------------------------------------------------------
 export async function PATCH(request: NextRequest) {
   try {
-    const { coachId, sessionId, delta, pitches, innings, notes, finish } = await request.json()
+    const { coachId, sessionId, delta, pitches, innings, notes, finish, reopen } = await request.json()
 
     if (!coachId || !sessionId) {
       return NextResponse.json({ error: 'coachId and sessionId are required' }, { status: 400 })
@@ -252,6 +252,10 @@ export async function PATCH(request: NextRequest) {
     if (innings !== undefined) update.innings = innings
     if (notes !== undefined) update.notes = notes
     if (finish) update.finished_at = new Date().toISOString()
+    // Finishing was a one-way door. A pitcher coming back out in the fourth is
+    // the normal case, not an edge one, and so is tapping Done a batter early.
+    // The appearance row is updated rather than duplicated on re-finish.
+    if (reopen) update.finished_at = null
 
     const { data: updated, error } = await supabaseAdmin
       .from('pitch_count_sessions')

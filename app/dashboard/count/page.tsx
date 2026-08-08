@@ -206,6 +206,27 @@ function CountContent() {
     track('pitch_count_switched', { subject_type: fresh.subject_type })
   }
 
+  // Undo a Done. The count keeps accumulating on the same row and the same
+  // date, so the day's total stays one number — which is the number the
+  // pitch limit is actually about.
+  const reopen = async (s: Session) => {
+    if (!coachId) return
+    const res = await fetch('/api/pitch-count', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ coachId, sessionId: s.id, reopen: true }),
+    })
+    const data = await res.json()
+    if (data.session) {
+      setActive(data.session)
+      setOptimistic(data.session.pitches)
+      setAvailability(null)
+      setResumedNote(`Back on ${data.session.label} — picking up at ${data.session.pitches}.`)
+      track('pitch_count_reopened', { subject_type: data.session.subject_type })
+      await load(coachId)
+    }
+  }
+
   const remove = async (id: string) => {
     if (!coachId) return
     await fetch(`/api/pitch-count?coachId=${coachId}&sessionId=${id}`, { method: 'DELETE' })
@@ -315,6 +336,10 @@ function CountContent() {
           </div>
         </button>
 
+        {/* Switching is what happens on a pitching change — several times a
+            game. Finishing happens once per pitcher, at the end. The green
+            "Done" button used to own this spot, so the common action was
+            missing and the rare one was the easiest thing to hit. */}
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => bump(-1)}
@@ -324,15 +349,24 @@ function CountContent() {
             <Minus size={18} /> Undo
           </button>
           <button
-            onClick={finish}
-            className="flex items-center justify-center gap-2 py-4 rounded-xl bg-green-600 text-white active:bg-green-700"
+            onClick={() => setActive(null)}
+            className="flex items-center justify-center gap-2 py-4 rounded-xl bg-gray-900 text-white active:bg-gray-800"
           >
-            <Check size={18} /> Done
+            <Users size={18} /> Switch pitcher
           </button>
         </div>
 
+        <button
+          onClick={finish}
+          className="w-full mt-3 py-3 rounded-xl border border-green-300 text-green-800 bg-green-50 active:bg-green-100 flex items-center justify-center gap-2 text-sm font-medium"
+        >
+          <Check size={16} /> Finish {active.label}&apos;s day
+        </button>
+
         <p className="text-xs text-gray-500 mt-4 text-center">
-          Saved as you go. You can close this and pick it back up.
+          Switching keeps this count open — come back to it any time today.
+          Finishing closes the day out{active.subject_type === 'opponent' ? ' and files it to scouting' : ''}, and
+          you can still reopen it if they go back out.
         </p>
       </div>
     )
@@ -370,12 +404,22 @@ function CountContent() {
             </p>
           )}
         </div>
-        <button
-          onClick={() => { setActive(null); setAvailability(null) }}
-          className="w-full py-3 rounded-lg border border-gray-300 text-gray-700"
-        >
-          Done
-        </button>
+        <div className="space-y-2">
+          {/* The most likely next thing after a pitching change is that same
+              kid coming back out, and this used to be a dead end. */}
+          <button
+            onClick={() => reopen(active)}
+            className="w-full py-3 rounded-lg bg-gray-900 text-white font-medium"
+          >
+            Back out there — keep counting
+          </button>
+          <button
+            onClick={() => { setActive(null); setAvailability(null) }}
+            className="w-full py-3 rounded-lg border border-gray-300 text-gray-700"
+          >
+            Done
+          </button>
+        </div>
       </div>
     )
   }
@@ -525,6 +569,15 @@ function CountContent() {
                     {s.subject_type === 'opponent' ? ' · in scouting' : ''}
                   </span>
                 </span>
+                {/* Any date, not just today: "I hit Done a batter early" is as
+                    common as a pitcher coming back out, and the date is right
+                    there so nobody reopens the wrong one by accident. */}
+                <button
+                  onClick={() => reopen(s)}
+                  className="text-xs text-gray-500 hover:text-gray-900 shrink-0 px-2 py-1 rounded border border-gray-300 bg-white"
+                >
+                  Continue
+                </button>
               </div>
             ))}
           </div>
