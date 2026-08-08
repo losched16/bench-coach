@@ -137,5 +137,49 @@ const arm = box.pitching.find(p => p.playerId === 'a1')!
 eq('pitcher: 3 outs = 1.0 IP, 14 pitches, 2 H, 1 K, 2 R', [ip(arm.outs), arm.pitches, arm.h, arm.k, arm.runs, arm.earned], ['1.0',14,2,1,2,2])
 eq('line score reconciles with the runs', [box.awayRuns, box.homeRuns], [3, 2])
 
+
+// ── Runner identity: the trip, not the player ─────────
+// The bug this guards: a walk with a runner already on first showed TWO rows
+// both called "Batter", both on 1st, and refused to save. Two causes — a
+// missing lineup made every batter the same placeholder id, and even with a
+// lineup a kid who reached and batted again in the same inning collided with
+// himself. Both are the same mistake: keying a runner by the player.
+const T = (trip: string, player: string, name: string): Runner =>
+  ({ id: trip, playerId: player, name, earned: true })
+
+r = applyPA(S({ first: T('t1', 'p9', 'Sam') }), 'BB', T('t2', 'p9', 'Sam'))
+eq('same player on base AND batting -> two distinct runners',
+  [at(r.bases), new Set(Object.values(r.bases).filter(Boolean).map((x: any) => x.id)).size],
+  [['t2', 't1', null], 2])
+
+r = applyPA(S({ first: T('t1', 'p1', 'A'), second: T('t2', 'p2', 'B'), third: T('t3', 'p3', 'C') }),
+            'BB', T('t4', 'p1', 'A'))
+eq('bases loaded walk, the forced run belongs to the player not the trip',
+  [r.scored.map(x => [x.id, x.playerId]), at(r.bases)],
+  [[['t3', 'p3']], ['t4', 't1', 't2']])
+
+// Runs credit the player, so a kid who scores twice gets two runs.
+const twice: StoredEvent[] = [
+  ev({ seq:1, batterId:'p1', result:'1B' }),
+  ev({ seq:2, batterId:'p2', result:'HR', rbi:2,
+       scored:[{id:'t1',playerId:'p1',name:'One',earned:true},
+               {id:'t2',playerId:'p2',name:'Two',earned:true}] }),
+  ev({ seq:3, batterId:'p1', result:'1B' }),
+  ev({ seq:4, batterId:'p2', result:'HR', rbi:2,
+       scored:[{id:'t3',playerId:'p1',name:'One',earned:true},
+               {id:'t4',playerId:'p2',name:'Two',earned:true}] }),
+]
+const bx2 = boxScore(twice, { p1:'One', p2:'Two' })
+eq('same player scoring twice gets 2 runs, not 2 phantom players',
+  [bx2.batting.length, bx2.batting.find(b => b.playerId === 'p1')!.runs],
+  [2, 2])
+
+// Old rows have no playerId — the id WAS the player id then.
+const legacy: StoredEvent[] = [
+  ev({ seq:1, batterId:'p1', result:'HR', rbi:1, scored:[{id:'p1',name:'One',earned:true} as any] }),
+]
+eq('a run written before playerId existed still lands on the right player',
+  boxScore(legacy, { p1:'One' }).batting.find(b => b.playerId === 'p1')?.runs, 1)
+
 console.log(fails === 0 ? '\nALL PASS' : `\n${fails} FAILED`)
 process.exit(fails === 0 ? 0 : 1)

@@ -21,7 +21,16 @@ function asBases(v: any): Bases {
   if (!v || typeof v !== 'object') return { ...EMPTY_BASES }
   const one = (r: any): Runner | null =>
     r && typeof r === 'object' && r.id
-      ? { id: String(r.id), name: String(r.name || 'Runner'), earned: r.earned !== false }
+      ? {
+          id: String(r.id),
+          // Who it is, as opposed to which trip around the bases this is. Rows
+          // written before the two were separated have only the id, and there
+          // it WAS the player id — so falling back to it keeps old games
+          // reading correctly.
+          playerId: r.playerId != null ? String(r.playerId) : null,
+          name: String(r.name || 'Runner'),
+          earned: r.earned !== false,
+        }
       : null
   return { first: one(v.first), second: one(v.second), third: one(v.third) }
 }
@@ -30,7 +39,12 @@ function asRunners(v: any): Runner[] {
   if (!Array.isArray(v)) return []
   return v
     .filter(r => r && r.id)
-    .map(r => ({ id: String(r.id), name: String(r.name || 'Runner'), earned: r.earned !== false }))
+    .map(r => ({
+      id: String(r.id),
+      playerId: r.playerId != null ? String(r.playerId) : null,
+      name: String(r.name || 'Runner'),
+      earned: r.earned !== false,
+    }))
 }
 
 function toStored(row: any): StoredEvent {

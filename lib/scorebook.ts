@@ -21,9 +21,19 @@
 // ── Who is on base ─────────────────────────────────────
 
 export interface Runner {
-  // team_player_id when we're batting. For the opposition, a synthetic id —
-  // they aren't on anyone's roster and never will be.
+  // The identity of this TRIP AROUND THE BASES, unique within a game — not the
+  // identity of the player.
+  //
+  // Those have to be different. A kid who singles in a big inning and comes up
+  // again before the third out is on second AND at the plate, and if both wore
+  // his player id the book would decide there were two runners on the same base
+  // and refuse the at-bat. Batting around is routine at 8U, so this is not an
+  // edge case.
   id: string
+  // Who it actually is: team_player_id for ours, a synthetic key for theirs.
+  // Stats are credited here. Null only for a runner recorded before this
+  // distinction existed.
+  playerId?: string | null
   name: string
   // Reached on an error or a passed ball, so runs they score are unearned
   // against our pitcher. Tracked because the pitching line is one of the two
@@ -486,7 +496,11 @@ export function boxScore(events: StoredEvent[], names: Record<string, string>): 
     // batter — the whole reason the runner is carried on the event.
     if (e.weBatting) {
       for (const r of e.scored || []) {
-        bat(r.id, names[r.id] || r.name).runs += 1
+        // The run belongs to the player, not to the trip. Older rows have no
+        // playerId and fall back to the id, which was the player id then.
+        const who = r.playerId || r.id
+        if (!who) continue
+        bat(who, names[who] || r.name).runs += 1
       }
     }
 

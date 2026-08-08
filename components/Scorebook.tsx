@@ -54,6 +54,7 @@ type Slot = 'out' | '1' | '2' | '3' | 'home'
 
 interface SheetRunner {
   id: string
+  playerId: string | null
   name: string
   earned: boolean
   slot: Slot
@@ -110,6 +111,9 @@ export function Scorebook({
     rbi: number
     fielders: string[]
     outsBefore: number
+    // For a base event: whose steal/pickoff this was. A plate appearance uses
+    // the batter instead.
+    subjectPlayerId?: string | null
   } | null>(null)
 
   const [bookOpen, setBookOpen] = useState(false)
@@ -183,10 +187,27 @@ export function Scorebook({
     return `#${slot}`
   }
 
+  // Each trip around the bases gets its own id, distinct from the player's.
+  //
+  // Keying a runner by player id looked obvious and was wrong twice over: with
+  // no batting order every batter became the same 'unknown', and even with a
+  // real lineup a kid who reached and batted again in the same inning collided
+  // with himself. Both showed up as "two runners on the same base" on a play
+  // where there was only one.
+  //
+  // lastSeq advances on every save, so two appearances can never share an id.
+  const trip = `t${lastSeq + 1}`
+
   const batterRunner: Runner = weBatting
-    ? { id: batter?.teamPlayerId || 'unknown', name: batter?.name || 'Batter', earned: true }
+    ? {
+        id: trip,
+        playerId: batter?.teamPlayerId || null,
+        name: batter?.name || 'Batter',
+        earned: true,
+      }
     : {
-        id: `opp-${opponentSlot}`,
+        id: trip,
+        playerId: `opp-${opponentSlot}`,
         name: opponentName.trim() || theirName(opponentSlot),
         earned: true,
       }
@@ -199,11 +220,15 @@ export function Scorebook({
     // Offered, not applied — a coach who taps ball four and finds the runner
     // already on first has to undo something they never chose.
     const implied = impliedResult(next)
-    if (implied) openSheet('pa', implied)
+    if (implied && !(weBatting && order.length === 0)) openSheet('pa', implied)
   }
 
   // ── Opening the confirm sheet ──────────────────────────
   const openSheet = (kind: 'pa' | 'base', result: string, from?: 1 | 2 | 3) => {
+    if (weBatting && order.length === 0) {
+      setError("Set our batting order first — the book needs to know who's up.")
+      return
+    }
     const b = state.bases
     const outcome = kind === 'pa'
       ? applyPA(state, result as PAResult, {
@@ -220,7 +245,9 @@ export function Scorebook({
       else if (outcome.bases.second?.id === r.id) slot = '2'
       else if (outcome.bases.third?.id === r.id) slot = '3'
       else if (outcome.scored.some(s => s.id === r.id)) slot = 'home'
-      involved.push({ id: r.id, name: r.name, earned: r.earned, slot, isBatter })
+      involved.push({
+        id: r.id, playerId: r.playerId ?? null, name: r.name, earned: r.earned, slot, isBatter,
+      })
     }
 
     if (kind === 'pa') place({ ...batterRunner, earned: !UNEARNED_RESULTS.has(result) }, true)
@@ -231,11 +258,16 @@ export function Scorebook({
     const runs = involved.filter(r => r.slot === 'home').length
     const cfg = kind === 'pa' ? PA_RESULTS[result as PAResult] : BASE_RESULTS[result as BaseResult]
 
+    const subject = kind === 'base'
+      ? (from === 1 ? b.first : from === 2 ? b.second : b.third)
+      : null
+
     setSheet({
       kind,
       result,
       label: cfg?.label || result,
       runners: involved,
+      subjectPlayerId: subject?.playerId ?? null,
       // An error or a double play doesn't get an RBI; everything else that
       // scores someone does, until the coach says otherwise.
       rbi: kind === 'pa' && !['E', 'DP', 'TP'].includes(result) ? runs : 0,
@@ -267,7 +299,7 @@ export function Scorebook({
 
     const at = (s: Slot): Runner | null => {
       const r = sheet.runners.find(x => x.slot === s)
-      return r ? { id: r.id, name: r.name, earned: r.earned } : null
+      return r ? { id: r.id, playerId: r.playerId, name: r.name, earned: r.earned } : null
     }
     // Three outs empties the bases whatever the sheet says — runners left on
     // do not carry over, and a book that carries them is off by a runner for
@@ -288,7 +320,14 @@ export function Scorebook({
           scoring: sheet.kind === 'pa' && sheet.fielders.length
             ? scoringNotation(sheet.result as PAResult, sheet.fielders)
             : null,
-          batterTeamPlayerId: weBatting ? batter?.teamPlayerId || null : null,
+          // A steal is credited to the runner; a plate appearance to the
+          // batter. Sending the batter for both put every stolen base on
+          // whoever was standing at the plate when it happened.
+          batterTeamPlayerId: !weBatting
+            ? null
+            : sheet.kind === 'base'
+              ? sheet.subjectPlayerId || null
+              : batter?.teamPlayerId || null,
           opponentSlot: weBatting ? null : opponentSlot,
           opponentName: weBatting ? null : (opponentName.trim() || opponentNames[opponentSlot] || null),
           pitcherPlayerId: weBatting ? null : currentPitcher,
@@ -298,7 +337,9 @@ export function Scorebook({
           rbi: sheet.rbi,
           outsAfter: sheetOuts,
           basesAfter,
-          scored: sheetScored.map(r => ({ id: r.id, name: r.name, earned: r.earned })),
+          scored: sheetScored.map(r => ({
+            id: r.id, playerId: r.playerId, name: r.name, earned: r.earned,
+          })),
           adjusted: true,
         }),
       })
@@ -649,6 +690,23 @@ export function Scorebook({
       </div>
 
       {/* ── How it ended ─────────────────────────────── */}
+      {/* No batting order means no batter, and a book that invents one puts a
+          runner called "Batter" on first and then argues with itself about how
+          many of him are on the base. Better to stop and ask. */}
+      {weBatting && order.length === 0 ? (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
+          <p className="text-sm text-amber-900">
+            We&apos;re batting, but there&apos;s no order set — so the book doesn&apos;t know
+            who&apos;s up. Set it and this turns back on.
+          </p>
+          <button
+            onClick={() => setImporting('us')}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium"
+          >
+            <Camera size={15} /> Set our order
+          </button>
+        </div>
+      ) : (
       <div className="space-y-2">
         <span className="text-xs uppercase tracking-wide text-gray-500">How it ended</span>
         {(['hit', 'onbase', 'out', 'other'] as const).map(group => (
@@ -674,6 +732,7 @@ export function Scorebook({
           </div>
         ))}
       </div>
+      )}
 
       {error && (
         <div className="flex gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-2.5">
