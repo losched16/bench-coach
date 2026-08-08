@@ -56,6 +56,7 @@ function CountContent() {
   const [availability, setAvailability] = useState<Availability | null>(null)
   const [starting, setStarting] = useState(false)
   const [showStart, setShowStart] = useState(false)
+  const [resumedNote, setResumedNote] = useState<string | null>(null)
   const [adhocName, setAdhocName] = useState('')
   const [opponentTeamName, setOpponentTeamName] = useState('')
   const [ruleSetId, setRuleSetId] = useState('')
@@ -121,7 +122,18 @@ function CountContent() {
       setAvailability(null)
       setShowStart(false)
       setAdhocName('')
-      track('pitch_count_started', { subject_type: payload.subjectType })
+      // Picking a pitcher who already threw today continues their count rather
+      // than opening a second one. Say so — a number that isn't zero when you
+      // expected zero reads as a bug until it's explained.
+      setResumedNote(
+        data.resumed
+          ? `Continuing ${data.session.label} — already at ${data.session.pitches} today.`
+          : null
+      )
+      track(data.resumed ? 'pitch_count_resumed' : 'pitch_count_started', {
+        subject_type: payload.subjectType,
+        reopened: !!data.reopened,
+      })
       await load(coachId)
     } catch (e: any) {
       alert(e.message || 'Could not start the counter')
@@ -178,6 +190,22 @@ function CountContent() {
     setAvailability(null)
   }
 
+  // Switching mid-game: park the current count and pick up another one without
+  // leaving the counting screen. Nothing is finished — both stay open, and the
+  // server holds the numbers, so a mis-tap costs a tap, not a count.
+  const switchTo = async (s: Session) => {
+    if (!coachId || s.id === active?.id) return
+    // Take the server's number rather than the list's: the list was loaded
+    // before the last few taps landed.
+    const data = await load(coachId)
+    const fresh = (data.open || []).find((o: Session) => o.id === s.id) || s
+    setActive(fresh)
+    setOptimistic(fresh.pitches)
+    setAvailability(null)
+    setResumedNote(null)
+    track('pitch_count_switched', { subject_type: fresh.subject_type })
+  }
+
   const remove = async (id: string) => {
     if (!coachId) return
     await fetch(`/api/pitch-count?coachId=${coachId}&sessionId=${id}`, { method: 'DELETE' })
@@ -192,6 +220,13 @@ function CountContent() {
   // ── Counting ─────────────────────────────────────────
   if (active && !active.finished_at) {
     const count = optimistic ?? active.pitches
+    // Only this date's counters. Yesterday's open counter is a forgotten one,
+    // not a pitcher who might come back out — showing it invites a mis-tap
+    // that puts today's pitches on the wrong day.
+    const todaysCounters = [
+      active,
+      ...open.filter(s => s.id !== active.id && s.counted_on === active.counted_on),
+    ]
     const rule = rules.find(r => r.id === active.rule_set_id)
     const overDaily = rule?.daily_max ? count >= rule.daily_max : false
     const nearDaily = rule?.daily_max ? count >= rule.daily_max - 10 && !overDaily : false
@@ -206,10 +241,52 @@ function CountContent() {
               {rule ? ` · ${rule.sanctioning_body} ${rule.age_group}` : ''}
             </div>
           </div>
-          <button onClick={() => setActive(null)} className="text-gray-400 hover:text-gray-600 p-2">
+          <button
+            onClick={() => setActive(null)}
+            className="text-gray-400 hover:text-gray-600 p-2"
+            aria-label="Back to all counters"
+          >
             <X size={22} />
           </button>
         </div>
+
+        {/* Everyone being counted today. Tap to switch — Charlie in the first,
+            their guy in the second, Charlie again in the third, all adding to
+            the right totals. Nothing here finishes anything. */}
+        {todaysCounters.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-1 px-1">
+            {todaysCounters.map(s => {
+              const isActive = s.id === active.id
+              const shown = isActive ? count : s.pitches
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => switchTo(s)}
+                  className={`shrink-0 px-3 py-2 rounded-lg border text-left transition-colors ${
+                    isActive
+                      ? 'bg-gray-900 text-white border-gray-900'
+                      : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="text-xs font-medium truncate max-w-[8rem]">{s.label}</div>
+                  <div className="text-lg font-bold tabular-nums leading-tight">{shown}</div>
+                </button>
+              )
+            })}
+            <button
+              onClick={() => { setActive(null); setShowStart(true) }}
+              className="shrink-0 px-3 py-2 rounded-lg border border-dashed border-gray-300 text-gray-500 hover:bg-gray-50 flex items-center gap-1 text-sm"
+            >
+              <Plus size={14} /> Add
+            </button>
+          </div>
+        )}
+
+        {resumedNote && (
+          <div className="rounded-lg p-3 mb-3 bg-blue-50 border border-blue-200 text-sm text-blue-900">
+            {resumedNote}
+          </div>
+        )}
 
         {(overDaily || nearDaily) && (
           <div className={`rounded-lg p-3 mb-4 flex items-start gap-2 text-sm ${

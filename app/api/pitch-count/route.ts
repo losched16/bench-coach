@@ -106,20 +106,85 @@ export async function POST(request: NextRequest) {
       }
 
       if (resolvedOpponentTeam) {
-        const { data: newPlayer, error: playerErr } = await supabaseAdmin
+        // Reuse the player if we've seen them before. Inserting unconditionally
+        // meant counting the same kid in two innings produced two scouting
+        // records with half the pitches each — which is exactly the number the
+        // availability board must not get wrong.
+        const { data: existingPlayer } = await supabaseAdmin
           .from('opponent_players')
-          .insert({
-            opponent_team_id: resolvedOpponentTeam,
-            name: label.trim(),
-            // Typed at the fence by the person watching — not a parse guess.
-            confidence: 'confirmed',
-            first_seen: countedOn || new Date().toISOString().slice(0, 10),
-            last_seen: countedOn || new Date().toISOString().slice(0, 10),
-          })
           .select('id')
+          .eq('opponent_team_id', resolvedOpponentTeam)
+          .ilike('name', label.trim())
+          .maybeSingle()
+
+        if (existingPlayer) {
+          resolvedOpponentPlayer = (existingPlayer as any).id
+          await supabaseAdmin
+            .from('opponent_players')
+            .update({ last_seen: countedOn || new Date().toISOString().slice(0, 10) })
+            .eq('id', resolvedOpponentPlayer)
+        } else {
+          const { data: newPlayer, error: playerErr } = await supabaseAdmin
+            .from('opponent_players')
+            .insert({
+              opponent_team_id: resolvedOpponentTeam,
+              name: label.trim(),
+              // Typed at the fence by the person watching — not a parse guess.
+              confidence: 'confirmed',
+              first_seen: countedOn || new Date().toISOString().slice(0, 10),
+              last_seen: countedOn || new Date().toISOString().slice(0, 10),
+            })
+            .select('id')
+            .single()
+          if (playerErr) throw playerErr
+          resolvedOpponentPlayer = (newPlayer as any).id
+        }
+      }
+    }
+
+    const onDate = countedOn || new Date().toISOString().slice(0, 10)
+    const effectiveType = type === 'opponent' && !resolvedOpponentPlayer ? 'adhoc' : type
+
+    // Charlie pitches the first, the opponent pitches the second, Charlie comes
+    // back in the third. That has to add to Charlie's count, not open a second
+    // one — a pitcher split across two rows reads as two short outings, and the
+    // daily limit is the whole reason anyone counts.
+    if (!body.forceNew) {
+      let q = supabaseAdmin
+        .from('pitch_count_sessions')
+        .select('*')
+        .eq('coach_id', coachId)
+        .eq('counted_on', onDate)
+
+      if (effectiveType === 'roster' && teamPlayerId) {
+        q = q.eq('team_player_id', teamPlayerId)
+      } else if (effectiveType === 'opponent' && resolvedOpponentPlayer) {
+        q = q.eq('opponent_player_id', resolvedOpponentPlayer)
+      } else {
+        // Ad-hoc counts have no identity but their name, so that is the match.
+        q = q.eq('subject_type', 'adhoc').ilike('label', label.trim())
+      }
+
+      // Open ones first — that is the common case and needs no explanation.
+      const { data: existing } = await q
+        .order('finished_at', { ascending: true, nullsFirst: true })
+        .limit(1)
+
+      const match = (existing || [])[0] as any
+      if (match) {
+        if (!match.finished_at) {
+          return NextResponse.json({ session: match, resumed: true })
+        }
+        // Finished earlier today and back on the mound. Reopen it: the number
+        // that matters at this age is the day's total, and re-finishing now
+        // corrects the scouting record rather than adding a second outing.
+        const { data: reopened } = await supabaseAdmin
+          .from('pitch_count_sessions')
+          .update({ finished_at: null })
+          .eq('id', match.id)
+          .select('*')
           .single()
-        if (playerErr) throw playerErr
-        resolvedOpponentPlayer = (newPlayer as any).id
+        return NextResponse.json({ session: reopened || match, resumed: true, reopened: true })
       }
     }
 
@@ -130,12 +195,12 @@ export async function POST(request: NextRequest) {
         team_id: teamId || null,
         // If we couldn't resolve an opponent identity, degrade to adhoc rather
         // than failing — a count with a name beats no count.
-        subject_type: type === 'opponent' && !resolvedOpponentPlayer ? 'adhoc' : type,
+        subject_type: effectiveType,
         team_player_id: type === 'roster' ? teamPlayerId || null : null,
         opponent_player_id: resolvedOpponentPlayer,
         opponent_team_id: resolvedOpponentTeam,
         label: label.trim(),
-        counted_on: countedOn || new Date().toISOString().slice(0, 10),
+        counted_on: onDate,
         rule_set_id: ruleSetId || null,
         pitches: 0,
       })
@@ -196,6 +261,20 @@ export async function PATCH(request: NextRequest) {
 
     if (error) throw error
     const u = updated as any
+
+    // A counter that was reopened and finished again already has an appearance.
+    // Skipping it would leave the scouting record showing the count from before
+    // the pitcher came back out — the availability board would clear a kid who
+    // actually threw thirty more.
+    if (finish && u.subject_type === 'opponent' && u.appearance_id) {
+      await supabaseAdmin
+        .from('opponent_appearances')
+        .update({
+          pitches_thrown: u.pitches,
+          innings_pitched: u.innings ?? null,
+        })
+        .eq('id', u.appearance_id)
+    }
 
     // Finishing an opponent count writes the outing into the scouting record,
     // which is what makes it show up on the availability board. Guarded by
