@@ -391,7 +391,7 @@ export function PrioritiesBoard({ teamId, focusId = null }: Props) {
           <p className="text-sm text-gray-600 mt-1 max-w-md mx-auto">
             Ask <a href={`/dashboard/chat?teamId=${teamId}`} className="text-red-600 underline">CoachAI</a> about
             something you want to fix, then hit &ldquo;Make this the priority&rdquo; on the answer. It shows
-            up here with its drills, and gets a read on whether it moved.
+            up here with its drills, and after three weeks you can see if it&apos;s working.
           </p>
         </div>
       )}
@@ -410,7 +410,7 @@ export function PrioritiesBoard({ teamId, focusId = null }: Props) {
       {running && !sections?.length && (
         <div className="bg-white rounded-lg shadow p-8 text-center">
           <Loader2 className="animate-spin mx-auto text-red-600 mb-3" size={24} />
-          <p className="text-gray-700 font-medium">Comparing it against what we said to watch for</p>
+          <p className="text-gray-700 font-medium">Reading what&apos;s happened since you started this</p>
           <p className="text-sm text-gray-500 mt-1">Usually 15–30 seconds.</p>
         </div>
       )}
@@ -516,10 +516,11 @@ export function PrioritiesBoard({ teamId, focusId = null }: Props) {
       {coachId && holdingList.length > 0 && (
         <div className="space-y-4">
           <div>
-            <h2 className="font-semibold text-gray-900">In progress</h2>
+            <h2 className="font-semibold text-gray-900">Still going</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              We hold a priority for three weeks rather than changing it every time new data lands — that&apos;s
-              how long it takes to move something at this age.
+              These stay put for three weeks rather than changing every time new data lands — that&apos;s
+              roughly how long a real change takes at this age. Keep logging sessions and the review
+              at the end will have something to go on.
             </p>
           </div>
           {holdingList.map(p => renderPriority(p, { due: false }))}

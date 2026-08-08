@@ -212,7 +212,7 @@ function PrescribeContent() {
         </div>
         <p className="text-gray-600 mt-1">
           Describe what you&apos;re seeing in plain English. You&apos;ll get a read on what&apos;s actually going on,
-          one priority, and how to know in three weeks whether it moved.
+          one priority, and how to know in three weeks whether it worked.
         </p>
       </div>
 

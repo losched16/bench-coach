@@ -140,7 +140,7 @@ export function ActivePriority({
           ? <CalendarCheck className="text-amber-600" size={20} />
           : <Target className="text-red-600" size={20} />}
         <h3 className="font-semibold text-gray-900">
-          {readyToCheckIn ? 'A check-in is ready' : 'Working on'}
+          {readyToCheckIn ? 'Ready to review' : 'Working on'}
         </h3>
         {/* The area is the unit. Several run at once and a coach needs to see
             at a glance which one this card is. */}
@@ -170,24 +170,32 @@ export function ActivePriority({
       </p>
 
       {readyToCheckIn ? (
-        onCheckIn ? (
-          <button
-            onClick={() => onCheckIn(item.id)}
-            disabled={busy}
-            className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-lg transition-colors font-medium"
-          >
-            {busy ? <Loader2 className="animate-spin" size={16} /> : null}
-            See whether it moved
-          </button>
-        ) : (
-          <Link
-            href={`/dashboard?teamId=${teamId}&prescriptionId=${item.id}`}
-            className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors font-medium"
-          >
-            See whether it moved
-            <ArrowRight size={16} />
-          </Link>
-        )
+        <>
+          {onCheckIn ? (
+            <button
+              onClick={() => onCheckIn(item.id)}
+              disabled={busy}
+              className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-lg transition-colors font-medium"
+            >
+              {busy ? <Loader2 className="animate-spin" size={16} /> : null}
+              See if it&apos;s working
+            </button>
+          ) : (
+            <Link
+              href={`/dashboard?teamId=${teamId}&prescriptionId=${item.id}`}
+              className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors font-medium"
+            >
+              See if it&apos;s working
+              <ArrowRight size={16} />
+            </Link>
+          )}
+          {/* Say what pressing it will do. "See whether it moved" told a coach
+              nothing about what they were about to get. */}
+          <p className="text-xs text-gray-500 mt-2 text-center leading-relaxed">
+            Reads everything logged over the last {item.daysElapsed} days — sessions, games,
+            measurements — and tells you whether it improved and what to do next.
+          </p>
+        </>
       ) : (
         <div className="mt-4">
           {entryId || alreadyToday ? (
