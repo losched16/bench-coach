@@ -15,7 +15,7 @@ import { focusAreaLabel, focusAreaChip } from '@/lib/focusAreas'
 // tap, and the optional note comes after — never before.
 //
 // Three states, in the order a coach meets them:
-//   holding            → "here's what we're working on. Ran it today?"
+//   holding            → "here's what we're working on. Did you work on it?"
 //   due, no evidence   → still the log button. A check-in with nothing to read
 //                        can only say "I can't tell", and asking someone to sit
 //                        through that teaches them to ignore the feature.
@@ -164,7 +164,9 @@ export function ActivePriority({
         />
       </div>
       <p className="text-xs text-gray-500 mt-1.5">
-        {item.adherence.logged} {item.adherence.logged === 1 ? 'session' : 'sessions'} logged
+        {item.adherence.logged === 0
+          ? 'No sessions logged on this yet'
+          : `${item.adherence.logged} ${item.adherence.logged === 1 ? 'session' : 'sessions'} worked on this so far`}
       </p>
 
       {readyToCheckIn ? (
@@ -194,8 +196,8 @@ export function ActivePriority({
                 <Check size={16} />
                 <span>
                   {alreadyNoted
-                    ? 'Already counted for today.'
-                    : 'Logged for today.'}
+                    ? 'Today was already counted.'
+                    : 'Counted. That session is now part of the check-in.'}
                 </span>
                 {entryId && (
                   <button
@@ -211,10 +213,14 @@ export function ActivePriority({
               {/* Optional, and visibly optional. The session is already saved. */}
               {entryId && !noteSaved && (
                 <div>
+                  <p className="text-xs text-gray-600 mb-1.5">
+                    What did you see? Optional — but it&apos;s the difference between a check-in
+                    that names the cause and one that says &ldquo;can&apos;t tell yet&rdquo;.
+                  </p>
                   <textarea
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
-                    placeholder="How'd it go? (optional — e.g. first 10 were ugly, then it clicked)"
+                    placeholder="e.g. first 10 were ugly, then it clicked — he was staying back on the last round"
                     rows={2}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
                   />
@@ -230,7 +236,8 @@ export function ActivePriority({
               )}
               {noteSaved && (
                 <p className="text-xs text-gray-500">
-                  Note saved. That&apos;s what makes the check-in worth reading.
+                  Saved. Notes like that are what let the check-in say something specific instead of
+                  &ldquo;not enough to tell&rdquo;.
                 </p>
               )}
             </div>
@@ -242,12 +249,16 @@ export function ActivePriority({
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
               >
                 {logging ? <Loader2 className="animate-spin" size={16} /> : <Check size={16} />}
-                {alreadyToday ? 'Already logged today' : 'Ran it today'}
+                {alreadyToday ? 'Logged for today' : 'We worked on this today'}
               </button>
-              <p className="text-xs text-gray-500 mt-2 text-center">
+              <p className="text-xs text-gray-500 mt-2 text-center leading-relaxed">
                 {alreadyToday
-                  ? 'Counted once for today. Log another session through Add if you went out twice.'
-                  : 'One tap. You can add a note after, if you want to.'}
+                  ? 'Today is counted. If you went out a second time, use “Log another” above.'
+                  : <>
+                      Tap this any time you put work into it — ten minutes in the driveway counts.
+                      It&apos;s how the check-in can tell a drill that isn&apos;t working from a plan
+                      that was too big for your week.
+                    </>}
               </p>
             </>
           )}
