@@ -97,13 +97,23 @@ export async function GET(request: NextRequest) {
   try {
     const { data, error } = await supabaseAdmin
       .from('prescriptions')
-      .select('development_plan')
+      .select('development_plan, drill_ids')
       .eq('id', prescriptionId)
       .eq('coach_id', coachId)
       .maybeSingle()
 
     if (error) throw error
-    return NextResponse.json({ plan: (data as any)?.development_plan || null })
+
+    const plan = (data as any)?.development_plan || null
+    // A plan written around drills that have since been swapped is telling a
+    // parent to run something that is no longer the plan. Say so rather than
+    // silently serving a stale document.
+    const builtFrom: string[] = plan?.drill_ids || []
+    const now: string[] = (data as any)?.drill_ids || []
+    const stale = !!plan && builtFrom.length > 0 &&
+      (builtFrom.length !== now.length || builtFrom.some(id => !now.includes(id)))
+
+    return NextResponse.json({ plan, stale })
   } catch (error: any) {
     console.error('Development plan GET error:', error)
     const hint = migrationHintFor(error)
@@ -247,6 +257,9 @@ Write the plan.`
                   markdown,
                   weeks: DEFAULT_WEEKS,
                   generated_at: new Date().toISOString(),
+                  // What it was written around, so a later drill swap can be
+                  // detected and the plan flagged rather than quietly wrong.
+                  drill_ids: drillIds,
                 },
               })
               .eq('id', prescriptionId)

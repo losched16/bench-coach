@@ -14,7 +14,7 @@ export const maxDuration = 120
 
 export async function POST(request: NextRequest) {
   try {
-    const { teamId, ageGroup, blockToReplace, otherBlocks, coachNote } = await request.json()
+    const { teamId, ageGroup, blockToReplace, otherBlocks, coachNote, count } = await request.json()
 
     if (!blockToReplace || !ageGroup) {
       return NextResponse.json(
@@ -30,15 +30,57 @@ export async function POST(request: NextRequest) {
       .or('status.eq.approved,status.is.null')
       .limit(100)
 
-    const block = await generateReplacementBlock(
-      ageGroup,
-      blockToReplace,
-      otherBlocks || [],
-      coachNote || '',
-      drillResources || []
+    // Three, generated in parallel and told to differ from each other. One
+    // forced replacement means a coach who doesn't like it has to roll again
+    // and hope; three means they choose.
+    const want = Math.min(Math.max(Number(count) || 1, 1), 3)
+
+    if (want === 1) {
+      const block = await generateReplacementBlock(
+        ageGroup, blockToReplace, otherBlocks || [], coachNote || '', drillResources || []
+      )
+      return NextResponse.json(block)
+    }
+
+    const ANGLES = [
+      'Closest to the original in setup and equipment — the coach liked the slot, not this drill.',
+      'A different way at the same skill. If the original was static, make this one live or competitive.',
+      'The simplest possible version. Assume no extra equipment and a short attention span.',
+    ]
+
+    const results = await Promise.allSettled(
+      Array.from({ length: want }, (_, i) =>
+        generateReplacementBlock(
+          ageGroup,
+          blockToReplace,
+          // Each generation avoids the others' angle by seeing the same
+          // "don't duplicate" list, plus its own brief.
+          otherBlocks || [],
+          `${coachNote || ''}\n\nANGLE FOR THIS SUGGESTION: ${ANGLES[i]}`.trim(),
+          drillResources || []
+        )
+      )
     )
 
-    return NextResponse.json(block)
+    const options = results
+      .filter(r => r.status === 'fulfilled')
+      .map(r => (r as PromiseFulfilledResult<any>).value)
+      .filter(Boolean)
+
+    if (options.length === 0) {
+      return NextResponse.json({ error: 'Could not generate alternatives' }, { status: 500 })
+    }
+
+    // Two identical titles is worse than two options.
+    const seen = new Set<string>()
+    const unique = options.filter(o => {
+      const key = String(o.title || '').toLowerCase().trim()
+      if (!key || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+
+    return NextResponse.json({ options: unique })
   } catch (error: any) {
     console.error('Swap drill API error:', error)
     return NextResponse.json(

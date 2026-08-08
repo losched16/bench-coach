@@ -54,6 +54,8 @@ export default function PracticePage() {
   const [swapNote, setSwapNote] = useState('')
   const [swapGenerating, setSwapGenerating] = useState(false)
   const [swapPreview, setSwapPreview] = useState<any>(null)
+  // Several suggestions to choose between, rather than one to accept or reroll.
+  const [swapOptions, setSwapOptions] = useState<any[]>([])
   const [swapSaving, setSwapSaving] = useState(false)
   const [librarySearch, setLibrarySearch] = useState('')
   const [libraryCategory, setLibraryCategory] = useState('all')
@@ -133,6 +135,7 @@ export default function PracticePage() {
     setSwapTab('ai')
     setSwapNote('')
     setSwapPreview(null)
+    setSwapOptions([])
     setLibrarySearch('')
     setLibraryCategory('all')
   }
@@ -141,6 +144,7 @@ export default function PracticePage() {
     if (!swapModal) return
     setSwapGenerating(true)
     setSwapPreview(null)
+    setSwapOptions([])
     try {
       const plan = plans.find(p => p.id === swapModal.planId)
       const allBlocks = Array.isArray(plan?.content) ? plan.content : plan?.content?.blocks || []
@@ -155,12 +159,20 @@ export default function PracticePage() {
           blockToReplace: swapModal.block,
           otherBlocks,
           coachNote: swapNote,
+          count: 3,
         }),
       })
 
       if (!response.ok) throw new Error('Failed to generate replacement')
-      const newBlock = await response.json()
-      setSwapPreview(newBlock)
+      const data = await response.json()
+      if (Array.isArray(data.options)) {
+        setSwapOptions(data.options)
+        // One survivor is a preview, not a choice — don't make them pick from
+        // a list of one.
+        if (data.options.length === 1) setSwapPreview(data.options[0])
+      } else {
+        setSwapPreview(data)
+      }
     } catch (error) {
       console.error('Swap error:', error)
       alert('Failed to generate replacement drill')
@@ -858,8 +870,51 @@ export default function PracticePage() {
                         <RefreshCw size={16} className="animate-spin" />
                         Generating replacement...
                       </span>
-                    ) : 'Generate Replacement Drill'}
+                    ) : 'Show me 3 options'}
                   </button>
+
+                  {/* Choose one. A single forced replacement meant a coach who
+                      didn't like it had to roll again and hope. */}
+                  {swapOptions.length > 1 && !swapPreview && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-800">
+                        Pick the one that fits your field and your kids:
+                      </p>
+                      {swapOptions.map((opt: any, i: number) => (
+                        <div key={i} className="border border-gray-200 rounded-lg p-3 bg-white">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <h5 className="font-semibold text-gray-900 text-sm">{opt.title}</h5>
+                              <p className="text-sm text-gray-600 mt-0.5">{opt.description}</p>
+                            </div>
+                            <span className="text-xs bg-gray-100 px-2 py-1 rounded-full shrink-0">
+                              {opt.minutes} min
+                            </span>
+                          </div>
+                          {opt.equipment?.length > 0 && (
+                            <p className="text-xs text-gray-500 mt-1.5">
+                              Needs: {opt.equipment.join(', ')}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-3 mt-2">
+                            <button
+                              onClick={() => setSwapPreview(opt)}
+                              className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700"
+                            >
+                              See the details
+                            </button>
+                            <button
+                              onClick={() => confirmSwap(opt)}
+                              disabled={swapSaving}
+                              className="text-xs text-gray-600 hover:text-gray-900 disabled:opacity-50"
+                            >
+                              Use this one
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {/* AI Preview */}
                   {swapPreview && (
@@ -934,7 +989,7 @@ export default function PracticePage() {
                       className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="all">All Categories</option>
-                      {[...new Set(drillResources.map((d: any) => d.skill_category))].sort().map((cat: any) => (
+                      {Array.from(new Set(drillResources.map((d: any) => d.skill_category))).sort().map((cat: any) => (
                         <option key={cat} value={cat}>{cat}</option>
                       ))}
                     </select>

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Play, Wrench, Check, X, RefreshCw, Loader2, RotateCcw } from 'lucide-react'
+import { Play, Wrench, Check, X, RefreshCw, Loader2, RotateCcw, Shuffle } from 'lucide-react'
+import { DrillOptions, OptionDrill } from './DrillOptions'
 
 // Judging the drills before they become the plan.
 //
@@ -35,6 +36,10 @@ interface Props {
   onVerdict: (drillId: string, verdict: DrillVerdict) => void
   onRefresh?: (reason: string) => Promise<void> | void
   refreshing?: boolean
+  // Alternatives for one slot. Swapping the whole set to change one drill is
+  // how a coach loses the two they liked.
+  onOptions?: (drillId: string) => Promise<OptionDrill[]>
+  onPick?: (replaceDrillId: string, chosen: OptionDrill) => void
 }
 
 const REJECTION_LABEL: Record<string, string> = {
@@ -42,9 +47,26 @@ const REJECTION_LABEL: Record<string, string> = {
   not_this: 'Not this one',
 }
 
-export function DrillReview({ drills, verdicts, onVerdict, onRefresh, refreshing }: Props) {
+export function DrillReview({
+  drills, verdicts, onVerdict, onRefresh, refreshing, onOptions, onPick,
+}: Props) {
   const [askingWhy, setAskingWhy] = useState(false)
   const [reason, setReason] = useState('')
+  const [optionsFor, setOptionsFor] = useState<string | null>(null)
+  const [options, setOptions] = useState<OptionDrill[]>([])
+  const [loadingOptions, setLoadingOptions] = useState(false)
+
+  const showOptions = async (drillId: string) => {
+    if (!onOptions) return
+    setOptionsFor(drillId)
+    setOptions([])
+    setLoadingOptions(true)
+    try {
+      setOptions(await onOptions(drillId))
+    } finally {
+      setLoadingOptions(false)
+    }
+  }
 
   if (!drills.length) {
     return (
@@ -113,6 +135,16 @@ export function DrillReview({ drills, verdicts, onVerdict, onRefresh, refreshing
               </>
             )}
 
+            {optionsFor === d.id && (
+              <DrillOptions
+                options={options}
+                loading={loadingOptions}
+                replacingName={d.drill_name}
+                onPick={o => { onPick?.(d.id, o); setOptionsFor(null) }}
+                onCancel={() => setOptionsFor(null)}
+              />
+            )}
+
             <div className="flex flex-wrap gap-3 mt-2.5 pt-2.5 border-t border-gray-100">
               {rejected ? (
                 <button
@@ -135,6 +167,14 @@ export function DrillReview({ drills, verdicts, onVerdict, onRefresh, refreshing
                   >
                     <X size={11} /> Not this one
                   </button>
+                  {onOptions && (
+                    <button
+                      onClick={() => showOptions(d.id)}
+                      className="text-xs text-gray-500 hover:text-gray-800 inline-flex items-center gap-1"
+                    >
+                      <Shuffle size={11} /> Other options
+                    </button>
+                  )}
                 </>
               )}
             </div>

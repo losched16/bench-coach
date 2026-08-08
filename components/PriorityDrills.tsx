@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Play, RefreshCw, Loader2, AlertCircle, Wrench } from 'lucide-react'
+import { Play, RefreshCw, Loader2, AlertCircle, Wrench, Shuffle } from 'lucide-react'
+import { DrillOptions, OptionDrill } from './DrillOptions'
 
 // The drills attached to a running priority.
 //
@@ -39,6 +40,10 @@ export function PriorityDrills({ prescriptionId, coachId, onSwapped }: Props) {
   const [reason, setReason] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Which slot is being reconsidered, and what it could become.
+  const [optionsFor, setOptionsFor] = useState<string | null>(null)
+  const [options, setOptions] = useState<OptionDrill[]>([])
+  const [loadingOptions, setLoadingOptions] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -54,6 +59,52 @@ export function PriorityDrills({ prescriptionId, coachId, onSwapped }: Props) {
       .finally(() => !cancelled && setLoading(false))
     return () => { cancelled = true }
   }, [prescriptionId, coachId])
+
+  // Options for ONE slot. Nothing is written until the coach picks — a swap
+  // counter that ticked on "let me look" would poison the signal the check-in
+  // reads off it.
+  const showOptions = async (drillId: string) => {
+    setOptionsFor(drillId)
+    setOptions([])
+    setLoadingOptions(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/prescribe/drills', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prescriptionId, coachId, replaceDrillId: drillId, count: 3 }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Could not find options')
+      setOptions(data.options || [])
+    } catch (e: any) {
+      setError(e.message)
+      setOptionsFor(null)
+    } finally {
+      setLoadingOptions(false)
+    }
+  }
+
+  const pickOption = async (replaceDrillId: string, chosen: OptionDrill) => {
+    setOptionsFor(null)
+    // Optimistic: the swap is a single row update and the coach is standing
+    // at a field waiting to read it.
+    setDrills(prev => prev.map(d => (d.id === replaceDrillId ? { ...d, ...chosen } as any : d)))
+    try {
+      const res = await fetch('/api/prescribe/drills', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prescriptionId, coachId, replaceDrillId, withDrillId: chosen.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Could not swap that drill')
+      setSwaps(data.swaps ?? swaps + 1)
+      if (data.readWarning) setNotice(data.readWarning)
+      onSwapped?.()
+    } catch (e: any) {
+      setError(e.message)
+    }
+  }
 
   const swap = async () => {
     setSwapping(true)
@@ -130,15 +181,33 @@ export function PriorityDrills({ prescriptionId, coachId, onSwapped }: Props) {
               </p>
             ) : null}
 
-            {(d.youtube_url || d.youtube_video_id) && (
-              <a
-                href={d.youtube_url || `https://www.youtube.com/watch?v=${d.youtube_video_id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-700 mt-2"
+            <div className="flex items-center gap-3 mt-2 flex-wrap">
+              {(d.youtube_url || d.youtube_video_id) && (
+                <a
+                  href={d.youtube_url || `https://www.youtube.com/watch?v=${d.youtube_video_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-700"
+                >
+                  <Play size={13} /> Watch{d.channel ? ` · ${d.channel}` : ''}
+                </a>
+              )}
+              <button
+                onClick={() => showOptions(d.id)}
+                className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800"
               >
-                <Play size={13} /> Watch{d.channel ? ` · ${d.channel}` : ''}
-              </a>
+                <Shuffle size={13} /> Other options
+              </button>
+            </div>
+
+            {optionsFor === d.id && (
+              <DrillOptions
+                options={options}
+                loading={loadingOptions}
+                replacingName={d.drill_name}
+                onPick={o => pickOption(d.id, o)}
+                onCancel={() => setOptionsFor(null)}
+              />
             )}
           </div>
         </div>

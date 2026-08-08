@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     // whole point of the review step is that nothing is committed until the
     // coach says so.
     if (!prescriptionId) {
-      const { searchText, excludeIds, playerAge: draftAge, problemSlug } = body
+      const { searchText, excludeIds, playerAge: draftAge, problemSlug, count } = body
       if (!searchText) {
         return NextResponse.json({ error: 'searchText required in draft mode' }, { status: 400 })
       }
@@ -104,9 +104,15 @@ export async function POST(request: NextRequest) {
             'Make it the priority as it stands and attack it your own way, or reword what you asked about.',
         })
       }
-      const picked = await pickReplacements(searchText, reason, pool)
-      return NextResponse.json({ drills: (picked.length ? picked : pool.slice(0, 3)).slice(0, 4) })
+      // `count` is how many CHOICES to offer for one slot. Without it this is
+      // the old behaviour: a fresh set to replace the whole list.
+      const want = Number(count) > 0 ? Math.min(Number(count), 5) : 3
+      const picked = await pickReplacements(searchText, reason, pool, want)
+      return NextResponse.json({ drills: (picked.length ? picked : pool.slice(0, want)).slice(0, want) })
     }
+
+    const replaceDrillId: string | null = body.replaceDrillId || null
+    const wantCount: number = Number(body.count) > 0 ? Math.min(Number(body.count), 5) : 0
 
     const { data: p } = await supabaseAdmin
       .from('prescriptions')
@@ -149,6 +155,17 @@ export async function POST(request: NextRequest) {
         message:
           'The library is out of drills for this one that you haven’t already tried. ' +
           'That is usually a sign the priority needs rethinking rather than more drills — give an update and let it re-read.',
+      })
+    }
+
+    // Offering choices for one slot writes nothing — the coach hasn't picked
+    // yet, and a swap counter that ticks on "let me look" would poison the
+    // signal the check-in reads.
+    if (wantCount > 0) {
+      const options = await pickReplacements(searchText, reason, eligible, wantCount)
+      return NextResponse.json({
+        options: (options.length ? options : eligible.slice(0, wantCount)).slice(0, wantCount),
+        forDrillId: replaceDrillId,
       })
     }
 
@@ -236,9 +253,10 @@ async function gatherCandidates(opts: {
 async function pickReplacements(
   searchText: string,
   reason: string | undefined,
-  pool: any[]
+  pool: any[],
+  want = 3
 ): Promise<any[]> {
-  if (!process.env.ANTHROPIC_API_KEY || pool.length <= 3) return pool.slice(0, 3)
+  if (!process.env.ANTHROPIC_API_KEY || pool.length <= want) return pool.slice(0, want)
 
   const list = pool.map((d, i) =>
     `${i}. ${d.drill_name}${d.description ? ` — ${String(d.description).slice(0, 140)}` : ''}`
@@ -250,11 +268,11 @@ They already tried a different set of drills for it and asked for new ones.${
   reason ? ` What they said about it: "${String(reason).slice(0, 400)}"` : ''
 }
 
-Pick the 3 drills below that would genuinely help, best first. Judge what the drill actually trains, not what category it sits in${
+Pick the ${want} drills below that would genuinely help, best first. Judge what the drill actually trains, not what category it sits in${
   reason ? ', and take their reason seriously — if the last set needed equipment they do not have or was too advanced, weight for that' : ''
 }.
 
-Return ONLY a JSON array of the numbers, at most 3. If none genuinely help, return [].
+Return ONLY a JSON array of the numbers, at most ${want}. If none genuinely help, return [].
 
 ${list}`
 
@@ -265,13 +283,79 @@ ${list}`
       messages: [{ role: 'user', content: prompt }],
     })
     const m = textFrom(res).match(/\[[\s\S]*?\]/)
-    if (!m) return pool.slice(0, 3)
+    if (!m) return pool.slice(0, want)
     return (JSON.parse(m[0]) as number[])
       .filter(i => Number.isInteger(i) && i >= 0 && i < pool.length)
-      .slice(0, 3)
+      .slice(0, want)
       .map(i => pool[i])
   } catch (e) {
     console.warn('Replacement drill gate failed, falling back to keyword order:', (e as any)?.message)
-    return pool.slice(0, 3)
+    return pool.slice(0, want)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// PATCH { prescriptionId, coachId, replaceDrillId, withDrillId }
+//   — the coach picked one of the options for a slot
+// ---------------------------------------------------------------------------
+// Slot-level, so the other drills keep their position. Swapping the whole set
+// to change one of them is how a coach loses the two they liked.
+export async function PATCH(request: NextRequest) {
+  try {
+    const { prescriptionId, coachId, replaceDrillId, withDrillId } = await request.json()
+    if (!prescriptionId || !coachId || !withDrillId) {
+      return NextResponse.json(
+        { error: 'prescriptionId, coachId and withDrillId are required' },
+        { status: 400 }
+      )
+    }
+
+    const { data: p } = await supabaseAdmin
+      .from('prescriptions')
+      .select('id, drill_ids, retired_drill_ids, drill_swaps')
+      .eq('id', prescriptionId)
+      .eq('coach_id', coachId)
+      .maybeSingle()
+
+    if (!p) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    const pres = p as any
+
+    const current: string[] = pres.drill_ids || []
+    const retired: string[] = pres.retired_drill_ids || []
+
+    // Replace in place when we know which slot; append when the coach is
+    // adding rather than swapping.
+    const next = replaceDrillId && current.includes(replaceDrillId)
+      ? current.map(id => (id === replaceDrillId ? withDrillId : id))
+      : [...current, withDrillId]
+
+    const { data: updated, error } = await supabaseAdmin
+      .from('prescriptions')
+      .update({
+        drill_ids: Array.from(new Set(next)),
+        retired_drill_ids: replaceDrillId
+          ? Array.from(new Set([...retired, replaceDrillId]))
+          : retired,
+        // One swap is one swap regardless of how many options were shown.
+        drill_swaps: replaceDrillId ? (pres.drill_swaps || 0) + 1 : (pres.drill_swaps || 0),
+      })
+      .eq('id', prescriptionId)
+      .eq('coach_id', coachId)
+      .select('drill_ids, drill_swaps')
+      .single()
+
+    if (error) throw error
+    const swaps = (updated as any).drill_swaps || 0
+
+    return NextResponse.json({
+      drillIds: (updated as any).drill_ids || [],
+      swaps,
+      readWarning: swaps >= 2
+        ? 'That is the second drill change on this priority. If the work is getting done and nothing is moving, the problem is usually the read rather than the drills — worth sending an update so it can look again at the cause.'
+        : null,
+    })
+  } catch (error: any) {
+    console.error('Priority drill swap error:', error)
+    return NextResponse.json({ error: error.message || 'Could not swap the drill' }, { status: 500 })
   }
 }

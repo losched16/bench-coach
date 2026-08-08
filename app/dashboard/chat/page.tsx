@@ -346,6 +346,29 @@ export default function ChatPage() {
     }
   }
 
+  // Options for one slot while the read is still a draft. Nothing is written
+  // — there is no prescription row yet, which is the point of the review step.
+  const draftOptions = async (drillId: string) => {
+    if (!commit?.draft || !coachId) return []
+    try {
+      const res = await fetch('/api/prescribe/drills', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coachId,
+          count: 3,
+          searchText: [commit.draft.markdown?.slice(0, 600), commit.complaint].filter(Boolean).join(' '),
+          problemSlug: commit.draft.problemSlug,
+          excludeIds: commit.drills.map(d => d.id),
+        }),
+      })
+      const data = await res.json()
+      return data.drills || []
+    } catch {
+      return []
+    }
+  }
+
   const refreshDraftDrills = async (reason: string) => {
     if (!commit?.draft || !coachId) return
     setCommit(prev => prev && ({ ...prev, refreshing: true }))
@@ -839,6 +862,14 @@ export default function ChatPage() {
                     }))}
                     onRefresh={refreshDraftDrills}
                     refreshing={commit.refreshing}
+                    onOptions={draftOptions}
+                    onPick={(replaceId, chosen) => setCommit(prev => prev && ({
+                      ...prev,
+                      drills: prev.drills.map(d => (d.id === replaceId ? chosen as any : d)),
+                      // The one they turned down stays turned down, so a later
+                      // refresh can't circle back to it.
+                      verdicts: { ...prev.verdicts, [replaceId]: undefined as any },
+                    }))}
                   />
 
                   {commit.error && <p className="text-sm text-red-700">{commit.error}</p>}

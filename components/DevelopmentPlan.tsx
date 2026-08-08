@@ -25,6 +25,7 @@ export function DevelopmentPlan({ prescriptionId, coachId, subjectName }: Props)
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [migrationMessage, setMigrationMessage] = useState<string | null>(null)
+  const [stale, setStale] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -35,6 +36,7 @@ export function DevelopmentPlan({ prescriptionId, coachId, subjectName }: Props)
         if (cancelled) return
         setMarkdown(d.plan?.markdown || null)
         setGeneratedAt(d.plan?.generated_at || null)
+        setStale(!!d.stale)
         if (d.needsMigration) setMigrationMessage(d.migrationMessage || 'Run the migrations in /migrations.')
       })
       .catch(() => {})
@@ -73,6 +75,7 @@ export function DevelopmentPlan({ prescriptionId, coachId, subjectName }: Props)
         setMarkdown(buffer)
       }
       setGeneratedAt(new Date().toISOString())
+      setStale(false)
     } catch (e: any) {
       setError(e.message || 'Could not write the plan.')
     } finally {
@@ -131,6 +134,16 @@ export function DevelopmentPlan({ prescriptionId, coachId, subjectName }: Props)
       ) : (
         <div className="bg-gray-50 rounded-lg p-4">
           <AnalysisProse body={markdown} />
+        </div>
+      )}
+
+      {stale && !running && (
+        <div className="flex gap-2 text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <AlertCircle size={16} className="shrink-0 mt-0.5 text-amber-600" />
+          <p>
+            You&apos;ve changed the drills since this was written, so it still schedules ones that
+            are no longer on the priority. Rewrite it to pick up the new set.
+          </p>
         </div>
       )}
 
