@@ -5,11 +5,11 @@ import { createSupabaseComponentClient } from '@/lib/supabase'
 import {
   CalendarCheck, Loader2, AlertCircle, Target, History, Search,
   CheckCircle2, RotateCcw, XCircle, ChevronRight, ListChecks, MessageSquarePlus, ChevronDown,
-  ClipboardList,
+  ClipboardList, ChevronLeft,
 } from 'lucide-react'
 import { useTracker } from '@/lib/tracking'
 import { PrescriptionSections } from './PrescriptionSections'
-import { ActivePriority } from './ActivePriority'
+import { ActivePriority, HOLD_DAYS } from './ActivePriority'
 import { PriorityDrills } from './PriorityDrills'
 import { DevelopmentPlan } from './DevelopmentPlan'
 import { splitSections } from '@/lib/analysis'
@@ -97,6 +97,9 @@ export function PrioritiesBoard({ teamId, focusId = null }: Props) {
   // charged a click for the most common thing on the screen. One expanded is
   // not a wall; all of them would be.
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  // Which plan is open. When set, the board shows THAT plan and nothing else —
+  // the list is a menu, not a stack.
+  const [detailId, setDetailId] = useState<string | null>(null)
   const autoExpanded = useRef(false)
   const [updateDraft, setUpdateDraft] = useState('')
 
@@ -255,6 +258,55 @@ export function PrioritiesBoard({ teamId, focusId = null }: Props) {
   }
 
 
+  // The list. One big row per plan — the whole point is that a coach can see
+  // every plan they are running in one screen without scrolling, and open the
+  // one they came for.
+  //
+  // This used to be an accordion: every plan's drills, checklist, prose and
+  // update box rendered inline, so three priorities made one enormous scroll
+  // and nothing was findable. Opening a plan now REPLACES the list rather than
+  // growing the page.
+  const renderPlanRow = (p: OpenPrescription) => {
+    const pct = Math.min(100, Math.round((p.daysElapsed / HOLD_DAYS) * 100))
+    return (
+      <button
+        key={p.id}
+        onClick={() => { setDetailId(p.id); setUpdateDraft('') }}
+        className="w-full text-left bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-red-300 active:bg-gray-50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-lg font-bold text-gray-900">
+                {focusAreaLabel(p.focusArea)} plan
+              </span>
+              {p.daysElapsed >= HOLD_DAYS && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-medium">
+                  Ready to review
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-gray-600 mt-0.5 truncate">{p.subjectName}</p>
+            <p className="text-sm text-gray-800 mt-1 line-clamp-2">{p.priority}</p>
+          </div>
+          <ChevronRight size={22} className="shrink-0 text-gray-400" />
+        </div>
+
+        <div className="mt-3 flex items-center gap-3">
+          <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full ${p.daysElapsed >= HOLD_DAYS ? 'bg-amber-400' : 'bg-red-500'}`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <span className="text-xs text-gray-500 tabular-nums shrink-0">
+            Day {p.daysElapsed} of {HOLD_DAYS}
+          </span>
+        </div>
+      </button>
+    )
+  }
+
   // Everything you can do to a priority that is already running: see the
   // drills it prescribed, swap them when they aren't landing, or say what
   // you're actually seeing and have it re-read on the spot.
@@ -357,6 +409,67 @@ export function PrioritiesBoard({ teamId, focusId = null }: Props) {
             </div>
           )}
         </div>
+      </div>
+    )
+  }
+
+  // ── One plan, open ──────────────────────────────────────
+  // Nothing else on screen. The list is a menu; this is the thing you came for.
+  const detail = detailId ? open.find(p => p.id === detailId) : null
+  if (detail) {
+    return (
+      <div className="space-y-4 max-w-3xl">
+        <button
+          onClick={() => { setDetailId(null); setExpandedId(null) }}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900"
+        >
+          <ChevronLeft size={17} /> All plans
+        </button>
+
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">
+            {focusAreaLabel(detail.focusArea)} plan
+          </h2>
+          <p className="text-sm text-gray-600 mt-0.5">
+            {detail.subjectName} · day {detail.daysElapsed} of {HOLD_DAYS}
+          </p>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <p className="text-[15px] text-gray-900 leading-relaxed">{detail.priority}</p>
+        </div>
+
+        {/* The checklist first. It is what you open this for on a Tuesday. */}
+        {coachId && (
+          <DevelopmentPlan
+            prescriptionId={detail.id}
+            coachId={coachId}
+            subjectName={detail.subjectName}
+            areaLabel={focusAreaLabel(detail.focusArea)}
+          />
+        )}
+
+        <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-gray-900">What to run</h3>
+          {coachId && (
+            <PriorityDrills
+              prescriptionId={detail.id}
+              coachId={coachId}
+              onSwapped={() => load(coachId)}
+            />
+          )}
+        </div>
+
+        {/* One big button, because this is the action of the screen. */}
+        {detail.daysElapsed >= HOLD_DAYS && coachId && (
+          <button
+            onClick={() => run(detail.id)}
+            disabled={running}
+            className="w-full py-4 rounded-xl bg-amber-500 text-white text-lg font-bold active:bg-amber-600 disabled:opacity-50"
+          >
+            {running ? 'Reading it…' : 'Review this plan'}
+          </button>
+        )}
       </div>
     )
   }
@@ -549,7 +662,7 @@ export function PrioritiesBoard({ teamId, focusId = null }: Props) {
                     {groups[key].length} {groups[key].length === 1 ? 'priority' : 'priorities'}
                   </span>
                 </div>
-                {groups[key].map(p => renderPriority(p, { due: false }))}
+                {groups[key].map(p => renderPlanRow(p))}
               </div>
             ))
           })()}

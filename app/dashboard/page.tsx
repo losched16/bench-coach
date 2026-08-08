@@ -141,71 +141,85 @@ function DashboardContent() {
           screen you have to remember to visit. */}
       <PrioritiesBoard teamId={teamId} focusId={focusId} />
 
-      {/* Primary Goals */}
-      {data.team.primary_goals && data.team.primary_goals.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Season Goals</h3>
-          <div className="flex flex-wrap gap-2">
-            {data.team.primary_goals.map((goal: string) => (
-              <span
-                key={goal}
-                className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm capitalize"
-              >
-                {goal}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Top Issues */}
-      {data.topIssues.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Pinned Issues</h3>
-          <div className="space-y-3">
-            {data.topIssues.map((issue) => (
-              <div key={issue.id} className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
-                <div className="flex-1">
-                  {issue.title && <div className="font-medium text-gray-900">{issue.title}</div>}
-                  <div className="text-gray-600 text-sm">{issue.note}</div>
-                </div>
+      {/* Team reference. Real information, but not the job — three cards
+          stacked under the plans turned the page into a scroll where the thing
+          you came for was the shortest part of it. One line, closed. */}
+      {(data.team.primary_goals?.length > 0 || data.topIssues.length > 0 || data.recentPlans.length > 0) && (
+        <details className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-gray-700 select-none">
+            Season goals, pinned issues and recent practice plans
+          </summary>
+          <div className="px-4 pb-4 space-y-4 border-t border-gray-100 pt-4">
+          {/* Primary Goals */}
+          {data.team.primary_goals && data.team.primary_goals.length > 0 && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Season Goals</h3>
+              <div className="flex flex-wrap gap-2">
+                {data.team.primary_goals.map((goal: string) => (
+                  <span
+                    key={goal}
+                    className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm capitalize"
+                  >
+                    {goal}
+                  </span>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            </div>
+          )}
 
-      {/* Recent Practice Plans */}
-      {data.recentPlans.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Practice Plans</h3>
-            <Link
-              href={`/dashboard/practice?teamId=${teamId}`}
-              className="text-sm text-blue-600 hover:text-blue-700"
-            >
-              View all
-            </Link>
-          </div>
-          <div className="space-y-3">
-            {data.recentPlans.map((plan) => (
-              <div key={plan.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <div className="font-medium text-gray-900">{plan.title}</div>
-                  <div className="text-sm text-gray-600">{plan.duration_minutes} minutes</div>
-                </div>
+              {/* Top Issues */}
+          {data.topIssues.length > 0 && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Pinned Issues</h3>
+              <div className="space-y-3">
+                {data.topIssues.map((issue) => (
+                  <div key={issue.id} className="flex items-start space-x-3">
+                    <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
+                    <div className="flex-1">
+                      {issue.title && <div className="font-medium text-gray-900">{issue.title}</div>}
+                      <div className="text-gray-600 text-sm">{issue.note}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+              {/* Recent Practice Plans */}
+          {data.recentPlans.length > 0 && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Recent Practice Plans</h3>
                 <Link
-                  href={`/dashboard/practice/${plan.id}?teamId=${teamId}`}
+                  href={`/dashboard/practice?teamId=${teamId}`}
                   className="text-sm text-blue-600 hover:text-blue-700"
                 >
-                  View
+                  View all
                 </Link>
               </div>
-            ))}
+              <div className="space-y-3">
+                {data.recentPlans.map((plan) => (
+                  <div key={plan.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <div className="font-medium text-gray-900">{plan.title}</div>
+                      <div className="text-sm text-gray-600">{plan.duration_minutes} minutes</div>
+                    </div>
+                    <Link
+                      href={`/dashboard/practice/${plan.id}?teamId=${teamId}`}
+                      className="text-sm text-blue-600 hover:text-blue-700"
+                    >
+                      View
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           </div>
-        </div>
+        </details>
       )}
+
     </div>
   )
 }

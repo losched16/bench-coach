@@ -36,7 +36,7 @@ export interface ActivePriorityItem {
   teamId?: string | null
 }
 
-const HOLD_DAYS = 21
+export const HOLD_DAYS = 21
 
 export function ActivePriority({
   item,
