@@ -30,6 +30,20 @@ const OBJECT_TO_MIGRATION: Array<{ match: RegExp; file: string; what: string }> 
   { match: /\b(chat_threads\.player_id|meta)\b/, file: '021_chat_thread_scope.sql', what: 'conversation scope' },
   // 022 — interacting with a running priority
   { match: /\b(drill_swaps|retired_drill_ids|coach_update)\b/, file: '022_priority_interaction.sql', what: 'drill swaps and priority updates' },
+  // 023 — the multi-week plan behind a priority
+  { match: /\bdevelopment_plan\b/, file: '023_development_plans.sql', what: 'development plans' },
+  // 024 — Personal and Coach
+  { match: /\b(subscription_tier|workspace_kind)\b/, file: '024_tiers.sql', what: 'the subscription tiers' },
+  // 025 — logging a session in one tap, without double-counting it
+  { match: /\bquick_log\b/, file: '025_quick_log.sql', what: 'one-tap session logging' },
+  // 027 — rules the lineup solver may not trade away
+  { match: /\b(locked_position|excluded_positions|min_innings|max_innings)\b/, file: '027_lineup_constraints.sql', what: 'position locks and innings limits' },
+  // 028 — who is in the game, and where
+  { match: /\b(game_participation|game_position_log|sub_rules|lineup_locked_at|times_removed|reentries)\b/, file: '028_live_lineup.sql', what: 'the live lineup and substitution rules' },
+  // 029 — league quirks the coach states in the dugout chat
+  { match: /\bhouse_rules\b/, file: '029_house_rules.sql', what: 'house rules on a game' },
+  // 030 — the book
+  { match: /\b(game_events|is_home|scorebook_started_at|outs_after|bases_after|runs_scored)\b/, file: '030_scorebook.sql', what: 'the scorebook' },
 ]
 
 export interface MigrationHint {

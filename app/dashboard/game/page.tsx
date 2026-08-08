@@ -6,11 +6,12 @@ import { createSupabaseComponentClient } from '@/lib/supabase'
 import {
   Plus, Minus, ChevronDown, ChevronUp, X, Trophy, Clock,
   ThumbsUp, AlertTriangle, Target, Shield, Zap,
-  MapPin, Send, Trash2, Activity, ChevronLeft, Users
+  MapPin, Send, Trash2, Activity, ChevronLeft, Users, BookOpen
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { findExistingGame } from '@/lib/games'
 import { LiveLineup } from '@/components/LiveLineup'
+import { Scorebook } from '@/components/Scorebook'
 import { usePageView } from '@/lib/tracking'
 
 interface Player {
@@ -95,6 +96,9 @@ function GamePageContent() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [showHandoff, setShowHandoff] = useState(false)
   const [lineupPanelOpen, setLineupPanelOpen] = useState(false)
+  // The book. Closed by default — a coach who isn't scoring shouldn't have to
+  // scroll past it, and one who is opens it once and leaves it open.
+  const [scorebookOpen, setScorebookOpen] = useState(false)
   const router = useRouter()
 
   // End game state
@@ -805,6 +809,28 @@ function GamePageContent() {
           )}
         </div>
 
+        {/* The scorebook. Below the lineup because subs are the more frequent
+            interruption, above pitch count because the book feeds it. */}
+        <div className="bg-white border-b border-gray-200">
+          <button
+            onClick={() => setScorebookOpen(!scorebookOpen)}
+            className="w-full px-4 py-3 flex items-center justify-between text-sm font-bold text-gray-800"
+          >
+            <span className="flex items-center gap-2">
+              <BookOpen size={16} />
+              Scorebook
+            </span>
+            {scorebookOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+          {scorebookOpen && activeGame && (
+            <Scorebook
+              gameId={activeGame.id}
+              currentPitcher={currentPitcher}
+              pitcherName={currentPitcher ? getPlayerName(currentPitcher) : null}
+            />
+          )}
+        </div>
+
         <div className="bg-white border-b border-gray-200">
           <button
             onClick={() => setPitchPanelOpen(!pitchPanelOpen)}
@@ -984,7 +1010,23 @@ function GamePageContent() {
         {/* Sticky Footer - End Game */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-30">
           <button
-            onClick={() => setShowEndModal(true)}
+            onClick={async () => {
+              // If the book was kept, it already knows the score. Asking a
+              // coach to retype what they just spent six innings recording is
+              // how a feature gets called pointless. Read it fresh — the
+              // scorebook writes the score server-side as runs come in.
+              if (activeGame) {
+                const { data } = await supabase
+                  .from('games')
+                  .select('team_score, opponent_score')
+                  .eq('id', activeGame.id)
+                  .maybeSingle()
+                const g = data as any
+                if (g?.team_score != null) setEndScoreUs(String(g.team_score))
+                if (g?.opponent_score != null) setEndScoreThem(String(g.opponent_score))
+              }
+              setShowEndModal(true)
+            }}
             className="w-full py-3 bg-red-600 text-white rounded-xl font-bold active:bg-red-700 transition-colors"
           >
             End Game

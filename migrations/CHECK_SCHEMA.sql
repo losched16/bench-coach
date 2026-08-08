@@ -27,7 +27,18 @@ WITH checks(migration, feature, kind, obj, col) AS (VALUES
   ('021_chat_thread_scope.sql',         'Conversation scope',            'column', 'chat_threads',       'player_id'),
   ('021_chat_thread_scope.sql',         'Priorities written into chat',  'column', 'chat_messages',      'meta'),
   ('022_priority_interaction.sql',      'Swapping drills',               'column', 'prescriptions',      'drill_swaps'),
-  ('022_priority_interaction.sql',      'On-demand check-ins',           'column', 'checkins',           'coach_update')
+  ('022_priority_interaction.sql',      'On-demand check-ins',           'column', 'checkins',           'coach_update'),
+  ('023_development_plans.sql',         'Development plans',             'column', 'prescriptions',      'development_plan'),
+  ('024_tiers.sql',                     'Personal and Coach tiers',      'column', 'teams',              'workspace_kind'),
+  ('025_quick_log.sql',                 'One-tap session logging',       'column', 'entries',            'quick_log'),
+  ('027_lineup_constraints.sql',        'Position locks',                'column', 'team_players',       'locked_position'),
+  ('027_lineup_constraints.sql',        'Innings minimums',              'column', 'team_players',       'min_innings'),
+  ('028_live_lineup.sql',               'The lineup, live',              'table',  'game_participation', NULL),
+  ('028_live_lineup.sql',               'Who played where',              'table',  'game_position_log',  NULL),
+  ('028_live_lineup.sql',               'Substitution rules',            'column', 'games',              'sub_rules'),
+  ('029_house_rules.sql',               'House rules',                   'column', 'games',              'house_rules'),
+  ('030_scorebook.sql',                 'The scorebook',                 'table',  'game_events',        NULL),
+  ('030_scorebook.sql',                 'Home or away',                  'column', 'games',              'is_home')
 )
 SELECT
   c.migration,
