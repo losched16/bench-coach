@@ -26,7 +26,12 @@ export const maxDuration = 120
 
 export async function POST(request: NextRequest) {
   try {
-    const { teamId, message, history, threadId: requestedThreadId, playerId } = await request.json()
+    const {
+      teamId, message, history, threadId: requestedThreadId, playerId,
+      // Set when the coach opened this conversation from an opponent's page.
+      // It replaces the guesswork below with a fact.
+      opponentTeamId,
+    } = await request.json()
 
     console.log('Chat API called with teamId:', teamId)
 
@@ -375,6 +380,13 @@ export async function POST(request: NextRequest) {
           ...(history || []).slice(-4).map((h: any) => h.content || ''),
         ].join('\n').toLowerCase()
 
+        // A conversation opened from an opponent's page is about that opponent,
+        // stated rather than inferred. "What about their two-hole?" names
+        // nobody and would fall straight through the heuristics below.
+        const pinned = opponentTeamId
+          ? opponentTeams.filter(ot => ot.id === opponentTeamId)
+          : []
+
         // Teams named in the conversation
         const namedTeams = opponentTeams.filter(ot => {
           const words = ot.name.toLowerCase().split(/\s+/).filter((w: string) => w.length >= 4)
@@ -383,6 +395,7 @@ export async function POST(request: NextRequest) {
 
         // Generic scouting intent ("who can they pitch tomorrow?", "their #7")
         const scoutingIntent =
+          pinned.length > 0 ||
           /(scout|opponent|matchup|bracket|availab)/i.test(recentText) ||
           /\b(they|them|their)\b[^.?!]*\b(pitch|throw|start|bunt|steal|hit|play)/i.test(recentText) ||
           /\b(their|that|the)\s*#\s?\d+/i.test(recentText) ||
@@ -394,7 +407,13 @@ export async function POST(request: NextRequest) {
           .eq('coach_id', team.coach_id)
           .in('status', ['upcoming', 'possible'])
 
-        let relevantTeams = namedTeams
+        // The pinned team always leads. Another team mentioned in passing still
+        // gets loaded — "we saw Springfield's ace at the Riverside tournament"
+        // is a real thing a coach says — but it never displaces the one they
+        // opened.
+        let relevantTeams = pinned.length > 0
+          ? [...pinned, ...namedTeams.filter(t => t.id !== opponentTeamId)]
+          : namedTeams
         if (relevantTeams.length === 0 && scoutingIntent) {
           // No team named — fall back to teams with pending matchups, then most recently seen
           const matchupTeamIds = new Set((allMatchups || []).map(m => m.opponent_team_id))
@@ -628,12 +647,17 @@ export async function POST(request: NextRequest) {
     // Which conversation this belongs to. The client names it explicitly now
     // that a team can have many; falling back to the most recently used one
     // keeps older clients and direct API calls working.
-    let thread: { id: string; title?: string | null; player_id?: string | null } | null = null
+    let thread: {
+      id: string; title?: string | null; player_id?: string | null
+      opponent_team_id?: string | null
+    } | null = null
+
+    const THREAD_COLS = 'id, title, player_id, opponent_team_id'
 
     if (requestedThreadId) {
       const { data } = await supabaseAdmin
         .from('chat_threads')
-        .select('id, title, player_id')
+        .select(THREAD_COLS)
         .eq('id', requestedThreadId)
         .eq('team_id', teamId)   // a thread id from another team is not a match
         .maybeSingle()
@@ -641,10 +665,19 @@ export async function POST(request: NextRequest) {
     }
 
     if (!thread) {
-      const { data } = await supabaseAdmin
+      // Falling back to "the most recent conversation" is right for the general
+      // chat and wrong for a scoped one — a coach who opens Springfield must
+      // not land in whatever they were last talking about. Scoped asks only
+      // ever resume a thread with the same scope.
+      let q = supabaseAdmin
         .from('chat_threads')
-        .select('id, title, player_id')
+        .select(THREAD_COLS)
         .eq('team_id', teamId)
+      q = opponentTeamId
+        ? q.eq('opponent_team_id', opponentTeamId)
+        : q.is('opponent_team_id', null)
+
+      const { data } = await q
         .order('last_message_at', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false })
         .limit(1)
@@ -655,7 +688,7 @@ export async function POST(request: NextRequest) {
     if (!thread) {
       const { data: newThread, error: threadErr } = await supabaseAdmin
         .from('chat_threads')
-        .insert({ team_id: teamId })
+        .insert({ team_id: teamId, opponent_team_id: opponentTeamId || null })
         .select()
         .single()
       thread = newThread
@@ -750,12 +783,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing teamId' }, { status: 400 })
     }
 
-    let thread: { id: string; title?: string | null } | null = null
+    // Scoped the same way the POST is: a request for Springfield's
+    // conversation must not resume whatever was open last.
+    const opponentTeamId = searchParams.get('opponentTeamId')
+
+    let thread: {
+      id: string; title?: string | null; player_id?: string | null
+      opponent_team_id?: string | null
+    } | null = null
 
     if (requestedThreadId) {
       const { data } = await supabaseAdmin
         .from('chat_threads')
-        .select('id, title')
+        .select('id, title, player_id, opponent_team_id')
         .eq('id', requestedThreadId)
         .eq('team_id', teamId)
         .maybeSingle()
@@ -765,10 +805,15 @@ export async function GET(request: NextRequest) {
     // No thread asked for: open the one they were last using, not the oldest.
     // Landing in a months-old conversation is how this looked broken.
     if (!thread) {
-      const { data } = await supabaseAdmin
+      let q = supabaseAdmin
         .from('chat_threads')
-        .select('id, title, player_id')
+        .select('id, title, player_id, opponent_team_id')
         .eq('team_id', teamId)
+      q = opponentTeamId
+        ? q.eq('opponent_team_id', opponentTeamId)
+        : q.is('opponent_team_id', null)
+
+      const { data } = await q
         .order('last_message_at', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false })
         .limit(1)
@@ -779,7 +824,7 @@ export async function GET(request: NextRequest) {
     if (!thread) {
       const { data: newThread, error: threadErr } = await supabaseAdmin
         .from('chat_threads')
-        .insert({ team_id: teamId })
+        .insert({ team_id: teamId, opponent_team_id: opponentTeamId || null })
         .select()
         .single()
       thread = newThread
@@ -801,6 +846,7 @@ export async function GET(request: NextRequest) {
       threadId: thread.id,
       threadTitle: thread.title ?? null,
       playerId: thread.player_id ?? null,
+      opponentTeamId: thread.opponent_team_id ?? null,
       messages: messages || []
     })
 

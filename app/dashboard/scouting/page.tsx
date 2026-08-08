@@ -6,6 +6,7 @@ import { Suspense } from 'react'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { usePageView, useTracker } from '@/lib/tracking'
 import { nameSimilarity, stalenessLabel, stalenessOf, aggregateBattingLines, MIN_PA_FOR_TENDENCY } from '@/lib/scouting'
+import { OpponentChat } from '@/components/OpponentChat'
 import { prepareImages, imagesFromClipboard } from '@/lib/imagePrep'
 import { OpponentAnalysis } from '@/components/OpponentAnalysis'
 import {
@@ -299,6 +300,7 @@ function ScoutingContent() {
 
       {tab === 'opponents' && selectedOpponentId && (
         <OpponentDetail
+          teamId={teamId}
           detail={detail}
           loading={detailLoading}
           coachId={coachId}
@@ -454,12 +456,13 @@ function OpponentList({
 // ── Opponent detail ────────────────────────────────────
 
 function OpponentDetail({
-  detail, loading, coachId, mergeMode, mergeSelection, merging,
+  detail, loading, coachId, teamId, mergeMode, mergeSelection, merging,
   onBack, onToggleMergeMode, onToggleMergeSelect, onMerge, onClearReview, onDeleteEntry, onViewBoard,
 }: {
   detail: { team: OpponentTeam; players: OpponentPlayer[]; entries: ScoutingEntry[]; matchups: Matchup[] } | null
   loading: boolean
   coachId: string | null
+  teamId: string | null
   mergeMode: boolean
   mergeSelection: string[]
   merging: boolean
@@ -490,6 +493,19 @@ function OpponentDetail({
       <button onClick={onBack} className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900">
         <ChevronLeft size={16} /> All opponents
       </button>
+
+      {/* Ask about them. Sits at the top because it is the reason a coach opens
+          this page the night before a game — the tables below are the record,
+          this is the question. */}
+      {teamId && coachId && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <OpponentChat
+            teamId={teamId}
+            opponentTeamId={team.id}
+            opponentName={team.name}
+          />
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

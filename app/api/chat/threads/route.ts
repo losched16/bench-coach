@@ -18,6 +18,8 @@ export interface ThreadSummary {
   preview: string | null
   player_id: string | null
   player_name: string | null
+  opponent_team_id: string | null
+  opponent_name: string | null
 }
 
 // ---------------------------------------------------------------------------
@@ -26,14 +28,20 @@ export interface ThreadSummary {
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const teamId = searchParams.get('teamId')
+  // The opponent's own list. Without the filter, a sidebar on Springfield's
+  // page would show every conversation the team has ever had.
+  const opponentTeamId = searchParams.get('opponentTeamId')
 
   if (!teamId) return NextResponse.json({ error: 'Missing teamId' }, { status: 400 })
 
   try {
-    const { data: threads, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('chat_threads')
-      .select('id, title, created_at, last_message_at, archived, player_id, player:players(name)')
+      .select('id, title, created_at, last_message_at, archived, player_id, player:players(name), opponent_team_id, opponent:opponent_teams(name)')
       .eq('team_id', teamId)
+    if (opponentTeamId) query = query.eq('opponent_team_id', opponentTeamId)
+
+    const { data: threads, error } = await query
       .order('last_message_at', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false })
       .limit(100)
@@ -75,6 +83,8 @@ export async function GET(request: NextRequest) {
       // Supabase returns a joined row as an array on some shapes and an object
       // on others depending on the relationship it infers.
       player_name: (Array.isArray(t.player) ? t.player[0]?.name : t.player?.name) || null,
+      opponent_team_id: t.opponent_team_id || null,
+      opponent_name: (Array.isArray(t.opponent) ? t.opponent[0]?.name : t.opponent?.name) || null,
     }))
 
     return NextResponse.json({ threads: summaries })

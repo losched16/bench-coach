@@ -52,6 +52,8 @@ const OBJECT_TO_MIGRATION: Array<{ match: RegExp; file: string; what: string }> 
   { match: /\bis_home\b/, file: '030_scorebook.sql', what: 'home and away on a game' },
   // 032 — the other team's batting order
   { match: /\bgame_opponent_lineup\b/, file: '032_opponent_lineup.sql', what: "the other team's lineup" },
+  // 033 — a conversation pinned to one opponent
+  { match: /\bopponent_team_id\b/, file: '033_opponent_threads.sql', what: 'conversations about one opponent' },
 ]
 
 export interface MigrationHint {
