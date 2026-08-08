@@ -637,7 +637,9 @@ export async function generatePracticePlan(
   // What the loop already concluded about this team: active priorities and
   // what the coach actually wrote down. Without this the practice builder is a
   // separate tool that has never heard of the check-in.
-  loopContext?: string
+  loopContext?: string,
+  // Called as text arrives, so a caller can stream progress to the browser.
+  onProgress?: (charsSoFar: number, chunk: string) => void
 ): Promise<any> {
   try {
     // Build drill library context for the prompt
@@ -650,14 +652,14 @@ You have access to a curated library of ${drillResources.length} drills with You
 
 Available drills:
 ${drillResources.map(d =>
-  `- "${d.drill_name}" (${d.skill_category}, ${d.difficulty_level || 'all levels'}, Ages: ${d.age_range || 'all'})
-     ${d.youtube_video_id ? `youtube_video_id: "${d.youtube_video_id}"` : ''}
-     ${d.channel ? `Channel: ${d.channel}` : ''}
-     ${d.description || ''}
-     ${d.mechanic_focus?.length ? `Mechanics: ${d.mechanic_focus.join(', ')}` : ''}
-     ${d.common_flaws_fixed?.length ? `Fixes: ${d.common_flaws_fixed.join(', ')}` : ''}
-     ${d.equipment_needed?.length ? `Equipment: ${d.equipment_needed.join(', ')}` : ''}
-     ${d.ai_coaching_notes || ''}`
+  // One line each. This is a menu to choose from, not a manual — the model
+  // needs enough to pick well and nothing more. The full prose for every
+  // drill used to be here, and it dominated the request.
+  `- "${d.drill_name}" (${d.skill_category}${d.difficulty_level ? `, ${d.difficulty_level}` : ''}${d.age_range ? `, ages ${d.age_range}` : ''})` +
+  (d.youtube_video_id ? ` [video: ${d.youtube_video_id}]` : '') +
+  (d.description ? ` — ${String(d.description).slice(0, 130)}` : '') +
+  (d.mechanic_focus?.length ? ` | trains: ${d.mechanic_focus.slice(0, 4).join(', ')}` : '') +
+  (d.equipment_needed?.length ? ` | needs: ${d.equipment_needed.join(', ')}` : '')
 ).join('\n')}
 
 CRITICAL: When you use a drill from the library, you MUST copy the exact "drill_name" and "youtube_video_id" into your JSON output. Do NOT make up video IDs.`
@@ -743,9 +745,10 @@ Format as JSON:
   ]
 }`
 
-    // Streamed for the length, not for the UI: a plan this long is exactly the
-    // kind of request that gets cut off at a platform timeout mid-generation.
-    const response = await anthropic.messages.stream({
+    // Streamed for the length AND for the UI now: a plan this long is exactly
+    // the kind of request that gets cut off at a platform timeout, and it is
+    // also long enough that the coach needs to see it happening.
+    const stream = anthropic.messages.stream({
       model: 'claude-sonnet-5',
       // Thinking counts against this and a full plan is long JSON; too low and
       // the response truncates mid-object and fails to parse.
@@ -762,12 +765,24 @@ When a drill video library is available, match drills to videos so the coach can
 
 Always return valid JSON. No text outside the JSON.`,
       messages: [{ role: 'user', content: prompt }],
-      // The plan's quality lives in the prompt, which is long and specific.
-      // Medium is the balance point between a thoughtful plan and a coach
-      // staring at a spinner.
-      output_config: { effort: 'medium' },
-    }).finalMessage()
+      // The prompt is a rigid template with mandatory rules and a fixed JSON
+      // shape — the model is filling a form, not reasoning its way to one.
+      // Medium bought deliberation this task doesn't need and charged the
+      // coach the wait for it.
+      output_config: { effort: 'low' },
+    })
 
+    // Let the caller watch it arrive. A plan is 30-60 seconds of silence
+    // otherwise, and a spinner that long is indistinguishable from broken.
+    if (onProgress) {
+      let seen = 0
+      stream.on('text', (chunk: string) => {
+        seen += chunk.length
+        onProgress(seen, chunk)
+      })
+    }
+
+    const response = await stream.finalMessage()
     const content = textFrom(response)
 
     // Extract JSON from response

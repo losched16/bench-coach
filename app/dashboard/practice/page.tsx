@@ -56,6 +56,8 @@ export default function PracticePage() {
   const [swapPreview, setSwapPreview] = useState<any>(null)
   // Several suggestions to choose between, rather than one to accept or reroll.
   const [swapOptions, setSwapOptions] = useState<any[]>([])
+  // Blocks finished so far, so the wait shows something happening.
+  const [blocksWritten, setBlocksWritten] = useState(0)
   const [swapSaving, setSwapSaving] = useState(false)
   const [librarySearch, setLibrarySearch] = useState('')
   const [libraryCategory, setLibraryCategory] = useState('all')
@@ -242,6 +244,7 @@ export default function PracticePage() {
     if (focusAreas.length === 0 || !teamId) return
 
     setGenerating(true)
+    setBlocksWritten(0)
 
     try {
       const response = await fetch('/api/practice-plan', {
@@ -255,8 +258,35 @@ export default function PracticePage() {
       })
 
       if (!response.ok) throw new Error('Failed to generate plan')
+      if (!response.body) throw new Error('No response from the server')
 
-      const data = await response.json()
+      // NDJSON: progress lines while it writes, then the plan.
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buf = ''
+      let data: any = null
+
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += decoder.decode(value, { stream: true })
+
+        const lines = buf.split('\n')
+        // The last piece may be a partial line — leave it for the next chunk.
+        buf = lines.pop() || ''
+
+        for (const line of lines) {
+          if (!line.trim()) continue
+          let msg: any
+          try { msg = JSON.parse(line) } catch { continue }
+          if (msg.type === 'progress') setBlocksWritten(msg.blocks)
+          if (msg.type === 'error') throw new Error(msg.error)
+          if (msg.type === 'plan') data = msg.plan
+        }
+      }
+
+      if (!data) throw new Error('The plan stopped part-way through. Try again.')
 
       // Save the plan
       await supabase
@@ -761,7 +791,11 @@ export default function PracticePage() {
                   disabled={focusAreas.length === 0 || generating}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {generating ? 'Generating...' : 'Generate Plan'}
+                  {generating
+                    ? (blocksWritten > 0
+                        ? `Writing block ${blocksWritten}…`
+                        : 'Picking the drills…')
+                    : 'Generate Plan'}
                 </button>
               </div>
             </div>

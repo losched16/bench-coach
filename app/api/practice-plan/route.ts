@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { generatePracticePlan, TeamContext } from '@/lib/anthropic'
 import { assembleCoachContext, renderCoachContext } from '@/lib/coachContext'
+import { categoriesForPracticeFocus } from '@/lib/focusAreas'
 
 // Use service role for server-side operations (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -91,12 +92,40 @@ export async function POST(request: NextRequest) {
       fullConstraints += `\n\nRECENT PRACTICE RECAPS (use these to make this plan better):\n${recapContext}`
     }
 
-    // Load drill resources (same as chat API)
-    const { data: drillResources } = await supabaseAdmin
+    // Only the drills that could plausibly be in THIS practice. Sending all
+    // 100 with their full coaching notes was tens of thousands of input tokens
+    // per request, most of it about skills the coach did not pick — and it is
+    // the single biggest reason this took so long.
+    //
+    // ai_coaching_notes and safety_notes are deliberately not selected: they
+    // are long prose written for the drill page, and the model is choosing a
+    // drill here, not running it.
+    const wantedCategories = categoriesForPracticeFocus(focus)
+
+    let drillQuery = supabaseAdmin
       .from('drill_resources')
-      .select('drill_name, skill_category, description, youtube_url, youtube_video_id, channel, age_range, difficulty_level, mechanic_focus, common_flaws_fixed, equipment_needed, ai_coaching_notes, safety_notes')
+      .select('drill_name, skill_category, description, youtube_video_id, channel, age_range, difficulty_level, mechanic_focus, equipment_needed')
       .or('status.eq.approved,status.is.null')
-      .limit(100)
+
+    if (wantedCategories.length > 0) {
+      // ilike-any rather than `in`, because the stored categories are
+      // inconsistently cased.
+      drillQuery = drillQuery.or(
+        wantedCategories.map(c => `skill_category.ilike.${c}`).join(',')
+      )
+    }
+
+    const { data: matched } = await drillQuery.limit(45)
+
+    // A focus with no library coverage (confidence, focus/behavior) would
+    // otherwise send nothing at all, and the plan loses its videos.
+    const drillResources = (matched && matched.length >= 8)
+      ? matched
+      : (await supabaseAdmin
+          .from('drill_resources')
+          .select('drill_name, skill_category, description, youtube_video_id, channel, age_range, difficulty_level, mechanic_focus, equipment_needed')
+          .or('status.eq.approved,status.is.null')
+          .limit(45)).data
 
     // Build context
     const context: TeamContext = {
@@ -130,12 +159,49 @@ export async function POST(request: NextRequest) {
       console.warn('Practice plan: loop context unavailable:', e?.message)
     }
 
-    // Generate practice plan
-    const plan = await generatePracticePlan(
-      duration, focus, context, fullConstraints, drillResources || [], loopContext || undefined
-    )
+    // Streamed as progress lines, then the finished plan. The client waited on
+    // a single JSON response before, so a 40-second generation was 40 seconds
+    // of nothing — which is what "taking way too long" mostly was.
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      async start(controller) {
+        const send = (obj: any) =>
+          controller.enqueue(encoder.encode(JSON.stringify(obj) + '\n'))
 
-    return NextResponse.json(plan)
+        // Counting blocks by their titles as they land: the only honest
+        // progress signal available while JSON is still being written.
+        let blocks = 0
+        let buffer = ''
+
+        try {
+          const plan = await generatePracticePlan(
+            duration, focus, context, fullConstraints, drillResources || [],
+            loopContext || undefined,
+            (_chars, chunk) => {
+              buffer += chunk
+              const found = (buffer.match(/"title"\s*:/g) || []).length
+              if (found > blocks) {
+                blocks = found
+                send({ type: 'progress', blocks })
+              }
+            }
+          )
+          send({ type: 'plan', plan })
+        } catch (e: any) {
+          console.error('Practice plan generation error:', e)
+          send({ type: 'error', error: e?.message || 'Failed to generate practice plan' })
+        }
+        controller.close()
+      },
+    })
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'application/x-ndjson; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'X-Accel-Buffering': 'no',
+      },
+    })
 
   } catch (error: any) {
     console.error('Practice plan API error:', error)

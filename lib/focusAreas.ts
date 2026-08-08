@@ -162,3 +162,34 @@ export function practiceFocusFor(area: string | null | undefined): string | null
   if (!area) return null
   return PRACTICE_FOCUS[area] || null
 }
+
+// The practice builder's focus list maps to the drill library's skill
+// categories. Used to send only the relevant slice of the library to the
+// model: a coach who picked "hitting" was getting all 100 drills, including
+// every catching and outfield one, in the prompt.
+const PRACTICE_FOCUS_CATEGORIES: Record<string, string[]> = {
+  hitting: ['hitting', 'bunting', 'soft toss'],
+  throwing: ['throwing', 'pitching', 'arm care'],
+  catching: ['catching'],
+  infield: ['fielding', 'fielding (infield)', 'team defense'],
+  outfield: ['fielding', 'fielding (fly balls)', 'team defense'],
+  baserunning: ['baserunning'],
+  // No drill category matches these — they are coached through how a practice
+  // is run, not through a drill from a library.
+  'game iq': ['team defense'],
+  confidence: [],
+  'focus/behavior': [],
+}
+
+export function categoriesForPracticeFocus(focus: string[]): string[] {
+  const out = new Set<string>()
+  for (const f of focus) {
+    for (const c of PRACTICE_FOCUS_CATEGORIES[String(f).toLowerCase()] || []) out.add(c)
+  }
+  // Warmups fit any practice, and every plan opens with one.
+  if (out.size > 0) {
+    out.add('warmup')
+    out.add('athletic development')
+  }
+  return Array.from(out)
+}
