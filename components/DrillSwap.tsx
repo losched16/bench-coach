@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { X, Search, Loader2, Check, Play, AlertCircle } from 'lucide-react'
+import { DrillVideo } from './DrillVideo'
 
 // Picking a different drill.
 //
@@ -171,15 +172,17 @@ export function DrillSwap({ coachId, prescriptionId, replacing, onCancel, onSwap
                     {d.description && (
                       <p className="text-sm text-gray-600 mt-1.5 line-clamp-2">{d.description}</p>
                     )}
+                    {/* Compact in a list of thirty: a button that becomes the
+                        player in place, rather than thirty thumbnails. */}
                     {(d.youtube_url || d.youtube_video_id) && (
-                      <a
-                        href={d.youtube_url || `https://www.youtube.com/watch?v=${d.youtube_video_id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-red-600 font-medium mt-1.5"
-                      >
-                        <Play size={12} /> Watch first
-                      </a>
+                      <div className="mt-2">
+                        <DrillVideo
+                          drillName={d.drill_name}
+                          youtubeVideoId={d.youtube_video_id || undefined}
+                          youtubeUrl={d.youtube_url || undefined}
+                          compact
+                        />
+                      </div>
                     )}
                   </div>
                   <button

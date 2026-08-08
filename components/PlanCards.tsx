@@ -9,6 +9,7 @@ import {
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { focusAreaLabel, focusAreaChip, FOCUS_AREAS, FocusArea } from '@/lib/focusAreas'
 import { DrillSwap } from './DrillSwap'
+import { DrillVideo } from './DrillVideo'
 
 // Plans, as cards.
 //
@@ -501,17 +502,21 @@ function PlanDetail({
                       You need: {d.equipment_needed.join(', ')}
                     </p>
                   )}
+                  {/* The video plays here rather than throwing the coach into
+                      the YouTube app, which loses the plan and usually the
+                      page. Thumbnail until tapped — see DrillVideo. */}
+                  {(d.youtube_url || d.youtube_video_id) && (
+                    <div className="mt-3">
+                      <DrillVideo
+                        drillName={d.drill_name}
+                        youtubeVideoId={d.youtube_video_id || undefined}
+                        youtubeUrl={d.youtube_url || undefined}
+                        autoExpand
+                      />
+                    </div>
+                  )}
+
                   <div className="mt-3 flex items-center gap-2 flex-wrap">
-                    {(d.youtube_url || d.youtube_video_id) && (
-                      <a
-                        href={d.youtube_url || `https://www.youtube.com/watch?v=${d.youtube_video_id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-xl font-bold text-sm"
-                      >
-                        <Play size={16} /> Watch it
-                      </a>
-                    )}
                     {/* One drill, not the whole set. A coach who dislikes one
                         drill wants that drill changed, not a new plan. */}
                     <button
@@ -520,6 +525,16 @@ function PlanDetail({
                     >
                       <Repeat size={15} /> Swap it
                     </button>
+                    {(d.youtube_url || d.youtube_video_id) && (
+                      <a
+                        href={d.youtube_url || `https://www.youtube.com/watch?v=${d.youtube_video_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-gray-500 underline"
+                      >
+                        Open the video
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>

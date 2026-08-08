@@ -60,7 +60,7 @@ export function DrillVideo({
           <div className="border-t border-gray-200">
             <div className="aspect-video bg-black">
               <iframe
-                src={`https://www.youtube.com/embed/${videoId}?rel=0`}
+                src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0`}
                 title={drillName}
                 className="w-full h-full"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -107,7 +107,7 @@ export function DrillVideo({
         // Embedded player
         <div className="aspect-video bg-black">
           <iframe
-            src={`https://www.youtube.com/embed/${videoId}?rel=0&autoplay=1`}
+            src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0&autoplay=1`}
             title={drillName}
             className="w-full h-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
