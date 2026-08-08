@@ -54,6 +54,9 @@ const OBJECT_TO_MIGRATION: Array<{ match: RegExp; file: string; what: string }> 
   { match: /\bgame_opponent_lineup\b/, file: '032_opponent_lineup.sql', what: "the other team's lineup" },
   // 033 — a conversation pinned to one opponent
   { match: /\bopponent_team_id\b/, file: '033_opponent_threads.sql', what: 'conversations about one opponent' },
+  // 034 — staff access. A member hitting an owner-only policy sees an empty
+  // screen rather than an error, so this mostly catches the helper functions.
+  { match: /\bbc_(team_role|team_at_least|game_at_least|coach_at_least|rank)\b/, file: '034_staff_access.sql', what: 'staff access to a team' },
 ]
 
 export interface MigrationHint {

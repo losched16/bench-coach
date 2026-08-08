@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
+import { useRole } from '@/lib/useRole'
 import Link from 'next/link'
 import Image from 'next/image'
 import { CaptureMenu } from '@/components/CaptureMenu'
@@ -34,6 +35,11 @@ function DashboardContent({
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const supabase = createSupabaseComponentClient()
+
+  // What this user may do on the team they're looking at. Menu items they can
+  // never use are not shown — an assistant coach hunting for Staff and finding
+  // a refusal has learned nothing except that the app argues with them.
+  const { role, label: roleLabel, can: allowed } = useRole(selectedTeamId)
 
   // Get teamId from URL or use first team
   const urlTeamId = searchParams.get('teamId')
@@ -218,7 +224,10 @@ function DashboardContent({
   //
   // Playbooks is deliberately absent — the page still exists, it is just not a
   // destination. It duplicates what a priority does, without the evidence.
-  const navGroups: Array<{ label: string; items: Array<{ label: string; href: string; icon: any }> }> = [
+  const allNavGroups: Array<{
+    label: string
+    items: Array<{ label: string; href: string; icon: any; needs?: 'record' | 'decide' | 'own' }>
+  }> = [
     {
       label: '',
       items: [
@@ -237,7 +246,7 @@ function DashboardContent({
         { label: 'Roster', href: '/dashboard/roster', icon: Users },
         { label: 'Stats', href: '/dashboard/stats', icon: BarChart3 },
         { label: 'Notes', href: '/dashboard/notes', icon: StickyNote },
-        { label: 'Staff', href: '/dashboard/team', icon: UsersRound },
+        { label: 'Staff', href: '/dashboard/team', icon: UsersRound, needs: 'own' },
       ],
     },
     {
@@ -245,27 +254,33 @@ function DashboardContent({
       items: [
         { label: 'Game Day', href: '/dashboard/game', icon: Activity },
         { label: 'Pitch Counter', href: '/dashboard/count', icon: Timer },
-        { label: 'Lineup Builder', href: '/dashboard/lineup', icon: Calendar },
+        { label: 'Lineup Builder', href: '/dashboard/lineup', icon: Calendar, needs: 'decide' },
         { label: 'Scouting', href: '/dashboard/scouting', icon: Search },
       ],
     },
     {
       label: 'Planning',
       items: [
-        { label: 'Practice Plans', href: '/dashboard/practice', icon: ClipboardList },
+        { label: 'Practice Plans', href: '/dashboard/practice', icon: ClipboardList, needs: 'decide' },
         { label: 'Drill Library', href: '/dashboard/drills', icon: Bookmark },
       ],
     },
     {
       label: 'Account',
       items: [
-        { label: 'AI Memory', href: '/dashboard/memory', icon: Brain },
+        { label: 'AI Memory', href: '/dashboard/memory', icon: Brain, needs: 'decide' },
         { label: 'Profile', href: '/dashboard/profile', icon: UserCircle },
         { label: 'Settings', href: '/dashboard/settings', icon: Settings },
         { label: 'Help', href: '/dashboard/help', icon: HelpCircle },
       ],
     },
   ]
+
+  // Drop what this role can never use, then drop any heading left empty by
+  // that. A group header over nothing is worse than no header.
+  const navGroups = allNavGroups
+    .map(g => ({ ...g, items: g.items.filter(i => !i.needs || allowed(i.needs)) }))
+    .filter(g => g.items.length > 0)
 
   if (loading) {
     return (
@@ -533,7 +548,15 @@ function DashboardContent({
           </aside>
 
           {/* Main Content */}
-          <main className="flex-1 min-w-0">
+          {/* Where an invited coach stands. Owners see nothing — they don't need
+          telling, and a permanent banner on your own team is noise. */}
+      {roleLabel && role !== 'owner' && (
+        <div className="bg-blue-50 border-b border-blue-200 px-4 py-2">
+          <p className="max-w-7xl mx-auto text-xs text-blue-900">{roleLabel}</p>
+        </div>
+      )}
+
+      <main className="flex-1 min-w-0">
             {children}
           </main>
         </div>

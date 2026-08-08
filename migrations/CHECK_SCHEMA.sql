@@ -43,7 +43,9 @@ WITH checks(migration, feature, kind, obj, col) AS (VALUES
   ('031_half_innings_and_eligibility.sql','Their pitch counts',           'column', 'game_pitch_counts',  'is_opponent'),
   ('031_half_innings_and_eligibility.sql','Eligibility for one game',     'table',  'game_position_eligibility', NULL),
   ('032_opponent_lineup.sql',           'Their batting order',           'table',  'game_opponent_lineup', NULL),
-  ('033_opponent_threads.sql',          'Chat about one opponent',       'column', 'chat_threads',       'opponent_team_id')
+  ('033_opponent_threads.sql',          'Chat about one opponent',       'column', 'chat_threads',       'opponent_team_id'),
+  ('034_staff_access.sql',              'Staff can use the app',         'function', 'bc_team_role',     NULL),
+  ('034_staff_access.sql',              'Staff can use the app',         'policy', 'teams',              'bc_read_member_team')
 )
 SELECT
   c.migration,
@@ -53,6 +55,18 @@ SELECT
       CASE WHEN EXISTS (
         SELECT 1 FROM information_schema.tables t
         WHERE t.table_schema = 'public' AND t.table_name = c.obj
+      ) THEN 'ok' ELSE 'MISSING' END
+    -- 034 creates functions and policies rather than tables, so it needs its
+    -- own two checks.
+    WHEN c.kind = 'function' THEN
+      CASE WHEN EXISTS (
+        SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname = 'public' AND p.proname = c.obj
+      ) THEN 'ok' ELSE 'MISSING' END
+    WHEN c.kind = 'policy' THEN
+      CASE WHEN EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE tablename = c.obj AND policyname = c.col
       ) THEN 'ok' ELSE 'MISSING' END
     ELSE
       CASE WHEN EXISTS (

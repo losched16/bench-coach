@@ -7,6 +7,7 @@ import { Plus, User, Trash2, ChevronRight, StickyNote, Upload, Camera, Check, X,
 import Link from 'next/link'
 import { usePageView } from '@/lib/tracking'
 import { PositionEligibility } from '@/components/PositionEligibility'
+import { useRole } from '@/lib/useRole'
 
 interface Player {
   id: string
@@ -40,6 +41,9 @@ function RosterPageContent() {
   const [newPlayerJersey, setNewPlayerJersey] = useState('')
   const searchParams = useSearchParams()
   const teamId = searchParams.get('teamId')
+  // Who is on the roster is a decision, not a record — contributors keep the
+  // book, the head coach decides who is on the team.
+  const { can: allowed } = useRole(teamId)
   const supabase = createSupabaseComponentClient()
   
   // Import state
@@ -297,28 +301,34 @@ function RosterPageContent() {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Roster</h2>
         <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <Camera size={20} />
-            <span>Import from Screenshot</span>
-          </button>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus size={20} />
-            <span>Add Player</span>
-          </button>
+          {allowed('decide') && (
+            <>
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Camera size={20} />
+                <span>Import from Screenshot</span>
+              </button>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Plus size={20} />
+                <span>Add Player</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       {players.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <User className="mx-auto text-gray-400 mb-4" size={48} />
-          <p className="text-gray-600 mb-4">No players yet</p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <p className="text-gray-600 mb-4">
+            {allowed('decide') ? 'No players yet' : 'No players on this roster yet — the head coach adds them.'}
+          </p>
+          <div className={`flex flex-col sm:flex-row items-center justify-center gap-3 ${allowed('decide') ? '' : 'hidden'}`}>
             <button
               onClick={() => setShowImportModal(true)}
               className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
@@ -390,7 +400,7 @@ function RosterPageContent() {
                 </div>
               </Link>
               
-              <div className="px-6 pb-4 pt-0 flex justify-end border-t border-gray-100">
+              <div className={`px-6 pb-4 pt-0 flex justify-end border-t border-gray-100 ${allowed('decide') ? '' : 'hidden'}`}>
                 <button
                   onClick={(e) => {
                     e.preventDefault()
@@ -411,7 +421,7 @@ function RosterPageContent() {
       {/* Position eligibility lives with the roster, because that is what it
           is: a fact about your players, not about a game. The lineup builder
           reads it and can depart from it for one night without changing it. */}
-      {teamId && players.length > 0 && (
+      {teamId && players.length > 0 && allowed('decide') && (
         <div className="bg-white rounded-lg shadow p-6">
           <PositionEligibility teamId={teamId} players={players as any} />
         </div>
