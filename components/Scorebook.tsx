@@ -39,6 +39,10 @@ interface Props {
   // The book moves the shared cursor (inning + half). Everything else on the
   // game screen reads that, so it has to be told when it changes.
   onCursorChange?: () => void
+  // Home or away is owned by the game screen — one value, one writer. The book
+  // shows it and can change it, but does not keep its own copy to drift.
+  isHome?: boolean
+  onSetHome?: (v: boolean) => void | Promise<void>
 }
 
 type Slot = 'out' | '1' | '2' | '3' | 'home'
@@ -64,7 +68,9 @@ const SLOTS: Array<{ v: Slot; label: string }> = [
 // off these are unearned against our pitcher.
 const UNEARNED_RESULTS = new Set<string>(['E'])
 
-export function Scorebook({ gameId, currentPitcher, pitcherName, onCursorChange }: Props) {
+export function Scorebook({
+  gameId, currentPitcher, pitcherName, onCursorChange, isHome: isHomeProp, onSetHome,
+}: Props) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -80,7 +86,9 @@ export function Scorebook({ gameId, currentPitcher, pitcherName, onCursorChange 
   const [opponentNames, setOpponentNames] = useState<Record<number, string>>({})
   const [events, setEvents] = useState<StoredEvent[]>([])
   const [lastSeq, setLastSeq] = useState(0)
-  const [isHome, setIsHome] = useState(true)
+  // Only used when the game screen isn't supplying it.
+  const [isHomeLocal, setIsHomeLocal] = useState(true)
+  const isHome = isHomeProp ?? isHomeLocal
 
   // The at-bat in progress.
   const [count, setCount] = useState<Count>(NEW_COUNT)
@@ -115,14 +123,14 @@ export function Scorebook({ gameId, currentPitcher, pitcherName, onCursorChange 
       setOpponentSlot(d.opponentSlot || 1)
       setOpponentNames(d.opponentNames || {})
       setEvents(d.events || [])
-      setIsHome(d.isHome !== false)
+      if (isHomeProp === undefined) setIsHomeLocal(d.isHome !== false)
       setLastSeq((d.events || []).length ? d.events[d.events.length - 1].seq : 0)
     } catch {
       setError('Could not load the book.')
     } finally {
       setLoading(false)
     }
-  }, [gameId])
+  }, [gameId, isHomeProp])
 
   useEffect(() => { load() }, [load])
 
@@ -288,13 +296,20 @@ export function Scorebook({ gameId, currentPitcher, pitcherName, onCursorChange 
 
   const setHome = async (v: boolean) => {
     if (v === isHome) return
-    setIsHome(v)
     try {
-      await fetch('/api/game/scorebook', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameId, isHome: v }),
-      })
+      // When the game screen owns it, let it write — two writers for one
+      // column is how the header and the book end up disagreeing about which
+      // dugout you're in.
+      if (onSetHome) {
+        await onSetHome(v)
+      } else {
+        setIsHomeLocal(v)
+        await fetch('/api/game/scorebook', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gameId, isHome: v }),
+        })
+      }
       await load()
     } catch {
       setError('Could not change that.')

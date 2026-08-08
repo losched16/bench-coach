@@ -353,6 +353,20 @@ function GamePageContent() {
     ? (activeGame.is_home !== false ? activeGame.current_half === 'top' : activeGame.current_half === 'bottom')
     : true
 
+  // Home or away. It decides which half we bat and which half we're in the
+  // field, so the pitch counter and the scorebook both hang off it — which is
+  // why it can't live only on the setup screen a coach passed twenty minutes
+  // ago, or only inside a scorebook they may never open.
+  const handleSetHome = async (v: boolean) => {
+    if (!activeGame || activeGame.is_home === v) return
+    setActiveGame(prev => prev ? { ...prev, is_home: v } : null)
+    const { error } = await supabase.from('games').update({ is_home: v }).eq('id', activeGame.id)
+    if (error) {
+      setActiveGame(prev => prev ? { ...prev, is_home: !v } : null)
+      setActionError(error.message || 'Could not change that.')
+    }
+  }
+
   // The book moved the inning or the half. Pull it back so the header, the
   // pitch panel and the lineup are all looking at the same place — that sync
   // is the whole point, and it must not require the coach to reload.
@@ -878,6 +892,37 @@ function GamePageContent() {
           </div>
         </div>
 
+        {/* Which dugout. One line, always visible, because everything below it
+            depends on the answer — and a coach who has it backwards will see
+            their pitcher's count going up while the other team is batting. */}
+        <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between gap-3">
+          <span className="text-xs text-gray-500">
+            We&apos;re the{' '}
+            <strong className="text-gray-900">
+              {activeGame.is_home !== false ? 'home team' : 'away team'}
+            </strong>
+            {' — we bat '}{activeGame.is_home !== false ? 'second' : 'first'}
+          </span>
+          <div className="flex gap-1 shrink-0">
+            {[
+              { v: true, label: 'Home' },
+              { v: false, label: 'Away' },
+            ].map(o => (
+              <button
+                key={String(o.v)}
+                onClick={() => handleSetHome(o.v)}
+                className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                  (activeGame.is_home !== false) === o.v
+                    ? 'border-gray-800 bg-gray-800 text-white'
+                    : 'border-gray-300 text-gray-600'
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Player Selector Chips */}
         <div className="bg-white border-b border-gray-200 px-4 py-3 overflow-x-auto sticky top-[68px] z-10">
           <div className="flex gap-2 min-w-max">
@@ -995,6 +1040,8 @@ function GamePageContent() {
               currentPitcher={weArePitching ? currentPitcher : null}
               pitcherName={weArePitching && currentPitcher ? getPlayerName(currentPitcher) : null}
               onCursorChange={refreshCursor}
+              isHome={activeGame.is_home !== false}
+              onSetHome={handleSetHome}
             />
           )}
         </div>
