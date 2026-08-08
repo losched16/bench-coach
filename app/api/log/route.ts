@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { migrationHintFor } from '@/lib/migrationHints'
 import { createClient } from '@supabase/supabase-js'
 import { normalizeStatLine } from '@/lib/entries'
 import { findExistingGame } from '@/lib/games'
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Log GET error:', error)
     // The table may not exist yet — don't break the page over it
-    return NextResponse.json({ entries: [], needsMigration: true })
+    return NextResponse.json({ entries: [], needsMigration: true, migrationMessage: migrationHintFor(error)?.message || null })
   }
 }
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { migrationHintFor } from '@/lib/migrationHints'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 import { COACH_VOICE } from '@/lib/coachVoice'
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Scouting analysis GET error:', error)
-    return NextResponse.json({ analysis: null, previous: null, stale: false, needsMigration: true })
+    return NextResponse.json({ analysis: null, previous: null, stale: false, needsMigration: true, migrationMessage: migrationHintFor(error)?.message || null })
   }
 }
 

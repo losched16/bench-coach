@@ -82,6 +82,8 @@ export function PrioritiesBoard({ teamId, focusId = null }: Props) {
   const [coachId, setCoachId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [needsMigration, setNeedsMigration] = useState(false)
+  const [migrationMessage, setMigrationMessage] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [open, setOpen] = useState<OpenPrescription[]>([])
 
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -117,7 +119,9 @@ export function PrioritiesBoard({ teamId, focusId = null }: Props) {
     if (teamId) params.set('teamId', teamId)
     const res = await fetch(`/api/checkin?${params}`)
     const data = await res.json()
-    if (data.needsMigration) setNeedsMigration(true)
+    setNeedsMigration(!!data.needsMigration)
+    setMigrationMessage(data.migrationMessage || null)
+    setLoadError(data.needsMigration ? null : (data.error || null))
     setOpen(data.prescriptions || [])
   }
 
@@ -315,9 +319,19 @@ export function PrioritiesBoard({ teamId, focusId = null }: Props) {
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3">
           <AlertCircle className="text-amber-600 flex-shrink-0" size={20} />
           <div className="text-sm text-amber-800">
-            The check-in tables aren&apos;t set up yet. Run{' '}
-            <code className="bg-amber-100 px-1 rounded">migrations/014_checkins.sql</code> in your Supabase
-            SQL editor, then refresh.
+            {migrationMessage
+              ? migrationMessage
+              : <>Your database is missing something this page needs. The files in{' '}
+                 <code className="bg-amber-100 px-1 rounded">/migrations</code> are safe to re-run.</>}
+          </div>
+        </div>
+      )}
+
+      {loadError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3">
+          <AlertCircle className="text-red-600 flex-shrink-0" size={20} />
+          <div className="text-sm text-red-800">
+            Couldn&apos;t load your priorities: {loadError}
           </div>
         </div>
       )}

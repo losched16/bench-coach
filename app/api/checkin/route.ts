@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { migrationHintFor } from '@/lib/migrationHints'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 import { COACH_VOICE } from '@/lib/coachVoice'
@@ -163,8 +164,19 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Checkin GET error:', error)
-    // Tables may not exist yet — the dashboard badge must not break the page
-    return NextResponse.json({ prescriptions: [], dueCount: 0, needsMigration: true })
+    // Tables may not exist yet — the board must still render. Say which thing
+    // is actually missing: this used to name 014 whatever the failure was,
+    // which told people to re-run a migration they had already applied.
+    const hint = migrationHintFor(error)
+    return NextResponse.json({
+      prescriptions: [],
+      dueCount: 0,
+      needsMigration: !!hint,
+      migrationMessage: hint?.message || null,
+      // A failure that isn't about schema is a real error and should read like
+      // one rather than being disguised as setup.
+      error: hint ? null : (error.message || 'Could not load priorities'),
+    })
   }
 }
 

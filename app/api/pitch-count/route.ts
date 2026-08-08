@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { migrationHintFor } from '@/lib/migrationHints'
 import { createClient } from '@supabase/supabase-js'
 import { computePitcherAvailability, PitchCountRuleSet, AppearanceLite } from '@/lib/scouting'
 
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Pitch count GET error:', error)
-    return NextResponse.json({ open: [], recent: [], needsMigration: true })
+    return NextResponse.json({ open: [], recent: [], needsMigration: true, migrationMessage: migrationHintFor(error)?.message || null })
   }
 }
 

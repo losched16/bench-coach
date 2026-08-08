@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { migrationHintFor } from '@/lib/migrationHints'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 import { scoreDrillRelevance } from '@/lib/analysis'
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Priority drills GET error:', error)
     // The columns from migration 022 may not exist yet — the page must render.
-    return NextResponse.json({ drills: [], swaps: 0, needsMigration: true })
+    return NextResponse.json({ drills: [], swaps: 0, needsMigration: true, migrationMessage: migrationHintFor(error)?.message || null })
   }
 }
 

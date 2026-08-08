@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { migrationHintFor } from '@/lib/migrationHints'
 import { createClient } from '@supabase/supabase-js'
 import { challengeValue, MetricType, MetricReading } from '@/lib/metrics'
 
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Metrics GET error:', error)
     // Table not created yet — the player page must still render
-    return NextResponse.json({ types: [], readings: [], needsMigration: true })
+    return NextResponse.json({ types: [], readings: [], needsMigration: true, migrationMessage: migrationHintFor(error)?.message || null })
   }
 }
 
