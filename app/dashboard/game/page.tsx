@@ -6,10 +6,11 @@ import { createSupabaseComponentClient } from '@/lib/supabase'
 import {
   Plus, Minus, ChevronDown, ChevronUp, X, Trophy, Clock,
   ThumbsUp, AlertTriangle, Target, Shield, Zap,
-  MapPin, Send, Trash2, Activity, ChevronLeft
+  MapPin, Send, Trash2, Activity, ChevronLeft, Users
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { findExistingGame } from '@/lib/games'
+import { LiveLineup } from '@/components/LiveLineup'
 import { usePageView } from '@/lib/tracking'
 
 interface Player {
@@ -93,6 +94,7 @@ function GamePageContent() {
   // check whether it stuck.
   const [actionError, setActionError] = useState<string | null>(null)
   const [showHandoff, setShowHandoff] = useState(false)
+  const [lineupPanelOpen, setLineupPanelOpen] = useState(false)
   const router = useRouter()
 
   // End game state
@@ -784,6 +786,25 @@ function GamePageContent() {
         )}
 
         {/* Pitch Count Panel */}
+        {/* The lineup, live. Sits above the pitch panel because a substitution
+            is the decision a coach is most often mid-way through when they
+            pick the phone up. */}
+        <div className="bg-white border-b border-gray-200">
+          <button
+            onClick={() => setLineupPanelOpen(!lineupPanelOpen)}
+            className="w-full px-4 py-3 flex items-center justify-between text-sm font-bold text-blue-700"
+          >
+            <span className="flex items-center gap-2">
+              <Users size={16} />
+              Lineup &amp; subs
+            </span>
+            {lineupPanelOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+          {lineupPanelOpen && activeGame && (
+            <LiveLineup gameId={activeGame.id} inning={activeGame.current_inning} />
+          )}
+        </div>
+
         <div className="bg-white border-b border-gray-200">
           <button
             onClick={() => setPitchPanelOpen(!pitchPanelOpen)}
