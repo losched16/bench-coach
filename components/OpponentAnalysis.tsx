@@ -54,6 +54,9 @@ export function OpponentAnalysis({
   const [running, setRunning] = useState(false)
   const [streamed, setStreamed] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Set when the report displayed but did not persist. Different from an error:
+  // what is on screen is good, it just will not be here tomorrow.
+  const [unsaved, setUnsaved] = useState<string | null>(null)
   const [expanded, setExpanded] = useState(false)
 
   const load = useCallback(async () => {
@@ -64,8 +67,18 @@ export function OpponentAnalysis({
       if (data.needsMigration) setNeedsMigration(true)
       setAnalysis(data.analysis)
       setStale(data.stale)
-      // A first read is worth showing in full; a repeat one they've seen.
-      setExpanded(!data.analysis)
+
+      // A written report stays OPEN — including when you come back to it a
+      // week later. It used to collapse to its headline on every load, on the
+      // theory that a repeat visit had already been read. Two things were wrong
+      // with that: load() also runs the moment generation finishes, so the
+      // report you were reading folded itself up mid-sentence; and a report you
+      // asked for should be there when you return, not one tap away behind a
+      // link that looks like it needs regenerating.
+      //
+      // Collapsing is still available — it is just the coach's choice now,
+      // never something that happens to them.
+      setExpanded(true)
     } catch {
       // panel just stays empty
     } finally {
@@ -79,6 +92,7 @@ export function OpponentAnalysis({
     if (!coachId) return
     setRunning(true)
     setError(null)
+    setUnsaved(null)
     setStreamed('')
     setExpanded(true)
     try {
@@ -114,11 +128,19 @@ export function OpponentAnalysis({
           try {
             const meta = JSON.parse(buffer.slice(at + SCOUT_META_SENTINEL.length))
             if (meta.error) setError(meta.error)
+            // No id means the row never landed, whatever the reason.
+            if (meta.saveError) setUnsaved(meta.saveError)
+            else if (meta.id === null && !meta.error) {
+              setUnsaved("This report is on screen but didn't save, so it won't be here when you come back. Try Update again.")
+            }
           } catch { /* tail incomplete */ }
         }
       }
+      // Hand over to the saved copy only once there IS one. Clearing the
+      // streamed text first meant that if the save had failed, the report the
+      // coach had just watched arrive vanished with nothing in its place — and
+      // nothing said why.
       await load()
-      setStreamed(null)
     } catch (e: any) {
       setError(e.message || 'Something went wrong')
     } finally {
@@ -194,6 +216,12 @@ export function OpponentAnalysis({
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 mb-3">{error}</div>
+      )}
+
+      {unsaved && !running && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-900 mb-3">
+          {unsaved}
+        </div>
       )}
 
       {/* What's different since last time is the most useful line on the page

@@ -131,7 +131,10 @@ export async function POST(request: NextRequest) {
           const headline = extractHeadline(markdown)
           const whatsChanged = extractSection(markdown, "What's changed")
 
-          const { data: saved } = await supabaseAdmin
+          // The insert error used to be discarded. A report that streamed
+          // perfectly and then failed to save looked identical to one that
+          // saved — until the coach came back and it was gone.
+          const { data: saved, error: saveError } = await supabaseAdmin
             .from('opponent_analyses')
             .insert({
               coach_id: coachId,
@@ -152,12 +155,19 @@ export async function POST(request: NextRequest) {
             .update({ analysis_stale: false })
             .eq('id', opponentTeamId)
 
+          if (saveError) console.error('Scouting analysis save failed:', saveError)
+
           controller.enqueue(encoder.encode(SCOUT_META_SENTINEL + JSON.stringify({
             id: (saved as any)?.id || null,
             generated_at: (saved as any)?.generated_at || null,
             headline,
             entry_count: evidence.entryCount,
             total_pa: evidence.totalPa,
+            // Said out loud so the screen can warn that what they are reading
+            // is not coming back next time.
+            saveError: saveError
+              ? (migrationHintFor(saveError)?.message || saveError.message || 'Could not save the report.')
+              : null,
           })))
         } catch (e: any) {
           console.error('Scouting analysis stream error:', e)
