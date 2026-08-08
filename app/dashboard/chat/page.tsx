@@ -3,12 +3,14 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
-import { Send, Loader2, Menu, X, Target, Users, ExternalLink } from 'lucide-react'
+import { Send, Loader2, Menu, X, Target, Users, ExternalLink, Play } from 'lucide-react'
 import Link from 'next/link'
 import { ChatMessageContent } from '@/components/ChatMessageContent'
+import { PrescriptionSections } from '@/components/PrescriptionSections'
+import { PriorityDrills } from '@/components/PriorityDrills'
 import { ChatThreadList, ChatThread } from '@/components/ChatThreadList'
 import { SupersedeConfirm, Superseding } from '@/components/SupersedeConfirm'
-import { META_SENTINEL } from '@/lib/analysis'
+import { META_SENTINEL, splitSections } from '@/lib/analysis'
 import { usePageView, useTracker } from '@/lib/tracking'
 
 interface Message {
@@ -55,6 +57,7 @@ export default function ChatPage() {
   const [roster, setRoster] = useState<RosterPlayer[]>([])
   const [playerId, setPlayerId] = useState<string | null>(null)
   const [commit, setCommit] = useState<Commit | null>(null)
+  const [coachId, setCoachId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -72,6 +75,7 @@ export default function ChatPage() {
       loadChat(initialThreadId || undefined)
       loadThreads()
       loadRoster()
+      loadCoach()
       loadTeamContext()
       if (initialPlayerId) setPlayerId(initialPlayerId)
     }
@@ -359,6 +363,14 @@ export default function ChatPage() {
     loadThreads()
   }
 
+  const loadCoach = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: coach } = await supabase
+      .from('coaches').select('id').eq('user_id', user.id).single() as { data: { id: string } | null }
+    if (coach) setCoachId(coach.id)
+  }
+
   const loadRoster = async () => {
     const { data } = await supabase
       .from('team_players')
@@ -642,10 +654,34 @@ export default function ChatPage() {
                       </div>
                     )}
 
-                    {message.role === 'assistant' ? (
+                    {isPriority ? (
+                      // The same sectioned read the analysis screen shows —
+                      // "the one thing" ringed in red, not a paragraph in a
+                      // wall of markdown.
+                      <PrescriptionSections
+                        sections={splitSections(message.content)}
+                        streaming={message.id.startsWith('commit-')}
+                      />
+                    ) : message.role === 'assistant' ? (
                       <ChatMessageContent content={message.content} role={message.role} />
                     ) : (
                       <div className="whitespace-pre-wrap">{message.content}</div>
+                    )}
+
+                    {/* The drills, with their videos. Loaded live off the
+                        prescription rather than snapshotted into the message,
+                        so swapping them updates here too. */}
+                    {isPriority && message.meta?.prescriptionId && coachId && (
+                      <div className="mt-4 bg-white rounded-lg border border-gray-200 p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Play className="text-green-600" size={17} />
+                          <h4 className="font-semibold text-gray-900 text-sm">Watch these</h4>
+                        </div>
+                        <PriorityDrills
+                          prescriptionId={message.meta.prescriptionId}
+                          coachId={coachId}
+                        />
+                      </div>
                     )}
 
                     {isPriority && message.meta?.prescriptionId && (

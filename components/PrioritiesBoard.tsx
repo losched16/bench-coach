@@ -7,7 +7,7 @@ import {
   CheckCircle2, RotateCcw, XCircle, ChevronRight, ListChecks, MessageSquarePlus, ChevronDown,
 } from 'lucide-react'
 import { useTracker } from '@/lib/tracking'
-import { AnalysisProse } from './AnalysisProse'
+import { PrescriptionSections } from './PrescriptionSections'
 import { ActivePriority } from './ActivePriority'
 import { PriorityDrills } from './PriorityDrills'
 import { splitSections } from '@/lib/analysis'
@@ -35,12 +35,6 @@ interface OpenPrescription {
 
 interface Section { key: string; heading: string; body: string }
 
-const SECTION_META: Record<string, { icon: any; accent: string }> = {
-  where_this_started: { icon: History, accent: 'text-slate-600' },
-  what_s_happened_since: { icon: Search, accent: 'text-blue-600' },
-  the_read: { icon: Target, accent: 'text-red-600' },
-  next_three_weeks: { icon: CalendarCheck, accent: 'text-green-600' },
-}
 
 // The four dispositions, in the order a coach is most likely to want them.
 // Wording matters here: these are the words that go into the record, and
@@ -388,28 +382,7 @@ export function PrioritiesBoard({ teamId, focusId = null }: Props) {
               </span>
             </div>
           )}
-          {sections.map((section, idx) => {
-            const meta = SECTION_META[section.key] || { icon: ChevronRight, accent: 'text-gray-600' }
-            const Icon = meta.icon
-            const isRead = section.key === 'the_read'
-            return (
-              <div
-                key={section.key}
-                className={`bg-white rounded-lg shadow-sm border p-5 ${
-                  isRead ? 'border-red-300 ring-1 ring-red-100' : 'border-gray-200'
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <Icon className={meta.accent} size={18} />
-                  <h2 className="font-semibold text-gray-900">{section.heading}</h2>
-                </div>
-                <AnalysisProse body={section.body} />
-                {streaming && idx === sections.length - 1 && (
-                  <span className="inline-block w-2 h-4 bg-red-500 animate-pulse align-middle ml-0.5 rounded-sm" />
-                )}
-              </div>
-            )
-          })}
+          <PrescriptionSections sections={sections} streaming={streaming} />
         </div>
       )}
 

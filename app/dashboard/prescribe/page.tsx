@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { usePageView, useTracker } from '@/lib/tracking'
 import { SupersedeConfirm, Superseding } from '@/components/SupersedeConfirm'
-import { AnalysisProse } from '@/components/AnalysisProse'
+import { PrescriptionSections } from '@/components/PrescriptionSections'
 import { splitSections, META_SENTINEL } from '@/lib/analysis'
 
 interface Problem { slug: string; label: string; skill_category: string | null }
@@ -47,17 +47,6 @@ interface Prescription {
 }
 
 interface RosterPlayer { player_id: string; name: string; birth_year: number | null }
-
-// Each section gets its own icon and treatment — the six-section shape IS the
-// output contract, so it should be visually legible as six distinct answers.
-const SECTION_META: Record<string, { icon: any; accent: string }> = {
-  what_the_data_showed: { icon: Search, accent: 'text-slate-600' },
-  the_one_thing: { icon: Target, accent: 'text-red-600' },
-  this_week: { icon: CalendarCheck, accent: 'text-blue-600' },
-  drills: { icon: Dumbbell, accent: 'text-green-600' },
-  what_to_watch_next: { icon: Eye, accent: 'text-purple-600' },
-  metrics: { icon: ClipboardList, accent: 'text-gray-600' },
-}
 
 function PrescribeContent() {
   usePageView('prescribe')
@@ -359,32 +348,10 @@ function PrescribeContent() {
             </div>
           )}
 
-          {/* The analysis — six sections */}
+          {/* The analysis — six sections. Shared with the CoachAI thread so
+              the two renderings can't drift apart. */}
           {result.sections && result.sections.length > 0 && (
-            <div className="space-y-4">
-              {result.sections.map((section, idx) => {
-                const meta = SECTION_META[section.key] || { icon: ChevronRight, accent: 'text-gray-600' }
-                const Icon = meta.icon
-                const isPriority = section.key.startsWith('the_one_thing')
-                return (
-                  <div
-                    key={section.key}
-                    className={`bg-white rounded-lg shadow-sm border p-5 ${
-                      isPriority ? 'border-red-300 ring-1 ring-red-100' : 'border-gray-200'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-3">
-                      <Icon className={meta.accent} size={18} />
-                      <h2 className="font-semibold text-gray-900">{section.heading}</h2>
-                    </div>
-                    <AnalysisProse body={section.body} />
-                    {result.streaming && idx === result.sections!.length - 1 && (
-                      <span className="inline-block w-2 h-4 bg-red-500 animate-pulse align-middle ml-0.5 rounded-sm" />
-                    )}
-                  </div>
-                )
-              })}
-            </div>
+            <PrescriptionSections sections={result.sections} streaming={result.streaming} />
           )}
 
           {/* Drill cards with the videos */}
