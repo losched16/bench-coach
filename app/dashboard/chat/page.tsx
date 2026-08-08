@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { Send, Loader2, Menu, X, Target, Users, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
@@ -56,18 +56,41 @@ export default function ChatPage() {
   const [playerId, setPlayerId] = useState<string | null>(null)
   const [commit, setCommit] = useState<Commit | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
   const searchParams = useSearchParams()
   const teamId = searchParams.get('teamId')
+  // Arriving from somewhere with something to say: a thread to open, who it's
+  // about, and an opening message to send on landing.
+  const initialThreadId = searchParams.get('threadId')
+  const initialPlayerId = searchParams.get('playerId')
+  const seed = searchParams.get('seed')
+  const seedSent = useRef(false)
   const supabase = createSupabaseComponentClient()
 
   useEffect(() => {
     if (teamId) {
-      loadChat()
+      loadChat(initialThreadId || undefined)
       loadThreads()
       loadRoster()
       loadTeamContext()
+      if (initialPlayerId) setPlayerId(initialPlayerId)
     }
-  }, [teamId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamId, initialThreadId])
+
+  // Send the opening message once the thread is open. Guarded by a ref rather
+  // than state so a re-render can't fire it twice and duplicate the message.
+  useEffect(() => {
+    if (!seed || seedSent.current || initialLoading || !threadId) return
+    seedSent.current = true
+    void send(seed)
+    // Drop it from the URL once sent. The ref guards this render pass, but a
+    // refresh would reset the ref and send the whole thing a second time.
+    const next = new URLSearchParams(searchParams.toString())
+    next.delete('seed')
+    router.replace(`/dashboard/chat?${next}`, { scroll: false })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed, initialLoading, threadId])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -386,9 +409,15 @@ export default function ChatPage() {
 
   const handleSend = async () => {
     if (!input.trim() || !teamId) return
-
     const userMessage = input.trim()
     setInput('')
+    void send(userMessage)
+  }
+
+  // One send path, whether the coach typed it or it arrived as an opening
+  // message from the log screen.
+  const send = async (userMessage: string) => {
+    if (!userMessage.trim() || !teamId) return
     setLoading(true)
 
     const tempUserMsg: Message = {

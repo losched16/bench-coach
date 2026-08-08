@@ -10,9 +10,10 @@ import {
 } from '@/lib/entries'
 import {
   Loader2, CheckCircle2, AlertTriangle, X, Plus,
-  ClipboardList, ChevronRight, Trash2, Info, Target,
+  ClipboardList, ChevronRight, Trash2, Info, Target, MessageSquare,
 } from 'lucide-react'
 import { focusAreaLabel, focusAreaChip, focusAreaRank } from '@/lib/focusAreas'
+import { PriorityDrills } from '@/components/PriorityDrills'
 import { prepareImages, imagesFromClipboard } from '@/lib/imagePrep'
 
 // ── Types ──────────────────────────────────────────────
@@ -26,6 +27,7 @@ interface OpenPriority {
   priority: string | null
   playerId: string | null
   adherence: { logged: number; expected: number }
+  daysElapsed: number
 }
 
 interface RosterPlayer {
@@ -133,7 +135,15 @@ function LogContent() {
   const [parsedGames, setParsedGames] = useState<ParsedGame[] | null>(null)
 
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState<{ games: number; attached: number; stats: number; notes: number } | null>(null)
+  const [saved, setSaved] = useState<{
+    games: number; attached: number; stats: number; notes: number
+    prescriptionId: string | null
+    playerId: string | null
+    // The coach's own words, kept so the follow-up conversation can open with
+    // what they actually wrote rather than "tell me about your session".
+    seed: string | null
+  } | null>(null)
+  const [openingThread, setOpeningThread] = useState(false)
   const startedAt = useRef<number>(Date.now())
   // Held so a save that lands mid-parse can wait for it rather than dropping
   // the stats on the floor — the user was told it would wait.
@@ -155,6 +165,35 @@ function LogContent() {
     setPrescriptionId(relevantPriorities.length === 1 ? relevantPriorities[0].id : '')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entryType, playerId, openPriorities])
+
+  // Logging is evidence. The useful next move is a reaction to what was
+  // written, not a generic "here's what to work on" — which is what the old
+  // button did: it dumped you into whatever conversation you had open last,
+  // about something else entirely.
+  const discussSession = async () => {
+    if (!saved?.seed || !teamId) return
+    setOpeningThread(true)
+    try {
+      const res = await fetch('/api/chat/threads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId, playerId: saved.playerId }),
+      })
+      const data = await res.json()
+      const params = new URLSearchParams({ teamId })
+      if (data.thread?.id) params.set('threadId', data.thread.id)
+      if (saved.playerId) params.set('playerId', saved.playerId)
+      // Browsers and proxies start dropping URLs past ~2000 characters, and a
+      // truncated question is worse than a short one.
+      params.set('seed', saved.seed.slice(0, 1200))
+      router.push(`/dashboard/chat?${params}`)
+    } catch {
+      // A failure here must not strand them — the entry is already saved.
+      router.push(`/dashboard/chat?teamId=${teamId}`)
+    } finally {
+      setOpeningThread(false)
+    }
+  }
 
   // ── Init ──
   useEffect(() => {
@@ -394,11 +433,29 @@ function LogContent() {
         notes: notes.length,
       })
 
+      // Compose the follow-up question now, before the form resets. Their
+      // words lead — the model should react to what happened, not ask for it.
+      const noteLines = notes
+        .map(n => {
+          const label = config.prompts.find(p => p.key === n.prompt_key)?.label || n.prompt_key
+          return `${label} ${n.body.trim()}`
+        })
+        .join('\n')
+
+      const subject = playerId
+        ? (roster.find(r => r.player_id === playerId)?.name || 'this player')
+        : 'the team'
+
       setSaved({
         games: data.summary?.gamesCreated || 0,
         attached: data.summary?.gamesAttached || 0,
         stats: data.summary?.statLinesCreated || 0,
         notes: data.summary?.observations || 0,
+        prescriptionId: config.linksToPrescription ? prescriptionId || null : null,
+        playerId: playerId || null,
+        seed: noteLines
+          ? `I just logged a ${config.label.toLowerCase()} for ${subject} on ${occurredOn}.\n\n${noteLines}\n\nWhat should I take from that, and what would you do next time out?`
+          : null,
       })
 
       // Reset for the next entry — the common case is logging several in a row
@@ -429,6 +486,11 @@ function LogContent() {
     (n, g) => n + g.players.filter(p => !p.team_player_id).length, 0
   )
   const notesStep = config.screenshots !== 'none' ? 4 : 3
+  // openPriorities is reloaded after every save, so this count already includes
+  // the session that was just written.
+  const savedPriority = saved?.prescriptionId
+    ? openPriorities.find(p => p.id === saved.prescriptionId) || null
+    : null
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -477,6 +539,59 @@ function LogContent() {
           <button onClick={() => setSaved(null)} className="text-green-700 hover:text-green-900">
             <X size={16} />
           </button>
+        </div>
+      )}
+
+      {/* What to do with what was just logged. This is the moment the coach is
+          most engaged — they've just written down what they saw — and until now
+          the only thing here was a button that dumped them into an unrelated
+          conversation. */}
+      {saved && (savedPriority || saved.seed) && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 space-y-4">
+          {savedPriority && (
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Target size={16} className="text-red-600" />
+                <h3 className="font-semibold text-gray-900">
+                  Counted toward {savedPriority.subjectName}&apos;s{' '}
+                  {focusAreaLabel(savedPriority.focusArea).toLowerCase()} priority
+                </h3>
+              </div>
+              <p className="text-sm text-gray-600">
+                {savedPriority.adherence.logged} session
+                {savedPriority.adherence.logged === 1 ? '' : 's'} logged against it so far
+                {savedPriority.daysElapsed > 0 && ` over ${savedPriority.daysElapsed} days`}.
+              </p>
+            </div>
+          )}
+
+          {savedPriority && coachId && (
+            <div>
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                For next time
+              </h4>
+              <PriorityDrills prescriptionId={savedPriority.id} coachId={coachId} />
+            </div>
+          )}
+
+          {saved.seed && (
+            <div className={savedPriority ? 'pt-4 border-t border-gray-100' : ''}>
+              <button
+                onClick={discussSession}
+                disabled={openingThread}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50"
+              >
+                {openingThread
+                  ? <Loader2 className="animate-spin" size={15} />
+                  : <MessageSquare size={15} />}
+                Talk this session through
+              </button>
+              <p className="text-xs text-gray-500 mt-2">
+                Opens a new conversation with what you just wrote, so you can ask why it happened
+                or what to change.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -754,10 +869,10 @@ function LogContent() {
             ))}
           </div>
           <button
-            onClick={() => router.push(`/dashboard/chat?teamId=${teamId}`)}
+            onClick={() => router.push(`/dashboard?teamId=${teamId}`)}
             className="mt-3 text-sm text-red-600 hover:text-red-700 font-medium flex items-center gap-1"
           >
-            See what to work on <ChevronRight size={14} />
+            See what you&apos;re working on <ChevronRight size={14} />
           </button>
         </div>
       )}
