@@ -1042,6 +1042,13 @@ function GamePageContent() {
               onCursorChange={refreshCursor}
               isHome={activeGame.is_home !== false}
               onSetHome={handleSetHome}
+              teamId={teamId}
+              roster={players.map(p => ({
+                teamPlayerId: p.id,
+                playerId: p.player.id,
+                name: p.player.name,
+                jersey: p.player.jersey_number ?? null,
+              }))}
             />
           )}
         </div>

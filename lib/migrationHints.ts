@@ -50,6 +50,8 @@ const OBJECT_TO_MIGRATION: Array<{ match: RegExp; file: string; what: string }> 
   // is_home is added by 030 but read by the half logic in 031 — name the
   // earlier file, which is the one that actually creates it.
   { match: /\bis_home\b/, file: '030_scorebook.sql', what: 'home and away on a game' },
+  // 032 — the other team's batting order
+  { match: /\bgame_opponent_lineup\b/, file: '032_opponent_lineup.sql', what: "the other team's lineup" },
 ]
 
 export interface MigrationHint {

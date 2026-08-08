@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  Loader2, AlertCircle, Undo2, BookOpen, ChevronDown, ChevronUp, Check, X,
+  Loader2, AlertCircle, Undo2, BookOpen, ChevronDown, ChevronUp, Check, X, Users, Camera,
 } from 'lucide-react'
+import { LineupImport, ImportRow } from '@/components/LineupImport'
 import {
   PA_RESULTS, BASE_RESULTS, PAResult, BaseResult, Count, NEW_COUNT, addPitch,
   impliedResult, PitchKind, Bases, EMPTY_BASES, Runner, GameState, applyPA,
@@ -43,6 +44,10 @@ interface Props {
   // shows it and can change it, but does not keep its own copy to drift.
   isHome?: boolean
   onSetHome?: (v: boolean) => void | Promise<void>
+  // The full roster, so our batting order can be imported or typed in from
+  // here when the game was started without one.
+  roster?: Array<{ teamPlayerId: string; playerId: string; name: string; jersey: string | null }>
+  teamId?: string | null
 }
 
 type Slot = 'out' | '1' | '2' | '3' | 'home'
@@ -70,6 +75,7 @@ const UNEARNED_RESULTS = new Set<string>(['E'])
 
 export function Scorebook({
   gameId, currentPitcher, pitcherName, onCursorChange, isHome: isHomeProp, onSetHome,
+  roster = [], teamId,
 }: Props) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -109,12 +115,29 @@ export function Scorebook({
   const [bookOpen, setBookOpen] = useState(false)
   const [boxOpen, setBoxOpen] = useState(false)
 
+  // Their batting order, so the book says a name instead of "#4" six times a
+  // game. Ours comes from the lineup; theirs has to be entered or read off a
+  // picture, because nobody rosters the other team.
+  const [opponentLineup, setOpponentLineup] = useState<Array<{
+    slot: number; name: string | null; jersey: string | null
+    position: string | null; is_pitcher: boolean
+  }>>([])
+  const [importing, setImporting] = useState<'us' | 'them' | null>(null)
+  const [importSaving, setImportSaving] = useState(false)
+
   const countKey = `bc-count-${gameId}`
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/game/scorebook?gameId=${gameId}`)
+      const [res, oppRes] = await Promise.all([
+        fetch(`/api/game/scorebook?gameId=${gameId}`),
+        fetch(`/api/game/opponent-lineup?gameId=${gameId}`),
+      ])
       const d = await res.json()
+      try {
+        const o = await oppRes.json()
+        setOpponentLineup(o.players || [])
+      } catch { /* the book still works, it just asks for names */ }
       if (d.needsMigration) { setMigrationMessage(d.migrationMessage); return }
       setState(d.state)
       setWeBatting(!!d.weBatting)
@@ -153,11 +176,18 @@ export function Scorebook({
     return order[dueUpIndex % order.length] || null
   }, [weBatting, order, dueUpIndex, batterOverride])
 
+  const theirName = (slot: number): string => {
+    const fromLineup = opponentLineup.find(p => p.slot === slot)
+    if (fromLineup?.name) return fromLineup.name
+    if (opponentNames[slot]) return opponentNames[slot]
+    return `#${slot}`
+  }
+
   const batterRunner: Runner = weBatting
     ? { id: batter?.teamPlayerId || 'unknown', name: batter?.name || 'Batter', earned: true }
     : {
         id: `opp-${opponentSlot}`,
-        name: opponentName.trim() || opponentNames[opponentSlot] || `#${opponentSlot}`,
+        name: opponentName.trim() || theirName(opponentSlot),
         earned: true,
       }
 
@@ -316,6 +346,56 @@ export function Scorebook({
     }
   }
 
+  // Ours goes through the same endpoint the lineup builder uses, so a lineup
+  // typed in here is indistinguishable from one built there — same starters,
+  // same substitution rules, same everything downstream.
+  const saveImported = async (r: ImportRow[], source: 'manual' | 'import') => {
+    setImportSaving(true)
+    setError(null)
+    try {
+      if (importing === 'us') {
+        const starters = r
+          .filter(x => x.team_player_id)
+          .map((x, i) => ({
+            teamPlayerId: x.team_player_id,
+            battingSlot: i + 1,
+            position: x.position || undefined,
+          }))
+        const chosen = new Set(starters.map(s2 => s2.teamPlayerId))
+        const bench = roster.map(p => p.teamPlayerId).filter(id => !chosen.has(id))
+        const res = await fetch('/api/game/lineup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gameId, starters, bench }),
+        })
+        const d = await res.json()
+        if (!res.ok) throw new Error(d.error || 'Could not save that lineup')
+      } else {
+        const res = await fetch('/api/game/opponent-lineup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            gameId,
+            source,
+            players: r.map((x, i) => ({
+              slot: i + 1, name: x.name, jersey: x.jersey,
+              position: x.position, is_pitcher: x.is_pitcher,
+            })),
+          }),
+        })
+        const d = await res.json()
+        if (!res.ok) throw new Error(d.error || 'Could not save their lineup')
+      }
+      setImporting(null)
+      await load()
+      onCursorChange?.()
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setImportSaving(false)
+    }
+  }
+
   const undo = async () => {
     if (!confirm('Undo the last thing in the book?')) return
     setSaving(true)
@@ -466,9 +546,18 @@ export function Scorebook({
 
         {weBatting ? (
           order.length === 0 ? (
-            <p className="text-sm text-gray-500">
-              No batting order yet — set the lineup and the book will follow it.
-            </p>
+            <div className="space-y-2">
+              <p className="text-sm text-gray-500">
+                No batting order yet. Snap your lineup card or type it in and the book
+                will follow it.
+              </p>
+              <button
+                onClick={() => setImporting('us')}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium"
+              >
+                <Camera size={15} /> Set our order
+              </button>
+            </div>
           ) : (
             <select
               value={batter?.teamPlayerId || ''}
@@ -484,23 +573,40 @@ export function Scorebook({
             </select>
           )
         ) : (
-          <div className="flex gap-2">
-            <select
-              value={opponentSlot}
-              onChange={e => setOpponentSlot(Number(e.target.value))}
-              className="w-24 text-base font-semibold border border-gray-300 rounded-lg px-2 py-2"
-              aria-label="Their batting slot"
-            >
-              {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
-                <option key={n} value={n}>#{n}</option>
-              ))}
-            </select>
-            <input
-              value={opponentName}
-              onChange={e => setOpponentName(e.target.value)}
-              placeholder={opponentNames[opponentSlot] || 'Name (optional)'}
-              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-base"
-            />
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <select
+                value={opponentSlot}
+                onChange={e => { setOpponentSlot(Number(e.target.value)); setOpponentName('') }}
+                className="flex-1 min-w-0 text-base font-semibold border border-gray-300 rounded-lg px-2 py-2"
+                aria-label="Their batting slot"
+              >
+                {Array.from(
+                  { length: Math.max(12, opponentLineup.length) },
+                  (_, i) => i + 1
+                ).map(n => (
+                  <option key={n} value={n}>
+                    {n}. {theirName(n)}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => setImporting('them')}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700"
+              >
+                <Users size={15} />
+                {opponentLineup.length > 0 ? 'Edit' : 'Their lineup'}
+              </button>
+            </div>
+            {/* Only worth asking when we don't already know the name. */}
+            {opponentLineup.find(p => p.slot === opponentSlot)?.name ? null : (
+              <input
+                value={opponentName}
+                onChange={e => setOpponentName(e.target.value)}
+                placeholder={opponentNames[opponentSlot] || 'Name for this spot (optional)'}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base"
+              />
+            )}
           </div>
         )}
 
@@ -577,6 +683,13 @@ export function Scorebook({
       )}
 
       <div className="flex gap-2">
+        <button
+          onClick={() => setImporting('them')}
+          className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-700"
+        >
+          <Users size={15} />
+          Their lineup{opponentLineup.length > 0 ? ` (${opponentLineup.length})` : ''}
+        </button>
         <button
           onClick={undo}
           disabled={saving || events.length === 0}
@@ -686,6 +799,23 @@ export function Scorebook({
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Setting an order ─────────────────────────── */}
+      {importing && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center sm:justify-center">
+          <div className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl p-4 max-h-[90vh] overflow-y-auto">
+            <LineupImport
+              side={importing}
+              teamId={teamId}
+              gameId={gameId}
+              roster={roster.map(p => ({ id: p.teamPlayerId, name: p.name, jersey: p.jersey }))}
+              onCancel={() => setImporting(null)}
+              onSave={saveImported}
+              saving={importSaving}
+            />
           </div>
         </div>
       )}

@@ -41,7 +41,8 @@ WITH checks(migration, feature, kind, obj, col) AS (VALUES
   ('030_scorebook.sql',                 'Home or away',                  'column', 'games',              'is_home'),
   ('031_half_innings_and_eligibility.sql','Half-innings',                 'column', 'games',              'current_half'),
   ('031_half_innings_and_eligibility.sql','Their pitch counts',           'column', 'game_pitch_counts',  'is_opponent'),
-  ('031_half_innings_and_eligibility.sql','Eligibility for one game',     'table',  'game_position_eligibility', NULL)
+  ('031_half_innings_and_eligibility.sql','Eligibility for one game',     'table',  'game_position_eligibility', NULL),
+  ('032_opponent_lineup.sql',           'Their batting order',           'table',  'game_opponent_lineup', NULL)
 )
 SELECT
   c.migration,

@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
-import { Plus, Calendar, Shield, RotateCcw, Save, Trash2, ChevronDown, ChevronUp, Users, AlertCircle, PencilLine } from 'lucide-react'
+import { Plus, Calendar, Shield, RotateCcw, Save, Trash2, ChevronDown, ChevronUp, Users, AlertCircle, PencilLine, Camera } from 'lucide-react'
 import { usePageView } from '@/lib/tracking'
 import { LINEUP_MODES, STRATEGIES, LineupMode, Strategy } from '@/lib/lineup'
 import { LineupRules } from '@/components/LineupRules'
 import { ManualLineup, BuiltLineup } from '@/components/ManualLineup'
 import { PositionEligibility } from '@/components/PositionEligibility'
+import { LineupImport, ImportRow } from '@/components/LineupImport'
 import { findExistingGame } from '@/lib/games'
 
 // Types
@@ -131,6 +132,8 @@ export default function LineupPage() {
   const [activeInning, setActiveInning] = useState(1)
   // Setting it by hand instead of solving for it.
   const [manualOpen, setManualOpen] = useState(false)
+  // Reading it off a photo of the card you already wrote.
+  const [importOpen, setImportOpen] = useState(false)
 
   // View saved lineup state
   const [viewingLineup, setViewingLineup] = useState<GameLineup | null>(null)
@@ -316,8 +319,66 @@ export default function LineupPage() {
     setShowSetup(false)
   }
 
+  // An imported order is a hand-set order that someone else's pen wrote. Same
+  // shape, same pipeline — the starting card carries forward to every inning
+  // and the grid below is there to change any of it.
+  const handleImported = (rows: ImportRow[]) => {
+    const chosen = rows.filter(r => r.team_player_id)
+    const batting_order = chosen.map((r, i) => ({
+      team_player_id: r.team_player_id as string,
+      name: players.find(p => p.id === r.team_player_id)?.player.name || r.name || 'Unknown',
+      order: i + 1,
+    }))
+    const field = chosen
+      .filter(r => r.position)
+      .map(r => ({
+        team_player_id: r.team_player_id as string,
+        name: players.find(p => p.id === r.team_player_id)?.player.name || r.name || 'Unknown',
+        position: r.position as string,
+      }))
+    const benchIds = new Set(field.map(f => f.team_player_id))
+    const bench = batting_order
+      .filter(b => !benchIds.has(b.team_player_id))
+      .map(b => ({ team_player_id: b.team_player_id, name: b.name }))
+
+    const field_assignments: Record<string, any[]> = {}
+    const bench_by_inning: Record<string, any[]> = {}
+    for (let i = 1; i <= innings; i++) {
+      field_assignments[String(i)] = field.map(f => ({ ...f }))
+      bench_by_inning[String(i)] = bench.map(b => ({ ...b }))
+    }
+    const innings_by_player: Record<string, number> = {}
+    for (const f of field) innings_by_player[f.team_player_id] = innings
+    for (const b of bench) innings_by_player[b.team_player_id] = 0
+
+    setGeneratedLineup({
+      batting_order,
+      field_assignments,
+      bench_by_inning,
+      innings_by_player,
+      notes: 'Read from your lineup card.',
+      warnings: field.length === 0
+        ? ['No positions were on the card, so everyone starts on the bench — set the first inning on the grid below.']
+        : [],
+      source: 'manual',
+    })
+    setActiveInning(1)
+    setImportOpen(false)
+    setShowSetup(false)
+  }
+
+  const openImport = () => {
+    setImportOpen(true)
+    setShowSetup(false)
+    setShowEligibility(false)
+    setManualOpen(false)
+    setGeneratedLineup(null)
+    setViewingLineup(null)
+  }
+
   const openManual = () => {
     setManualOpen(true)
+    setImportOpen(false)
     setShowSetup(false)
     setShowEligibility(false)
     setGeneratedLineup(null)
@@ -868,6 +929,14 @@ export default function LineupPage() {
                 already decided the lineup should not have to run the solver
                 first and then undo it. */}
             <button
+              onClick={openImport}
+              disabled={generating}
+              className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Camera size={18} />
+              <span>Read my card</span>
+            </button>
+            <button
               onClick={openManual}
               disabled={generating}
               className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
@@ -893,6 +962,22 @@ export default function LineupPage() {
               )}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Reading the card you already wrote */}
+      {importOpen && teamId && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <LineupImport
+            side="us"
+            teamId={teamId}
+            gameId={forGameId}
+            roster={players.map(p => ({
+              id: p.id, name: p.player.name, jersey: p.player.jersey_number,
+            }))}
+            onCancel={() => { setImportOpen(false); setShowSetup(true) }}
+            onSave={rows => handleImported(rows)}
+          />
         </div>
       )}
 
@@ -1260,7 +1345,7 @@ export default function LineupPage() {
       )}
 
       {/* Saved Lineups List */}
-      {!generatedLineup && !viewingLineup && !manualOpen && (
+      {!generatedLineup && !viewingLineup && !manualOpen && !importOpen && (
         <div>
           {savedLineups.length === 0 ? (
             <div className="bg-white rounded-lg shadow p-12 text-center">
