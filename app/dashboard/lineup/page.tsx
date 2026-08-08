@@ -6,6 +6,7 @@ import { createSupabaseComponentClient } from '@/lib/supabase'
 import { Plus, Calendar, Shield, RotateCcw, Save, Trash2, ChevronDown, ChevronUp, Users, AlertCircle } from 'lucide-react'
 import { usePageView } from '@/lib/tracking'
 import { LINEUP_MODES, STRATEGIES, LineupMode, Strategy } from '@/lib/lineup'
+import { LineupRules } from '@/components/LineupRules'
 import { findExistingGame } from '@/lib/games'
 
 // Types
@@ -690,6 +691,15 @@ export default function LineupPage() {
                 ))}
               </div>
             </div>
+
+            {/* Rules the solver may not trade away. Sits next to the strategy
+                because the two together are what makes a generated lineup
+                trustworthy: how it should lean, and what it can't do. */}
+            {teamId && (
+              <div className="sm:col-span-2">
+                <LineupRules teamId={teamId} />
+              </div>
+            )}
 
             {/* Who isn't here. Nothing else in the app knows this, and a lineup
                 built around a kid who didn't travel is worse than useless. */}

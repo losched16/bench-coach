@@ -17,6 +17,10 @@
 // in a game they are trying to win. Those are opposite goals and the same
 // algorithm can serve both — the difference is one term in the score.
 
+// 'development' spreads innings and positions — the rec default, where the
+// point is that everyone plays everywhere. 'competitive' keeps the best
+// available arrangement and holds players in one spot, which is how travel
+// actually runs: a settled defence with a few moving pieces.
 export type Strategy = 'development' | 'competitive'
 
 // How the batting order works. Travel varies by tournament and even by game,
@@ -40,6 +44,22 @@ export interface LineupPlayer {
   positionHistory?: Record<string, number>
   // Present when the player is unavailable this game
   out?: boolean
+
+  // ── Coach constraints ────────────────────────────────
+  // Hard rules the solver may not trade away for fairness or fit. A coach who
+  // finds their catcher in right field because the optimiser wanted variety
+  // stops trusting the optimiser.
+
+  // "RJ only plays short." When set, this player takes no other position, and
+  // the position prefers them over anyone else eligible.
+  lockedPosition?: string | null
+  // "Lucas can play anywhere except first." Cheaper to express than listing
+  // the eight he can play.
+  excludedPositions?: string[]
+  // League rules and promises. 8U travel usually requires every kid to field
+  // at least one inning; a pitcher on a count may be capped.
+  minInnings?: number | null
+  maxInnings?: number | null
 }
 
 export interface FieldingOptions {
@@ -53,6 +73,9 @@ export interface FieldingOptions {
   dhPlayerId?: string | null
   // Coach pitch / machine pitch means no player pitcher is needed.
   needsPitcher: boolean
+  // Applied to every player without their own minimum. This is how "everyone
+  // plays at least one inning" gets expressed once instead of per kid.
+  minInningsAll?: number
 }
 
 export interface Assignment { team_player_id: string; name: string; position: string }
@@ -82,11 +105,35 @@ export function positionsFor(fieldPositions: number, needsPitcher: boolean): str
 }
 
 function isEligible(player: LineupPlayer, position: string, needsPitcher: boolean): boolean {
+  // Coach constraints come first: they are rules, not preferences, and the
+  // solver must never trade one away for a better fit.
+  if (player.lockedPosition && player.lockedPosition !== position) return false
+  if ((player.excludedPositions || []).includes(position)) return false
+
   // Only the key positions gate on the coach's flags. Everything else is open,
   // because a coach who has to flag nine positions per kid never uses this.
   if (!KEY_POSITIONS.includes(position)) return true
   if (position === 'P' && !needsPitcher) return true
   return (player.eligiblePositions || []).includes(position)
+}
+
+// Whether this player still needs innings to satisfy a minimum, and how
+// urgently. Returned as innings still owed against innings still available —
+// once those are equal they have to play every remaining inning or the promise
+// breaks, and no fit score should be allowed to outweigh that.
+function inningsOwed(
+  player: LineupPlayer,
+  opts: FieldingOptions,
+  played: number,
+  inningsLeft: number
+): { owed: number; mustPlayNow: boolean } {
+  const min = player.minInnings ?? opts.minInningsAll ?? 0
+  const owed = Math.max(0, min - played)
+  return { owed, mustPlayNow: owed > 0 && owed >= inningsLeft }
+}
+
+function atMax(player: LineupPlayer, played: number): boolean {
+  return player.maxInnings != null && played >= player.maxInnings
 }
 
 // How well this player fits this position, before fairness is considered.
@@ -151,14 +198,54 @@ export function buildFieldingPlan(
     )
   }
 
+  // Constraints that cannot be satisfied are a setup problem, and saying so
+  // once beforehand beats a plan that quietly breaks a promise.
+  for (const p of fieldPool) {
+    if (p.lockedPosition && !positions.includes(p.lockedPosition)) {
+      warnings.push(
+        `${p.name} is locked to ${p.lockedPosition}, which isn't a position in this alignment. ` +
+        `They'll sit unless you unlock them.`
+      )
+    }
+  }
+
+  const lockedByPosition: Record<string, string[]> = {}
+  for (const p of fieldPool) {
+    if (p.lockedPosition) (lockedByPosition[p.lockedPosition] ||= []).push(p.name)
+  }
+  for (const [pos, names] of Object.entries(lockedByPosition)) {
+    if (names.length > 1) {
+      warnings.push(
+        `${names.join(' and ')} are all locked to ${pos}. Only one can play it at a time, ` +
+        `so the others sit — unlock all but one.`
+      )
+    }
+  }
+
+  // Do the minimums even fit? Innings available is positions x innings.
+  const totalSlots = positions.length * opts.innings
+  const demanded = fieldPool.reduce(
+    (sum, p) => sum + (p.minInnings ?? opts.minInningsAll ?? 0), 0
+  )
+  if (demanded > totalSlots) {
+    warnings.push(
+      `The minimum innings you've set add up to ${demanded}, but there are only ${totalSlots} ` +
+      `fielding slots in ${opts.innings} innings. Something has to give — lower a minimum or play more innings.`
+    )
+  }
+
   for (let inning = 1; inning <= opts.innings; inning++) {
     const assigned = new Set<string>()
     const rows: Assignment[] = []
 
     for (const position of orderPositionsForFilling(positions)) {
+      const inningsLeft = opts.innings - inning + 1
       const candidates = fieldPool
         .filter(p => !assigned.has(p.id))
         .filter(p => isEligible(p, position, opts.needsPitcher))
+        // A cap is a cap. Someone on a pitch count who is done for the day
+        // should not reappear because the optimiser liked their glove.
+        .filter(p => !atMax(p, inningsPlayed[p.id]))
 
       if (candidates.length === 0) {
         // Only worth saying when the pool exists but was used up this inning —
@@ -173,8 +260,8 @@ export function buildFieldingPlan(
       }
 
       const best = candidates.reduce((a, b) =>
-        scoreCandidate(b, position, opts, inningsPlayed, playedThisGame) >
-        scoreCandidate(a, position, opts, inningsPlayed, playedThisGame) ? b : a
+        scoreCandidate(b, position, opts, inningsPlayed, playedThisGame, inningsLeft) >
+        scoreCandidate(a, position, opts, inningsPlayed, playedThisGame, inningsLeft) ? b : a
       )
 
       assigned.add(best.id)
@@ -238,6 +325,26 @@ export function buildFieldingPlan(
     }
   }
 
+  // Report broken promises explicitly. The scoring makes these rare, but a
+  // roster with heavy locks and thin eligibility can still box the solver in,
+  // and a coach who was told "everyone plays one" needs to hear that it
+  // didn't happen — before the game, not from a parent afterwards.
+  for (const p of fieldPool) {
+    const min = p.minInnings ?? opts.minInningsAll ?? 0
+    if (min > 0 && inningsPlayed[p.id] < min) {
+      warnings.push(
+        `${p.name} only gets ${inningsPlayed[p.id]} of the ${min} innings you asked for. ` +
+        `Usually a lock or a position they can't play is squeezing them out — swap someone manually.`
+      )
+    }
+    if (p.lockedPosition && inningsPlayed[p.id] === 0 && positions.includes(p.lockedPosition)) {
+      warnings.push(
+        `${p.name} is locked to ${p.lockedPosition} but never gets on the field — ` +
+        `someone else is holding that spot every inning.`
+      )
+    }
+  }
+
   return { field_assignments, bench_by_inning, warnings, innings_by_player: inningsPlayed }
 }
 
@@ -256,14 +363,29 @@ function scoreCandidate(
   position: string,
   opts: FieldingOptions,
   inningsPlayed: Record<string, number>,
-  playedThisGame: Record<string, Set<string>>
+  playedThisGame: Record<string, Set<string>>,
+  inningsLeft: number
 ): number {
   const fit = fitScore(player, position)
+  const played = inningsPlayed[player.id]
+
+  // A locked player owns their position. Without this the solver could put a
+  // better glove at short and leave the locked kid on the bench all game,
+  // which is the opposite of what locking them meant.
+  const lockBonus = player.lockedPosition === position ? 1000 : 0
+
+  // Running out of innings to keep a minimum outranks everything except a
+  // lock. "Every kid plays an inning" is a league rule or a promise to a
+  // parent, not a preference to be optimised against.
+  const { owed, mustPlayNow } = inningsOwed(player, opts, played, inningsLeft)
+  const owedBonus = mustPlayNow ? 500 : owed > 0 ? 20 : 0
 
   if (opts.strategy === 'competitive') {
-    // Win the game. Fit dominates; a small rest term still breaks ties toward
-    // whoever has been sitting, because nobody should play zero innings.
-    return fit * 10 - inningsPlayed[player.id] * 0.5
+    // Win the game, and keep the defence settled: travel runs a set lineup
+    // with a few moving pieces, so a player already at this position stays
+    // there rather than being shuffled for variety.
+    const consistencyBonus = playedThisGame[player.id].has(position) ? 6 : 0
+    return lockBonus + owedBonus + fit * 10 + consistencyBonus - played * 0.5
   }
 
   // Development: the fairness terms outweigh fit on purpose.
@@ -275,7 +397,7 @@ function scoreCandidate(
   const seasonBonus = -Math.min(seasonReps, 6) * 1.5
   const infieldSpread = INFIELD.has(position) && !hasPlayedInfield(playedThisGame[player.id]) ? 4 : 0
 
-  return fit + restBonus + varietyBonus + seasonBonus + infieldSpread
+  return lockBonus + owedBonus + fit + restBonus + varietyBonus + seasonBonus + infieldSpread
 }
 
 function hasPlayedInfield(played: Set<string>): boolean {
@@ -358,13 +480,14 @@ export const LINEUP_MODES: Record<LineupMode, { label: string; hint: string }> =
   },
 }
 
+// Named for the league they belong to, because that is how a coach picks.
 export const STRATEGIES: Record<Strategy, { label: string; hint: string }> = {
   development: {
-    label: 'Fair rotation',
-    hint: 'Equal innings, everyone gets infield reps, nobody buried in right field.',
+    label: 'Rec — fair rotation',
+    hint: 'Equal innings, everyone gets infield reps, nobody buried in right field. Positions move every inning.',
   },
   competitive: {
-    label: 'Best lineup',
-    hint: 'Best glove at every spot. Innings will not be equal — this is for games you are trying to win.',
+    label: 'Travel — set lineup',
+    hint: 'Best glove at every spot, and players stay there rather than rotating. Set minimum innings so nobody is forgotten.',
   },
 }

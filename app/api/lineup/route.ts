@@ -45,13 +45,19 @@ export async function POST(request: NextRequest) {
     const mode: LineupMode = (['continuous', 'fixed_9', 'fixed_10'] as const).includes(lineupMode)
       ? lineupMode
       : everyoneBats === false ? 'fixed_9' : 'continuous'
-    const strat: Strategy = strategy === 'competitive' ? 'competitive' : 'development'
     const needsPitcher = pitchingType === 'live_pitch' || pitchingType === 'player_pitch'
 
     // ── Team + roster ──
     const { data: team } = await supabaseAdmin
       .from('teams').select('*, season:seasons(name, league_type)').eq('id', teamId).single()
     if (!team) return NextResponse.json({ error: 'Team not found' }, { status: 404 })
+
+    // The team's saved default is the starting point; an explicit choice for
+    // this game wins. A rec team in a tournament should be able to switch for
+    // the day without changing what the team is.
+    const strat: Strategy = strategy === 'competitive' || strategy === 'development'
+      ? strategy
+      : ((team as any).default_strategy === 'competitive' ? 'competitive' : 'development')
 
     const { data: roster } = await supabaseAdmin
       .from('team_players')
@@ -104,6 +110,13 @@ export async function POST(request: NextRequest) {
       pitching_level: r.pitching_level,
       eligiblePositions: eligibilityMap[r.id] || [],
       positionHistory: positionHistory[r.id] || {},
+      // Rules the coach set once on the roster. Columns may not exist yet if
+      // migration 027 hasn't been applied — undefined reads as "no constraint"
+      // in the solver, so the builder keeps working either way.
+      lockedPosition: r.locked_position ?? null,
+      excludedPositions: r.excluded_positions || [],
+      minInnings: r.min_innings ?? null,
+      maxInnings: r.max_innings ?? null,
       out: out.has(r.id),
     }))
 
@@ -137,6 +150,9 @@ export async function POST(request: NextRequest) {
     // plans reached coaches. Catch it here rather than at the fence.
     const errors = validateFieldingPlan(plan, players, {
       innings, fieldPositions, strategy: strat, lineupMode: mode,
+      // "Everyone plays at least one inning" lives on the team so it is said
+      // once. A player's own minimum overrides it.
+      minInningsAll: (team as any).min_innings_all ?? undefined,
       dhPlayerId: mode === 'fixed_10' ? dhPlayerId || null : null,
       needsPitcher,
     })
