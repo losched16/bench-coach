@@ -343,6 +343,33 @@ function GamePageContent() {
     return p?.player.jersey_number
   }
 
+  // Everyone who has thrown a pitch in this game, in the order they first
+  // appeared. Per-inning rows are the storage; this is the roster of arms.
+  const pitchersUsed = Array.from(
+    new Set(
+      [
+        ...[...pitchCounts]
+          .sort((a, b) => a.inning - b.inning)
+          .filter(pc => pc.pitch_count > 0)
+          .map(pc => pc.player_id),
+        // Someone just brought in belongs on the strip before their first
+        // pitch, or the panel shows no active arm at all.
+        ...(currentPitcher ? [currentPitcher] : []),
+      ]
+    )
+  )
+
+  // Coming back to a game in progress, the arm on the mound is whoever threw
+  // most recently. Making the coach re-pick them is a step for nothing.
+  useEffect(() => {
+    if (currentPitcher || pitchCounts.length === 0) return
+    const latest = [...pitchCounts]
+      .filter(pc => pc.pitch_count > 0)
+      .sort((a, b) => b.inning - a.inning)[0]
+    if (latest) setCurrentPitcher(latest.player_id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pitchCounts])
+
   const getPitcherTotal = (playerId: string) => {
     return pitchCounts.filter(pc => pc.player_id === playerId).reduce((sum, pc) => sum + pc.pitch_count, 0)
   }
@@ -772,18 +799,60 @@ function GamePageContent() {
 
           {pitchPanelOpen && (
             <div className="px-4 pb-4">
-              {/* Pitcher Selector */}
+              {/* Who has thrown in this game, with their totals. Going back to
+                  a pitcher who came out in the third used to mean scrolling a
+                  roster dropdown; a pitching change is a two-second job and
+                  this is the part that has to keep up. */}
+              {pitchersUsed.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-1 px-1">
+                  {pitchersUsed.map(pid => {
+                    const isActive = pid === currentPitcher
+                    const thisInning = getPitcherInningCount(pid, activeGame.current_inning)
+                    return (
+                      <button
+                        key={pid}
+                        onClick={() => setCurrentPitcher(pid)}
+                        className={`shrink-0 px-3 py-2 rounded-lg border text-left transition-colors ${
+                          isActive
+                            ? 'bg-purple-700 text-white border-purple-700'
+                            : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="text-xs font-medium truncate max-w-[8rem]">
+                          {getPlayerName(pid)}
+                        </div>
+                        <div className="text-lg font-bold tabular-nums leading-tight">
+                          {getPitcherTotal(pid)}
+                          {/* This inning vs the game. The limit is the game
+                              total; the split is what a coach reads to decide
+                              whether to leave them in. */}
+                          <span className={`text-xs font-normal ml-1 ${isActive ? 'text-purple-200' : 'text-gray-500'}`}>
+                            {thisInning > 0 ? `+${thisInning} this inn` : 'resting'}
+                          </span>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Bringing someone in. Only the roster members who have not
+                  thrown yet — the ones who have are one tap away above. */}
               <select
-                value={currentPitcher || ''}
-                onChange={e => setCurrentPitcher(e.target.value || null)}
+                value=""
+                onChange={e => { if (e.target.value) setCurrentPitcher(e.target.value) }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-xl mb-3 text-sm focus:ring-2 focus:ring-purple-500"
               >
-                <option value="">Select pitcher...</option>
-                {players.map(p => (
-                  <option key={p.player.id} value={p.player.id}>
-                    {p.player.jersey_number ? `#${p.player.jersey_number} ` : ''}{p.player.name}
-                  </option>
-                ))}
+                <option value="">
+                  {pitchersUsed.length > 0 ? 'Bring in another pitcher…' : 'Who is pitching?'}
+                </option>
+                {players
+                  .filter(p => !pitchersUsed.includes(p.player.id))
+                  .map(p => (
+                    <option key={p.player.id} value={p.player.id}>
+                      {p.player.jersey_number ? `#${p.player.jersey_number} ` : ''}{p.player.name}
+                    </option>
+                  ))}
               </select>
 
               {currentPitcher && (
