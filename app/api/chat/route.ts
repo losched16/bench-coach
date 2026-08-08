@@ -26,7 +26,7 @@ export const maxDuration = 120
 
 export async function POST(request: NextRequest) {
   try {
-    const { teamId, message, history, threadId: requestedThreadId } = await request.json()
+    const { teamId, message, history, threadId: requestedThreadId, playerId } = await request.json()
 
     console.log('Chat API called with teamId:', teamId)
 
@@ -577,7 +577,10 @@ export async function POST(request: NextRequest) {
       const coachCtx = await assembleCoachContext(supabaseAdmin, {
         coachId: team.coach_id,
         teamId,
-        playerId: null,
+        // Scoped to one kid when the coach picks one. A question about
+        // Charlie's swing should be answered from Charlie's history, not an
+        // average of the roster.
+        playerId: playerId || null,
       })
       const rendered = renderCoachContext(coachCtx)
       if (rendered && !rendered.startsWith('No history logged')) {
@@ -625,12 +628,12 @@ export async function POST(request: NextRequest) {
     // Which conversation this belongs to. The client names it explicitly now
     // that a team can have many; falling back to the most recently used one
     // keeps older clients and direct API calls working.
-    let thread: { id: string; title?: string | null } | null = null
+    let thread: { id: string; title?: string | null; player_id?: string | null } | null = null
 
     if (requestedThreadId) {
       const { data } = await supabaseAdmin
         .from('chat_threads')
-        .select('id, title')
+        .select('id, title, player_id')
         .eq('id', requestedThreadId)
         .eq('team_id', teamId)   // a thread id from another team is not a match
         .maybeSingle()
@@ -640,7 +643,7 @@ export async function POST(request: NextRequest) {
     if (!thread) {
       const { data } = await supabaseAdmin
         .from('chat_threads')
-        .select('id, title')
+        .select('id, title, player_id')
         .eq('team_id', teamId)
         .order('last_message_at', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false })
@@ -708,6 +711,16 @@ export async function POST(request: NextRequest) {
       await supabaseAdmin.from('chat_threads').update({ title: threadTitle }).eq('id', thread.id)
     }
 
+    // Remember who this conversation is about, so reopening it on Thursday
+    // puts the coach back in the same context without re-picking.
+    const scopedPlayerId = playerId || null
+    if (scopedPlayerId !== (thread.player_id ?? null)) {
+      await supabaseAdmin
+        .from('chat_threads')
+        .update({ player_id: scopedPlayerId })
+        .eq('id', thread.id)
+    }
+
     return NextResponse.json({
       message: response.message,
       memory_suggestions: response.memory_suggestions,
@@ -754,7 +767,7 @@ export async function GET(request: NextRequest) {
     if (!thread) {
       const { data } = await supabaseAdmin
         .from('chat_threads')
-        .select('id, title')
+        .select('id, title, player_id')
         .eq('team_id', teamId)
         .order('last_message_at', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false })
@@ -787,6 +800,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       threadId: thread.id,
       threadTitle: thread.title ?? null,
+      playerId: thread.player_id ?? null,
       messages: messages || []
     })
 

@@ -8,6 +8,7 @@ import {
   Search, Eye, CalendarCheck, Dumbbell, ChevronRight,
 } from 'lucide-react'
 import { usePageView, useTracker } from '@/lib/tracking'
+import { SupersedeConfirm, Superseding } from '@/components/SupersedeConfirm'
 import { AnalysisProse } from '@/components/AnalysisProse'
 import { splitSections, META_SENTINEL } from '@/lib/analysis'
 
@@ -73,6 +74,10 @@ function PrescribeContent() {
   const [competitionLevel, setCompetitionLevel] = useState<'both' | 'rec' | 'travel'>('both')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<Prescription | null>(null)
+  // Set when a commit would replace the priority already running in this area.
+  const [superseding, setSuperseding] = useState<
+    { replacing: Superseding; focusAreaLabel: string; complaint: string } | null
+  >(null)
 
   useEffect(() => {
     fetch('/api/prescribe')
@@ -109,12 +114,13 @@ function PrescribeContent() {
     ? new Date().getFullYear() - selectedPlayer.birth_year
     : undefined
 
-  const submit = async (text?: string) => {
+  const submit = async (text?: string, confirmSupersede = false) => {
     const q = (text ?? complaint).trim()
     if (!q) return
     setComplaint(q)
     setLoading(true)
     setResult(null)
+    setSuperseding(null)
     try {
       const res = await fetch('/api/prescribe', {
         method: 'POST',
@@ -125,8 +131,17 @@ function PrescribeContent() {
           playerId: playerId || undefined,
           playerAge,
           competitionLevel: competitionLevel === 'both' ? undefined : competitionLevel,
+          confirmSupersede,
         }),
       })
+
+      // There is already a priority in this area. The server checks before
+      // running the analysis, so backing out here costs nothing.
+      if (res.status === 409) {
+        const data = await res.json()
+        setSuperseding({ replacing: data.replacing, focusAreaLabel: data.focusAreaLabel || 'this area', complaint: q })
+        return
+      }
 
       // Migration / validation errors still come back as JSON
       const contentType = res.headers.get('content-type') || ''
@@ -309,6 +324,16 @@ function PrescribeContent() {
             after a game or a lesson and the read here stops being generic.
           </span>
         </div>
+      )}
+
+      {superseding && (
+        <SupersedeConfirm
+          replacing={superseding.replacing}
+          focusAreaLabel={superseding.focusAreaLabel}
+          busy={loading}
+          onConfirm={() => submit(superseding.complaint, true)}
+          onCancel={() => setSuperseding(null)}
+        />
       )}
 
       {loading && !result?.sections?.length && (

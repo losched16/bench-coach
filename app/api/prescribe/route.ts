@@ -124,6 +124,62 @@ export async function POST(request: NextRequest) {
       `${primary?.label || ''} ${complaint}`
     )
 
+    // 3b. Say what this would cost before spending anything on it.
+    //
+    // Setting a priority abandons the one already running in the same focus
+    // area. That is correct — two swing corrections at once and you can't tell
+    // which cue failed — but it used to happen silently, so a coach who typed
+    // a question into what looked like a search box lost three weeks of a
+    // hitting plan without being told.
+    //
+    // The check runs here rather than in a separate route because the focus
+    // area isn't known until the diagnosis above; guessing it from keywords
+    // would name the wrong priority, which is worse than no warning. It also
+    // runs before the analysis, so a coach who backs out pays nothing.
+    if (coachId && focusArea && !body.confirmSupersede) {
+      let sq = supabaseAdmin
+        .from('prescriptions')
+        .select('id, priority, focus_area, created_at')
+        .eq('coach_id', coachId)
+        .eq('status', 'active')
+        .eq('focus_area', focusArea)
+
+      sq = playerId
+        ? sq.eq('player_id', playerId)
+        : sq.eq('team_id', teamId || '').eq('scope', 'team')
+
+      const { data: conflicting } = await sq.order('created_at', { ascending: false }).limit(1)
+      const existing = (conflicting || [])[0] as any
+
+      if (existing) {
+        // How much work is already attached to it. Replacing a priority that
+        // was run six times is a different decision from replacing one set
+        // yesterday, and the coach should see which one this is.
+        const { count } = await supabaseAdmin
+          .from('entries')
+          .select('id', { count: 'exact', head: true })
+          .eq('prescription_id', existing.id)
+
+        const ageDays = existing.created_at
+          ? Math.max(0, Math.floor((Date.now() - new Date(existing.created_at).getTime()) / 86400000))
+          : null
+
+        return NextResponse.json({
+          needsConfirmation: true,
+          focusArea,
+          focusAreaLabel: focusAreaLabel(focusArea),
+          replacing: {
+            id: existing.id,
+            // The stored priority is a markdown section; its opening is the
+            // part a coach will recognise.
+            priority: String(existing.priority || '').replace(/[#*_`>]/g, '').trim().slice(0, 240) || null,
+            age_days: ageDays,
+            sessions_logged: count ?? 0,
+          },
+        }, { status: 409 })
+      }
+    }
+
     // 4. Select candidate drills mapped to those problems.
     const { data: mapRows } = slugs.length > 0
       ? await supabaseAdmin

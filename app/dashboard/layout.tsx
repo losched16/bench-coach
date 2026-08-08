@@ -227,7 +227,9 @@ function DashboardContent({
     {
       label: 'Coaching',
       items: [
-        { label: 'Chat', href: '/dashboard/chat', icon: MessageSquare },
+        // The front door. Ask anything; making it a priority is a button
+        // inside the answer, not a different screen you had to pick first.
+        { label: 'CoachAI', href: '/dashboard/chat', icon: MessageSquare },
         { label: 'Log an Entry', href: '/dashboard/log', icon: ClipboardList },
         { label: 'What to Work On', href: '/dashboard/prescribe', icon: Target },
         { label: 'Check-In', href: '/dashboard/checkin', icon: CalendarCheck },

@@ -16,6 +16,8 @@ export interface ThreadSummary {
   created_at: string
   message_count: number
   preview: string | null
+  player_id: string | null
+  player_name: string | null
 }
 
 // ---------------------------------------------------------------------------
@@ -30,7 +32,7 @@ export async function GET(request: NextRequest) {
   try {
     const { data: threads, error } = await supabaseAdmin
       .from('chat_threads')
-      .select('id, title, created_at, last_message_at, archived')
+      .select('id, title, created_at, last_message_at, archived, player_id, player:players(name)')
       .eq('team_id', teamId)
       .order('last_message_at', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false })
@@ -69,6 +71,10 @@ export async function GET(request: NextRequest) {
       // Shown under the title while a thread is still untitled, and as a
       // second line otherwise — enough to tell two pitching chats apart.
       preview: (firstUserMessage.get(t.id) || '').replace(/\s+/g, ' ').slice(0, 90) || null,
+      player_id: t.player_id || null,
+      // Supabase returns a joined row as an array on some shapes and an object
+      // on others depending on the relationship it infers.
+      player_name: (Array.isArray(t.player) ? t.player[0]?.name : t.player?.name) || null,
     }))
 
     return NextResponse.json({ threads: summaries })
@@ -76,7 +82,7 @@ export async function GET(request: NextRequest) {
     console.error('Thread list error:', error)
     // The columns from migration 020 may not be applied yet. Say so plainly
     // rather than leaving the sidebar mysteriously empty.
-    const needsMigration = /last_message_at|archived/.test(String(error?.message))
+    const needsMigration = /last_message_at|archived|player_id/.test(String(error?.message))
     return NextResponse.json(
       { error: error.message || 'Could not load conversations', needsMigration },
       { status: needsMigration ? 200 : 500 }
@@ -91,13 +97,13 @@ export async function GET(request: NextRequest) {
 // after the first message, when there is something to name it after.
 export async function POST(request: NextRequest) {
   try {
-    const { teamId } = await request.json()
+    const { teamId, playerId } = await request.json()
     if (!teamId) return NextResponse.json({ error: 'Missing teamId' }, { status: 400 })
 
     const { data, error } = await supabaseAdmin
       .from('chat_threads')
-      .insert({ team_id: teamId })
-      .select('id, title, created_at')
+      .insert({ team_id: teamId, player_id: playerId || null })
+      .select('id, title, created_at, player_id')
       .single()
 
     if (error) throw error
@@ -113,17 +119,31 @@ export async function POST(request: NextRequest) {
 // ---------------------------------------------------------------------------
 export async function PATCH(request: NextRequest) {
   try {
-    const { threadId, title } = await request.json()
+    const body = await request.json()
+    const { threadId, title } = body
     if (!threadId) return NextResponse.json({ error: 'Missing threadId' }, { status: 400 })
 
-    const clean = String(title || '').replace(/\s+/g, ' ').trim().slice(0, 80)
-    if (!clean) return NextResponse.json({ error: 'A name is required' }, { status: 400 })
+    const patch: Record<string, any> = {}
+
+    if (title !== undefined) {
+      const clean = String(title || '').replace(/\s+/g, ' ').trim().slice(0, 80)
+      if (!clean) return NextResponse.json({ error: 'A name is required' }, { status: 400 })
+      patch.title = clean
+    }
+
+    // Explicit null is meaningful here — it means "this is about the whole
+    // team now" — so presence in the body is the test, not truthiness.
+    if ('playerId' in body) patch.player_id = body.playerId || null
+
+    if (Object.keys(patch).length === 0) {
+      return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
+    }
 
     const { data, error } = await supabaseAdmin
       .from('chat_threads')
-      .update({ title: clean })
+      .update(patch)
       .eq('id', threadId)
-      .select('id, title')
+      .select('id, title, player_id')
       .single()
 
     if (error) throw error

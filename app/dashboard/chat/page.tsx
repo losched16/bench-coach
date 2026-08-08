@@ -3,20 +3,43 @@
 import { useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
-import { Send, Loader2, Menu, X } from 'lucide-react'
+import { Send, Loader2, Menu, X, Target, Users, ExternalLink } from 'lucide-react'
+import Link from 'next/link'
 import { ChatMessageContent } from '@/components/ChatMessageContent'
 import { ChatThreadList, ChatThread } from '@/components/ChatThreadList'
-import { usePageView } from '@/lib/tracking'
+import { SupersedeConfirm, Superseding } from '@/components/SupersedeConfirm'
+import { META_SENTINEL } from '@/lib/analysis'
+import { usePageView, useTracker } from '@/lib/tracking'
 
 interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
   memory_suggestions?: any
+  // Set on the analysis written into the thread when a priority is committed,
+  // so it renders as a decision rather than another chat reply.
+  meta?: { kind?: string; prescriptionId?: string | null; playerName?: string | null } | null
+}
+
+interface RosterPlayer {
+  player_id: string
+  name: string
+  birth_year: number | null
+}
+
+// A pending commit: which question it came from, and whether it is waiting on
+// the coach to confirm replacing an existing priority.
+interface Commit {
+  complaint: string
+  confirming: Superseding | null
+  focusAreaLabel: string
+  running: boolean
+  error: string | null
 }
 
 export default function ChatPage() {
   usePageView('chat')
+  const track = useTracker()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -29,6 +52,9 @@ export default function ChatPage() {
   // Set when migration 020 hasn't been applied — the rail is useless without
   // it, so say why rather than showing an empty list.
   const [threadsUnavailable, setThreadsUnavailable] = useState(false)
+  const [roster, setRoster] = useState<RosterPlayer[]>([])
+  const [playerId, setPlayerId] = useState<string | null>(null)
+  const [commit, setCommit] = useState<Commit | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const searchParams = useSearchParams()
   const teamId = searchParams.get('teamId')
@@ -38,6 +64,7 @@ export default function ChatPage() {
     if (teamId) {
       loadChat()
       loadThreads()
+      loadRoster()
       loadTeamContext()
     }
   }, [teamId])
@@ -56,6 +83,9 @@ export default function ChatPage() {
         const data = await response.json()
         setThreadId(data.threadId)
         setMessages(data.messages || [])
+        // A conversation about Charlie stays about Charlie when you reopen it.
+        setPlayerId(data.playerId ?? null)
+        setCommit(null)
       }
     } catch (error) {
       console.error('Error loading chat:', error)
@@ -97,7 +127,7 @@ export default function ChatPage() {
       const response = await fetch('/api/chat/threads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamId }),
+        body: JSON.stringify({ teamId, playerId }),
       })
       const data = await response.json()
       if (data.thread) {
@@ -111,6 +141,171 @@ export default function ChatPage() {
     } finally {
       setStartingThread(false)
     }
+  }
+
+  // ── Committing a priority ────────────────────────────────
+  //
+  // The button doesn't bookmark the chat reply. It runs the full structured
+  // analysis on the original question and saves it as the active priority for
+  // that area of the game, which is what starts the three-week loop. Chat
+  // answers in ten seconds; this is the deliberate act.
+
+  const selectedPlayer = roster.find(r => r.player_id === playerId)
+
+  const runCommit = async (complaint: string, confirmSupersede: boolean) => {
+    setCommit(prev => ({
+      complaint,
+      confirming: confirmSupersede ? null : prev?.confirming ?? null,
+      focusAreaLabel: prev?.focusAreaLabel || '',
+      running: true,
+      error: null,
+    }))
+
+    const playerAge = selectedPlayer?.birth_year
+      ? new Date().getFullYear() - selectedPlayer.birth_year
+      : undefined
+
+    try {
+      const res = await fetch('/api/prescribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          complaint,
+          teamId,
+          playerId: playerId || undefined,
+          playerAge,
+          confirmSupersede,
+        }),
+      })
+
+      // 409 means there is already a priority in this area. The server checks
+      // before spending anything on the analysis, so backing out is free.
+      if (res.status === 409) {
+        const data = await res.json()
+        setCommit({
+          complaint,
+          confirming: data.replacing,
+          focusAreaLabel: data.focusAreaLabel || 'this area',
+          running: false,
+          error: null,
+        })
+        return
+      }
+
+      const contentType = res.headers.get('content-type') || ''
+      if (contentType.includes('application/json')) {
+        const data = await res.json()
+        throw new Error(data.error || 'Could not set the priority.')
+      }
+      if (!res.body) throw new Error('No response from the server')
+
+      // Stream it into the conversation as it is written — a read takes 20-40
+      // seconds and a spinner that long reads as broken.
+      const liveId = `commit-${Date.now()}`
+      setMessages(prev => [
+        ...prev,
+        { id: liveId, role: 'assistant', content: '', meta: { kind: 'priority' } },
+      ])
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let markdown = ''
+      let meta: any = null
+
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+
+        const sentinelAt = buffer.indexOf(META_SENTINEL)
+        markdown = sentinelAt === -1 ? buffer : buffer.slice(0, sentinelAt)
+
+        setMessages(prev =>
+          prev.map(m => (m.id === liveId ? { ...m, content: markdown } : m))
+        )
+
+        if (sentinelAt !== -1) {
+          try {
+            meta = JSON.parse(buffer.slice(sentinelAt + META_SENTINEL.length))
+          } catch {
+            /* the tail is the only part that failed — the analysis still stands */
+          }
+        }
+      }
+
+      if (meta?.error) throw new Error(meta.error)
+
+      // Persist it into the thread so the conversation reads as the whole
+      // story: the question, the answer, and the decision.
+      const saved = await fetch('/api/chat/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          threadId,
+          role: 'assistant',
+          content: markdown,
+          meta: {
+            kind: 'priority',
+            prescriptionId: meta?.prescriptionId || null,
+            playerName: selectedPlayer?.name || null,
+          },
+        }),
+      }).then(r => r.json()).catch(() => null)
+
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === liveId
+            ? {
+                ...m,
+                id: saved?.message?.id || liveId,
+                content: markdown,
+                meta: {
+                  kind: 'priority',
+                  prescriptionId: meta?.prescriptionId || null,
+                  playerName: selectedPlayer?.name || null,
+                },
+              }
+            : m
+        )
+      )
+
+      track('prescription_generated', { source: 'chat', from_chat: true })
+      setCommit(null)
+      loadThreads()
+    } catch (error: any) {
+      console.error('Commit error:', error)
+      setCommit({
+        complaint,
+        confirming: null,
+        focusAreaLabel: '',
+        running: false,
+        error: error?.message || 'Could not set the priority.',
+      })
+    }
+  }
+
+  // The question a commit is built from is the coach's own words, not the
+  // model's answer — the analysis should read the problem, not a summary of a
+  // previous read of it.
+  const questionBefore = (assistantIndex: number): string | null => {
+    for (let i = assistantIndex - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') return messages[i].content
+    }
+    return null
+  }
+
+  const handleScopeChange = async (nextPlayerId: string | null) => {
+    setPlayerId(nextPlayerId)
+    setCommit(null)
+    if (!threadId) return
+    setThreads(prev => prev.map(t => (t.id === threadId ? { ...t, player_id: nextPlayerId } : t)))
+    await fetch('/api/chat/threads', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threadId, playerId: nextPlayerId }),
+    })
   }
 
   const handleRenameThread = async (id: string, title: string) => {
@@ -139,6 +334,22 @@ export default function ChatPage() {
       }
     }
     loadThreads()
+  }
+
+  const loadRoster = async () => {
+    const { data } = await supabase
+      .from('team_players')
+      .select('player:players(id, name, birth_year)')
+      .eq('team_id', teamId as any)
+    const list: RosterPlayer[] = (data || [])
+      .map((tp: any) => ({
+        player_id: tp.player?.id,
+        name: tp.player?.name || '',
+        birth_year: tp.player?.birth_year ?? null,
+      }))
+      .filter((r: RosterPlayer) => r.player_id && r.name)
+      .sort((a: RosterPlayer, b: RosterPlayer) => a.name.localeCompare(b.name))
+    setRoster(list)
   }
 
   const loadTeamContext = async () => {
@@ -198,6 +409,7 @@ export default function ChatPage() {
           // Without this the server falls back to "most recent thread", which
           // is the wrong one the moment you switch conversations.
           threadId,
+          playerId,
         }),
       })
 
@@ -301,12 +513,31 @@ export default function ChatPage() {
           )}
           <div className="min-w-0 flex-1">
             <h2 className="font-semibold text-gray-900 truncate">
-              {activeThread?.title || 'AI Coach'}
+              {activeThread?.title || 'CoachAI'}
             </h2>
             {activeThread?.title && (
-              <p className="text-xs text-gray-500">AI Coach</p>
+              <p className="text-xs text-gray-500">CoachAI</p>
             )}
           </div>
+
+          {/* Who this conversation is about. Answers get read from that
+              player's own history rather than an average of the roster, and
+              it's what a committed priority attaches to. */}
+          {roster.length > 0 && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Users size={15} className="text-gray-400 hidden sm:block" />
+              <select
+                value={playerId || ''}
+                onChange={e => handleScopeChange(e.target.value || null)}
+                className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 bg-white max-w-[9rem] sm:max-w-none"
+              >
+                <option value="">Whole team</option>
+                {roster.map(r => (
+                  <option key={r.player_id} value={r.player_id}>{r.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           {!threadsUnavailable && (
             <button
               onClick={handleNewThread}
@@ -340,7 +571,21 @@ export default function ChatPage() {
             </div>
           ) : (
             <>
-              {messages.map(message => (
+              {messages.map((message, index) => {
+                const isPriority = message.meta?.kind === 'priority'
+                const sourceQuestion = message.role === 'assistant' ? questionBefore(index) : null
+                // Only offer the commit on the newest answer. Older ones are
+                // history, and a stack of identical buttons up the thread is
+                // noise rather than a choice.
+                const canCommit =
+                  message.role === 'assistant' &&
+                  !isPriority &&
+                  !message.id.startsWith('error-') &&
+                  index === messages.length - 1 &&
+                  !!sourceQuestion &&
+                  !loading
+
+                return (
                 <div
                   key={message.id}
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -349,13 +594,63 @@ export default function ChatPage() {
                     className={`max-w-3xl rounded-lg ${
                       message.role === 'user'
                         ? 'bg-blue-600 text-white px-4 py-3'
-                        : 'bg-gray-100 text-gray-900 px-4 py-3'
+                        : isPriority
+                          ? 'bg-white border-2 border-red-200 px-4 py-3 w-full'
+                          : 'bg-gray-100 text-gray-900 px-4 py-3'
                     }`}
                   >
+                    {isPriority && (
+                      <div className="flex items-center gap-2 mb-3 pb-3 border-b border-red-100">
+                        <Target className="text-red-600 shrink-0" size={18} />
+                        <span className="font-semibold text-gray-900 text-sm">
+                          {message.meta?.playerName
+                            ? `${message.meta.playerName}'s priority`
+                            : 'Team priority'}
+                        </span>
+                        <span className="text-xs text-gray-500 ml-auto">
+                          Check-in in 3 weeks
+                        </span>
+                      </div>
+                    )}
+
                     {message.role === 'assistant' ? (
                       <ChatMessageContent content={message.content} role={message.role} />
                     ) : (
                       <div className="whitespace-pre-wrap">{message.content}</div>
+                    )}
+
+                    {isPriority && message.meta?.prescriptionId && (
+                      <Link
+                        href={`/dashboard/prescribe?teamId=${teamId}`}
+                        className="mt-3 inline-flex items-center gap-1 text-sm text-red-700 hover:text-red-800"
+                      >
+                        See all active priorities <ExternalLink size={13} />
+                      </Link>
+                    )}
+
+                    {/* The commit. Not a bookmark of this reply — it runs the
+                        full structured read on the original question and puts
+                        it on the three-week clock. */}
+                    {canCommit && (
+                      <div className="mt-3 pt-3 border-t border-gray-300">
+                        {commit?.error && (
+                          <p className="text-sm text-red-700 mb-2">{commit.error}</p>
+                        )}
+                        <button
+                          onClick={() => runCommit(sourceQuestion!, false)}
+                          disabled={commit?.running}
+                          className="inline-flex items-center gap-2 px-3 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50"
+                        >
+                          {commit?.running
+                            ? <Loader2 className="animate-spin" size={15} />
+                            : <Target size={15} />}
+                          {commit?.running ? 'Working on the read…' : 'Make this the priority'}
+                        </button>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Runs the full read on {selectedPlayer?.name || 'the team'}, sets it as
+                          the priority, and checks back in three weeks to see whether it moved.
+                        </p>
+                      </div>
                     )}
 
                     {/* Memory Suggestions */}
@@ -387,7 +682,20 @@ export default function ChatPage() {
                       )}
                   </div>
                 </div>
-              ))}
+                )
+              })}
+              {/* Raised before anything is written, and before the analysis
+                  costs anything — the server checks and returns 409 first. */}
+              {commit?.confirming && (
+                <SupersedeConfirm
+                  replacing={commit.confirming}
+                  focusAreaLabel={commit.focusAreaLabel}
+                  busy={commit.running}
+                  onConfirm={() => runCommit(commit.complaint, true)}
+                  onCancel={() => setCommit(null)}
+                />
+              )}
+
               <div ref={messagesEndRef} />
             </>
           )}
