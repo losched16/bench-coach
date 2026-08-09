@@ -46,7 +46,16 @@ WITH checks(migration, feature, kind, obj, col) AS (VALUES
   ('033_opponent_threads.sql',          'Chat about one opponent',       'column', 'chat_threads',       'opponent_team_id'),
   ('034_staff_access.sql',              'Staff can use the app',         'function', 'bc_team_role',     NULL),
   ('034_staff_access.sql',              'Staff can use the app',         'policy', 'teams',              'bc_read_member_team'),
-  ('035_plan_sessions.sql',             'Action plan checklist',         'table',  'plan_session_log',   NULL)
+  ('035_plan_sessions.sql',             'Action plan checklist',         'table',  'plan_session_log',   NULL),
+  ('036_plan_progression.sql',          'Steps in a plan',               'column', 'prescriptions',      'plan_steps'),
+  ('036_plan_progression.sql',          'Which step a player is on',     'column', 'prescriptions',      'current_step'),
+  ('036_plan_progression.sql',          'Drill start times in a video',  'column', 'drill_resources',    'youtube_start_seconds'),
+  ('037_journal_into_entries.sql',      'Player history',                'column', 'entries',            'legacy_journal_id'),
+  ('037_journal_into_entries.sql',      'Journal folded into the log',   'column', 'player_journal_entries', 'migrated_at'),
+  ('038_practice_recap_columns.sql',    'Practice recaps',               'column', 'practice_sessions',  'what_worked'),
+  ('038_practice_recap_columns.sql',    'Attendance in practice plans',  'column', 'practice_sessions',  'attendance_count'),
+  ('039_practice_schedule.sql',         'Practice dates',                'column', 'practice_plans',     'scheduled_for'),
+  ('039_practice_schedule.sql',         'Recap reminders',               'column', 'practice_plans',     'recap_dismissed_at')
 )
 SELECT
   c.migration,
