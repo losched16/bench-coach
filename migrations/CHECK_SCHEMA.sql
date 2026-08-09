@@ -57,6 +57,13 @@ WITH checks(migration, feature, kind, obj, col) AS (VALUES
   ('039_practice_schedule.sql',         'Practice dates',                'column', 'practice_plans',     'scheduled_for'),
   ('039_practice_schedule.sql',         'Recap reminders',               'column', 'practice_plans',     'recap_dismissed_at')
 )
+-- 040 repairs data rather than adding schema, so it cannot be detected by
+-- looking for a column. Run this instead — it must return 0:
+--
+--   SELECT count(*) FROM coaches
+--   WHERE is_subscribed = TRUE AND subscription_tier = 'free';
+--
+-- Anything above zero is a coach paying for a plan the app is not giving them.
 SELECT
   c.migration,
   c.feature,
