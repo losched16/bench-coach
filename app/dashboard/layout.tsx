@@ -15,9 +15,24 @@ interface Team {
   id: string
   name: string
   age_group: string
+  // The real answer to "is this a team or my own kid". The picker used to
+  // infer it from season.name === 'Personal', which is a label a coach can
+  // rename — and getting it wrong means the menu quietly disagrees with the
+  // workspace you think you are in.
+  workspace_kind?: string | null
   season: {
     name: string
   }
+}
+
+// A personal workspace is one player, not a roster. Coaching surfaces — the
+// lineup builder, scouting, practice plans, staff — are hidden while you are
+// standing in one, which is correct and completely baffling if the picker
+// gives you no clue which kind you picked.
+function isPersonal(team: Team): boolean {
+  if (team.workspace_kind) return team.workspace_kind === 'personal'
+  // Pre-migration-024 rows have no workspace_kind; fall back to the old tell.
+  return team.season?.name === 'Personal'
 }
 
 function DashboardContent({
@@ -124,6 +139,7 @@ function DashboardContent({
           id,
           name,
           age_group,
+          workspace_kind,
           season:seasons(name)
         `)
         .eq('coach_id', coach.id)
@@ -145,6 +161,7 @@ function DashboardContent({
             id,
             name,
             age_group,
+            workspace_kind,
             season:seasons(name)
           `)
           .in('id', teamIds)
@@ -358,9 +375,9 @@ function DashboardContent({
                   >
                     {teams.map((team) => (
                       <option key={team.id} value={team.id}>
-                        {team.season.name === 'Personal' 
-                          ? `${team.name}`
-                          : `${team.name} (${team.age_group})`
+                        {isPersonal(team)
+                          ? `${team.name} — my player`
+                          : `${team.name} (${team.age_group}) — team`
                         }
                       </option>
                     ))}
@@ -407,9 +424,9 @@ function DashboardContent({
               >
                 {teams.map((team) => (
                   <option key={team.id} value={team.id}>
-                    {team.season.name === 'Personal' 
-                      ? `${team.name}`
-                      : `${team.name} (${team.age_group})`
+                    {isPersonal(team)
+                      ? `${team.name} — my player`
+                      : `${team.name} (${team.age_group}) — team`
                     }
                   </option>
                 ))}
