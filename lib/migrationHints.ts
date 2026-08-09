@@ -65,6 +65,8 @@ const OBJECT_TO_MIGRATION: Array<{ match: RegExp; file: string; what: string }> 
   { match: /\b(legacy_journal_id|migrated_at)\b/, file: '037_journal_into_entries.sql', what: 'the player history' },
   // 038 — what actually happened at practice
   { match: /\b(what_worked|what_didnt_work|player_callouts|energy_level|attendance_count|next_focus)\b/, file: '038_practice_recap_columns.sql', what: 'practice recaps' },
+  // 039 — the day a practice plan is for
+  { match: /\b(scheduled_for|recap_dismissed_at)\b/, file: '039_practice_schedule.sql', what: 'practice dates and recap reminders' },
 ]
 
 export interface MigrationHint {

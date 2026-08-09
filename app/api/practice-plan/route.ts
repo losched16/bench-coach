@@ -65,6 +65,9 @@ export async function POST(request: NextRequest) {
     // the coach's own notes into the plan.
     let recapContext = ''
     let recapsDegraded = false
+    // How many kids actually turned up recently. The single most useful number
+    // for planning a practice and, until migration 038, one nothing recorded.
+    let attendanceHistory: number[] = []
     try {
       const recapQuery = (full: boolean) => supabaseAdmin
         .from('practice_sessions')
@@ -81,6 +84,10 @@ export async function POST(request: NextRequest) {
         attempt = await recapQuery(false)
       }
       const recentRecaps = attempt.data as any[] | null
+
+      attendanceHistory = (recentRecaps || [])
+        .map(r => r.attendance_count)
+        .filter((n: any) => typeof n === 'number' && n > 0)
 
       if (recentRecaps && recentRecaps.length > 0) {
         const recapLines = recentRecaps.map(r => {
@@ -164,6 +171,52 @@ export async function POST(request: NextRequest) {
           .or('status.eq.approved,status.is.null')
           .limit(45)).data
 
+    // Who is actually going to be standing there.
+    //
+    // players was hardcoded to [] since this route was written, so every plan
+    // ever generated was written for an unknown number of kids. "Split into
+    // stations" is useless advice; "three groups of four" is a plan. This is
+    // the difference, and it costs one query.
+    let roster: Array<{ id: string; name: string }> = []
+    try {
+      const { data: rosterRows } = await supabaseAdmin
+        .from('team_players')
+        .select('player_id, player:players(id, name)')
+        .eq('team_id', teamId)
+
+      roster = (rosterRows || [])
+        .map((r: any) => {
+          const p = Array.isArray(r.player) ? r.player[0] : r.player
+          return p ? { id: p.id, name: p.name } : null
+        })
+        .filter(Boolean) as Array<{ id: string; name: string }>
+    } catch (e: any) {
+      console.warn('Practice plan: roster unavailable:', e?.message)
+    }
+
+    // Deliberately names and a count, not full player profiles. Sending every
+    // kid's six skill ratings would repeat the mistake the drill library
+    // already had to be cured of — the model is doing station maths and
+    // planning around a couple of specific kids, not writing a scouting
+    // report on each one.
+    let rosterSection = ''
+    if (roster.length > 0) {
+      const typical = attendanceHistory.length > 0
+        ? Math.round(attendanceHistory.reduce((a, b) => a + b, 0) / attendanceHistory.length)
+        : null
+
+      rosterSection =
+        `HOW MANY KIDS\n\n` +
+        `Roster: ${roster.length} players — ${roster.map(p => p.name).join(', ')}.\n` +
+        (typical
+          ? `Recent attendance: ${attendanceHistory.join(', ')}. Plan for about ${typical}.\n`
+          : `No attendance recorded yet, so plan for the full ${roster.length} and say what to cut if fewer show up.\n`) +
+        `\nDo the station maths against that number and put it in the plan. ` +
+        `"Three groups of four, rotating every four minutes" — never "split into stations". ` +
+        `No kid should stand in a line waiting more than about thirty seconds; ` +
+        `if a block would leave players idle at this headcount, change the block.`
+    }
+
     // Build context
     const context: TeamContext = {
       team: {
@@ -175,7 +228,7 @@ export async function POST(request: NextRequest) {
       },
       coachPreferences: {},
       teamNotes: teamNotes?.map(n => ({ note: n.note, pinned: true })) || [],
-      players: [],
+      players: roster.map(p => ({ name: p.name })),
     }
 
     // What the loop knows: active team priorities, what the coach logged, and
@@ -214,6 +267,7 @@ export async function POST(request: NextRequest) {
           const plan = await generatePracticePlan(
             duration, focus, context, fullConstraints, drillResources || [],
             loopContext || undefined,
+            rosterSection || undefined,
             (_chars, chunk) => {
               buffer += chunk
               const found = (buffer.match(/"title"\s*:/g) || []).length

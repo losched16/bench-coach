@@ -686,6 +686,10 @@ export async function generatePracticePlan(
   // what the coach actually wrote down. Without this the practice builder is a
   // separate tool that has never heard of the check-in.
   loopContext?: string,
+  // The roster size and recent attendance, already written as prose by the
+  // caller. Station maths is most of what separates a plan a volunteer can run
+  // from one they read and then improvise around.
+  rosterSection?: string,
   // Called as text arrives, so a caller can stream progress to the browser.
   onProgress?: (charsSoFar: number, chunk: string) => void
 ): Promise<any> {
@@ -729,6 +733,8 @@ WHAT WE'RE ALREADY WORKING ON — build the practice around this, don't ignore i
 ${loopContext}
 
 If a priority above is live for this team, at least one drill block must move it forward, and say which one in that block's description. If a check-in concluded something stalled, do NOT put the same drill back in unchanged — that is the specific failure the coach is paying us to catch.
+` : ''}${rosterSection ? `
+${rosterSection}
 ` : ''}
 ${drillLibrarySection}
 

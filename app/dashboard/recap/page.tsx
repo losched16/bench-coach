@@ -106,6 +106,14 @@ export default function RecapPage() {
           if (planData.focus) {
             setNextFocus(planData.focus)
           }
+          // The practice happened on the day the plan was for, not today —
+          // recaps are usually written the evening after, or the next morning.
+          // Defaulting to today quietly files the write-up against the wrong
+          // date and the next plan reads it as a more recent session than it
+          // was. Requires migration 039; undated plans keep today.
+          if (planData.scheduled_for) {
+            setPracticeDate(planData.scheduled_for)
+          }
         }
       }
     } catch (error) {

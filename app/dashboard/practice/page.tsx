@@ -11,6 +11,7 @@ import { useDrillResources } from '@/lib/useDrillResources'
 import { usePageView } from '@/lib/tracking'
 import { TemplateGallery } from '@/components/TemplateGallery'
 import { TeamOnly } from '@/components/TeamOnly'
+import { todayStr } from '@/lib/entries'
 
 
 interface PracticePlan {
@@ -21,6 +22,11 @@ interface PracticePlan {
   focus_areas: string[]
   content: any
   created_at: string
+  // The day the plan is FOR, as opposed to the day it was written. Null on
+  // everything generated before migration 039, and on anything a coach
+  // deliberately leaves undated.
+  scheduled_for?: string | null
+  recap_dismissed_at?: string | null
 }
 
 function PracticeContent() {
@@ -36,6 +42,14 @@ function PracticeContent() {
   const [planToDelete, setPlanToDelete] = useState<PracticePlan | null>(null)
   const [duration, setDuration] = useState(90)
   const [focusAreas, setFocusAreas] = useState<string[]>([])
+  // What day this plan is for. Defaults to today rather than to a guess at the
+  // next practice — the app does not know their schedule, and a wrong date
+  // silently attached to a plan is worse than one the coach set themselves.
+  const [scheduledFor, setScheduledFor] = useState(todayStr())
+  // Plan ids that already have a recap written against them.
+  const [recappedPlanIds, setRecappedPlanIds] = useState<Set<string>>(new Set())
+  const [scheduleReady, setScheduleReady] = useState(true)
+  const [dismissing, setDismissing] = useState<string | null>(null)
   
   // Custom plan state
   const [customTitle, setCustomTitle] = useState('')
@@ -106,6 +120,10 @@ function PracticeContent() {
 
   const loadPlans = async () => {
     try {
+      // select('*') already returns the new columns when they exist, so the
+      // only thing to detect is whether migration 039 has been run — which
+      // decides whether the scheduling UI is shown at all. Offering a date
+      // field that silently fails to save would be worse than not offering it.
       const { data } = await supabase
         .from('practice_plans')
         .select('*')
@@ -114,7 +132,20 @@ function PracticeContent() {
 
       if (data) {
         setPlans(data)
+        setScheduleReady(data.length === 0 || 'scheduled_for' in (data[0] as any))
       }
+
+      // Which plans have been written up. Cheap: one query for the whole team,
+      // rather than a per-card lookup.
+      const { data: sessions } = await supabase
+        .from('practice_sessions')
+        .select('practice_plan_id')
+        .eq('team_id', teamId)
+        .not('practice_plan_id', 'is', null)
+
+      setRecappedPlanIds(new Set(
+        (sessions || []).map((r: any) => r.practice_plan_id).filter(Boolean)
+      ))
     } catch (error) {
       console.error('Error loading plans:', error)
     } finally {
@@ -298,6 +329,7 @@ function PracticeContent() {
           duration_minutes: duration,
           focus: focusAreas,
           content: data.blocks,
+          ...(scheduleReady ? { scheduled_for: scheduledFor } : {}),
         })
 
       setShowPlanModal(false)
@@ -396,6 +428,38 @@ function PracticeContent() {
 
   if (loading) {
     return <div className="text-gray-600">Loading practice plans...</div>
+  }
+
+  // Practices that have happened and that nobody has written up.
+  //
+  // This is what turns the recap from a page you have to remember into a thing
+  // the app asks you for. Migration 038 made recaps work; without this nothing
+  // makes them happen, and a loop that depends on the coach spontaneously
+  // navigating somewhere is not a loop.
+  const awaitingRecap = plans.filter(p =>
+    p.scheduled_for &&
+    p.scheduled_for < todayStr() &&
+    !p.recap_dismissed_at &&
+    !recappedPlanIds.has(p.id)
+  )
+
+  const upcoming = plans.filter(p => p.scheduled_for && p.scheduled_for >= todayStr())
+
+  const dismissRecap = async (planId: string) => {
+    setDismissing(planId)
+    try {
+      await supabase
+        .from('practice_plans')
+        .update({ recap_dismissed_at: new Date().toISOString() })
+        .eq('id', planId)
+      setPlans(prev => prev.map(p =>
+        p.id === planId ? { ...p, recap_dismissed_at: new Date().toISOString() } : p
+      ))
+    } catch (error) {
+      console.error('Could not dismiss recap prompt:', error)
+    } finally {
+      setDismissing(null)
+    }
   }
 
   return (
@@ -505,6 +569,64 @@ function PracticeContent() {
         </div>
       )}
 
+      {/* "Practice was Tuesday — how did it go?"
+          The recap columns landed in migration 038 and the loop still only ran
+          if the coach thought to go and write one. This is the ask. It is
+          dismissible per plan, because a rained-off practice that keeps
+          nagging teaches people to ignore the whole panel. */}
+      {awaitingRecap.length > 0 && (
+        <div className="space-y-2">
+          {awaitingRecap.map(plan => (
+            <div
+              key={plan.id}
+              className="bg-green-50 border border-green-200 rounded-lg p-4 flex flex-wrap items-center justify-between gap-3"
+            >
+              <div className="min-w-0">
+                <p className="font-semibold text-green-900">
+                  How did {formatDate(plan.scheduled_for as string)} go?
+                </p>
+                <p className="text-sm text-green-800 mt-0.5">
+                  {plan.title} — two minutes now and the next plan is built around
+                  what actually happened.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => dismissRecap(plan.id)}
+                  disabled={dismissing === plan.id}
+                  className="px-3 py-2 text-sm text-green-800 font-medium disabled:opacity-50"
+                >
+                  Didn&apos;t happen
+                </button>
+                <Link
+                  href={`/dashboard/recap?teamId=${teamId}&planId=${plan.id}`}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
+                >
+                  <ClipboardCheck size={16} />
+                  Write the recap
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {upcoming.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-sm font-semibold text-blue-900">
+            Coming up
+          </p>
+          <ul className="mt-1.5 space-y-1">
+            {upcoming.map(p => (
+              <li key={p.id} className="text-sm text-blue-900">
+                <strong>{formatDate(p.scheduled_for as string)}</strong> — {p.title}
+                {p.duration_minutes ? ` (${p.duration_minutes} min)` : ''}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {plans.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <Clock className="mx-auto text-gray-400 mb-4" size={48} />
@@ -538,7 +660,14 @@ function PracticeContent() {
                     <Clock size={16} />
                     <span>{plan.duration_minutes} min</span>
                   </span>
-                  <span>{formatDate(plan.created_at)}</span>
+                  {/* The day it is for, when we know it. created_at is when
+                      the plan was written, which for a Sunday-night plan for a
+                      Tuesday practice is simply the wrong date to show. */}
+                  <span>
+                    {plan.scheduled_for
+                      ? `For ${formatDate(plan.scheduled_for)}`
+                      : formatDate(plan.created_at)}
+                  </span>
                 </div>
                 {((plan.focus && plan.focus.length > 0) || (plan.focus_areas && plan.focus_areas.length > 0)) && (
                   <div className="flex flex-wrap gap-2 mb-4">
@@ -740,6 +869,26 @@ function PracticeContent() {
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
             <h3 className="text-xl font-bold text-gray-900 mb-4">Generate Practice Plan</h3>
             <div className="space-y-4">
+              {/* Only shown once migration 039 exists. A date field that
+                  silently fails to save is worse than no date field. */}
+              {scheduleReady && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Practice date
+                  </label>
+                  <input
+                    type="date"
+                    value={scheduledFor}
+                    onChange={(e) => setScheduledFor(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    So the plan shows up on the right day — and so we can ask you
+                    afterwards how it went.
+                  </p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Duration (minutes)
