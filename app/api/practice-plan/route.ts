@@ -55,15 +55,32 @@ export async function POST(request: NextRequest) {
       .eq('pinned', true)
       .limit(3)
 
-    // Load recent practice recaps (last 3) to feed into the next plan
+    // Load recent practice recaps (last 3) to feed into the next plan.
+    //
+    // Two attempts. The recap columns arrived in migration 038, and before it
+    // this select failed on the first unknown column, dropped into the catch
+    // below, and logged a warning nobody reads — so the whole recaps-improve-
+    // the-next-plan loop was off with no visible symptom. Falling back to the
+    // columns that have always existed means a database without 038 still gets
+    // the coach's own notes into the plan.
     let recapContext = ''
+    let recapsDegraded = false
     try {
-      const { data: recentRecaps } = await supabaseAdmin
+      const recapQuery = (full: boolean) => supabaseAdmin
         .from('practice_sessions')
-        .select('date, recap_note, what_worked, what_didnt_work, player_callouts, energy_level, next_focus, attendance_count')
+        .select(full
+          ? 'date, recap_note, what_worked, what_didnt_work, player_callouts, energy_level, next_focus, attendance_count'
+          : 'date, recap_note')
         .eq('team_id', teamId)
         .order('date', { ascending: false })
         .limit(3)
+
+      let attempt = await recapQuery(true)
+      if (attempt.error) {
+        recapsDegraded = true
+        attempt = await recapQuery(false)
+      }
+      const recentRecaps = attempt.data as any[] | null
 
       if (recentRecaps && recentRecaps.length > 0) {
         const recapLines = recentRecaps.map(r => {
@@ -92,8 +109,18 @@ export async function POST(request: NextRequest) {
 
         recapContext = recapLines.join('\n\n')
       }
-    } catch (e) {
-      console.warn('Could not load practice recaps (table may not have new columns yet)')
+    } catch (e: any) {
+      console.warn('Practice plan: recaps unavailable:', e?.message)
+    }
+
+    if (recapsDegraded) {
+      // Named, so this shows up as something rather than nothing. The whole
+      // reason it went unnoticed for so long is that its failure mode was a
+      // console warning on a server nobody was watching.
+      console.warn(
+        'Practice plan: recap columns missing — run migrations/038_practice_recap_columns.sql. ' +
+        'Plans are being generated without what worked, what did not, or the attendance count.'
+      )
     }
 
     // Build constraints string that includes recaps

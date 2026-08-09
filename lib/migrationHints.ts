@@ -59,6 +59,12 @@ const OBJECT_TO_MIGRATION: Array<{ match: RegExp; file: string; what: string }> 
   { match: /\bbc_(team_role|team_at_least|game_at_least|coach_at_least|rank)\b/, file: '034_staff_access.sql', what: 'staff access to a team' },
   // 035 — ticking off the sessions in a plan
   { match: /\bplan_session_log\b/, file: '035_plan_sessions.sql', what: 'the action plan checklist' },
+  // 036 — a plan as a progression rather than a pile of drills
+  { match: /\b(plan_steps|current_step|step_advanced_at|youtube_start_seconds)\b/, file: '036_plan_progression.sql', what: 'the steps in a plan' },
+  // 037 — the journal folded into the activity log
+  { match: /\b(legacy_journal_id|migrated_at)\b/, file: '037_journal_into_entries.sql', what: 'the player history' },
+  // 038 — what actually happened at practice
+  { match: /\b(what_worked|what_didnt_work|player_callouts|energy_level|attendance_count|next_focus)\b/, file: '038_practice_recap_columns.sql', what: 'practice recaps' },
 ]
 
 export interface MigrationHint {

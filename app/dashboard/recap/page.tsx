@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
-import { ArrowLeft, Plus, X, ThumbsUp, ThumbsDown, User, Sun, Cloud, CloudRain, Snowflake, Zap, Check, Loader2 } from 'lucide-react'
+import { ArrowLeft, Plus, X, ThumbsUp, ThumbsDown, User, Sun, Cloud, CloudRain, Snowflake, Zap, Check, Loader2, AlertCircle } from 'lucide-react'
 import { usePageView } from '@/lib/tracking'
+import { migrationHintFor } from '@/lib/migrationHints'
 
 interface Player {
   id: string
@@ -52,6 +53,7 @@ export default function RecapPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   // Form state
   const [practiceDate, setPracticeDate] = useState(new Date().toISOString().split('T')[0])
@@ -161,6 +163,7 @@ export default function RecapPage() {
     if (!teamId) return
 
     setSaving(true)
+    setSaveError(null)
     try {
       const { error } = await supabase
         .from('practice_sessions')
@@ -195,9 +198,18 @@ export default function RecapPage() {
       setTimeout(() => {
         router.push(`/dashboard/practice?teamId=${teamId}`)
       }, 1500)
-    } catch (error) {
+    } catch (error: any) {
+      // Was alert('Failed to save recap') with no reason. Every recap anyone
+      // ever wrote failed on a missing column, and the message gave them no
+      // way to find that out — so the honest guess was "this feature is
+      // broken" and people stopped filling it in.
       console.error('Error saving recap:', error)
-      alert('Failed to save recap')
+      const hint = migrationHintFor(error)
+      setSaveError(
+        hint?.message ||
+        error?.message ||
+        'Could not save the recap. Nothing was lost — the form still has everything you typed.'
+      )
     } finally {
       setSaving(false)
     }
@@ -527,6 +539,19 @@ export default function RecapPage() {
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
         />
       </div>
+
+      {saveError && (
+        <div className="flex gap-2 text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg p-3">
+          <AlertCircle size={16} className="shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium">The recap didn&apos;t save.</p>
+            <p className="mt-0.5">{saveError}</p>
+            <p className="mt-1.5 text-red-700">
+              Everything you typed is still on this page — fix it and press save again.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Save Button */}
       <div className="flex justify-end pb-8">
