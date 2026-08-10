@@ -356,6 +356,9 @@ function PracticeContent() {
           mustIncludeDrillIds: Array.from(pickedDrills),
           objective: objective.trim() || undefined,
           equipmentAvailable: Array.from(equipmentAvailable),
+          // On a rebuild, what they already read. Blocks that survive the
+          // change keep the exact wording rather than being written again.
+          previousBlocks: constraintsOverride ? (draft?.blocks || []) : undefined,
         }),
       })
 
@@ -438,9 +441,10 @@ function PracticeContent() {
       `${specifics}\n\nThe coach read this plan and asked for a change:\n` +
       `${JSON.stringify({ title: draft?.title, blocks: draft?.blocks }, null, 1).slice(0, 6000)}\n\n` +
       `THEIR WORDS: "${adjustment.trim()}"\n` +
-      `Rebuild the plan honouring that. Keep every block they did not complain ` +
-      `about as close to identical as you can — changing things they liked is ` +
-      `how a coach stops trusting the adjust button.`
+      `Rebuild the plan honouring that. Any block they did not complain about ` +
+      `must come back with the SAME title and the SAME number of minutes — ` +
+      `that is how its already-written detail is carried across untouched. ` +
+      `Change a title or a duration only where they asked you to.`
     )
   }
 

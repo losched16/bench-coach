@@ -235,6 +235,58 @@ export function plannedMinutes(blocks: PlanBlock[]): number {
   return (blocks || []).reduce((n, b) => n + (Math.max(0, Number(b?.minutes) || 0)), 0)
 }
 
+// ---------------------------------------------------------------------------
+// Rebuilding a plan the coach has already read
+// ---------------------------------------------------------------------------
+
+/** Titles compare on their words, not their punctuation or capitals. */
+function titleKey(s: unknown): string {
+  return String(s || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+/** Does this block carry anything worth keeping, or is it just a heading? */
+export function isExpanded(b: PlanBlock | null | undefined): boolean {
+  return Boolean(
+    b && (b.detailed_instructions || b.setup ||
+          b.coaching_cues?.length || b.common_mistakes?.length)
+  )
+}
+
+/**
+ * The already-written version of a block, if the rebuild kept it unchanged.
+ *
+ * "More baserunning, drop the bunting station" should not silently reword the
+ * four blocks the coach liked. Telling the model to keep them "as close to
+ * identical as you can" was never going to hold — so instead, when a rebuilt
+ * block has the same name and the same length as one the coach already read,
+ * its detail is carried across verbatim and never regenerated.
+ *
+ * Length has to match as well as the name: if they asked for longer tee work,
+ * the rep counts and timings inside the instructions are now wrong, and a
+ * block that says "3 rounds of 2 minutes" under a 20-minute heading is worse
+ * than one that was rewritten.
+ */
+export function reusableBlock(
+  block: PlanBlock,
+  previous: PlanBlock[] | null | undefined
+): PlanBlock | null {
+  const key = titleKey(block?.title)
+  if (!key) return null
+  for (const p of previous || []) {
+    if (!isExpanded(p)) continue
+    if (titleKey(p.title) !== key) continue
+    if (Number(p.minutes) !== Number(block?.minutes)) continue
+    // The skeleton's own fields win — it may have changed the description or
+    // matched a different video — and the written detail comes from the copy
+    // the coach already approved.
+    return { ...p, ...block }
+  }
+  return null
+}
+
 /**
  * The cues worth printing when there is no room for all of them.
  *

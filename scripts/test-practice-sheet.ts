@@ -13,7 +13,7 @@
 
 import {
   readPlan, equipmentKey, equipmentChecklist, scheduleRows, parseTime,
-  plannedMinutes, fallbackCoachingPoints, PlanBlock,
+  plannedMinutes, fallbackCoachingPoints, reusableBlock, isExpanded, PlanBlock,
 } from '@/lib/practicePlan'
 
 let failures = 0
@@ -115,6 +115,49 @@ const cued = fallbackCoachingPoints([
 ])
 check('one cue per block, not three from the first', cued.length === 3 && cued[1] === 'glove below the ball', cued.join(' | '))
 check('a plan with no cues yields nothing rather than blanks', fallbackCoachingPoints([block(10)]).length === 0)
+
+// ── reusing detail across a rebuild ─────────────────────────────────────────
+
+const written: PlanBlock = {
+  title: 'Alligator Ground Balls', minutes: 15,
+  description: 'old description',
+  detailed_instructions: '1. Ten reps at 15 feet…',
+  coaching_cues: ['glove below the ball'],
+}
+const bare: PlanBlock = { title: 'Four Corners Rundown', minutes: 10 }
+
+check('an expanded block is recognised', isExpanded(written))
+check('a bare skeleton block is not', !isExpanded(bare))
+check('an undefined block is not expanded', !isExpanded(undefined))
+
+check(
+  'the same block by name and length is reused',
+  reusableBlock({ title: 'Alligator Ground Balls', minutes: 15 }, [written])
+    ?.detailed_instructions === '1. Ten reps at 15 feet…',
+)
+check(
+  'punctuation and case do not break the match',
+  reusableBlock({ title: 'alligator ground-balls', minutes: 15 }, [written]) !== null,
+)
+check(
+  'the new skeleton fields win over the old ones',
+  reusableBlock({ title: 'Alligator Ground Balls', minutes: 15, description: 'new' }, [written])
+    ?.description === 'new',
+)
+check(
+  'a block whose length changed is rewritten, not reused',
+  reusableBlock({ title: 'Alligator Ground Balls', minutes: 20 }, [written]) === null,
+)
+check(
+  'a genuinely new block is not reused',
+  reusableBlock({ title: 'Bunting Ladder', minutes: 15 }, [written]) === null,
+)
+check(
+  'a previous block with no detail is not worth reusing',
+  reusableBlock({ title: 'Four Corners Rundown', minutes: 10 }, [bare]) === null,
+)
+check('no previous plan means nothing to reuse', reusableBlock(written, null) === null)
+check('an untitled block never matches', reusableBlock({ minutes: 15 }, [written]) === null)
 
 console.log('')
 if (failures > 0) {

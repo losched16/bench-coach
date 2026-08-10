@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import {
-  generatePracticePlanSingle, generatePracticeSkeleton, expandPracticeBlock,
+  generatePracticeSkeleton, expandPracticeBlock,
   PracticeInputs, TeamContext,
 } from '@/lib/anthropic'
 import { assembleCoachContext, renderCoachContext } from '@/lib/coachContext'
 import { categoriesForPracticeFocus } from '@/lib/focusAreas'
 import { guard } from '@/lib/authz'
 import { visibleDrillsSafe, favoriteDrillIds, drillMenuLine, DRILL_PREFERENCE_NOTE } from '@/lib/drills'
+import { reusableBlock } from '@/lib/practicePlan'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -41,6 +42,10 @@ export async function POST(request: NextRequest) {
       // one back, and an empty equipment list means "assume the usual kit"
       // rather than "they have nothing".
       objective, equipmentAvailable,
+      // On a rebuild, the plan they just read. Blocks they did not ask to
+      // change keep the detail that was already written for them instead of
+      // being generated again.
+      previousBlocks,
     } = await request.json()
 
     if (!teamId || !duration || !focus) {
@@ -367,30 +372,46 @@ export async function POST(request: NextRequest) {
             ? equipmentAvailable : undefined,
         }
 
-        try {
-          // A refine is one coherent rewrite of a plan the coach has already
-          // read, so it stays a single call — fanning it out would let five
-          // independent expansions disagree about what changed.
-          if (isRefine) {
-            const plan = await generatePracticePlanSingle(inputs)
-            send({ type: 'plan', plan })
-            controller.close()
-            return
-          }
+        // Sent before anything is awaited, so bytes are on the wire within
+        // milliseconds. A refine used to await one 60-120 second generation
+        // and send nothing until it finished; the gateway saw an open response
+        // with no data, killed it, and the coach got a 504 with no idea why.
+        // Whatever else changes here, something must be written immediately.
+        send({ type: 'progress', stage: isRefine ? 'rebuilding' : 'designing' })
 
+        try {
           // Phase 1: the shape. Small output, so it lands in seconds, and the
           // coach can see the whole practice — including the flags — while the
           // detail is still being written.
+          //
+          // A refine runs through here too. It used to be a single call on the
+          // grounds that fanning out would let independent expansions disagree
+          // about what changed — but they never see "what changed". The
+          // skeleton is one call that reads the old plan and the coach's words
+          // and decides the whole new shape; the expansions just write out the
+          // blocks they are handed.
           const skeleton = await generatePracticeSkeleton(inputs)
           const blocks: any[] = Array.isArray(skeleton.blocks) ? skeleton.blocks : []
           send({ type: 'skeleton', plan: { ...skeleton, blocks } })
 
-          // Phase 2: every block at once. Wall clock is the slowest block, not
-          // the sum of them, and each call has room to be thorough about one
-          // block instead of rationing tokens across the whole plan.
+          // On a rebuild, a block that came back with the same name and the
+          // same length is the one the coach already read and did not complain
+          // about. Its detail is reused verbatim rather than regenerated —
+          // which is both faster and the only way "keep what I liked" can
+          // actually hold. Asking the model to keep it "as close to identical
+          // as you can" was never a guarantee.
+          const prior: any[] = isRefine && Array.isArray(previousBlocks) ? previousBlocks : []
+
+          // Phase 2: every block that still needs writing, at once. Wall clock
+          // is the slowest block, not the sum of them.
           const expanded = await Promise.all(
-            blocks.map((b, idx) =>
-              expandPracticeBlock(inputs, b, idx, blocks)
+            blocks.map((b, idx) => {
+              const kept = prior.length ? reusableBlock(b, prior) : null
+              if (kept) {
+                send({ type: 'block', index: idx, block: kept })
+                return Promise.resolve(kept)
+              }
+              return expandPracticeBlock(inputs, b, idx, blocks)
                 .then(detail => {
                   const full = { ...b, ...detail }
                   // Sent as it lands so the coach can start reading block one
@@ -406,7 +427,7 @@ export async function POST(request: NextRequest) {
                   send({ type: 'block', index: idx, block: b })
                   return b
                 })
-            )
+            })
           )
 
           send({ type: 'plan', plan: { ...skeleton, blocks: expanded } })
