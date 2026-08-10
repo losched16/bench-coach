@@ -3,6 +3,10 @@
 import { useState, useEffect, useCallback } from 'react'
 
 export interface DrillResource {
+  // Returned by /api/drills and needed to favourite a drill from inside a
+  // practice plan. Optional because plans generated before the API selected it
+  // will not have one, and the save button falls back to "save as my own".
+  id?: string
   drill_name: string
   youtube_video_id?: string
   youtube_url?: string

@@ -2,6 +2,7 @@
 
 import { RefreshCw } from 'lucide-react'
 import { DrillVideo, DrillVideoLookup } from './DrillVideo'
+import { SaveDrillButton } from './SaveDrillButton'
 
 // One block of a practice plan, rendered in full.
 //
@@ -21,9 +22,17 @@ interface Props {
   // which is a better tool for the same job at that moment.
   onSwap?: () => void
   drillResources?: any[]
+  // Saving a drill happens here, in the moment a coach decides they like it,
+  // rather than only on a library page nobody browses.
+  coachId?: string | null
+  favorites?: Set<string>
+  onFavoritesChanged?: () => void
 }
 
-export function PracticeBlock({ block, idx, onSwap, drillResources = [] }: Props) {
+export function PracticeBlock({
+  block, idx, onSwap, drillResources = [],
+  coachId = null, favorites, onFavoritesChanged,
+}: Props) {
   return (
       <div className="mb-5 last:mb-0 bg-white rounded-lg border border-gray-200 overflow-hidden">
         {/* Block Header */}
@@ -177,6 +186,19 @@ export function PracticeBlock({ block, idx, onSwap, drillResources = [] }: Props
               compact={true}
               autoExpand={false}
             />
+          )}
+
+          {/* Last in the block on purpose: they decide whether they like a
+              drill after reading how it runs, not before. */}
+          {favorites && onFavoritesChanged && (
+            <div className="pt-1">
+              <SaveDrillButton
+                block={block}
+                coachId={coachId}
+                favorites={favorites}
+                onChanged={onFavoritesChanged}
+              />
+            </div>
           )}
         </div>
       </div>

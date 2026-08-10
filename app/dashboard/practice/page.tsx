@@ -67,6 +67,11 @@ function PracticeContent() {
   // from `generating`, which now only covers the few seconds before there is
   // anything to look at.
   const [expanding, setExpanding] = useState(false)
+  const [coachId, setCoachId] = useState<string | null>(null)
+  // Loaded once for the page rather than per block — the star has to know
+  // whether it is already on, and forty blocks asking separately is forty
+  // requests to answer one question.
+  const [favorites, setFavorites] = useState<Set<string>>(new Set())
   
   // Custom plan state
   const [customTitle, setCustomTitle] = useState('')
@@ -132,8 +137,31 @@ function PracticeContent() {
     if (teamId) {
       loadPlans()
       loadTeam()
+      loadCoachAndFavorites()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId])
+
+  const loadCoachAndFavorites = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: coach } = await supabase
+        .from('coaches').select('id').eq('user_id', user.id).single() as { data: { id: string } | null }
+      if (!coach) return
+      setCoachId(coach.id)
+      await refreshFavorites(coach.id)
+    } catch { /* the star is not worth breaking the page over */ }
+  }
+
+  const refreshFavorites = async (cid: string | null = coachId) => {
+    if (!cid) return
+    try {
+      const res = await fetch(`/api/drills/favorites?coachId=${cid}`)
+      const d = await res.json()
+      setFavorites(new Set<string>(d.drillIds || []))
+    } catch { /* leave the stars as they were */ }
+  }
 
   const loadPlans = async () => {
     try {
@@ -820,6 +848,9 @@ function PracticeContent() {
                       idx={idx}
                       onSwap={() => openSwapModal(plan.id, idx, block)}
                       drillResources={drillResources}
+                      coachId={coachId}
+                      favorites={favorites}
+                      onFavoritesChanged={() => refreshFavorites()}
                     />
                   ))}
                 </div>
@@ -862,7 +893,15 @@ function PracticeContent() {
                   and the full thing after saving is how a coach reviews a
                   detailed plan, sees three fields, and concludes it is thin. */}
               {(draft.blocks || []).map((b: any, i: number) => (
-                <PracticeBlock key={i} block={b} idx={i} drillResources={drillResources} />
+                <PracticeBlock
+                  key={i}
+                  block={b}
+                  idx={i}
+                  drillResources={drillResources}
+                  coachId={coachId}
+                  favorites={favorites}
+                  onFavoritesChanged={() => refreshFavorites()}
+                />
               ))}
             </div>
 
