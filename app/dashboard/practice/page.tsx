@@ -63,6 +63,10 @@ function PracticeContent() {
   const [adjustment, setAdjustment] = useState('')
   const [genError, setGenError] = useState<string | null>(null)
   const [savingDraft, setSavingDraft] = useState(false)
+  // The skeleton is on screen and the blocks are still filling in. Distinct
+  // from `generating`, which now only covers the few seconds before there is
+  // anything to look at.
+  const [expanding, setExpanding] = useState(false)
   
   // Custom plan state
   const [customTitle, setCustomTitle] = useState('')
@@ -303,6 +307,10 @@ function PracticeContent() {
           // What the chips cannot say. The route has always accepted this and
           // folded it into the prompt; nothing ever sent it.
           constraints: (constraintsOverride ?? specifics).trim() || undefined,
+          // A refine rewrites a plan they already read, so it stays one
+          // coherent call rather than a fan-out that could disagree with
+          // itself about what changed.
+          isRefine: !!constraintsOverride,
         }),
       })
 
@@ -332,8 +340,29 @@ function PracticeContent() {
           if (!line.trim()) continue
           let msg: any
           try { msg = JSON.parse(line) } catch { continue }
-          if (msg.type === 'progress') setBlocksWritten(msg.blocks)
           if (msg.type === 'error') throw new Error(msg.error)
+
+          // The shape of the practice, in a few seconds. Shown immediately —
+          // the coach reads the flags and the block list while the step-by-
+          // step for each block is still being written behind it.
+          if (msg.type === 'skeleton') {
+            setDraft(msg.plan)
+            setGenerating(false)
+            setExpanding(true)
+            setBlocksWritten(0)
+          }
+
+          // Each block lands on its own and replaces its outline in place.
+          if (msg.type === 'block') {
+            setDraft((prev: any) => {
+              if (!prev) return prev
+              const blocks = [...(prev.blocks || [])]
+              blocks[msg.index] = msg.block
+              return { ...prev, blocks }
+            })
+            setBlocksWritten(n => n + 1)
+          }
+
           if (msg.type === 'plan') data = msg.plan
         }
       }
@@ -344,6 +373,7 @@ function PracticeContent() {
       // to change — see saveDraft and refine below.
       setDraft(data)
       setAdjustment('')
+      setExpanding(false)
     } catch (error: any) {
       // The real reason, not a constant. "Failed to generate practice plan"
       // told the coach nothing and told us nothing when they reported it.
@@ -351,6 +381,7 @@ function PracticeContent() {
       setGenError(error?.message || 'Could not generate the plan.')
     } finally {
       setGenerating(false)
+      setExpanding(false)
     }
   }
 
@@ -810,7 +841,10 @@ function PracticeContent() {
             <div className="p-6 border-b border-gray-100">
               <h3 className="text-xl font-bold text-gray-900">{draft.title}</h3>
               <p className="text-sm text-gray-600 mt-1">
-                {duration} minutes · {(draft.blocks || []).length} blocks · nothing saved yet
+                {duration} minutes · {(draft.blocks || []).length} blocks ·{' '}
+                {expanding
+                  ? `writing the detail (${blocksWritten}/${(draft.blocks || []).length})`
+                  : 'nothing saved yet'}
               </p>
             </div>
 
@@ -853,19 +887,17 @@ function PracticeContent() {
               <div className="flex gap-3">
                 <button
                   onClick={refinePlan}
-                  disabled={generating || !adjustment.trim()}
+                  disabled={generating || expanding || !adjustment.trim()}
                   className="flex-1 px-4 py-3 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50"
                 >
-                  {generating
-                    ? (blocksWritten > 0 ? `Rewriting block ${blocksWritten}…` : 'Rebuilding…')
-                    : 'Rebuild with these changes'}
+                  {generating || expanding ? 'Rebuilding…' : 'Rebuild with these changes'}
                 </button>
                 <button
                   onClick={saveDraft}
-                  disabled={generating || savingDraft}
+                  disabled={generating || expanding || savingDraft}
                   className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {savingDraft ? 'Saving…' : 'Use this plan'}
+                  {savingDraft ? 'Saving…' : expanding ? 'Almost there…' : 'Use this plan'}
                 </button>
               </div>
 
@@ -996,11 +1028,7 @@ function PracticeContent() {
                   disabled={focusAreas.length === 0 || generating}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {generating
-                    ? (blocksWritten > 0
-                        ? `Writing block ${blocksWritten}…`
-                        : 'Picking the drills…')
-                    : 'Generate Plan'}
+                  {generating ? 'Designing the practice…' : 'Generate Plan'}
                 </button>
               </div>
             </div>

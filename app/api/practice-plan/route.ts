@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { generatePracticePlan, TeamContext } from '@/lib/anthropic'
+import {
+  generatePracticePlanSingle, generatePracticeSkeleton, expandPracticeBlock,
+  PracticeInputs, TeamContext,
+} from '@/lib/anthropic'
 import { assembleCoachContext, renderCoachContext } from '@/lib/coachContext'
 import { categoriesForPracticeFocus } from '@/lib/focusAreas'
 import { guard } from '@/lib/authz'
@@ -28,7 +31,7 @@ export async function POST(request: NextRequest) {
   if (denied) return denied
 
   try {
-    const { teamId, duration, focus, constraints } = await request.json()
+    const { teamId, duration, focus, constraints, isRefine } = await request.json()
 
     if (!teamId || !duration || !focus) {
       return NextResponse.json(
@@ -47,6 +50,23 @@ export async function POST(request: NextRequest) {
     if (!team) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 })
     }
+
+    // Started now, awaited at the bottom. Nothing between here and there
+    // needs it, and it is the longest query on the route.
+    const loopContextPromise = assembleCoachContext(supabaseAdmin, {
+      coachId: team.coach_id,
+      teamId,
+    })
+      .then(ctx =>
+        (ctx.activePrescriptions?.length || ctx.observations?.length)
+          ? renderCoachContext(ctx)
+          : ''
+      )
+      .catch((e: any) => {
+        // The plan is still worth generating without it.
+        console.warn('Practice plan: loop context unavailable:', e?.message)
+        return ''
+      })
 
     // Load team notes
     const { data: teamNotes } = await supabaseAdmin
@@ -268,19 +288,12 @@ export async function POST(request: NextRequest) {
     // any check-in outcomes. The practice builder used to be blind to all of
     // it, so a plan could cheerfully re-prescribe a drill the check-in had
     // just concluded wasn't working.
-    let loopContext = ''
-    try {
-      const coachContext = await assembleCoachContext(supabaseAdmin, {
-        coachId: team.coach_id,
-        teamId,
-      })
-      if (coachContext.activePrescriptions?.length || coachContext.observations?.length) {
-        loopContext = renderCoachContext(coachContext)
-      }
-    } catch (e: any) {
-      // The plan is still worth generating without it
-      console.warn('Practice plan: loop context unavailable:', e?.message)
-    }
+    //
+    // Awaited here, but STARTED much earlier — see loopContextPromise. It is
+    // the slowest thing on this route by some distance and it does not depend
+    // on anything below it, so waiting for it in sequence was several seconds
+    // of the coach staring at "Picking the drills…".
+    const loopContext = await loopContextPromise
 
     // Streamed as progress lines, then the finished plan. The client waited on
     // a single JSON response before, so a 40-second generation was 40 seconds
@@ -291,27 +304,64 @@ export async function POST(request: NextRequest) {
         const send = (obj: any) =>
           controller.enqueue(encoder.encode(JSON.stringify(obj) + '\n'))
 
-        // Counting blocks by their titles as they land: the only honest
-        // progress signal available while JSON is still being written.
-        let blocks = 0
-        let buffer = ''
+        const inputs: PracticeInputs = {
+          duration,
+          focus,
+          context,
+          constraints: fullConstraints,
+          drillResources: drillResources || [],
+          loopContext: loopContext || undefined,
+          rosterSection: rosterSection || undefined,
+          preference: { favorites, note: drillPreference },
+        }
 
         try {
-          const plan = await generatePracticePlan(
-            duration, focus, context, fullConstraints, drillResources || [],
-            loopContext || undefined,
-            rosterSection || undefined,
-            { favorites, note: drillPreference },
-            (_chars, chunk) => {
-              buffer += chunk
-              const found = (buffer.match(/"title"\s*:/g) || []).length
-              if (found > blocks) {
-                blocks = found
-                send({ type: 'progress', blocks })
-              }
-            }
+          // A refine is one coherent rewrite of a plan the coach has already
+          // read, so it stays a single call — fanning it out would let five
+          // independent expansions disagree about what changed.
+          if (isRefine) {
+            const plan = await generatePracticePlanSingle(
+              duration, focus, context, fullConstraints, drillResources || [],
+              loopContext || undefined, rosterSection || undefined,
+              { favorites, note: drillPreference }
+            )
+            send({ type: 'plan', plan })
+            controller.close()
+            return
+          }
+
+          // Phase 1: the shape. Small output, so it lands in seconds, and the
+          // coach can see the whole practice — including the flags — while the
+          // detail is still being written.
+          const skeleton = await generatePracticeSkeleton(inputs)
+          const blocks: any[] = Array.isArray(skeleton.blocks) ? skeleton.blocks : []
+          send({ type: 'skeleton', plan: { ...skeleton, blocks } })
+
+          // Phase 2: every block at once. Wall clock is the slowest block, not
+          // the sum of them, and each call has room to be thorough about one
+          // block instead of rationing tokens across the whole plan.
+          const expanded = await Promise.all(
+            blocks.map((b, idx) =>
+              expandPracticeBlock(inputs, b, idx, blocks)
+                .then(detail => {
+                  const full = { ...b, ...detail }
+                  // Sent as it lands so the coach can start reading block one
+                  // while block four is still being written.
+                  send({ type: 'block', index: idx, block: full })
+                  return full
+                })
+                .catch((e: any) => {
+                  // One block failing must not cost the plan. The skeleton
+                  // version of it is still runnable — it has a name, a
+                  // duration and a description.
+                  console.error(`Practice plan: block ${idx} expansion failed:`, e?.message)
+                  send({ type: 'block', index: idx, block: b })
+                  return b
+                })
+            )
           )
-          send({ type: 'plan', plan })
+
+          send({ type: 'plan', plan: { ...skeleton, blocks: expanded } })
         } catch (e: any) {
           console.error('Practice plan generation error:', e)
           send({ type: 'error', error: e?.message || 'Failed to generate practice plan' })

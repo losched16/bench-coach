@@ -677,7 +677,47 @@ export async function generateChatResponse(
   }
 }
 
-export async function generatePracticePlan(
+// What this surface is, said once. Both phases need it and a drift between
+// them would show up as a plan whose blocks were written to a different
+// standard than the plan they belong to.
+const PRACTICE_SURFACE = `WHAT THIS SURFACE IS
+
+You are writing a practice a volunteer parent will run on a field on Tuesday, holding a phone. They may never have coached before. The #1 reason youth practices fail is the coach not knowing exactly what to do next, and your work removes that.
+
+A schedule is not coaching. You are the experienced coach standing next to them: you explain the shape, you flag what is about to go wrong, and you name what a good rep looks like from where they are standing.
+
+Never generic. "Work on fundamentals", "keep it fun", "focus on the basics" are not coaching and must not appear. If a sentence could have been written without knowing this team's age, headcount, kit or history, cut it and write the one that could not.
+
+Return valid JSON and nothing else.`
+
+// ---------------------------------------------------------------------------
+// Two-phase practice generation
+// ---------------------------------------------------------------------------
+// The single-call version below produced a good plan and took 45-60 seconds to
+// do it, most of which the coach spent looking at "Picking the drills…". Two
+// causes, and only one of them was the model thinking.
+//
+// A full plan is five blocks times ten prose fields — instructions, setup,
+// cues, mistakes, variations, indicators, watch_for. That is 6-10k output
+// tokens generated strictly in series, and output tokens are the wall clock.
+//
+// So it is generated in two phases instead:
+//
+//   1. The SKELETON — title, coach_notes, flags, and the block list with its
+//      titles, durations, one-line descriptions and drill matches. Under a
+//      thousand tokens. The coach has the whole shape of the practice, and can
+//      already tell whether it is the practice they wanted, in a few seconds.
+//
+//   2. Every block EXPANDED IN PARALLEL, one call each. Wall clock becomes the
+//      slowest single block rather than the sum of five, and each call has
+//      room to be thorough about one block instead of rationing tokens across
+//      the whole plan. Faster AND more detailed, which is the only reason this
+//      is worth the extra complexity.
+//
+// generatePracticePlanSingle is kept because the refine path still wants one
+// coherent rewrite of an existing plan — fanning that out would let five
+// independent calls disagree about what changed.
+export async function generatePracticePlanSingle(
   duration: number,
   focus: string[],
   context: TeamContext,
@@ -882,6 +922,146 @@ Always return valid JSON. No text outside the JSON.`,
     console.error('Practice plan generation error:', error)
     throw new Error(error?.message || 'Failed to generate practice plan')
   }
+}
+
+export interface PracticeInputs {
+  duration: number
+  focus: string[]
+  context: TeamContext
+  constraints?: string
+  drillResources?: any[]
+  loopContext?: string
+  rosterSection?: string
+  preference?: { favorites: Set<string>; note: string }
+}
+
+// The situation, written once and reused by both phases. Sending it to every
+// block expansion is what lets each one stay specific to this team rather
+// than producing a generic description of a drill.
+function practiceSituation(i: PracticeInputs): string {
+  const c = i.context
+  return `A ${c.team.age_group} ${c.team.skill_level} team, ${i.duration}-minute practice.
+Focus areas: ${i.focus.join(', ')}
+${i.constraints ? `\nWHAT THE COACH SAID THEY WANT — this outranks everything else here:\n${i.constraints}\n` : ''}
+- Currently working on: ${c.team.primary_goals.length > 0 ? c.team.primary_goals.join(', ') : 'Not specified'}
+${c.teamNotes.length > 0 ? `- Current issues: ${c.teamNotes.map(n => n.note).join('; ')}` : ''}
+${i.loopContext ? `\nWHAT WE'RE ALREADY WORKING ON — build around this, don't ignore it:\n\n${i.loopContext}\n` : ''}${i.rosterSection ? `\n${i.rosterSection}\n` : ''}`
+}
+
+function drillMenu(i: PracticeInputs): string {
+  const drills = i.drillResources || []
+  if (drills.length === 0) return ''
+  return `\nDRILL VIDEO LIBRARY (${drills.length} available). Use these by their exact drill_name and youtube_video_id. Never invent an ID.\n\n${
+    drills.map(d => drillMenuLine(d, !!i.preference?.favorites?.has(d.id))).join('\n')
+  }\n${i.preference?.note ? `\n${i.preference.note}\n` : ''}`
+}
+
+/**
+ * Phase 1 — the shape of the practice, fast.
+ *
+ * Deliberately small output. Everything here is judgement (what to work, in
+ * what order, what is wrong with their setup) and none of it is prose the
+ * model has to grind out, so it comes back in a few seconds and the coach can
+ * tell immediately whether it is the practice they asked for.
+ */
+export async function generatePracticeSkeleton(i: PracticeInputs): Promise<any> {
+  const stream = anthropic.messages.stream({
+    model: 'claude-sonnet-5',
+    max_tokens: 4000,
+    system: `${COACH_VOICE}
+
+${PRACTICE_SURFACE}
+
+You are doing the THINKING half of the job: deciding what this practice is, in what order, and what is wrong with how the coach has set it up. Somebody else writes out the step-by-step for each block afterwards — do not write it here, and do not pad. Short, specific, decided.`,
+    messages: [{ role: 'user', content: `${practiceSituation(i)}
+${drillMenu(i)}
+
+Design the practice. Warm-up, two to four named drill blocks, a competitive game with real rules, cool-down. Durations must add to about ${i.duration} minutes.
+
+Every block must be a REAL, NAMED drill — "Alligator Ground Balls", "Four Corners Rundown". Never a category like "Fielding Practice" or "Throwing Assessment".
+
+Return ONLY this JSON:
+{
+  "title": "Specific to this team and this practice, not 'Youth Baseball Practice'",
+  "coach_notes": "2-4 sentences to this coach before they read a block. Why the practice is shaped this way, what you deliberately left out, and — naming the block — what to cut first if they lose fifteen minutes.",
+  "flags": ["Problems in what they told you, each with its fix. Headcount against stations. One adult against two places to stand. Block length against attention span at this age. Throwing volume against what they played this weekend. Empty array only if there is genuinely nothing."],
+  "blocks": [
+    {
+      "type": "warmup|drill|station|game|cooldown",
+      "title": "The named drill",
+      "minutes": 10,
+      "description": "One sentence: what happens and why it is in this practice.",
+      "drill_name": "exact name from the library, or omit",
+      "youtube_video_id": "exact id from the library, or omit",
+      "youtube_channel": "channel from the library, or omit"
+    }
+  ]
+}` }],
+    // The decisions here are the valuable part and there are not many tokens
+    // to produce, so this is the one place deliberation is cheap.
+    output_config: { effort: 'medium' },
+  })
+
+  const content = textFrom(await stream.finalMessage())
+  const match = content.match(/\{[\s\S]*\}/)
+  if (!match) throw new Error('The plan outline came back unreadable. Try again.')
+  return JSON.parse(match[0])
+}
+
+/**
+ * Phase 2 — one block, in full.
+ *
+ * Called once per block, all at the same time. Each gets the whole situation
+ * and the rest of the plan for context, so it can say "the group you sent to
+ * the cages in block 2" rather than describing a drill in the abstract.
+ */
+export async function expandPracticeBlock(
+  i: PracticeInputs,
+  block: any,
+  index: number,
+  allBlocks: any[]
+): Promise<any> {
+  const outline = allBlocks
+    .map((b, n) => `${n + 1}. ${b.title} (${b.minutes} min)${n === index ? '  <-- the one you are writing' : ''}`)
+    .join('\n')
+
+  const stream = anthropic.messages.stream({
+    model: 'claude-sonnet-5',
+    max_tokens: 3000,
+    system: `${COACH_VOICE}
+
+${PRACTICE_SURFACE}
+
+You are writing ONE block of a practice somebody has already designed. Do not redesign it, do not change its length, do not comment on the other blocks. Write this one so well that a parent who has never coached can run it without looking anything up.`,
+    messages: [{ role: 'user', content: `${practiceSituation(i)}
+
+THE PRACTICE:
+${outline}
+
+THE BLOCK YOU ARE WRITING:
+${JSON.stringify(block, null, 1)}
+
+Write it out. Return ONLY this JSON:
+{
+  "detailed_instructions": "5-10 numbered steps, each with SPECIFIC distances in feet, SPECIFIC rep counts, SPECIFIC player positions and SPECIFIC timing. 'Round 1 (2 minutes): pairs 15 feet apart, both on their throwing-side knee, 10 throws each focusing only on wrist snap' — not 'partner throwing to work on mechanics'.",
+  "setup": "Exact layout with distances and where the coach stands. 'Three cones in a line 10 feet apart along the third-base line, coach 20 feet away with a bucket of 15 balls, players single-file behind the first cone.' Never '3 stations, coaches assess'.",
+  "equipment": ["specific", "with counts where it matters"],
+  "coaching_cues": ["4-6 phrases the coach says OUT LOUD. Mechanical and specific: 'step with your left foot at your target', 'glove below the ball, scoop up never stab down'. Never 'nice throw', 'hustle', 'good effort'."],
+  "common_mistakes": ["3-5, each as 'What you will see — how to fix it'. 'Throws sidearm — start him on one knee to force an overhand slot, hold your hand above his throwing shoulder as a target'."],
+  "drill_variations": "Easier: [for the weakest kid]. Harder: [for the one who is already good].",
+  "success_indicators": ["2-3 things the coach can OBSERVE that say it is working"],
+  "watch_for": "The one thing you would see from the side that a first-time coach walks straight past. What a good rep looks like versus the failure that is easy to miss, from where they are standing. Not 'watch their form'."
+}` }],
+    // Low here on purpose. The hard decisions were made in phase 1; this is
+    // writing out a drill the model already knows, and effort buys nothing
+    // except the wait the coach is complaining about.
+    output_config: { effort: 'low' },
+  })
+
+  const content = textFrom(await stream.finalMessage())
+  const match = content.match(/\{[\s\S]*\}/)
+  if (!match) return {}
+  try { return JSON.parse(match[0]) } catch { return {} }
 }
 
 export async function generateReplacementBlock(
