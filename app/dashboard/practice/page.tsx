@@ -14,6 +14,7 @@ import { TeamOnly } from '@/components/TeamOnly'
 import { todayStr } from '@/lib/entries'
 import { PracticeBlock } from '@/components/PracticeBlock'
 import { EQUIPMENT_OPTIONS } from '@/lib/practicePlan'
+import type { PracticeTemplate } from '@/lib/practiceTemplates'
 import { PlanHeader } from '@/components/PlanHeader'
 
 
@@ -433,6 +434,28 @@ function PracticeContent() {
     }
   }
 
+  // A stock template, handed to the generator rather than copied.
+  //
+  // The template knows the occasion — a first practice, a rained-out gym, the
+  // thirty minutes before first pitch — and knows nothing about this team. The
+  // generator knows the team and has no idea what tonight is. Prefilling the
+  // builder puts both in the same request, which is worth more than either
+  // alone. The coach still sees the form and can change anything before it runs.
+  const seedFromTemplate = (t: PracticeTemplate) => {
+    setShowTemplateModal(false)
+    setDraft(null)
+    setGenError(null)
+    setDuration(t.seed.duration)
+    // Filtered against the real chips: a focus area the builder does not have
+    // would select nothing and the coach would never know why.
+    setFocusAreas(t.seed.focus.filter(f => FOCUS_OPTIONS.includes(f)).slice(0, 5))
+    setObjective(t.seed.objective)
+    setEquipmentAvailable(new Set(t.seed.equipment.filter(e => EQUIPMENT_OPTIONS.includes(e))))
+    setSpecifics(t.seed.specifics)
+    setPickedDrills(new Set())
+    setShowPlanModal(true)
+  }
+
   // "More baserunning, drop the bunting station" — regenerate with the plan
   // they just read plus what they said about it.
   const refinePlan = async () => {
@@ -717,7 +740,7 @@ function PracticeContent() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Start from a template</h3>
                 <p className="text-sm text-gray-600">
-                  Pre-built plans, ready to run. Copy one into your plans and change whatever you want.
+                  For the nights the planner has no advantage. Build one around your team, or take it as it is.
                 </p>
               </div>
               <button
@@ -728,7 +751,7 @@ function PracticeContent() {
               </button>
             </div>
             <div className="p-5">
-              <TemplateGallery teamId={teamId} onCopied={loadPlans} />
+              <TemplateGallery teamId={teamId} onCopied={loadPlans} onSeed={seedFromTemplate} />
             </div>
           </div>
         </div>

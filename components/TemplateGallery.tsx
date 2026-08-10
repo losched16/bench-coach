@@ -2,420 +2,299 @@
 
 import { useEffect, useState } from 'react'
 import { createSupabaseComponentClient } from '@/lib/supabase'
-import { FileText, Clock, Users, Filter, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react'
-import { DrillVideo } from '@/components/DrillVideo'
+import { Clock, Users, Copy, Check, Sparkles, ChevronDown, ChevronUp, Target } from 'lucide-react'
+import { PracticeBlock } from '@/components/PracticeBlock'
+import {
+  PRACTICE_TEMPLATES, OCCASIONS, PracticeTemplate, templatePlanContent,
+} from '@/lib/practiceTemplates'
+import { equipmentChecklist } from '@/lib/practicePlan'
 
-// The pre-built practice plan gallery.
+// The stock practice gallery.
 //
 // This used to be its own nav destination ("Practice Library"), which made it
-// look like a feature. It isn't: the only thing you can do here is copy a plan
-// into Practice Plans. That's a way to START a plan, so it belongs inside the
-// builder's "New Plan" menu alongside "Generate with AI" and "Create Custom" —
-// three answers to one question, in one place.
-
-interface PracticeTemplate {
-  id: string
-  title: string
-  description: string
-  age_group: string
-  duration_minutes: number
-  focus_type: string
-  skill_level: string
-  content: any
-  tags: string[]
-}
-
-const AGE_GROUPS = [
-  { value: 'all', label: 'All Ages' },
-  { value: '6U', label: '6U' },
-  { value: '8U', label: '8U' },
-  { value: '10U', label: '10U' },
-  { value: '12U', label: '12U' },
-]
-
-const FOCUS_TYPES = [
-  { value: 'all', label: 'All Types' },
-  { value: 'balanced', label: 'Balanced Practice' },
-  { value: 'first-practice', label: 'First Practice' },
-  { value: 'game-warmup', label: 'Game Day Warm-up' },
-]
+// look like a feature. It isn't: the only thing you can do here is start a
+// plan, so it belongs inside the builder's "New Plan" menu alongside "Generate
+// with AI" and "Create Custom" — three answers to one question, in one place.
+//
+// Two things changed when the templates were rebuilt.
+//
+// THE TEMPLATES ARE CODE, NOT ROWS. They are identical for every coach, so
+// there was never a reason for them to be database rows somebody has to
+// remember to seed — and in fact nothing ever seeded them, so this gallery
+// spent its whole life querying a table that may not have existed and telling
+// coaches "no templates match your filters", which was not true. They now come
+// from lib/practiceTemplates.ts. Any rows that DO exist in practice_templates
+// are still appended, so nothing anybody wrote by hand disappears.
+//
+// THE PRIMARY ACTION IS NOW "SEED", NOT "COPY". Copying gives a coach a good
+// generic plan. Seeding hands the occasion to the generator, which then builds
+// it for THIS team — the roster, the attendance, the active priorities, last
+// practice's recap. Copy stays as the second button, because it is instant and
+// it is the escape hatch when the model is unavailable.
 
 export function TemplateGallery({
   teamId,
   onCopied,
+  onSeed,
 }: {
   teamId: string | null
   onCopied?: () => void
+  // Hands the template's occasion to the practice builder, prefilled.
+  onSeed?: (template: PracticeTemplate) => void
 }) {
-  const [templates, setTemplates] = useState<PracticeTemplate[]>([])
-  const [loading, setLoading] = useState(true)
+  const [extra, setExtra] = useState<PracticeTemplate[]>([])
   const [selectedAge, setSelectedAge] = useState('all')
-  const [selectedFocus, setSelectedFocus] = useState('all')
-  const [expandedTemplate, setExpandedTemplate] = useState<string | null>(null)
+  const [selectedOccasion, setSelectedOccasion] = useState('all')
+  const [expanded, setExpanded] = useState<string | null>(null)
   const [copying, setCopying] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
-  
+  const [copyError, setCopyError] = useState<string | null>(null)
+
   const supabase = createSupabaseComponentClient()
 
+  // Anything hand-written into practice_templates still shows. A missing table
+  // is now completely fine rather than an empty gallery — the built-ins are
+  // already on screen before this runs.
   useEffect(() => {
-    loadTemplates()
-  }, [])
-
-  const loadTemplates = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('practice_templates')
-        .select('*')
-        .order('age_group')
-        .order('focus_type')
-
-      if (error) throw error
-      if (data) {
-        setTemplates(data)
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { data, error } = await supabase.from('practice_templates').select('*')
+        if (error || !data || cancelled) return
+        const builtInIds = new Set(PRACTICE_TEMPLATES.map(t => t.id))
+        setExtra(
+          (data as any[])
+            .filter(r => !builtInIds.has(r.id))
+            .map(r => ({
+              ...r,
+              occasion: r.occasion || r.focus_type || 'all',
+              seed: r.seed || null,
+              content: r.content || { blocks: [] },
+            })) as PracticeTemplate[]
+        )
+      } catch {
+        // Deliberately silent. These are a bonus, not the content.
       }
-    } catch (error) {
-      console.error('Error loading templates:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+    })()
+    return () => { cancelled = true }
+  }, [supabase])
+
+  const templates = [...PRACTICE_TEMPLATES, ...extra]
 
   const copyToMyPlans = async (template: PracticeTemplate) => {
     if (!teamId) {
-      alert('Please select a team first')
+      setCopyError('Pick a team first — a plan has to belong to one.')
       return
     }
-
     setCopying(template.id)
+    setCopyError(null)
     try {
-      const { error } = await supabase
-        .from('practice_plans')
+      // Cast: the browser client is generated against a Database type that
+      // does not describe practice_plans, so every insert infers as `never`.
+      const { error } = await (supabase.from('practice_plans') as any)
         .insert({
           team_id: teamId,
           title: template.title,
-          content: template.content,
           duration_minutes: template.duration_minutes,
-          focus_areas: [template.focus_type],
+          focus: template.seed?.focus || [],
+          // The same shape the generator writes, so the printed sheet, the plan
+          // page and the recap loop cannot tell a copied template apart from a
+          // generated plan.
+          content: templatePlanContent(template),
         })
-
       if (error) throw error
-
       setCopied(template.id)
       setTimeout(() => setCopied(null), 3000)
       onCopied?.()
-    } catch (error) {
-      console.error('Error copying template:', error)
-      alert('Failed to copy template')
+    } catch (e: any) {
+      // The real reason. "Failed to copy template" told a coach nothing.
+      setCopyError(e?.message || 'That plan could not be copied.')
     } finally {
       setCopying(null)
     }
   }
 
-  // Filter templates
-  const filteredTemplates = templates.filter(t => {
-    const matchesAge = selectedAge === 'all' || t.age_group === selectedAge
-    const matchesFocus = selectedFocus === 'all' || t.focus_type === selectedFocus
-    return matchesAge && matchesFocus
+  const shown = templates.filter(t => {
+    // A template marked 'all' is for every age — the occasion does not change
+    // with the birthday. The old filter required an exact match, so an
+    // age-agnostic plan was invisible unless you happened to pick "All Ages".
+    const matchesAge = selectedAge === 'all' || t.age_group === 'all' || t.age_group === selectedAge
+    const matchesOccasion = selectedOccasion === 'all' || t.occasion === selectedOccasion
+    return matchesAge && matchesOccasion
   })
 
-  // Group by focus type for display
-  const groupedTemplates = filteredTemplates.reduce((acc, template) => {
-    const focus = template.focus_type
-    if (!acc[focus]) acc[focus] = []
-    acc[focus].push(template)
-    return acc
-  }, {} as Record<string, PracticeTemplate[]>)
-
-  const getFocusLabel = (focus: string) => {
-    const found = FOCUS_TYPES.find(f => f.value === focus)
-    return found ? found.label : focus
-  }
-
-  const getFocusColor = (focus: string) => {
-    switch (focus) {
-      case 'balanced': return 'bg-blue-100 text-blue-700'
-      case 'first-practice': return 'bg-green-100 text-green-700'
-      case 'game-warmup': return 'bg-orange-100 text-orange-700'
-      default: return 'bg-gray-100 text-gray-700'
-    }
-  }
-
-  if (loading) {
-    return <div className="text-gray-600">Loading practice templates...</div>
-  }
-
   return (
-    <div className="space-y-6">
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4 bg-white rounded-lg shadow p-4">
-        <div className="flex items-center space-x-2">
-          <Filter size={20} className="text-gray-400" />
-          <span className="text-sm font-medium text-gray-700">Filter:</span>
-        </div>
-        <div>
-          <select
-            value={selectedAge}
-            onChange={(e) => setSelectedAge(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            {AGE_GROUPS.map(age => (
-              <option key={age.value} value={age.value}>{age.label}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <select
-            value={selectedFocus}
-            onChange={(e) => setSelectedFocus(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            {FOCUS_TYPES.map(focus => (
-              <option key={focus.value} value={focus.value}>{focus.label}</option>
-            ))}
-          </select>
-        </div>
-        <div className="text-sm text-gray-500 flex items-center">
-          {filteredTemplates.length} plan{filteredTemplates.length !== 1 ? 's' : ''} found
-        </div>
+    <div className="space-y-5">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3.5">
+        <p className="text-sm text-blue-900">
+          These cover the nights the AI has no advantage — a first practice, a rained-out
+          gym, thirty minutes before first pitch. <strong>Build for my team</strong> hands
+          the occasion to the planner, which then shapes it around your roster and what
+          you&apos;ve been working on. <strong>Use as-is</strong> drops it straight into your
+          plans, unchanged.
+        </p>
       </div>
 
-      {/* Templates */}
-      {filteredTemplates.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <FileText className="mx-auto text-gray-400 mb-4" size={48} />
-          <p className="text-gray-600">No templates match your filters</p>
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 items-center bg-white rounded-lg shadow p-4">
+        <select
+          value={selectedOccasion}
+          onChange={(e) => setSelectedOccasion(e.target.value)}
+          aria-label="Filter by occasion"
+          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+        >
+          {OCCASIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        <select
+          value={selectedAge}
+          onChange={(e) => setSelectedAge(e.target.value)}
+          aria-label="Filter by age group"
+          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+        >
+          <option value="all">All ages</option>
+          {['6U', '8U', '10U', '12U'].map(a => <option key={a} value={a}>{a}</option>)}
+        </select>
+        <span className="text-sm text-gray-500 ml-auto">
+          {shown.length} plan{shown.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+
+      {copyError && (
+        <div className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg p-3">
+          {copyError}
+        </div>
+      )}
+
+      {shown.length === 0 ? (
+        <div className="bg-white rounded-lg shadow p-10 text-center">
+          <p className="text-gray-900 font-medium">
+            Nothing here for {OCCASIONS.find(o => o.value === selectedOccasion)?.label.toLowerCase()}
+            {selectedAge !== 'all' ? ` at ${selectedAge}` : ''}.
+          </p>
+          <p className="text-sm text-gray-600 mt-1">
+            Clear the filters to see all {templates.length}, or generate one with AI — that
+            handles anything these don&apos;t.
+          </p>
         </div>
       ) : (
-        <div className="space-y-8">
-          {Object.entries(groupedTemplates).map(([focus, focusTemplates]) => (
-            <div key={focus}>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <span className={`px-3 py-1 rounded-full text-sm mr-3 ${getFocusColor(focus)}`}>
-                  {getFocusLabel(focus)}
-                </span>
-                <span className="text-gray-400 text-sm font-normal">
-                  {focusTemplates.length} plan{focusTemplates.length !== 1 ? 's' : ''}
-                </span>
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {focusTemplates.map((template) => (
-                  <div
-                    key={template.id}
-                    className="bg-white rounded-lg shadow overflow-hidden"
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {shown.map(t => (
+            <div key={t.id} className="bg-white rounded-lg shadow overflow-hidden flex flex-col">
+              <div className="p-4 flex-1">
+                <h4 className="font-semibold text-gray-900">{t.title}</h4>
+                <p className="text-sm text-gray-600 mt-1">{t.description}</p>
+
+                {t.content?.objective && (
+                  <div className="mt-3 flex gap-2 items-start bg-gray-50 border border-gray-200 rounded-lg p-2.5">
+                    <Target size={14} className="text-gray-500 shrink-0 mt-0.5" />
+                    <p className="text-xs text-gray-800 leading-relaxed">{t.content.objective}</p>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
+                    <Clock size={12} className="mr-1" />{t.duration_minutes} min
+                  </span>
+                  <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
+                    <Users size={12} className="mr-1" />
+                    {t.age_group === 'all' ? 'Any age' : t.age_group}
+                  </span>
+                  <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
+                    {t.content?.blocks?.length || 0} blocks
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => setExpanded(expanded === t.id ? null : t.id)}
+                  className="mt-3 text-sm text-blue-600 hover:text-blue-700 flex items-center font-medium"
+                >
+                  {expanded === t.id
+                    ? <><ChevronUp size={16} className="mr-1" />Hide the plan</>
+                    : <><ChevronDown size={16} className="mr-1" />See the whole plan</>}
+                </button>
+              </div>
+
+              <div className="px-4 pb-4 flex flex-wrap gap-2">
+                {onSeed && t.seed && (
+                  <button
+                    onClick={() => onSeed(t)}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                   >
-                    <div className="p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-semibold text-gray-900">{template.title}</h4>
-                        <button
-                          onClick={() => copyToMyPlans(template)}
-                          disabled={copying === template.id}
-                          className={`flex items-center space-x-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                            copied === template.id
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-blue-600 text-white hover:bg-blue-700'
-                          } disabled:opacity-50`}
-                        >
-                          {copied === template.id ? (
-                            <>
-                              <Check size={16} />
-                              <span>Copied!</span>
-                            </>
-                          ) : copying === template.id ? (
-                            <span>Copying...</span>
-                          ) : (
-                            <>
-                              <Copy size={16} />
-                              <span>Use This</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                      
-                      <p className="text-sm text-gray-600 mb-3">{template.description}</p>
-                      
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                          <Users size={12} className="mr-1" />
-                          {template.age_group}
-                        </span>
-                        <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                          <Clock size={12} className="mr-1" />
-                          {template.duration_minutes} min
-                        </span>
-                        <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs capitalize">
-                          {template.skill_level}
-                        </span>
-                      </div>
+                    <Sparkles size={15} />
+                    Build for my team
+                  </button>
+                )}
+                <button
+                  onClick={() => copyToMyPlans(t)}
+                  disabled={copying === t.id}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors disabled:opacity-50 ${
+                    copied === t.id
+                      ? 'bg-green-50 border-green-300 text-green-700'
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {copied === t.id
+                    ? <><Check size={15} />Added to your plans</>
+                    : copying === t.id
+                      ? <>Adding…</>
+                      : <><Copy size={15} />Use as-is</>}
+                </button>
+              </div>
 
-                      <button
-                        onClick={() => setExpandedTemplate(
-                          expandedTemplate === template.id ? null : template.id
-                        )}
-                        className="text-sm text-blue-600 hover:text-blue-700 flex items-center"
-                      >
-                        {expandedTemplate === template.id ? (
-                          <>
-                            <ChevronUp size={16} className="mr-1" />
-                            Hide Details
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDown size={16} className="mr-1" />
-                            View Details
-                          </>
-                        )}
-                      </button>
+              {expanded === t.id && (
+                <div className="border-t border-gray-100 p-4 bg-gray-50">
+                  {t.content?.coach_notes && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                      <p className="text-xs font-semibold text-blue-900 uppercase tracking-wide mb-1">
+                        How to run this
+                      </p>
+                      <p className="text-sm text-blue-900 leading-relaxed">{t.content.coach_notes}</p>
                     </div>
+                  )}
 
-                    {expandedTemplate === template.id && template.content && (
-                      <div className="border-t border-gray-100 p-4 bg-gray-50">
-                        {template.content.overview && (
-                          <p className="text-sm text-gray-700 mb-4 italic bg-white p-3 rounded-lg border border-gray-200">
-                            {template.content.overview}
-                          </p>
-                        )}
+                  {t.content?.coaching_points?.length > 0 && (
+                    <div className="bg-white border border-gray-200 rounded-lg p-3 mb-4">
+                      <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
+                        Say these all practice
+                      </p>
+                      <ol className="space-y-1.5">
+                        {t.content.coaching_points.map((p, i) => (
+                          <li key={i} className="flex gap-2.5 text-sm text-gray-800">
+                            <span className="font-bold text-gray-400">{i + 1}.</span>
+                            <span>{p}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
 
-                        {template.content.equipment && (
-                          <div className="mb-4">
-                            <div className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Equipment Needed:</div>
-                            <div className="flex flex-wrap gap-2">
-                              {template.content.equipment.map((item: string, i: number) => (
-                                <span key={i} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                                  {item}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="space-y-4">
-                          {template.content.blocks?.map((block: any, idx: number) => (
-                            <div key={idx} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                              {/* Block Header */}
-                              <div className="px-4 py-3 bg-gradient-to-r from-blue-50 to-white border-b border-gray-100">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-3">
-                                    <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${
-                                      block.type === 'warmup' ? 'bg-yellow-100 text-yellow-700' :
-                                      block.type === 'drill' || block.type === 'station' ? 'bg-blue-100 text-blue-700' :
-                                      block.type === 'game' ? 'bg-green-100 text-green-700' :
-                                      block.type === 'cooldown' ? 'bg-purple-100 text-purple-700' :
-                                      'bg-gray-100 text-gray-700'
-                                    }`}>
-                                      {idx + 1}
-                                    </span>
-                                    <h5 className="font-semibold text-gray-900 text-sm">{block.title}</h5>
-                                  </div>
-                                  <span className="text-xs font-medium text-gray-500 bg-white px-2.5 py-1 rounded-full border border-gray-200">{block.minutes} min</span>
-                                </div>
-                                {block.description && (
-                                  <p className="text-sm text-gray-600 mt-1.5 ml-10">{block.description}</p>
-                                )}
-                              </div>
-
-                              <div className="px-4 py-3 space-y-3">
-                                {/* Equipment */}
-                                {block.equipment && block.equipment.length > 0 && (
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {block.equipment.map((item: string, i: number) => (
-                                      <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">
-                                        {item}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-
-                                {/* Setup */}
-                                {block.setup && (
-                                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                                    <span className="text-xs font-semibold text-amber-800 uppercase tracking-wide">Setup</span>
-                                    <p className="text-sm text-amber-900 mt-1">{block.setup}</p>
-                                  </div>
-                                )}
-
-                                {/* Detailed Instructions */}
-                                {block.detailed_instructions && (
-                                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                    <span className="text-xs font-semibold text-blue-800 uppercase tracking-wide">How to Run This Drill</span>
-                                    <div className="text-sm text-blue-900 mt-2 whitespace-pre-line leading-relaxed">
-                                      {block.detailed_instructions}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Coaching Cues */}
-                                {block.coaching_cues && block.coaching_cues.length > 0 && (
-                                  <div>
-                                    <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Say This Out Loud</span>
-                                    <div className="mt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                                      {block.coaching_cues.map((cue: string, i: number) => (
-                                        <div key={i} className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                                          <span className="text-green-600 mt-0.5 shrink-0">&#x1f4ac;</span>
-                                          <span className="text-sm text-green-900 italic">"{cue}"</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Common Mistakes */}
-                                {block.common_mistakes && block.common_mistakes.length > 0 && (
-                                  <div>
-                                    <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Watch For</span>
-                                    <ul className="mt-1.5 space-y-1">
-                                      {block.common_mistakes.map((mistake: string, i: number) => (
-                                        <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                                          <span className="text-red-500 mt-0.5 shrink-0">&#x26a0;&#xfe0f;</span>
-                                          <span>{mistake}</span>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                )}
-
-                                {/* Drill Variations */}
-                                {block.drill_variations && block.drill_variations !== 'N/A' && (
-                                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                                    <span className="text-xs font-semibold text-purple-800 uppercase tracking-wide">Adjustments</span>
-                                    <p className="text-sm text-purple-900 mt-1">{block.drill_variations}</p>
-                                  </div>
-                                )}
-
-                                {/* Success Indicators */}
-                                {block.success_indicators && block.success_indicators.length > 0 && (
-                                  <div>
-                                    <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">You're Doing It Right When...</span>
-                                    <ul className="mt-1.5 space-y-1">
-                                      {block.success_indicators.map((indicator: string, i: number) => (
-                                        <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                                          <span className="text-green-500 mt-0.5 shrink-0">&#x2705;</span>
-                                          <span>{indicator}</span>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                )}
-
-                                {/* Embedded Drill Video */}
-                                {block.youtube_video_id && (
-                                  <DrillVideo
-                                    drillName={block.drill_name || block.title}
-                                    youtubeVideoId={block.youtube_video_id}
-                                    channel={block.youtube_channel}
-                                    compact={true}
-                                    autoExpand={false}
-                                  />
-                                )}
-                              </div>
-                            </div>
+                  {(() => {
+                    const kit = equipmentChecklist(t.content?.blocks || [])
+                    return kit.length > 0 ? (
+                      <div className="mb-4">
+                        <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
+                          What to bring
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {kit.map(item => (
+                            <span key={item} className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-800">
+                              {item}
+                            </span>
                           ))}
                         </div>
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+                    ) : null
+                  })()}
+
+                  {/* The same renderer the draft preview and the saved plan use.
+                      This component used to have its own copy of it, which is
+                      exactly how the draft ended up showing three fields while
+                      the saved plan showed fifteen. */}
+                  {t.content?.blocks?.map((block, idx) => (
+                    <PracticeBlock key={idx} block={block} idx={idx} />
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
