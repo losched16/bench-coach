@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     console.error('Drill favorite POST error:', error)
     const hint = migrationHintFor(error)
     return NextResponse.json({
-      error: hint?.message || error.message || 'Could not save that favourite.',
+      error: hint?.message || error.message || 'Could not save that favorite.',
       needsMigration: !!hint,
     }, { status: 500 })
   }

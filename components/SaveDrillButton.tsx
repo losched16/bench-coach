@@ -6,7 +6,7 @@ import { useDrillResources } from '@/lib/useDrillResources'
 
 // Saving a drill from inside a practice plan.
 //
-// Favourites shipped on the Drill Library page, which is the wrong place on
+// Favorites shipped on the Drill Library page, which is the wrong place on
 // its own: nobody browses a library of 150 drills deciding what they like.
 // They notice a drill is good while READING A PLAN — in the moment, with the
 // setup and the cues in front of them — and that is where the button has to

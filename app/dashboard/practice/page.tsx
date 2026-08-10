@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
-import { Plus, Clock, ChevronDown, ChevronUp, Trash2, Pencil, Sparkles, ClipboardCheck, RefreshCw, Search, X, FileText, AlertCircle } from 'lucide-react'
+import { Plus, Clock, ChevronDown, ChevronUp, Trash2, Pencil, Sparkles, ClipboardCheck, RefreshCw, Search, X, FileText, AlertCircle, Check } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import Link from 'next/link'
 import { DrillVideo, DrillVideoLookup } from '@/components/DrillVideo'
@@ -72,6 +72,10 @@ function PracticeContent() {
   // whether it is already on, and forty blocks asking separately is forty
   // requests to answer one question.
   const [favorites, setFavorites] = useState<Set<string>>(new Set())
+  // Favorites the coach ticked for THIS practice. Separate from `favorites`,
+  // which is just what they have starred — starring a drill says "I like
+  // this", ticking it says "use it on Tuesday".
+  const [pickedDrills, setPickedDrills] = useState<Set<string>>(new Set())
   
   // Custom plan state
   const [customTitle, setCustomTitle] = useState('')
@@ -339,6 +343,7 @@ function PracticeContent() {
           // coherent call rather than a fan-out that could disagree with
           // itself about what changed.
           isRefine: !!constraintsOverride,
+          mustIncludeDrillIds: Array.from(pickedDrills),
         }),
       })
 
@@ -456,6 +461,7 @@ function PracticeContent() {
       setFocusAreas([])
       setSpecifics('')
       setAdjustment('')
+      setPickedDrills(new Set())
       loadPlans()
     } catch (error: any) {
       setGenError(error?.message || 'Could not save the plan.')
@@ -565,6 +571,13 @@ function PracticeContent() {
   )
 
   const upcoming = plans.filter(p => p.scheduled_for && p.scheduled_for >= todayStr())
+
+  // The starred drills, resolved to names. drillResources is already loaded
+  // for the video lookups, so this costs nothing.
+  const favoriteDrills = (drillResources as any[])
+    .filter(d => d.id && favorites.has(d.id))
+    .sort((a, b) => (a.skill_category || '').localeCompare(b.skill_category || '')
+      || a.drill_name.localeCompare(b.drill_name))
 
   const dismissRecap = async (planId: string) => {
     setDismissing(planId)
@@ -1032,6 +1045,58 @@ function PracticeContent() {
                   </p>
                 )}
               </div>
+
+              {/* Drills the coach has starred, offered as a checklist.
+                  Starring says "I like this"; ticking one here says "use it on
+                  Tuesday", and the route treats that as a requirement rather
+                  than a hint. Only shown when they actually have favorites —
+                  an empty box teaching a feature nobody has used yet is
+                  clutter. */}
+              {favoriteDrills.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Use any of your favorites?
+                  </label>
+                  <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-52 overflow-y-auto">
+                    {favoriteDrills.map((d: any) => {
+                      const on = pickedDrills.has(d.id)
+                      return (
+                        <button
+                          key={d.id}
+                          type="button"
+                          onClick={() => setPickedDrills(prev => {
+                            const next = new Set(prev)
+                            on ? next.delete(d.id) : next.add(d.id)
+                            return next
+                          })}
+                          className={`w-full flex items-start gap-3 px-3 py-2.5 text-left ${
+                            on ? 'bg-amber-50' : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <span className={`mt-0.5 w-4 h-4 rounded border shrink-0 flex items-center justify-center ${
+                            on ? 'bg-amber-500 border-amber-500' : 'border-gray-300'
+                          }`}>
+                            {on && <Check size={11} className="text-white" />}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block text-sm font-medium text-gray-900">
+                              {d.drill_name}
+                            </span>
+                            {d.skill_category && (
+                              <span className="block text-xs text-gray-500">{d.skill_category}</span>
+                            )}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {pickedDrills.size > 0
+                      ? `${pickedDrills.size} picked — ${pickedDrills.size === 1 ? 'it' : 'they'} will be in the plan.`
+                      : 'Optional. Anything you tick gets built into the practice.'}
+                  </p>
+                </div>
+              )}
 
               {/* The chips say "hitting". This says "off live pitching, not the
                   cages, and we only have the infield tonight" — which is the

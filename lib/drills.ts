@@ -104,10 +104,10 @@ export async function visibleDrillsSafe(
 }
 
 /**
- * The drill ids this coach has favourited.
+ * The drill ids this coach has favorited.
  *
  * Returns an empty set rather than throwing when migration 041 has not been
- * applied — a missing favourites table should cost a coach their stars, not
+ * applied — a missing favorites table should cost a coach their stars, not
  * their practice plan.
  */
 export async function favoriteDrillIds(
@@ -128,12 +128,12 @@ export async function favoriteDrillIds(
 }
 
 /**
- * Favourites first, then everything else, each group keeping the order it
+ * Favorites first, then everything else, each group keeping the order it
  * arrived in.
  *
  * Used where a coach is choosing — the swap picker, the library. NOT used when
  * the prescription engine has already sorted by progression_level: a
- * favourite is a preference, and it does not get to reorder a progression so
+ * favorite is a preference, and it does not get to reorder a progression so
  * that step three comes first.
  */
 export function favoritesFirst<T extends { id: string }>(
@@ -152,7 +152,7 @@ export function favoritesFirst<T extends { id: string }>(
  *
  * One line each, deliberately: the full prose for every drill used to be sent
  * and it dominated the request. The two markers earn their characters —
- * ★ makes a favourite pickable-by-preference, and "the coach's own drill" is
+ * ★ makes a favorite pickable-by-preference, and "the coach's own drill" is
  * the difference between a drill Claude may reason about and one it must not
  * paraphrase, because the coach wrote those words.
  */
@@ -175,9 +175,9 @@ export function drillMenuLine(d: any, isFavorite: boolean): string {
 // Said once, here, so every surface that sends a drill menu says the same
 // thing about what the marks mean.
 export const DRILL_PREFERENCE_NOTE =
-  'Drills marked ★ are ones this coach has favourited — they know them, their ' +
+  'Drills marked ★ are ones this coach has favorited — they know them, their ' +
   'players know them, and setup is faster. Prefer a ★ drill when it genuinely ' +
-  'fits, and pick a different one when it does not: a favourite that is wrong ' +
+  'fits, and pick a different one when it does not: a favorite that is wrong ' +
   'for the problem is still wrong.\n' +
   "Drills marked [the coach's own drill] were written by this coach. Use their " +
   'name and their description as written — do not rewrite or improve them.'

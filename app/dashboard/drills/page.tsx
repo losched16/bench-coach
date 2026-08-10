@@ -246,7 +246,7 @@ export default function DrillLibraryPage() {
           <h1 className="text-2xl font-bold text-gray-900">Drill Library</h1>
           <p className="text-gray-600">
             {drills.length} drills
-            {favorites.size > 0 && ` · ${favorites.size} favourite${favorites.size === 1 ? '' : 's'}`}
+            {favorites.size > 0 && ` · ${favorites.size} favorite${favorites.size === 1 ? '' : 's'}`}
             {mineCount > 0 && ` · ${mineCount} of your own`}
           </p>
         </div>
@@ -261,7 +261,7 @@ export default function DrillLibraryPage() {
             }`}
           >
             <Star size={16} fill={showOnlyFavorites ? 'currentColor' : 'none'} />
-            {showOnlyFavorites ? 'Favourites only' : 'Favourites'}
+            {showOnlyFavorites ? 'Favorites only' : 'Favorites'}
           </button>
           <button
             onClick={() => { setEditingDrill(null); setShowAddDrill(true) }}
@@ -418,7 +418,7 @@ export default function DrillLibraryPage() {
               {/* stopPropagation, or starring a drill also opens it. */}
               <button
                 onClick={(e) => { e.stopPropagation(); toggleFavorite(drill.id) }}
-                aria-label={favorites.has(drill.id) ? 'Remove from favourites' : 'Add to favourites'}
+                aria-label={favorites.has(drill.id) ? 'Remove from favorites' : 'Add to favorites'}
                 className="absolute top-2 right-2 w-9 h-9 rounded-full bg-black/60 flex items-center justify-center"
               >
                 <Star

@@ -45,11 +45,11 @@ CREATE INDEX IF NOT EXISTS idx_drill_resources_created_by
   ON drill_resources (created_by_coach_id);
 
 -- ---------------------------------------------------------------------------
--- 2. Favourites
+-- 2. Favorites
 -- ---------------------------------------------------------------------------
 -- Keyed on the coach, not the team. "Drills I trust" travels with the person —
 -- a coach running a 10U team and their own kid's workouts does not want two
--- separate sets of favourites, and the ones they love do not stop being loved
+-- separate sets of favorites, and the ones they love do not stop being loved
 -- when the season changes.
 CREATE TABLE IF NOT EXISTS drill_favorites (
   id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

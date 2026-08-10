@@ -31,7 +31,12 @@ export async function POST(request: NextRequest) {
   if (denied) return denied
 
   try {
-    const { teamId, duration, focus, constraints, isRefine } = await request.json()
+    const {
+      teamId, duration, focus, constraints, isRefine,
+      // Drills the coach picked out of their favorites before generating.
+      // Not a hint — the plan is built around these.
+      mustIncludeDrillIds,
+    } = await request.json()
 
     if (!teamId || !duration || !focus) {
       return NextResponse.json(
@@ -191,8 +196,8 @@ export async function POST(request: NextRequest) {
       console.error('Practice plan: drill library query failed:', matchedResult.error)
     }
 
-    // Which of these the coach has starred. Favourites are a preference the
-    // model is told about, not a filter — a coach with four favourites should
+    // Which of these the coach has starred. Favorites are a preference the
+    // model is told about, not a filter — a coach with four favorites should
     // still get a full practice.
     const favorites = await favoriteDrillIds(supabaseAdmin, team.coach_id)
 
@@ -210,10 +215,35 @@ export async function POST(request: NextRequest) {
       drillsDegraded = drillsDegraded || wide.degraded
     }
 
+    // Drills the coach explicitly asked for.
+    //
+    // Fetched separately and merged in, because the menu above is filtered to
+    // the chosen focus areas — a coach picking a favorite hitting drill for a
+    // fielding practice would otherwise have it silently dropped before the
+    // model ever saw it, which is the opposite of "I picked this one".
+    let mustUse: any[] = []
+    const wantedIds: string[] = Array.isArray(mustIncludeDrillIds) ? mustIncludeDrillIds : []
+    if (wantedIds.length > 0) {
+      const picked = await visibleDrillsSafe(
+        supabaseAdmin, team.coach_id, DRILL_SELECT,
+        (q: any) => q.in('id', wantedIds)
+      )
+      if (picked.error) {
+        console.error('Practice plan: picked drills query failed:', picked.error)
+      }
+      mustUse = picked.data || []
+
+      const byId = new Map<string, any>()
+      for (const d of [...(drillResources || []), ...mustUse]) {
+        if (d?.id) byId.set(d.id, d)
+      }
+      drillResources = Array.from(byId.values())
+    }
+
     if (drillsDegraded) {
       console.warn(
         'Practice plan: drill_resources has no created_by_coach_id — run ' +
-        'migrations/041_coach_drills_and_favorites.sql. Favourites and ' +
+        'migrations/041_coach_drills_and_favorites.sql. Favorites and ' +
         "coach-written drills are off; the curated library still works."
       )
     }
@@ -264,11 +294,24 @@ export async function POST(request: NextRequest) {
         `if a block would leave players idle at this headcount, change the block.`
     }
 
-    // Favourites and the coach's own drills, said once so the model knows what
+    // Favorites and the coach's own drills, said once so the model knows what
     // the marks in the menu mean.
-    const drillPreference = (drillResources || []).some((d: any) =>
+    let drillPreference = (drillResources || []).some((d: any) =>
       favorites.has(d.id) || d.created_by_coach_id
     ) ? DRILL_PREFERENCE_NOTE : ''
+
+    // Said last so it is the strongest thing in the section. A coach who ticked
+    // a drill has made a decision, and a plan that quietly drops it has
+    // overruled them.
+    if (mustUse.length > 0) {
+      drillPreference +=
+        `\n\nTHE COACH HAS CHOSEN THESE DRILLS AND EVERY ONE MUST BE IN THE PLAN:\n` +
+        mustUse.map((d: any) => `- "${d.drill_name}"`).join('\n') +
+        `\nBuild the practice around them. If one does not fit the focus areas, ` +
+        `it still goes in — put it where it does the most good and say in that ` +
+        `block's description why it is there. Do not silently drop one, and do ` +
+        `not substitute something similar.`
+    }
 
     // Build context
     const context: TeamContext = {
