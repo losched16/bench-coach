@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { requireSession } from '@/lib/authz'
+import { requireSession, callerCoachId } from '@/lib/authz'
+import { visibleDrills } from '@/lib/drills'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -20,6 +21,9 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url)
+    // Whose library this is. Read off the session rather than a query
+    // parameter — a caller does not get to name a coach and see their drills.
+    const coachId = await callerCoachId()
     const name = searchParams.get('name')
     const names = searchParams.get('names') // Comma-separated list
     const category = searchParams.get('category')
@@ -28,14 +32,11 @@ export async function GET(request: NextRequest) {
     if (names) {
       const nameList = names.split(',').map(n => n.trim().toLowerCase())
       
-      const { data: drills } = await supabaseAdmin
-        .from('drill_resources')
-        .select('id, drill_name, youtube_video_id, youtube_url, thumbnail_url, channel, description, skill_category, difficulty_level, common_flaws_fixed, ai_coaching_notes')
-        .or('status.eq.approved,status.is.null')
-      
+      const { data: drills } = await visibleDrills(supabaseAdmin, coachId, 'id, drill_name, youtube_video_id, youtube_url, thumbnail_url, channel, description, skill_category, difficulty_level, common_flaws_fixed, ai_coaching_notes')
+
       // Fuzzy match each name
       const matched = nameList.map(searchName => {
-        return drills?.find(d => 
+        return drills?.find((d: any) => 
           d.drill_name.toLowerCase() === searchName ||
           d.drill_name.toLowerCase().includes(searchName) ||
           searchName.includes(d.drill_name.toLowerCase())
@@ -47,13 +48,10 @@ export async function GET(request: NextRequest) {
 
     // Single drill lookup
     if (name) {
-      const { data: drills } = await supabaseAdmin
-        .from('drill_resources')
-        .select('id, drill_name, youtube_video_id, youtube_url, thumbnail_url, channel, description, skill_category, difficulty_level, common_flaws_fixed, ai_coaching_notes')
-        .or('status.eq.approved,status.is.null')
-      
+      const { data: drills } = await visibleDrills(supabaseAdmin, coachId, 'id, drill_name, youtube_video_id, youtube_url, thumbnail_url, channel, description, skill_category, difficulty_level, common_flaws_fixed, ai_coaching_notes')
+
       // Fuzzy match
-      const drill = drills?.find(d => 
+      const drill = drills?.find((d: any) => 
         d.drill_name.toLowerCase() === name.toLowerCase() ||
         d.drill_name.toLowerCase().includes(name.toLowerCase()) ||
         name.toLowerCase().includes(d.drill_name.toLowerCase())
@@ -66,10 +64,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all drills (optionally filtered by category)
-    let query = supabaseAdmin
-      .from('drill_resources')
-      .select('id, drill_name, youtube_video_id, youtube_url, thumbnail_url, channel, description, skill_category, difficulty_level, common_flaws_fixed, ai_coaching_notes')
-      .or('status.eq.approved,status.is.null')
+    let query = visibleDrills(supabaseAdmin, coachId, 'id, drill_name, youtube_video_id, youtube_url, thumbnail_url, channel, description, skill_category, difficulty_level, common_flaws_fixed, ai_coaching_notes')
       .order('skill_category')
       .order('drill_name')
 

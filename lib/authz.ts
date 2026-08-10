@@ -434,6 +434,21 @@ export async function requireSession() {
  * which is not authentication — it is a password published in the source. This
  * requires a real signed-in session whose verified email matches.
  */
+/**
+ * The coach row belonging to whoever is calling, or null.
+ *
+ * Off the session cookie, never off a query parameter — the whole point of
+ * scoping a coach's own drills is that asking for someone else's id must not
+ * work.
+ */
+export async function callerCoachId(): Promise<string | null> {
+  const userId = await currentUserId()
+  if (!userId) return null
+  const { data } = await supabaseAdmin
+    .from('coaches').select('id').eq('user_id', userId).maybeSingle()
+  return (data as any)?.id || null
+}
+
 export async function requireAdmin() {
   const supabase = await sessionClient()
   const { data: { user } } = await supabase.auth.getUser()

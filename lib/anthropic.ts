@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { COACH_VOICE, CHAT_ADDENDUM } from './coachVoice'
 import { textFrom, requireText } from './claudeText'
+import { drillMenuLine } from './drills'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -690,6 +691,9 @@ export async function generatePracticePlan(
   // caller. Station maths is most of what separates a plan a volunteer can run
   // from one they read and then improvise around.
   rosterSection?: string,
+  // Which drills this coach has starred, and the sentence explaining what the
+  // marks mean. Passed together because a mark with no key is noise.
+  preference?: { favorites: Set<string>; note: string },
   // Called as text arrives, so a caller can stream progress to the browser.
   onProgress?: (charsSoFar: number, chunk: string) => void
 ): Promise<any> {
@@ -707,12 +711,9 @@ ${drillResources.map(d =>
   // One line each. This is a menu to choose from, not a manual — the model
   // needs enough to pick well and nothing more. The full prose for every
   // drill used to be here, and it dominated the request.
-  `- "${d.drill_name}" (${d.skill_category}${d.difficulty_level ? `, ${d.difficulty_level}` : ''}${d.age_range ? `, ages ${d.age_range}` : ''})` +
-  (d.youtube_video_id ? ` [video: ${d.youtube_video_id}]` : '') +
-  (d.description ? ` — ${String(d.description).slice(0, 130)}` : '') +
-  (d.mechanic_focus?.length ? ` | trains: ${d.mechanic_focus.slice(0, 4).join(', ')}` : '') +
-  (d.equipment_needed?.length ? ` | needs: ${d.equipment_needed.join(', ')}` : '')
+  drillMenuLine(d, !!preference?.favorites?.has(d.id))
 ).join('\n')}
+${preference?.note ? `\n${preference.note}\n` : ''}
 
 CRITICAL: When you use a drill from the library, you MUST copy the exact "drill_name" and "youtube_video_id" into your JSON output. Do NOT make up video IDs.`
     }

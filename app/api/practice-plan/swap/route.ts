@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { generateReplacementBlock } from '@/lib/anthropic'
 import { guard } from '@/lib/authz'
+import { visibleDrills } from '@/lib/drills'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -34,11 +35,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Load drill resources for video matching
-    const { data: drillResources } = await supabaseAdmin
-      .from('drill_resources')
-      .select('drill_name, skill_category, description, youtube_url, youtube_video_id, channel, age_range, difficulty_level, mechanic_focus, common_flaws_fixed, equipment_needed, ai_coaching_notes, safety_notes')
-      .or('status.eq.approved,status.is.null')
-      .limit(100)
+    // Scoped to the team's owner: a coach swapping a block should be offered
+    // their own drills, and nobody else's.
+    const { data: ownerTeam } = await supabaseAdmin
+      .from('teams').select('coach_id').eq('id', teamId).maybeSingle()
+
+    const { data: drillResources } = await visibleDrills(
+      supabaseAdmin,
+      (ownerTeam as any)?.coach_id,
+      'id, drill_name, skill_category, description, youtube_url, youtube_video_id, channel, age_range, difficulty_level, mechanic_focus, common_flaws_fixed, equipment_needed, ai_coaching_notes, safety_notes, created_by_coach_id'
+    ).limit(100)
 
     // Three, generated in parallel and told to differ from each other. One
     // forced replacement means a coach who doesn't like it has to roll again

@@ -8,6 +8,7 @@ import { resolveFocusArea, focusAreaLabel } from '@/lib/focusAreas'
 import { textFrom } from '@/lib/claudeText'
 import { commitPrescription } from '@/lib/prescriptions'
 import { guard, requireSession } from '@/lib/authz'
+import { visibleDrills } from '@/lib/drills'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -241,11 +242,7 @@ export async function POST(request: NextRequest) {
     //     answerable even though it is not a catalogued flaw.
     if (selected.length < 2) {
       const already = new Set(selected.map(d => d.id))
-      let q = supabaseAdmin
-        .from('drill_resources')
-        .select('*')
-        .or('status.eq.approved,status.is.null')
-        .limit(400)
+      let q = visibleDrills(supabaseAdmin, coachId, '*').limit(400)
       if (categories.length > 0) q = q.in('skill_category', categories)
 
       const { data: candidates } = await q

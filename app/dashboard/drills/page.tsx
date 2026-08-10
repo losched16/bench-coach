@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
-import { Search, Filter, Play, Clock, Users, MapPin, ChevronDown, ChevronUp, X } from 'lucide-react'
+import { Search, Filter, Play, Clock, Users, MapPin, ChevronDown, ChevronUp, X, Star, Plus, Pencil } from 'lucide-react'
 import { usePageView } from '@/lib/tracking'
+import { visibleDrills } from '@/lib/drills'
+import { DrillForm } from '@/components/DrillForm'
 
 interface DrillResource {
   id: string
@@ -65,24 +67,76 @@ export default function DrillLibraryPage() {
   const [selectedAge, setSelectedAge] = useState('All')
   const [showFilters, setShowFilters] = useState(false)
   const [selectedDrill, setSelectedDrill] = useState<DrillResource | null>(null)
+  const [coachId, setCoachId] = useState<string | null>(null)
+  const [favorites, setFavorites] = useState<Set<string>>(new Set())
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false)
+  const [showAddDrill, setShowAddDrill] = useState(false)
+  const [editingDrill, setEditingDrill] = useState<DrillResource | null>(null)
   
   const searchParams = useSearchParams()
   const teamId = searchParams.get('teamId')
   const supabase = createSupabaseComponentClient()
 
   useEffect(() => {
-    loadDrills()
+    init()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const init = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setLoading(false); return }
+    const { data: coach } = await supabase
+      .from('coaches').select('id').eq('user_id', user.id).single() as { data: { id: string } | null }
+    const cid = coach?.id || null
+    setCoachId(cid)
+    await Promise.all([loadDrills(cid), loadFavorites(cid)])
+  }
+
+  const loadFavorites = async (cid: string | null) => {
+    if (!cid) return
+    try {
+      const res = await fetch(`/api/drills/favorites?coachId=${cid}`)
+      const d = await res.json()
+      setFavorites(new Set<string>(d.drillIds || []))
+    } catch { /* stars are not worth breaking the library over */ }
+  }
+
+  const toggleFavorite = async (drillId: string) => {
+    if (!coachId) return
+    const on = favorites.has(drillId)
+    // Optimistic: a star that waits on a round trip feels broken.
+    setFavorites(prev => {
+      const next = new Set(prev)
+      on ? next.delete(drillId) : next.add(drillId)
+      return next
+    })
+    try {
+      await fetch('/api/drills/favorites', {
+        method: on ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coachId, drillId }),
+      })
+    } catch {
+      setFavorites(prev => {
+        const next = new Set(prev)
+        on ? next.add(drillId) : next.delete(drillId)
+        return next
+      })
+    }
+  }
 
   useEffect(() => {
     filterDrills()
-  }, [drills, searchQuery, selectedCategory, selectedDifficulty, selectedAge])
+  }, [drills, searchQuery, selectedCategory, selectedDifficulty, selectedAge, showOnlyFavorites, favorites])
 
-  const loadDrills = async () => {
+  const loadDrills = async (cid: string | null = coachId) => {
     try {
-      const { data, error } = await supabase
-        .from('drill_resources')
-        .select('*')
+      // The RLS policy from migration 041 already limits this to the curated
+      // library plus the coach's own, and it is the anon key so the policy
+      // actually applies. The explicit filter is here anyway: a database
+      // where 041's policies have not been applied would otherwise show every
+      // coach's private drills to everybody, silently.
+      const { data, error } = await visibleDrills(supabase, cid, '*')
         .order('skill_category')
         .order('progression_level')
 
@@ -94,6 +148,8 @@ export default function DrillLibraryPage() {
       setLoading(false)
     }
   }
+
+  const mineCount = drills.filter(d => (d as any).created_by_coach_id).length
 
   const filterDrills = () => {
     let filtered = [...drills]
@@ -108,6 +164,10 @@ export default function DrillLibraryPage() {
         d.common_flaws_fixed?.some(f => f.toLowerCase().includes(query)) ||
         d.mechanic_focus?.some(m => m.toLowerCase().includes(query))
       )
+    }
+
+    if (showOnlyFavorites) {
+      filtered = filtered.filter(d => favorites.has(d.id))
     }
 
     // Category filter
@@ -184,9 +244,45 @@ export default function DrillLibraryPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Drill Library</h1>
-          <p className="text-gray-600">{drills.length} drills with video demonstrations</p>
+          <p className="text-gray-600">
+            {drills.length} drills
+            {favorites.size > 0 && ` · ${favorites.size} favourite${favorites.size === 1 ? '' : 's'}`}
+            {mineCount > 0 && ` · ${mineCount} of your own`}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg border font-medium text-sm ${
+              showOnlyFavorites
+                ? 'bg-amber-50 border-amber-300 text-amber-800'
+                : 'bg-white border-gray-300 text-gray-700'
+            }`}
+          >
+            <Star size={16} fill={showOnlyFavorites ? 'currentColor' : 'none'} />
+            {showOnlyFavorites ? 'Favourites only' : 'Favourites'}
+          </button>
+          <button
+            onClick={() => { setEditingDrill(null); setShowAddDrill(true) }}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm"
+          >
+            <Plus size={16} /> Add your own
+          </button>
         </div>
       </div>
+
+      {showAddDrill && (
+        <DrillForm
+          existing={editingDrill as any}
+          onCancel={() => { setShowAddDrill(false); setEditingDrill(null) }}
+          onSaved={async () => {
+            setShowAddDrill(false)
+            setEditingDrill(null)
+            await Promise.all([loadDrills(coachId), loadFavorites(coachId)])
+          }}
+        />
+      )}
 
       {/* Search and Filters */}
       <div className="bg-white rounded-lg shadow p-4">
@@ -316,6 +412,25 @@ export default function DrillLibraryPage() {
               {drill.channel && (
                 <div className="absolute bottom-2 right-2 px-2 py-1 bg-black bg-opacity-70 rounded text-xs text-white">
                   {drill.channel}
+                </div>
+              )}
+
+              {/* stopPropagation, or starring a drill also opens it. */}
+              <button
+                onClick={(e) => { e.stopPropagation(); toggleFavorite(drill.id) }}
+                aria-label={favorites.has(drill.id) ? 'Remove from favourites' : 'Add to favourites'}
+                className="absolute top-2 right-2 w-9 h-9 rounded-full bg-black/60 flex items-center justify-center"
+              >
+                <Star
+                  size={18}
+                  className={favorites.has(drill.id) ? 'text-amber-400' : 'text-white'}
+                  fill={favorites.has(drill.id) ? 'currentColor' : 'none'}
+                />
+              </button>
+
+              {(drill as any).created_by_coach_id && (
+                <div className="absolute top-2 left-2 px-2 py-1 bg-red-600 rounded text-xs text-white font-medium">
+                  Yours
                 </div>
               )}
             </div>

@@ -12,6 +12,7 @@ import {
   PitchCountRuleSet,
 } from '@/lib/scouting'
 import { guard, authorizeTeam, can } from '@/lib/authz'
+import { visibleDrills } from '@/lib/drills'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -270,11 +271,11 @@ export async function POST(request: NextRequest) {
     // Load drill resources library for AI to reference
     let drillResources: any[] = []
     try {
-      const { data: resources } = await supabaseAdmin
-        .from('drill_resources')
-        .select('drill_name, skill_category, description, youtube_url, youtube_video_id, channel, age_range, difficulty_level, mechanic_focus, common_flaws_fixed, equipment_needed, ai_coaching_notes, safety_notes')
-        .or('status.eq.approved,status.is.null')
-        .limit(100)
+      const { data: resources } = await visibleDrills(
+        supabaseAdmin,
+        team.coach_id,
+        'id, drill_name, skill_category, description, youtube_url, youtube_video_id, channel, age_range, difficulty_level, mechanic_focus, common_flaws_fixed, equipment_needed, ai_coaching_notes, safety_notes, created_by_coach_id'
+      ).limit(100)
 
       drillResources = resources || []
     } catch (e) {

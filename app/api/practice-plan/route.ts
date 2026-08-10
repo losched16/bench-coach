@@ -4,6 +4,7 @@ import { generatePracticePlan, TeamContext } from '@/lib/anthropic'
 import { assembleCoachContext, renderCoachContext } from '@/lib/coachContext'
 import { categoriesForPracticeFocus } from '@/lib/focusAreas'
 import { guard } from '@/lib/authz'
+import { visibleDrills, favoriteDrillIds, drillMenuLine, DRILL_PREFERENCE_NOTE } from '@/lib/drills'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -146,10 +147,7 @@ export async function POST(request: NextRequest) {
     // drill here, not running it.
     const wantedCategories = categoriesForPracticeFocus(focus)
 
-    let drillQuery = supabaseAdmin
-      .from('drill_resources')
-      .select('drill_name, skill_category, description, youtube_video_id, channel, age_range, difficulty_level, mechanic_focus, equipment_needed')
-      .or('status.eq.approved,status.is.null')
+    let drillQuery = visibleDrills(supabaseAdmin, team.coach_id, 'id, drill_name, skill_category, description, youtube_video_id, channel, age_range, difficulty_level, mechanic_focus, equipment_needed, created_by_coach_id')
 
     if (wantedCategories.length > 0) {
       // ilike-any rather than `in`, because the stored categories are
@@ -161,15 +159,16 @@ export async function POST(request: NextRequest) {
 
     const { data: matched } = await drillQuery.limit(45)
 
+    // Which of these the coach has starred. Favourites are a preference the
+    // model is told about, not a filter — a coach with four favourites should
+    // still get a full practice.
+    const favorites = await favoriteDrillIds(supabaseAdmin, team.coach_id)
+
     // A focus with no library coverage (confidence, focus/behavior) would
     // otherwise send nothing at all, and the plan loses its videos.
     const drillResources = (matched && matched.length >= 8)
       ? matched
-      : (await supabaseAdmin
-          .from('drill_resources')
-          .select('drill_name, skill_category, description, youtube_video_id, channel, age_range, difficulty_level, mechanic_focus, equipment_needed')
-          .or('status.eq.approved,status.is.null')
-          .limit(45)).data
+      : (await visibleDrills(supabaseAdmin, team.coach_id, 'id, drill_name, skill_category, description, youtube_video_id, channel, age_range, difficulty_level, mechanic_focus, equipment_needed, created_by_coach_id').limit(45)).data
 
     // Who is actually going to be standing there.
     //
@@ -216,6 +215,12 @@ export async function POST(request: NextRequest) {
         `No kid should stand in a line waiting more than about thirty seconds; ` +
         `if a block would leave players idle at this headcount, change the block.`
     }
+
+    // Favourites and the coach's own drills, said once so the model knows what
+    // the marks in the menu mean.
+    const drillPreference = (drillResources || []).some((d: any) =>
+      favorites.has(d.id) || d.created_by_coach_id
+    ) ? DRILL_PREFERENCE_NOTE : ''
 
     // Build context
     const context: TeamContext = {
@@ -268,6 +273,7 @@ export async function POST(request: NextRequest) {
             duration, focus, context, fullConstraints, drillResources || [],
             loopContext || undefined,
             rosterSection || undefined,
+            { favorites, note: drillPreference },
             (_chars, chunk) => {
               buffer += chunk
               const found = (buffer.match(/"title"\s*:/g) || []).length

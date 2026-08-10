@@ -10,7 +10,8 @@
     "verify:claude": "node scripts/verify-claude-calls.mjs",
     "test:scorebook": "npx --yes tsx --tsconfig tsconfig.json scripts/test-scorebook.ts",
     "verify:authz": "node scripts/verify-authz.mjs",
-    "test:progression": "npx --yes tsx --tsconfig tsconfig.json scripts/test-progression.ts"
+    "test:progression": "npx --yes tsx --tsconfig tsconfig.json scripts/test-progression.ts",
+    "verify:drills": "node scripts/verify-drill-scope.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

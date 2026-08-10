@@ -55,7 +55,9 @@ WITH checks(migration, feature, kind, obj, col) AS (VALUES
   ('038_practice_recap_columns.sql',    'Practice recaps',               'column', 'practice_sessions',  'what_worked'),
   ('038_practice_recap_columns.sql',    'Attendance in practice plans',  'column', 'practice_sessions',  'attendance_count'),
   ('039_practice_schedule.sql',         'Practice dates',                'column', 'practice_plans',     'scheduled_for'),
-  ('039_practice_schedule.sql',         'Recap reminders',               'column', 'practice_plans',     'recap_dismissed_at')
+  ('039_practice_schedule.sql',         'Recap reminders',               'column', 'practice_plans',     'recap_dismissed_at'),
+  ('041_coach_drills_and_favorites.sql','Your own drills',               'column', 'drill_resources',    'created_by_coach_id'),
+  ('041_coach_drills_and_favorites.sql','Favourite drills',              'table',  'drill_favorites',    NULL)
 )
 -- 040 repairs data rather than adding schema, so it cannot be detected by
 -- looking for a column. Run this instead — it must return 0:
