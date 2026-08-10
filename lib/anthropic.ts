@@ -846,10 +846,17 @@ Always return valid JSON. No text outside the JSON.`,
       return JSON.parse(jsonMatch[0])
     }
 
-    throw new Error('Failed to parse practice plan')
-  } catch (error) {
+    throw new Error(
+      'The plan came back in a shape we could not read. This is usually a plan ' +
+      'that ran past its length limit — try a shorter practice or fewer focus areas.'
+    )
+  } catch (error: any) {
+    // Was `throw new Error('Failed to generate practice plan')`, which
+    // discarded the only useful thing in the whole failure. A coach reporting
+    // "it failed to generate" had nothing to tell us and neither did the
+    // client, because the message it showed was a constant.
     console.error('Practice plan generation error:', error)
-    throw new Error('Failed to generate practice plan')
+    throw new Error(error?.message || 'Failed to generate practice plan')
   }
 }
 

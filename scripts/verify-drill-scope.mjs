@@ -69,7 +69,7 @@ for (const file of files) {
   // working rather than as everything being fine.
   // Exclude the definition itself by PATH — every consumer imports from
   // '@/lib/drills', so matching on the string would exclude all of them.
-  if (rel !== 'lib/drills.ts' && /\bvisibleDrills\s*\(/.test(src)) viaHelper++
+  if (rel !== 'lib/drills.ts' && /\bvisibleDrills(Safe)?\s*\(/.test(src)) viaHelper++
 
   if (!src.includes("from('drill_resources')")) continue
 
@@ -90,7 +90,7 @@ for (const file of files) {
 
   // The filter can arrive two ways: through the helper, or spelled out. Both
   // are acceptable; neither being present is not.
-  const usesHelper = /\bvisibleDrills\s*\(/.test(src)
+  const usesHelper = /\bvisibleDrills(Safe)?\s*\(/.test(src)
   const spellsItOut = src.includes('created_by_coach_id')
 
   if (!usesHelper && !spellsItOut) {

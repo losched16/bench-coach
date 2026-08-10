@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
-import { Plus, Clock, ChevronDown, ChevronUp, Trash2, Pencil, Sparkles, ClipboardCheck, RefreshCw, Search, X, FileText } from 'lucide-react'
+import { Plus, Clock, ChevronDown, ChevronUp, Trash2, Pencil, Sparkles, ClipboardCheck, RefreshCw, Search, X, FileText, AlertCircle } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import Link from 'next/link'
 import { DrillVideo, DrillVideoLookup } from '@/components/DrillVideo'
@@ -50,6 +50,17 @@ function PracticeContent() {
   const [recappedPlanIds, setRecappedPlanIds] = useState<Set<string>>(new Set())
   const [scheduleReady, setScheduleReady] = useState(true)
   const [dismissing, setDismissing] = useState<string | null>(null)
+  // What the coach wants that a focus chip cannot say: "live pitching, not the
+  // cages", "we only have the infield", "no catcher tonight". The API and the
+  // prompt have taken this since they were written; the form never asked.
+  const [specifics, setSpecifics] = useState('')
+  // The plan before it is committed. Generating straight into the database
+  // meant the first version was the only version — a coach who wanted one
+  // thing changed had to delete it and start over.
+  const [draft, setDraft] = useState<any | null>(null)
+  const [adjustment, setAdjustment] = useState('')
+  const [genError, setGenError] = useState<string | null>(null)
+  const [savingDraft, setSavingDraft] = useState(false)
   
   // Custom plan state
   const [customTitle, setCustomTitle] = useState('')
@@ -107,7 +118,7 @@ function PracticeContent() {
     if (!preset) return
     const wanted = preset.split(',').map(x => x.trim().toLowerCase()).filter(Boolean)
     const matched = FOCUS_OPTIONS.filter(o => wanted.includes(o.toLowerCase()))
-    if (matched.length) setFocusAreas(matched.slice(0, 3))
+    if (matched.length) setFocusAreas(matched.slice(0, 5))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
@@ -272,11 +283,12 @@ function PracticeContent() {
     )
   }
 
-  const handleGeneratePlan = async () => {
+  const handleGeneratePlan = async (constraintsOverride?: string) => {
     if (focusAreas.length === 0 || !teamId) return
 
     setGenerating(true)
     setBlocksWritten(0)
+    setGenError(null)
 
     try {
       const response = await fetch('/api/practice-plan', {
@@ -286,10 +298,16 @@ function PracticeContent() {
           teamId,
           duration,
           focus: focusAreas,
+          // What the chips cannot say. The route has always accepted this and
+          // folded it into the prompt; nothing ever sent it.
+          constraints: (constraintsOverride ?? specifics).trim() || undefined,
         }),
       })
 
-      if (!response.ok) throw new Error('Failed to generate plan')
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}))
+        throw new Error(d.error || `The server refused the request (${response.status}).`)
+      }
       if (!response.body) throw new Error('No response from the server')
 
       // NDJSON: progress lines while it writes, then the plan.
@@ -320,26 +338,60 @@ function PracticeContent() {
 
       if (!data) throw new Error('The plan stopped part-way through. Try again.')
 
-      // Save the plan
-      await supabase
+      // Held, not saved. The coach reads it and either takes it or says what
+      // to change — see saveDraft and refine below.
+      setDraft(data)
+      setAdjustment('')
+    } catch (error: any) {
+      // The real reason, not a constant. "Failed to generate practice plan"
+      // told the coach nothing and told us nothing when they reported it.
+      console.error('Error generating plan:', error)
+      setGenError(error?.message || 'Could not generate the plan.')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  // "More baserunning, drop the bunting station" — regenerate with the plan
+  // they just read plus what they said about it.
+  const refinePlan = async () => {
+    if (!adjustment.trim()) return
+    await handleGeneratePlan(
+      `${specifics}\n\nThe coach read this plan and asked for a change:\n` +
+      `${JSON.stringify({ title: draft?.title, blocks: draft?.blocks }, null, 1).slice(0, 6000)}\n\n` +
+      `THEIR WORDS: "${adjustment.trim()}"\n` +
+      `Rebuild the plan honouring that. Keep every block they did not complain ` +
+      `about as close to identical as you can — changing things they liked is ` +
+      `how a coach stops trusting the adjust button.`
+    )
+  }
+
+  const saveDraft = async () => {
+    if (!draft) return
+    setSavingDraft(true)
+    try {
+      const { error } = await supabase
         .from('practice_plans')
         .insert({
           team_id: teamId,
-          title: data.title,
+          title: draft.title,
           duration_minutes: duration,
           focus: focusAreas,
-          content: data.blocks,
+          content: draft.blocks,
           ...(scheduleReady ? { scheduled_for: scheduledFor } : {}),
         })
+      if (error) throw error
 
       setShowPlanModal(false)
+      setDraft(null)
       setFocusAreas([])
+      setSpecifics('')
+      setAdjustment('')
       loadPlans()
-    } catch (error) {
-      console.error('Error generating plan:', error)
-      alert('Failed to generate practice plan')
+    } catch (error: any) {
+      setGenError(error?.message || 'Could not save the plan.')
     } finally {
-      setGenerating(false)
+      setSavingDraft(false)
     }
   }
 
@@ -864,11 +916,107 @@ function PracticeContent() {
       )}
 
       {/* Generate Plan Modal */}
-      {showPlanModal && (
+      {/* The draft.
+          Generating straight into the database meant the first version was the
+          only version — a coach who wanted one thing different had to delete
+          it and start over. Now they read it, say what to change in their own
+          words, and it comes back rebuilt. Nothing is saved until they say so. */}
+      {showPlanModal && draft && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[92vh] flex flex-col">
+            <div className="p-6 border-b border-gray-100">
+              <h3 className="text-xl font-bold text-gray-900">{draft.title}</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                {duration} minutes · {(draft.blocks || []).length} blocks · nothing saved yet
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-3">
+              {genError && (
+                <div className="flex gap-2 text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg p-3">
+                  <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                  <span>{genError}</span>
+                </div>
+              )}
+
+              {(draft.blocks || []).map((b: any, i: number) => (
+                <div key={i} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-gray-900">{i + 1}. {b.title}</p>
+                      {b.description && (
+                        <p className="text-sm text-gray-600 mt-1">{b.description}</p>
+                      )}
+                    </div>
+                    <span className="shrink-0 text-sm text-gray-500">{b.minutes} min</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-6 border-t border-gray-100 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Want anything changed?
+                </label>
+                <textarea
+                  value={adjustment}
+                  onChange={(e) => setAdjustment(e.target.value)}
+                  rows={2}
+                  placeholder="e.g. Drop the bunting station, more baserunning. And the warm-up is too long."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled={generating}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Blocks you don&apos;t mention stay as they are.
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={refinePlan}
+                  disabled={generating || !adjustment.trim()}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50"
+                >
+                  {generating
+                    ? (blocksWritten > 0 ? `Rewriting block ${blocksWritten}…` : 'Rebuilding…')
+                    : 'Rebuild with these changes'}
+                </button>
+                <button
+                  onClick={saveDraft}
+                  disabled={generating || savingDraft}
+                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {savingDraft ? 'Saving…' : 'Use this plan'}
+                </button>
+              </div>
+
+              <button
+                onClick={() => { setShowPlanModal(false); setDraft(null); setGenError(null) }}
+                disabled={generating || savingDraft}
+                className="w-full py-2 text-sm text-gray-600 disabled:opacity-50"
+              >
+                Throw it away
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPlanModal && !draft && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[92vh] overflow-y-auto">
             <h3 className="text-xl font-bold text-gray-900 mb-4">Generate Practice Plan</h3>
             <div className="space-y-4">
+              {genError && (
+                <div className="flex gap-2 text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg p-3">
+                  <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">That didn&apos;t generate.</p>
+                    <p className="mt-0.5">{genError}</p>
+                  </div>
+                </div>
+              )}
               {/* Only shown once migration 039 exists. A date field that
                   silently fails to save is worse than no date field. */}
               {scheduleReady && (
@@ -907,7 +1055,7 @@ function PracticeContent() {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Focus Areas (choose 1-3)
+                  What are we working on? (up to 5)
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {FOCUS_OPTIONS.map((focus) => (
@@ -915,7 +1063,7 @@ function PracticeContent() {
                       key={focus}
                       type="button"
                       onClick={() => toggleFocus(focus)}
-                      disabled={!focusAreas.includes(focus) && focusAreas.length >= 3}
+                      disabled={!focusAreas.includes(focus) && focusAreas.length >= 5}
                       className={`px-3 py-2 rounded-lg border-2 transition-colors text-sm capitalize ${
                         focusAreas.includes(focus)
                           ? 'border-blue-600 bg-blue-50 text-blue-700'
@@ -926,18 +1074,47 @@ function PracticeContent() {
                     </button>
                   ))}
                 </div>
+                {focusAreas.length > 3 && (
+                  <p className="text-xs text-amber-700 mt-2">
+                    {focusAreas.length} areas in {duration} minutes is about{' '}
+                    {Math.round(duration / focusAreas.length)} minutes each. It will
+                    still build it — just know that two or three is where a practice
+                    usually lands something.
+                  </p>
+                )}
+              </div>
+
+              {/* The chips say "hitting". This says "off live pitching, not the
+                  cages, and we only have the infield tonight" — which is the
+                  difference between a generic plan and one for this practice.
+                  The route has accepted this since it was written. */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Anything specific?
+                </label>
+                <textarea
+                  value={specifics}
+                  onChange={(e) => setSpecifics(e.target.value)}
+                  rows={3}
+                  placeholder="e.g. Hitting off live pitching rather than the cages — they're late on anything with speed. Only have the infield, and no catcher tonight."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Optional. Kit you have, space you're in, what you saw last game,
+                  a kid to work around — anything the buttons above can't say.
+                </p>
               </div>
 
               <div className="flex space-x-3 pt-4">
                 <button
-                  onClick={() => setShowPlanModal(false)}
+                  onClick={() => { setShowPlanModal(false); setDraft(null); setGenError(null) }}
                   disabled={generating}
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleGeneratePlan}
+                  onClick={() => handleGeneratePlan()}
                   disabled={focusAreas.length === 0 || generating}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >

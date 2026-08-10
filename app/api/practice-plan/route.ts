@@ -4,7 +4,7 @@ import { generatePracticePlan, TeamContext } from '@/lib/anthropic'
 import { assembleCoachContext, renderCoachContext } from '@/lib/coachContext'
 import { categoriesForPracticeFocus } from '@/lib/focusAreas'
 import { guard } from '@/lib/authz'
-import { visibleDrills, favoriteDrillIds, drillMenuLine, DRILL_PREFERENCE_NOTE } from '@/lib/drills'
+import { visibleDrillsSafe, favoriteDrillIds, drillMenuLine, DRILL_PREFERENCE_NOTE } from '@/lib/drills'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -147,17 +147,29 @@ export async function POST(request: NextRequest) {
     // drill here, not running it.
     const wantedCategories = categoriesForPracticeFocus(focus)
 
-    let drillQuery = visibleDrills(supabaseAdmin, team.coach_id, 'id, drill_name, skill_category, description, youtube_video_id, channel, age_range, difficulty_level, mechanic_focus, equipment_needed, created_by_coach_id')
+    const DRILL_SELECT = 'id, drill_name, skill_category, description, youtube_video_id, channel, age_range, difficulty_level, mechanic_focus, equipment_needed, created_by_coach_id'
 
-    if (wantedCategories.length > 0) {
-      // ilike-any rather than `in`, because the stored categories are
-      // inconsistently cased.
-      drillQuery = drillQuery.or(
-        wantedCategories.map(c => `skill_category.ilike.${c}`).join(',')
-      )
+    // ilike-any rather than `in`, because the stored categories are
+    // inconsistently cased.
+    const narrow = (q: any) => {
+      let out = q
+      if (wantedCategories.length > 0) {
+        out = out.or(wantedCategories.map(c => `skill_category.ilike.${c}`).join(','))
+      }
+      return out.limit(45)
     }
 
-    const { data: matched } = await drillQuery.limit(45)
+    const matchedResult = await visibleDrillsSafe(
+      supabaseAdmin, team.coach_id, DRILL_SELECT, narrow
+    )
+    const matched = matchedResult.data
+    let drillsDegraded = matchedResult.degraded
+
+    // Loud, because the failure mode here is a plan generated with an empty
+    // drill library — which produces a worse plan and no error at all.
+    if (matchedResult.error) {
+      console.error('Practice plan: drill library query failed:', matchedResult.error)
+    }
 
     // Which of these the coach has starred. Favourites are a preference the
     // model is told about, not a filter — a coach with four favourites should
@@ -166,9 +178,25 @@ export async function POST(request: NextRequest) {
 
     // A focus with no library coverage (confidence, focus/behavior) would
     // otherwise send nothing at all, and the plan loses its videos.
-    const drillResources = (matched && matched.length >= 8)
-      ? matched
-      : (await visibleDrills(supabaseAdmin, team.coach_id, 'id, drill_name, skill_category, description, youtube_video_id, channel, age_range, difficulty_level, mechanic_focus, equipment_needed, created_by_coach_id').limit(45)).data
+    let drillResources = matched
+    if (!matched || matched.length < 8) {
+      const wide = await visibleDrillsSafe(
+        supabaseAdmin, team.coach_id, DRILL_SELECT, (q: any) => q.limit(45)
+      )
+      if (wide.error) {
+        console.error('Practice plan: fallback drill query failed:', wide.error)
+      }
+      drillResources = wide.data
+      drillsDegraded = drillsDegraded || wide.degraded
+    }
+
+    if (drillsDegraded) {
+      console.warn(
+        'Practice plan: drill_resources has no created_by_coach_id — run ' +
+        'migrations/041_coach_drills_and_favorites.sql. Favourites and ' +
+        "coach-written drills are off; the curated library still works."
+      )
+    }
 
     // Who is actually going to be standing there.
     //

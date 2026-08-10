@@ -62,6 +62,48 @@ export function visibleDrills(
 }
 
 /**
+ * visibleDrills, but survives a database that has not run migration 041.
+ *
+ * Before 041 there is no created_by_coach_id column, so both the select and
+ * the filter above fail — and a failed drill query does not throw, it returns
+ * an error object that the caller usually destructures past. The result is a
+ * practice plan generated with an EMPTY drill library, which is not an error
+ * anyone sees; it is just a much worse plan, and it took a coach reporting
+ * "it failed to generate" to find it.
+ *
+ * So: try the scoped query, and if the column is missing fall back to the
+ * pre-041 shape. There are no coach-written drills in that world, so nothing
+ * can leak — the whole feature simply is not on yet.
+ *
+ * Returns { data, error, degraded } so a caller can say WHICH of the two
+ * happened rather than guessing.
+ */
+export async function visibleDrillsSafe(
+  supabase: any,
+  coachId: string | null | undefined,
+  fields: string = DRILL_FIELDS,
+  apply: (q: any) => any = (q) => q
+): Promise<{ data: any[] | null; error: any; degraded: boolean }> {
+  const first = await apply(visibleDrills(supabase, coachId, fields))
+  if (!first.error) return { data: first.data, error: null, degraded: false }
+
+  // Strip the column from both the projection and the filter.
+  const legacyFields = fields
+    .split(',')
+    .map(f => f.trim())
+    .filter(f => f !== 'created_by_coach_id')
+    .join(', ')
+
+  const second = await apply(
+    supabase.from('drill_resources')
+      .select(legacyFields)
+      .or('status.eq.approved,status.is.null')
+  )
+
+  return { data: second.data, error: second.error, degraded: !second.error }
+}
+
+/**
  * The drill ids this coach has favourited.
  *
  * Returns an empty set rather than throwing when migration 041 has not been
