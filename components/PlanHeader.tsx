@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertTriangle, Compass } from 'lucide-react'
+import { AlertTriangle, Compass, Target } from 'lucide-react'
 
 // The coach talking, before the blocks.
 //
@@ -16,14 +16,48 @@ import { AlertTriangle, Compass } from 'lucide-react'
 interface Props {
   coachNotes?: string | null
   flags?: string[] | null
+  // The one goal and the three things to repeat all night. Both print on the
+  // clipboard sheet, and both belong on screen too — a coach who reads the
+  // plan in the app and the sheet on the field should not meet two different
+  // versions of what tonight is for.
+  objective?: string | null
+  coachingPoints?: string[] | null
 }
 
-export function PlanHeader({ coachNotes, flags }: Props) {
+export function PlanHeader({ coachNotes, flags, objective, coachingPoints }: Props) {
   const list = (flags || []).filter(Boolean)
-  if (!coachNotes && list.length === 0) return null
+  const points = (coachingPoints || []).filter(Boolean)
+  if (!coachNotes && list.length === 0 && !objective && points.length === 0) return null
 
   return (
     <div className="space-y-3">
+      {objective && (
+        <div className="bg-gray-900 text-white rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Target size={16} className="text-gray-300" />
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-300">
+              Today&rsquo;s #1 goal
+            </p>
+          </div>
+          <p className="text-base font-semibold leading-snug">{objective}</p>
+        </div>
+      )}
+
+      {points.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
+            Say these all practice
+          </p>
+          <ol className="space-y-1.5">
+            {points.map((pt, i) => (
+              <li key={i} className="flex gap-2.5 text-sm text-gray-800 leading-relaxed">
+                <span className="font-bold text-gray-400 shrink-0">{i + 1}.</span>
+                <span>{pt}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
       {coachNotes && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-1.5">

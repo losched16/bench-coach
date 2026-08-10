@@ -338,9 +338,9 @@ function DashboardContent({
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 print:bg-white print:min-h-0">
       {/* Top Navigation */}
-      <header className="bg-slate-900 text-white sticky top-0 z-30">
+      <header className="bg-slate-900 text-white sticky top-0 z-30 print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14 sm:h-16">
             {/* Left side - Hamburger + Logo */}
@@ -550,10 +550,10 @@ function DashboardContent({
       )}
 
       {/* Main Content Area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 print:max-w-none print:px-0 print:py-0">
         <div className="flex">
           {/* Desktop Sidebar Navigation */}
-          <aside className="hidden lg:block w-64 flex-shrink-0 pr-8">
+          <aside className="hidden lg:block w-64 flex-shrink-0 pr-8 print:hidden">
             <nav className="space-y-4 sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pb-4">
               {navGroups.map((group, gi) => (
                 <div key={group.label || `g${gi}`} className="space-y-1">
@@ -600,7 +600,7 @@ function DashboardContent({
           {/* Where an invited coach stands. Owners see nothing — they don't need
           telling, and a permanent banner on your own team is noise. */}
       {roleLabel && role !== 'owner' && (
-        <div className="bg-blue-50 border-b border-blue-200 px-4 py-2">
+        <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 print:hidden">
           <p className="max-w-7xl mx-auto text-xs text-blue-900">{roleLabel}</p>
         </div>
       )}

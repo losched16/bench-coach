@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
-import { Plus, Clock, ChevronDown, ChevronUp, Trash2, Pencil, Sparkles, ClipboardCheck, RefreshCw, Search, X, FileText, AlertCircle, Check } from 'lucide-react'
+import { Plus, Clock, ChevronDown, ChevronUp, Trash2, Pencil, Sparkles, ClipboardCheck, RefreshCw, Search, X, FileText, AlertCircle, Check, Printer } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import Link from 'next/link'
 import { DrillVideo, DrillVideoLookup } from '@/components/DrillVideo'
@@ -13,6 +13,7 @@ import { TemplateGallery } from '@/components/TemplateGallery'
 import { TeamOnly } from '@/components/TeamOnly'
 import { todayStr } from '@/lib/entries'
 import { PracticeBlock } from '@/components/PracticeBlock'
+import { EQUIPMENT_OPTIONS } from '@/lib/practicePlan'
 import { PlanHeader } from '@/components/PlanHeader'
 
 
@@ -56,6 +57,15 @@ function PracticeContent() {
   // cages", "we only have the infield", "no catcher tonight". The API and the
   // prompt have taken this since they were written; the form never asked.
   const [specifics, setSpecifics] = useState('')
+  // The clipboard fields. A coach standing on a field wants one goal, a clock,
+  // and a list of what to bring — so the builder asks for the two of those
+  // three it cannot work out on its own.
+  const [objective, setObjective] = useState('')
+  const [startTime, setStartTime] = useState('')
+  // Empty means "assume the usual kit". Ticking anything turns it into a hard
+  // constraint, which is the point: a plan that stations four kids at a tee
+  // this team does not own fails in front of everybody.
+  const [equipmentAvailable, setEquipmentAvailable] = useState<Set<string>>(new Set())
   // The plan before it is committed. Generating straight into the database
   // meant the first version was the only version — a coach who wanted one
   // thing changed had to delete it and start over.
@@ -344,6 +354,8 @@ function PracticeContent() {
           // itself about what changed.
           isRefine: !!constraintsOverride,
           mustIncludeDrillIds: Array.from(pickedDrills),
+          objective: objective.trim() || undefined,
+          equipmentAvailable: Array.from(equipmentAvailable),
         }),
       })
 
@@ -451,6 +463,18 @@ function PracticeContent() {
             blocks: draft.blocks,
             coach_notes: draft.coach_notes || null,
             flags: draft.flags || [],
+            // The clipboard half of the plan. Stored inside content because it
+            // is JSONB and already versioned by shape — no migration, and a
+            // plan written before today simply has none of these.
+            //
+            // The model's objective wins over the raw input: it is the coach's
+            // own goal sharpened, and it is the wording they just reviewed in
+            // the draft. Their text is the fallback for a plan where the model
+            // returned nothing.
+            objective: draft.objective || objective.trim() || null,
+            coaching_points: draft.coaching_points || [],
+            start_time: startTime || null,
+            equipment_available: Array.from(equipmentAvailable),
           },
           ...(scheduleReady ? { scheduled_for: scheduledFor } : {}),
         })
@@ -462,6 +486,9 @@ function PracticeContent() {
       setSpecifics('')
       setAdjustment('')
       setPickedDrills(new Set())
+      setObjective('')
+      setStartTime('')
+      setEquipmentAvailable(new Set())
       loadPlans()
     } catch (error: any) {
       setGenError(error?.message || 'Could not save the plan.')
@@ -839,6 +866,17 @@ function PracticeContent() {
                     <ClipboardCheck size={16} className="mr-1" />
                     Log Recap
                   </Link>
+                  {/* The version that goes on a clipboard. Sits next to the
+                      other two verbs rather than hidden inside the expanded
+                      plan — printing is something a coach decides before they
+                      have read anything. */}
+                  <Link
+                    href={`/dashboard/practice/${plan.id}/print`}
+                    className="text-sm text-gray-600 hover:text-gray-900 font-medium flex items-center"
+                  >
+                    <Printer size={16} className="mr-1" />
+                    Print
+                  </Link>
                 </div>
               </div>
               
@@ -851,6 +889,8 @@ function PracticeContent() {
                       <PlanHeader
                         coachNotes={plan.content.coach_notes}
                         flags={plan.content.flags}
+                        objective={plan.content.objective}
+                        coachingPoints={plan.content.coaching_points}
                       />
                     </div>
                   )}
@@ -900,7 +940,8 @@ function PracticeContent() {
                 </div>
               )}
 
-              <PlanHeader coachNotes={draft.coach_notes} flags={draft.flags} />
+              <PlanHeader coachNotes={draft.coach_notes} flags={draft.flags}
+                          objective={draft.objective} coachingPoints={draft.coaching_points} />
 
               {/* The same renderer the saved plan uses. Showing a summary here
                   and the full thing after saving is how a coach reviews a
@@ -998,6 +1039,46 @@ function PracticeContent() {
                   </p>
                 </div>
               )}
+
+              {/* Turns the printed running order into real times — 5:30-5:40
+                  rather than 0:00-0:10. Optional, because a coach who does not
+                  know when they are getting on the field still gets a sheet
+                  with elapsed times on it. */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Start time
+                </label>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Optional. Sets the clock on the printed schedule.
+                </p>
+              </div>
+
+              {/* Asked first because it changes what a good plan looks like.
+                  Optional on purpose — a coach who does not know yet gets one
+                  written for them, which is more useful than a box they have
+                  to invent an answer for. */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  What&apos;s the one thing you want out of tonight?
+                </label>
+                <input
+                  type="text"
+                  value={objective}
+                  onChange={(e) => setObjective(e.target.value)}
+                  placeholder="e.g. Every infielder fields with two hands and comes up throwing"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Optional. Leave it blank and we&apos;ll write one — it goes at the
+                  top of the printed sheet either way.
+                </p>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1097,6 +1178,49 @@ function PracticeContent() {
                   </p>
                 </div>
               )}
+
+              {/* What is actually in the car. This used to live only in the
+                  free-text box below, where it was easy to forget and easy for
+                  the model to skim past — and the cost of missing it is a plan
+                  the coach physically cannot run. */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  What will you have?
+                </label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {EQUIPMENT_OPTIONS.map((item) => {
+                    const on = equipmentAvailable.has(item)
+                    return (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => setEquipmentAvailable(prev => {
+                          const next = new Set(prev)
+                          on ? next.delete(item) : next.add(item)
+                          return next
+                        })}
+                        className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border text-sm text-left transition-colors ${
+                          on
+                            ? 'border-blue-600 bg-blue-50 text-blue-800'
+                            : 'border-gray-200 text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        <span className={`w-4 h-4 rounded border shrink-0 flex items-center justify-center ${
+                          on ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
+                        }`}>
+                          {on && <Check size={11} className="text-white" />}
+                        </span>
+                        {item}
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {equipmentAvailable.size > 0
+                    ? 'Nothing outside this list will be in the plan.'
+                    : 'Optional. Tick what you have and no drill will ask for anything else.'}
+                </p>
+              </div>
 
               {/* The chips say "hitting". This says "off live pitching, not the
                   cages, and we only have the infield tonight" — which is the

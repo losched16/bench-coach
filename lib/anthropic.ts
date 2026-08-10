@@ -718,25 +718,19 @@ Return valid JSON and nothing else.`
 // coherent rewrite of an existing plan — fanning that out would let five
 // independent calls disagree about what changed.
 export async function generatePracticePlanSingle(
-  duration: number,
-  focus: string[],
-  context: TeamContext,
-  constraints?: string,
-  drillResources?: any[],
-  // What the loop already concluded about this team: active priorities and
-  // what the coach actually wrote down. Without this the practice builder is a
-  // separate tool that has never heard of the check-in.
-  loopContext?: string,
-  // The roster size and recent attendance, already written as prose by the
-  // caller. Station maths is most of what separates a plan a volunteer can run
-  // from one they read and then improvise around.
-  rosterSection?: string,
-  // Which drills this coach has starred, and the sentence explaining what the
-  // marks mean. Passed together because a mark with no key is noise.
-  preference?: { favorites: Set<string>; note: string },
+  // One object rather than nine positional arguments. It used to be nine, and
+  // the refine path silently stopped passing the last two the moment they were
+  // added — a coach's stated goal and their kit list were dropped by "adjust
+  // this plan" and nothing anywhere said so. Sharing PracticeInputs with the
+  // two-phase path makes that class of drift a type error.
+  i: PracticeInputs,
   // Called as text arrives, so a caller can stream progress to the browser.
   onProgress?: (charsSoFar: number, chunk: string) => void
 ): Promise<any> {
+  const {
+    duration, focus, context, constraints, drillResources,
+    loopContext, rosterSection, preference, objective, equipmentAvailable,
+  } = i
   try {
     // Build drill library context for the prompt
     let drillLibrarySection = ''
@@ -761,7 +755,7 @@ CRITICAL: When you use a drill from the library, you MUST copy the exact "drill_
     const prompt = `Create a ${duration}-minute practice plan for a ${context.team.age_group} ${context.team.skill_level} team.
 
 Focus areas: ${focus.join(', ')}
-${constraints ? `Additional context: ${constraints}` : ''}
+${objective ? `\nTHE COACH'S #1 GOAL FOR TONIGHT — every block must earn its place against this:\n${objective}\n` : ''}${constraints ? `Additional context: ${constraints}` : ''}${equipmentAvailable?.length ? `\nWHAT THEY HAVE WITH THEM — you may not require anything outside this list:\n${equipmentAvailable.join(', ')}\nAdapt or replace any drill needing something not on it, and say so in the setup.\n` : ''}
 
 Team context:
 - Currently working on: ${context.team.primary_goals.length > 0 ? context.team.primary_goals.join(', ') : 'Not specified'}
@@ -821,9 +815,15 @@ RULE 8 — COACH_NOTES AND FLAGS ARE NOT OPTIONAL: "coach_notes" explains the sh
 
 RULE 9 — "watch_for" ON EVERY BLOCK: the thing you would see from the side that a first-time coach misses entirely. This is the single highest-value sentence in each block and the clearest signal that a coach wrote the plan rather than a template.
 
+RULE 10 — THE PRACTICE GETS PRINTED: "objective" and the three "coaching_points" go on a one-page sheet a coach carries onto the field with no phone in their hand, so they have to survive with no other context. The objective is one thing, not three joined by "and". The coaching points belong to the whole practice, not to one drill — if a point only makes sense during the tee work, it is a coaching cue on that block instead. "equipment" on every block is what gets aggregated into the packing list, so name real objects with counts and never a phrase like "standard equipment".
+
 Format as JSON:
 {
   "title": "Practice Plan Title",
+
+  "objective": "ONE sentence. The single thing that has to be better when everyone goes home, said the way the coach would say it to the team in the first minute. Concrete and observable — 'every infielder fields with two hands and comes up throwing', never 'improve fielding'. If the coach stated their own #1 goal, this is that goal sharpened, not replaced.",
+
+  "coaching_points": ["Exactly 3. What this coach should be saying and watching for ALL PRACTICE, across every block — not cues belonging to one drill. Mechanical and specific."],
 
   "coach_notes": "2-4 sentences, written to this coach, before they read a single block. Why this practice is shaped the way it is: what you are prioritising and why, what you deliberately left out today, and — concretely — what to cut first if you lose fifteen minutes to rain or a late start. Name the block you would cut. This is the part that makes them a better coach rather than a better schedule-follower.",
 
@@ -933,6 +933,15 @@ export interface PracticeInputs {
   loopContext?: string
   rosterSection?: string
   preference?: { favorites: Set<string>; note: string }
+  // The one thing the coach wants out of the night, in their words. Optional:
+  // when they leave it blank the model decides and writes it back, which is
+  // usually better than a coach guessing at a goal to fill a box.
+  objective?: string
+  // What is actually in the car. A plan that stations four kids at a tee this
+  // team does not own is worse than no plan — the coach finds out in front of
+  // everybody. Empty means unknown, and the model should assume the ordinary
+  // kit rather than refuse to plan.
+  equipmentAvailable?: string[]
 }
 
 // The situation, written once and reused by both phases. Sending it to every
@@ -942,7 +951,7 @@ function practiceSituation(i: PracticeInputs): string {
   const c = i.context
   return `A ${c.team.age_group} ${c.team.skill_level} team, ${i.duration}-minute practice.
 Focus areas: ${i.focus.join(', ')}
-${i.constraints ? `\nWHAT THE COACH SAID THEY WANT — this outranks everything else here:\n${i.constraints}\n` : ''}
+${i.objective ? `\nTHE COACH'S #1 GOAL FOR TONIGHT — every block must earn its place against this:\n${i.objective}\n` : ''}${i.constraints ? `\nWHAT THE COACH SAID THEY WANT — this outranks everything else here:\n${i.constraints}\n` : ''}${i.equipmentAvailable?.length ? `\nWHAT THEY HAVE WITH THEM — you may not require anything outside this list:\n${i.equipmentAvailable.join(', ')}\nIf a drill you want needs something they do not have, either adapt it and say so in the setup, or pick a different drill. Never write a block a coach cannot physically run.\n` : ''}
 - Currently working on: ${c.team.primary_goals.length > 0 ? c.team.primary_goals.join(', ') : 'Not specified'}
 ${c.teamNotes.length > 0 ? `- Current issues: ${c.teamNotes.map(n => n.note).join('; ')}` : ''}
 ${i.loopContext ? `\nWHAT WE'RE ALREADY WORKING ON — build around this, don't ignore it:\n\n${i.loopContext}\n` : ''}${i.rosterSection ? `\n${i.rosterSection}\n` : ''}`
@@ -983,6 +992,8 @@ Every block must be a REAL, NAMED drill — "Alligator Ground Balls", "Four Corn
 Return ONLY this JSON:
 {
   "title": "Specific to this team and this practice, not 'Youth Baseball Practice'",
+  "objective": "ONE sentence. The single thing that has to be better when everyone goes home, written so the coach could say it out loud to the team in the first minute. Concrete and observable — 'every infielder fields with two hands and comes up throwing' beats 'improve fielding'. If the coach gave you their own #1 goal, this is that goal in their words, sharpened, not replaced.",
+  "coaching_points": ["Exactly 3. The things this coach should be saying and looking for ALL PRACTICE, across every block — not cues for one drill. These are what they repeat until the kids hear it in their sleep. Mechanical and specific."],
   "coach_notes": "2-4 sentences to this coach before they read a block. Why the practice is shaped this way, what you deliberately left out, and — naming the block — what to cut first if they lose fifteen minutes.",
   "flags": ["Problems in what they told you, each with its fix. Headcount against stations. One adult against two places to stand. Block length against attention span at this age. Throwing volume against what they played this weekend. Empty array only if there is genuinely nothing."],
   "blocks": [

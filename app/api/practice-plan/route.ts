@@ -36,6 +36,11 @@ export async function POST(request: NextRequest) {
       // Drills the coach picked out of their favorites before generating.
       // Not a hint — the plan is built around these.
       mustIncludeDrillIds,
+      // The coach's own #1 goal for the night, and what they have in the car.
+      // Both optional: a blank objective means the model decides and writes
+      // one back, and an empty equipment list means "assume the usual kit"
+      // rather than "they have nothing".
+      objective, equipmentAvailable,
     } = await request.json()
 
     if (!teamId || !duration || !focus) {
@@ -356,6 +361,10 @@ export async function POST(request: NextRequest) {
           loopContext: loopContext || undefined,
           rosterSection: rosterSection || undefined,
           preference: { favorites, note: drillPreference },
+          objective: typeof objective === 'string' && objective.trim()
+            ? objective.trim() : undefined,
+          equipmentAvailable: Array.isArray(equipmentAvailable) && equipmentAvailable.length
+            ? equipmentAvailable : undefined,
         }
 
         try {
@@ -363,11 +372,7 @@ export async function POST(request: NextRequest) {
           // read, so it stays a single call — fanning it out would let five
           // independent expansions disagree about what changed.
           if (isRefine) {
-            const plan = await generatePracticePlanSingle(
-              duration, focus, context, fullConstraints, drillResources || [],
-              loopContext || undefined, rosterSection || undefined,
-              { favorites, note: drillPreference }
-            )
+            const plan = await generatePracticePlanSingle(inputs)
             send({ type: 'plan', plan })
             controller.close()
             return
