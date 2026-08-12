@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { textFrom } from '@/lib/claudeText'
 import { requireSession } from '@/lib/authz'
 import { createClient } from '@supabase/supabase-js'
-import { chooseOpponentSide, ownPlayersIn, ParsedSide } from '@/lib/scoutingSides'
+import { chooseTrackedSide, ownPlayersIn, ParsedSide } from '@/lib/scoutingSides'
 import { claude as anthropic, describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
 
 // Never prerendered. This route reads the session cookie to decide who is
@@ -155,7 +155,10 @@ export async function POST(request: NextRequest) {
       // The three things the app knows and the model cannot see. Without these
       // "which team is the opponent" is unanswerable from the pixels, which is
       // exactly how a coach's own players ended up in an opponent's roster.
-      teamId, ourTeamName, opponentName,
+      teamId, ourTeamName,
+      // The team the coach selected — the SUBJECT of this upload, not our
+      // adversary. Most scouting uploads are games we were not playing in.
+      trackedTeamName,
     } = await request.json()
 
     const imageList = Array.isArray(images) ? images : []
@@ -180,6 +183,13 @@ export async function POST(request: NextRequest) {
     }))
 
     let promptText = prompt
+    // Naming the tracked team helps the model READ an abbreviated scoreboard
+    // ("WAR" over a logo) — it does not ask the model to choose a side. That
+    // decision stays in lib/scoutingSides.ts, where it can be tested and where
+    // it refuses to guess.
+    if (entryType === 'box_score' && typeof trackedTeamName === 'string' && trackedTeamName.trim()) {
+      promptText += `\n\nThe coach is logging a team they call "${trackedTeamName.trim()}". If one of the teams in this image is abbreviated or shown as a logo and you can tell it is that team, use the full name "${trackedTeamName.trim()}" as its team_name. Still return BOTH teams — do not drop the other one, and do not move players between them to make it fit.`
+    }
     if (imageList.length > 1) {
       promptText += `\n\nThere are ${imageList.length} images of the SAME game/document — combine them into one result.`
     }
@@ -253,8 +263,8 @@ export async function POST(request: NextRequest) {
 
       const sides = rawSides.filter(s => s.players.length > 0)
       const roster = await ourRosterNames(teamId)
-      const choice = chooseOpponentSide(sides, {
-        opponentName: typeof opponentName === 'string' ? opponentName : null,
+      const choice = chooseTrackedSide(sides, {
+        trackedTeamName: typeof trackedTeamName === 'string' ? trackedTeamName : null,
         ourTeamName: typeof ourTeamName === 'string' ? ourTeamName : null,
         ourRoster: roster,
       })
@@ -263,15 +273,15 @@ export async function POST(request: NextRequest) {
       // enough to put a coach's own kid into an opponent's pitch-count board —
       // so name the ones that look like ours and let the coach decide. The
       // roster itself stays server-side; only the matched names go back.
-      const ownPlayers = ownPlayersIn(choice.opponent?.players || [], roster)
+      const ownPlayers = ownPlayersIn(choice.tracked?.players || [], roster)
 
       return NextResponse.json({
         // The old shape, so every downstream reader is unchanged — it now holds
         // one team rather than a guess spanning both.
         parsed: {
           ...parsed,
-          team_name: choice.opponent?.team_name || parsed.team_name || null,
-          players: choice.opponent?.players || [],
+          team_name: choice.tracked?.team_name || parsed.team_name || null,
+          players: choice.tracked?.players || [],
         },
         // Everything needed to show the coach what was decided and let them
         // change it in one tap. A silent pick is what caused the problem.

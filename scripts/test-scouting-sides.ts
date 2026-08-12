@@ -1,14 +1,17 @@
-// Does the box-score parser put the right team in the opponent's roster?
+// Does the box-score parser log the team the coach actually asked for?
 //
-// The failure this guards is not an exception. It is a coach's own players
-// quietly appearing in an opponent's roster, where they drive pitch-count
-// availability and make a board that is confidently wrong. Nothing throws, and
-// the screen looks normal.
+// Two real failures live here. A coach's own players appearing in a tracked
+// team's roster, and — the one that matters more — a coach selecting Warrington,
+// uploading Warrington vs Springfield, and getting Springfield. Neither throws.
+// Both drive pitch-count availability, so the board is confidently wrong.
+//
+// The rule these enforce: if the coach named a team, that IS the answer, and
+// when we cannot find it we ask instead of guessing.
 //
 //   npm run test:scouting-sides
 
 import {
-  chooseOpponentSide, teamNameSimilarity, samePlayer, rosterOverlap,
+  chooseTrackedSide, teamNameSimilarity, teamNamesMatch, samePlayer, rosterOverlap,
   normalizeName, ownPlayersIn, ParsedSide,
 } from '@/lib/scoutingSides'
 
@@ -49,64 +52,96 @@ check('blank never matches', samePlayer('', 'Tommy Smith') === false)
 const theirs = side('Hawks 10U', ['A. Nguyen', 'B. Patel', 'C. Kim', 'D. Rossi'])
 const mine = side('Springfield Rangers', OURS)
 
-check('the opponent the coach picked wins',
-  chooseOpponentSide([mine, theirs], { opponentName: 'Hawks' }).opponent === theirs)
+check('the team the coach selected wins',
+  chooseTrackedSide([mine, theirs], { trackedTeamName: 'Hawks' }).tracked === theirs)
 check('...and it is confident',
-  chooseOpponentSide([mine, theirs], { opponentName: 'Hawks' }).confident)
+  chooseTrackedSide([mine, theirs], { trackedTeamName: 'Hawks' }).confident)
 check('...and it says why',
-  /Hawks/.test(chooseOpponentSide([mine, theirs], { opponentName: 'Hawks' }).reason))
+  /Hawks/.test(chooseTrackedSide([mine, theirs], { trackedTeamName: 'Hawks' }).reason))
 
 check('our own team name excludes that side',
-  chooseOpponentSide([mine, theirs], { ourTeamName: 'Springfield Rangers' }).opponent === theirs)
+  chooseTrackedSide([mine, theirs], { ourTeamName: 'Springfield Rangers' }).tracked === theirs)
 check('...and identifies which side was ours',
-  chooseOpponentSide([mine, theirs], { ourTeamName: 'Springfield Rangers' }).ours === mine)
+  chooseTrackedSide([mine, theirs], { ourTeamName: 'Springfield Rangers' }).ours === mine)
 
 // The case that matters most: team names unreadable or missing, which is very
 // common on a cropped screenshot. The roster is the only signal left.
 const anonMine = side(null, OURS)
 const anonTheirs = side(null, ['A. Nguyen', 'B. Patel', 'C. Kim', 'D. Rossi'])
-const byRoster = chooseOpponentSide([anonMine, anonTheirs], { ourRoster: OURS })
-check('roster overlap identifies our side with no team names', byRoster.opponent === anonTheirs)
+const byRoster = chooseTrackedSide([anonMine, anonTheirs], { ourRoster: OURS })
+check('roster overlap identifies our side with no team names', byRoster.tracked === anonTheirs)
 check('...confidently', byRoster.confident)
 check('...and explains it in coach language', /roster/.test(byRoster.reason), byRoster.reason)
 
 check('roster overlap works with abbreviated box-score names',
-  chooseOpponentSide(
+  chooseTrackedSide(
     [side(null, ['C. Losch', 'J. Miller', 'O. Ruiz', 'B. Carter']), anonTheirs],
     { ourRoster: OURS },
-  ).opponent === anonTheirs)
+  ).tracked === anonTheirs)
 
 // One coincidental surname must not flip the decision.
 const coincidence = side('Hawks', ['A. Nguyen', 'B. Patel', 'C. Kim', 'S. Doyle'])
-const byCoincidence = chooseOpponentSide([coincidence, mine], { ourRoster: OURS })
+const byCoincidence = chooseTrackedSide([coincidence, mine], { ourRoster: OURS })
 check('a single shared surname does not make a team ours',
-  byCoincidence.opponent === coincidence, byCoincidence.reason)
+  byCoincidence.tracked === coincidence, byCoincidence.reason)
 
 // ── refusing to guess ───────────────────────────────────────────────────────
 
-const blind = chooseOpponentSide([anonMine, anonTheirs], {})
+const blind = chooseTrackedSide([anonMine, anonTheirs], {})
 check('with no context at all it is NOT confident', !blind.confident)
-check('...but still offers a guess to show the coach', blind.opponent !== null)
-check('...and says plainly that it cannot tell', /cannot tell/.test(blind.reason), blind.reason)
+check('...and refuses to pick rather than guessing', blind.tracked === null)
+check('...and says plainly which decision it needs', /which one/.test(blind.reason), blind.reason)
 
-check('a mismatched opponent name does not force a confident pick',
-  chooseOpponentSide([anonMine, anonTheirs], { opponentName: 'Completely Different' }).confident === false)
+// ── the Warrington case ─────────────────────────────────────────────────────
+// The coach selected Warrington and uploaded Warrington vs Springfield. This is
+// a scouting upload: neither team is theirs, and their roster is irrelevant.
+
+const warrington = side('Warrington', ['A. Nguyen', 'B. Patel', 'C. Kim'])
+const springfield = side('Springfield', ['D. Rossi', 'E. Fox', 'F. Grant'])
+const war = chooseTrackedSide([springfield, warrington], { trackedTeamName: 'Warrington' })
+check('the selected team is logged, not the other one', war.tracked === warrington, war.reason)
+check('...confidently', war.confident)
+check('...and no side is marked as ours', war.ours === null)
+
+check('the selected team wins even when listed first',
+  chooseTrackedSide([warrington, springfield], { trackedTeamName: 'Warrington' }).tracked === warrington)
+
+// Our own roster must NOT drag the answer away from what the coach selected.
+check('the selection outranks our own roster',
+  chooseTrackedSide(
+    [side('Warrington', OURS), springfield],
+    { trackedTeamName: 'Warrington', ourRoster: OURS, ourTeamName: 'Springfield Rangers' },
+  ).tracked?.team_name === 'Warrington')
+
+// A scoreboard printing three letters is the normal case, not the exception.
+check('an abbreviated scoreboard name still matches', teamNamesMatch('WAR', 'Warrington'))
+check('...and drives the choice',
+  chooseTrackedSide([springfield, side('WAR', ['A. Nguyen'])], { trackedTeamName: 'Warrington' }).confident)
+check('a short name does not match an unrelated club', teamNamesMatch('WAR', 'Springfield') === false)
+
+// Named a team that is on neither side: ask, and name what we did read.
+const missing = chooseTrackedSide([springfield, side('Hawks', ['X. One'])], { trackedTeamName: 'Warrington' })
+check('a team we cannot find is never silently substituted', missing.tracked === null)
+check('...it is not confident', !missing.confident)
+check('...and the message names both teams we DID read',
+  /Springfield/.test(missing.reason) && /Hawks/.test(missing.reason), missing.reason)
+check('...and names the team they asked for', /Warrington/.test(missing.reason))
 
 // ── one team on the page ────────────────────────────────────────────────────
 
-const solo = chooseOpponentSide([theirs], { ourTeamName: 'Springfield Rangers' })
-check('a single foreign team is taken confidently', solo.confident && solo.opponent === theirs)
+const solo = chooseTrackedSide([theirs], { ourTeamName: 'Springfield Rangers' })
+check('a single foreign team is taken confidently', solo.confident && solo.tracked === theirs)
 
-const soloOurs = chooseOpponentSide([mine], { ourTeamName: 'Springfield Rangers' })
-check('a single side that is OUR team is refused', soloOurs.opponent === null)
+const soloOurs = chooseTrackedSide([mine], { ourTeamName: 'Springfield Rangers' })
+check('a single side that is OUR team is refused', soloOurs.tracked === null)
 check('...and says so', /your own team/.test(soloOurs.reason), soloOurs.reason)
 check('a single side matching our roster is also refused',
-  chooseOpponentSide([side(null, OURS)], { ourRoster: OURS }).opponent === null)
+  chooseTrackedSide([side(null, OURS)], { ourRoster: OURS }).tracked === null)
 
 // ── nothing usable ──────────────────────────────────────────────────────────
 
-check('no sides at all is handled', chooseOpponentSide([], { ourRoster: OURS }).opponent === null)
-check('...and is not confident', !chooseOpponentSide([], {}).confident)
+check('no sides at all is handled', chooseTrackedSide([], { ourRoster: OURS }).tracked === null)
+check('...and is not confident', !chooseTrackedSide([], {}).confident)
 
 // ── the save-time guard ─────────────────────────────────────────────────────
 

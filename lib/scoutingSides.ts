@@ -1,25 +1,31 @@
-// Which of these two teams am I scouting?
+// Which team in this box score am I logging?
 //
-// A GameChanger box score shows BOTH teams. The parser used to be told
-// "extract the OPPONENT team's data" and nothing else — not our team name, not
-// the opponent's name, not our roster. That question is unanswerable from the
-// pixels, so the model either guessed or returned everybody, and a coach ended
-// up with their own players saved into an opponent's roster.
+// THE WORD "OPPONENT" WAS THE BUG. A coach building a scouting database is
+// tracking teams — often teams they have never played, from games they were
+// not in. Calling the selected team "the opponent" implied our team is one of
+// the two in the picture, and that assumption ran all the way down: the picker
+// leaned on "is my team here?" signals that do not apply when neither side is
+// ours. A coach selected Warrington, uploaded Warrington vs Springfield, and
+// got Springfield.
 //
-// That is worse than a cosmetic mess. Opponent rosters drive pitch-count
-// availability, and an availability board with our own kids in it is wrong in a
-// way that looks authoritative.
+// So the subject of an upload is the TRACKED TEAM. Our own team may or may not
+// be in the image and is only ever a tie-breaker.
 //
-// The fix is a division of labour. The MODEL separates the two teams, which is
-// just reading what is on the screen. THIS FILE decides which side is the
-// opponent, using the three things the app knows and the model never did:
+// A GameChanger box score shows BOTH teams, and the parser used to be handed
+// the images and nothing else — no tracked team name, no team of ours, no
+// roster. That question is unanswerable from the pixels, so the model guessed.
+// Which matters: these rosters drive pitch-count availability, and a board with
+// the wrong team in it is wrong in a way that looks authoritative.
 //
-//   1. the opponent name the coach already typed or selected
-//   2. our own team name
-//   3. our own roster
+// Division of labour. The MODEL separates the two teams, which is just reading
+// the screen. THIS FILE decides which one the coach meant, in priority order:
 //
-// And when none of those settle it, it says so, and the coach taps a button.
-// Guessing silently is what caused the problem in the first place.
+//   1. the team they selected — if they named it, that IS the answer, and when
+//      neither side matches we ASK rather than guess
+//   2. our own team name, which excludes that side (only when we are playing)
+//   3. our own roster, same idea, and it survives unreadable team names
+//
+// Guessing silently is what caused this twice. It does not guess any more.
 
 export interface ParsedSide {
   team_name: string | null
@@ -29,9 +35,10 @@ export interface ParsedSide {
 }
 
 export interface SideChoice {
-  /** The side to scout, or null when there is nothing usable. */
-  opponent: ParsedSide | null
-  /** The side we believe is the coach's own team, when we identified one. */
+  /** The side the coach is logging, or null when there is nothing usable. */
+  tracked: ParsedSide | null
+  /** The side that is the coach's OWN team, when one of them is. Usually null:
+   *  most scouting uploads are games the coach was not playing in. */
   ours: ParsedSide | null
   /** Plain English, shown to the coach so the decision is never invisible. */
   reason: string
@@ -80,6 +87,23 @@ export function teamNameSimilarity(a: string, b: string): number {
 }
 
 const STRONG_TEAM_MATCH = 0.6
+
+/**
+ * Does one of these name the same club as the other, allowing for the way box
+ * scores abbreviate? "WAR" and "Warrington" are the same team; a scoreboard
+ * that prints three letters is the normal case, not the exception.
+ */
+export function teamNamesMatch(a: string, b: string): boolean {
+  if (teamNameSimilarity(a, b) >= STRONG_TEAM_MATCH) return true
+  const wa = meaningfulWords(a)
+  const wb = meaningfulWords(b)
+  if (wa.length === 0 || wb.length === 0) return false
+  // A short token that opens a word on the other side: WAR -> Warrington.
+  const abbrev = (short: string[], long: string[]) =>
+    short.length === 1 && short[0].length >= 2 && short[0].length <= 4 &&
+    long.some(w => w.length > short[0].length && w.startsWith(short[0]))
+  return abbrev(wa, wb) || abbrev(wb, wa)
+}
 
 /**
  * Does this player name refer to the same kid as that one?
@@ -134,11 +158,11 @@ function overlapHits(side: ParsedSide, roster: string[]): number {
 // ---------------------------------------------------------------------------
 
 export interface SideContext {
-  /** The opponent the coach selected or typed, if any. */
-  opponentName?: string | null
-  /** The coach's own team name. */
+  /** The team the coach selected or typed — the subject of this upload. */
+  trackedTeamName?: string | null
+  /** The coach's own team name. Only useful when they were actually playing. */
   ourTeamName?: string | null
-  /** The coach's own player names. The strongest signal when names are vague. */
+  /** The coach's own player names. A tie-breaker, not the main signal. */
   ourRoster?: string[]
 }
 
@@ -149,71 +173,93 @@ export interface SideContext {
  * `reason` so the coach can see WHY a team was chosen and correct it in one
  * tap if the app got it wrong.
  */
-export function chooseOpponentSide(
+export function chooseTrackedSide(
   sides: ParsedSide[],
   ctx: SideContext = {}
 ): SideChoice {
   const usable = (sides || []).filter(s => s && Array.isArray(s.players))
   const roster = (ctx.ourRoster || []).filter(Boolean)
+  const tracked = ctx.trackedTeamName?.trim() || ''
 
   if (usable.length === 0) {
-    return { opponent: null, ours: null, reason: 'No teams could be read from that image.', confident: false }
+    return { tracked: null, ours: null, reason: 'No teams could be read from that image.', confident: false }
   }
 
-  // Only one team on the page. Common when a coach screenshots half a box
-  // score, and it is still ambiguous — it might be OUR half.
+  // 1. THE COACH ALREADY TOLD US. This outranks everything, including our own
+  //    roster — they are logging the team they named, and if our players are
+  //    somehow on that side then the screenshot is wrong, not the selection.
+  if (tracked) {
+    const matches = usable.filter(s => teamNamesMatch(s.team_name || '', tracked))
+    if (matches.length === 1) {
+      const other = usable.find(s => s !== matches[0]) || null
+      return {
+        tracked: matches[0],
+        ours: other && ctx.ourTeamName && teamNamesMatch(other.team_name || '', ctx.ourTeamName)
+          ? other : null,
+        confident: true,
+        reason: `Matched "${matches[0].team_name}" to ${tracked}.`,
+      }
+    }
+    // Named a team and it is not on either side — an abbreviation we could not
+    // read, or the wrong screenshot. Both are worth a question, and neither is
+    // worth a guess: guessing here is exactly how Warrington became
+    // Springfield.
+    if (matches.length === 0) {
+      const names = usable.map(s => s.team_name).filter(Boolean)
+      return {
+        tracked: null,
+        ours: null,
+        confident: false,
+        reason: names.length
+          ? `You're tracking ${tracked}, but this image reads as ${names.join(' and ')}. Pick which one is ${tracked}.`
+          : `You're tracking ${tracked}, but neither team name was readable. Pick which one is ${tracked}.`,
+      }
+    }
+    // Both matched — usually two ways of printing the same club. Ask.
+    return {
+      tracked: null, ours: null, confident: false,
+      reason: `Both teams could be ${tracked}. Pick the right one.`,
+    }
+  }
+
+  // Only one team on the page, and no name to check it against.
   if (usable.length === 1) {
     const only = usable[0]
     const looksOurs =
-      (ctx.ourTeamName && teamNameSimilarity(only.team_name || '', ctx.ourTeamName) >= STRONG_TEAM_MATCH) ||
+      (ctx.ourTeamName && teamNamesMatch(only.team_name || '', ctx.ourTeamName)) ||
       (overlapHits(only, roster) >= OURS_MIN_HITS && rosterOverlap(only, roster) >= OURS_OVERLAP)
     if (looksOurs) {
       return {
-        opponent: null, ours: only, confident: false,
-        reason: `That looks like your own team${only.team_name ? ` (${only.team_name})` : ''}, not an opponent. Check the screenshot.`,
+        tracked: null, ours: only, confident: false,
+        reason: `That looks like your own team${only.team_name ? ` (${only.team_name})` : ''}. Name the team you're tracking, or check the screenshot.`,
       }
     }
     return {
-      opponent: only, ours: null, confident: true,
+      tracked: only, ours: null, confident: true,
       reason: only.team_name
         ? `Only one team in the image: ${only.team_name}.`
         : 'Only one team in the image.',
     }
   }
 
-  // 1. The coach already told us who they are scouting. Believe them.
-  if (ctx.opponentName) {
-    const scored = usable
-      .map(s => ({ s, sim: teamNameSimilarity(s.team_name || '', ctx.opponentName!) }))
-      .sort((a, b) => b.sim - a.sim)
-    if (scored[0].sim >= STRONG_TEAM_MATCH && scored[0].sim > scored[1].sim) {
-      return {
-        opponent: scored[0].s,
-        ours: scored[1].s,
-        confident: true,
-        reason: `Matched "${scored[0].s.team_name}" to the opponent you picked.`,
-      }
-    }
-  }
-
-  // 2. Our own name is on one of them, so the opponent is the other one.
+  // 2. Our own name is on one side, so the coach means the other one. Only
+  //    reachable when they did NOT name a team, which means they are logging a
+  //    game they played in.
   if (ctx.ourTeamName) {
-    const scored = usable
-      .map(s => ({ s, sim: teamNameSimilarity(s.team_name || '', ctx.ourTeamName!) }))
-      .sort((a, b) => b.sim - a.sim)
-    if (scored[0].sim >= STRONG_TEAM_MATCH && scored[0].sim > scored[1].sim) {
+    const ours = usable.filter(s => teamNamesMatch(s.team_name || '', ctx.ourTeamName!))
+    if (ours.length === 1 && usable.length === 2) {
+      const other = usable.find(s => s !== ours[0])!
       return {
-        opponent: scored[1].s,
-        ours: scored[0].s,
+        tracked: other,
+        ours: ours[0],
         confident: true,
-        reason: `"${scored[0].s.team_name}" is your team, so we took the other side.`,
+        reason: `"${ours[0].team_name}" is your team, so we took the other side.`,
       }
     }
   }
 
-  // 3. Our players are on one of them. This is the signal that survives missing
-  //    or abbreviated team names, which is most of the hard cases.
-  if (roster.length > 0) {
+  // 3. Our players are on one side. Survives unreadable team names.
+  if (roster.length > 0 && usable.length === 2) {
     const scored = usable
       .map(s => ({ s, hits: overlapHits(s, roster), frac: rosterOverlap(s, roster) }))
       .sort((a, b) => b.frac - a.frac)
@@ -221,7 +267,7 @@ export function chooseOpponentSide(
     if (top.hits >= OURS_MIN_HITS && top.frac >= OURS_OVERLAP && top.frac > scored[1].frac) {
       const other = scored[1].s
       return {
-        opponent: other,
+        tracked: other,
         ours: top.s,
         confident: true,
         reason: `${top.hits} of those players are on your roster, so that side is yours — we took ${other.team_name || 'the other team'}.`,
@@ -229,14 +275,12 @@ export function chooseOpponentSide(
     }
   }
 
-  // Nothing settled it. Say so rather than picking one and hoping: a wrong
-  // roster is expensive to unpick and this is one tap to avoid.
-  const guess = usable.reduce((a, b) => (b.players.length > a.players.length ? b : a))
+  // Nothing to go on. Ask, and say what we are asking about.
   return {
-    opponent: guess,
-    ours: usable.find(s => s !== guess) || null,
+    tracked: null,
+    ours: null,
     confident: false,
-    reason: 'Both teams are in this image and we cannot tell which one you are scouting.',
+    reason: 'Two teams in this image and nothing tells us which one you want. Pick one.',
   }
 }
 

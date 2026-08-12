@@ -463,11 +463,12 @@ function OpponentList({
       {opponents.length === 0 ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-10 text-center">
           <Search className="mx-auto text-gray-300 mb-3" size={48} />
-          <h3 className="font-semibold text-gray-900 mb-1">No opponents scouted yet</h3>
+          <h3 className="font-semibold text-gray-900 mb-1">No teams tracked yet</h3>
           <p className="text-gray-600 text-sm max-w-md mx-auto">
-            Log a box score or recap screenshot from GameChanger after playing (or watching) a team.
-            The most valuable habit: log every opponent box score during a tournament weekend — that&apos;s
-            what powers the pitching availability board.
+            Log a box score or recap screenshot from GameChanger for any team you want to
+            follow — one you played, or one you only watched. The most valuable habit is
+            logging every box score across a tournament weekend, because that is what
+            powers the pitching availability board.
           </p>
         </div>
       ) : (
@@ -546,7 +547,7 @@ function OpponentDetail({
   return (
     <div className="space-y-4">
       <button onClick={onBack} className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900">
-        <ChevronLeft size={16} /> All opponents
+        <ChevronLeft size={16} /> All teams
       </button>
 
       {/* Ask about them. Sits at the top because it is the reason a coach opens
@@ -877,7 +878,10 @@ function CaptureForm({
           // no way to tell the two teams in a box score apart.
           teamId,
           ourTeamName: ownTeamName,
-          opponentName:
+          // The team the coach selected. This is the subject of the upload and
+          // outranks every other signal — if they said Warrington, the answer
+          // is Warrington or a question, never Springfield.
+          trackedTeamName:
             opponents.find(o => o.id === opponentTeamId)?.name || newTeamName.trim() || undefined,
         }),
       })
@@ -1004,14 +1008,24 @@ function CaptureForm({
       {/* 1. Team */}
       {entryType !== 'bracket' && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Opponent team</label>
+          {/* Not "opponent". A coach building a scouting database tracks teams
+              they may never play, from games they were not in — and reading
+              this as "our opponent" is what made a Warrington upload come back
+              full of Springfield players. */}
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Which team are you logging?
+          </label>
+          <p className="text-xs text-gray-500 mb-1.5">
+            The team whose players and stats are in this upload. Any team you want to
+            track — you don&apos;t have to be playing them.
+          </p>
           <div className="flex flex-col sm:flex-row gap-2">
             <select
               value={opponentTeamId}
               onChange={e => { setOpponentTeamId(e.target.value); if (e.target.value) setNewTeamName('') }}
               className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
             >
-              <option value="">— New team —</option>
+              <option value="">— Add a team —</option>
               {opponents.map(o => (
                 <option key={o.id} value={o.id}>{o.name}{o.age_group ? ` (${o.age_group})` : ''}</option>
               ))}
@@ -1021,7 +1035,7 @@ function CaptureForm({
                 type="text"
                 value={newTeamName}
                 onChange={e => setNewTeamName(e.target.value)}
-                placeholder="New opponent team name"
+                placeholder="Team name, e.g. Warrington"
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
               />
             )}
@@ -1185,7 +1199,7 @@ function CaptureForm({
               sideConfident ? 'bg-gray-50 border-gray-200' : 'bg-amber-50 border-amber-300'
             }`}>
               <p className={`text-sm font-medium ${sideConfident ? 'text-gray-900' : 'text-amber-900'}`}>
-                {sideConfident ? 'Scouting this team' : 'Which team are you scouting?'}
+                {sideConfident ? 'Logging this team' : 'Which of these are you logging?'}
               </p>
               {sideReason && (
                 <p className={`text-xs mt-0.5 ${sideConfident ? 'text-gray-600' : 'text-amber-900'}`}>
@@ -1230,6 +1244,11 @@ function CaptureForm({
                         {sd.is_ours && (
                           <span className="text-[10px] font-semibold uppercase tracking-wide bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded">
                             Your team
+                          </span>
+                        )}
+                        {!sd.is_ours && sd.team_name && (
+                          <span className="text-[10px] uppercase tracking-wide text-gray-400">
+                            {sd.player_count} listed
                           </span>
                         )}
                         {chosen && <Check size={14} className="text-blue-600 ml-auto" />}
