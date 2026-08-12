@@ -2,19 +2,18 @@
 //
 // A coach typed July 14 2026 into the date field, uploaded a box score, and the
 // entry saved as 2024 — so every downstream surface called the data "over a
-// year old" and discounted it. Two independent faults, both worth naming.
+// year old" and discounted it.
 //
-// THE PARSED DATE OVERWROTE THE TYPED ONE. The capture screen did
-// `if (parsed.game_date) setOccurredOn(parsed.game_date)`, unconditionally.
-// A human who has told you the date is the best source in the room, and a
-// guess from a screenshot is the worst; that assignment had it backwards.
+// THE RULE NOW: the date the coach selects is the date. The capture form does
+// not read a date out of an image at all, ever. They pick one deliberately,
+// and a year guessed off a screenshot that printed "Jul 14" with no year is
+// not a reason to overrule them.
 //
-// THE MODEL WAS NEVER TOLD WHAT TODAY IS. GameChanger prints "Jul 14" with no
-// year all over its box scores. Asked to produce YYYY-MM-DD from that, a model
-// with no clock has to invent a year, and it lands near its training data
-// rather than near the coach's season.
-//
-// So: never guess a year, and never accept one that cannot be true.
+// What is left here guards the OTHER copy of the date — the parsed value kept
+// in the raw parse record. GameChanger prints days without years constantly, a
+// model with no clock has to invent one, and it lands near its training data.
+// So the prompt is given today's date and told never to guess, and anything
+// impossible that comes back anyway is stripped rather than stored.
 
 /** Today in the local timezone, as YYYY-MM-DD. */
 export function todayISO(now: Date = new Date()): string {
@@ -96,37 +95,4 @@ export function checkGameDate(value: unknown, today: string = todayISO()): DateC
     }
   }
   return { verdict: 'ok', date: iso, note: null }
-}
-
-/**
- * What to do with a parsed date when the coach has already set one.
- *
- * The coach always wins. This only decides whether to mention that the image
- * disagreed — worth saying when they might have picked the wrong day, and pure
- * noise when the two agree.
- */
-export function reconcileDate(
-  parsedDate: unknown,
-  coachDate: string | null,
-  coachTouched: boolean,
-  today: string = todayISO()
-): { use: string | null; suggestion: string | null; note: string | null } {
-  const check = checkGameDate(parsedDate, today)
-
-  // Nothing usable came out of the image.
-  if (!check.date) return { use: null, suggestion: null, note: check.note }
-
-  // They have not touched the field, so the parsed date is an improvement on a
-  // default of "today".
-  if (!coachTouched) return { use: check.date, suggestion: null, note: null }
-
-  // They set it themselves. Keep theirs, and only speak up on a real conflict.
-  if (coachDate && check.date !== coachDate) {
-    return {
-      use: null,
-      suggestion: check.date,
-      note: `You entered ${coachDate}, but the image reads as ${check.date}.`,
-    }
-  }
-  return { use: null, suggestion: null, note: null }
 }

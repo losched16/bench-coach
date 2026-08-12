@@ -2,13 +2,14 @@
 //
 // The failure: a coach typed July 14 2026, the parser read 2024 off a box score
 // that printed "Jul 14" with no year, and the typed date was silently
-// overwritten. Nothing threw. The entry just aged two years, and every surface
-// that reasons about staleness then wrote off good scouting as historical.
+// overwritten. The form no longer touches the date at all — what the coach
+// selects is what saves — so these guard the parsed copy that still gets kept
+// in the raw parse record, where an impossible year is still worth refusing.
 //
 //   npm run test:game-date
 
 import {
-  todayISO, parseISODate, daysBetween, checkGameDate, reconcileDate,
+  todayISO, parseISODate, daysBetween, checkGameDate,
 } from '@/lib/gameDate'
 
 let failures = 0
@@ -66,36 +67,9 @@ check('a day of timezone slack is tolerated', checkGameDate('2026-08-12', TODAY)
 check('an unreadable date is not an error', checkGameDate('sometime in July', TODAY).verdict === 'unreadable')
 check('...and produces no coach-facing noise', checkGameDate(null, TODAY).note === null)
 
-// ── who wins ────────────────────────────────────────────────────────────────
-
-// The exact reported case: coach typed 2026-07-14, image said 2024-07-14.
-const conflict = reconcileDate('2024-07-14', '2026-07-14', true, TODAY)
-check('the coach-entered date is NOT overwritten', conflict.use === null,
-  'this assignment is the whole bug')
-check('...but the disagreement is offered, not hidden', conflict.suggestion === '2024-07-14')
-check('...and the note names both dates',
-  /2026-07-14/.test(conflict.note || '') && /2024-07-14/.test(conflict.note || ''),
-  conflict.note || '')
-
-const untouched = reconcileDate('2026-07-14', TODAY, false, TODAY)
-check('an untouched field takes the parsed date', untouched.use === '2026-07-14',
-  'the default is just "today", so a real date read from the image beats it')
-check('...with nothing to say about it', untouched.note === null)
-
-const agree = reconcileDate('2026-07-14', '2026-07-14', true, TODAY)
-check('agreement is silent', agree.note === null && agree.suggestion === null)
-
-const junkParsed = reconcileDate('2019-01-01', '2026-07-14', true, TODAY)
-check('an implausible parse never becomes a suggestion', junkParsed.suggestion === null)
-check('...and does not overwrite', junkParsed.use === null)
-check('...but is explained', junkParsed.note !== null)
-
-const nothingParsed = reconcileDate(null, '2026-07-14', true, TODAY)
-check('no parsed date changes nothing', nothingParsed.use === null && nothingParsed.note === null)
-
-const untouchedJunk = reconcileDate('2019-01-01', TODAY, false, TODAY)
-check('an implausible parse is not applied even to an untouched field',
-  untouchedJunk.use === null)
+// The coach's own date is not reconciled against anything — the capture form
+// never reads a date out of an image. These only guard the parsed copy kept in
+// the raw parse record.
 
 console.log('')
 if (failures > 0) { console.log(`${failures} FAILED`); process.exit(1) }
