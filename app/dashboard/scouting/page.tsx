@@ -11,7 +11,7 @@ import { prepareImages, imagesFromClipboard } from '@/lib/imagePrep'
 import { OpponentAnalysis } from '@/components/OpponentAnalysis'
 import {
   Search, Plus, Camera, Loader2, ChevronLeft, Trash2, Calendar,
-  AlertTriangle, CheckCircle2, XCircle, HelpCircle, Merge,
+  AlertTriangle, Check, CheckCircle2, XCircle, HelpCircle, Merge,
   ClipboardList, Users, X, Eye, Info,
 } from 'lucide-react'
 import { TeamOnly } from '@/components/TeamOnly'
@@ -799,6 +799,16 @@ function CaptureForm({
   const [pastedText, setPastedText] = useState('')
   const [parsing, setParsing] = useState(false)
   const [parseError, setParseError] = useState<string | null>(null)
+  // Both teams from the image, and which one we picked. Kept so the coach can
+  // see the decision and flip it — a box score has two teams and the app
+  // choosing silently is exactly how their own players got into an opponent's
+  // roster.
+  const [sides, setSides] = useState<any[]>([])
+  const [sideReason, setSideReason] = useState<string>('')
+  const [sideConfident, setSideConfident] = useState(true)
+  // Parsed names that match the coach's own roster. Almost always means a
+  // row from the wrong side of the box score survived.
+  const [ownPlayersFound, setOwnPlayersFound] = useState<string[]>([])
   // Whether trying the same thing again is worth suggesting. An overloaded
   // AI service clears in seconds; a screenshot it cannot read never will.
   const [parseRetryable, setParseRetryable] = useState(false)
@@ -846,6 +856,10 @@ function CaptureForm({
     setParsing(true)
     setParseError(null)
     setParseRetryable(false)
+    setSides([])
+    setSideReason('')
+    setSideConfident(true)
+    setOwnPlayersFound([])
     try {
       // Downscales and rejects formats the API can't read, with a message
       // that says what to do rather than failing opaquely.
@@ -857,7 +871,15 @@ function CaptureForm({
       const res = await fetch('/api/scouting/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images, text: pastedText.trim() || undefined, entryType }),
+        body: JSON.stringify({
+          images, text: pastedText.trim() || undefined, entryType,
+          // Who we are and who we are scouting. Without these the parser has
+          // no way to tell the two teams in a box score apart.
+          teamId,
+          ourTeamName: ownTeamName,
+          opponentName:
+            opponents.find(o => o.id === opponentTeamId)?.name || newTeamName.trim() || undefined,
+        }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -865,6 +887,10 @@ function CaptureForm({
         throw new Error(data.error || 'Parse failed')
       }
       setParsed(data.parsed)
+      setSides(data.sides || [])
+      setSideReason(data.sideChoice?.reason || '')
+      setSideConfident(data.sideChoice?.confident !== false)
+      setOwnPlayersFound(data.sideChoice?.ownPlayers || [])
       if (entryType === 'box_score') {
         setParsedPlayers(
           (data.parsed.players || []).map((p: any) => ({
@@ -1147,6 +1173,92 @@ function CaptureForm({
                   {parsing ? 'Trying again…' : 'Try again'}
                 </button>
               )}
+            </div>
+          )}
+
+          {/* Which team came out of the image, and the way to change it.
+              A box score has two teams; before this the app picked one without
+              saying so and a coach's own players could end up saved as an
+              opponent's roster, where they drive pitch-count availability. */}
+          {entryType === 'box_score' && sides.length > 0 && (
+            <div className={`mt-3 rounded-lg border p-3 ${
+              sideConfident ? 'bg-gray-50 border-gray-200' : 'bg-amber-50 border-amber-300'
+            }`}>
+              <p className={`text-sm font-medium ${sideConfident ? 'text-gray-900' : 'text-amber-900'}`}>
+                {sideConfident ? 'Scouting this team' : 'Which team are you scouting?'}
+              </p>
+              {sideReason && (
+                <p className={`text-xs mt-0.5 ${sideConfident ? 'text-gray-600' : 'text-amber-900'}`}>
+                  {sideReason}
+                </p>
+              )}
+              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {sides.map((sd: any, i: number) => {
+                  const chosen = (parsed?.players || []).length > 0 &&
+                    sd.players?.[0]?.name === parsed.players[0]?.name
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => {
+                        // Switching sides re-seeds everything the review table
+                        // and the save path read.
+                        setParsed({ ...parsed, team_name: sd.team_name, players: sd.players })
+                        setParsedPlayers(
+                          (sd.players || []).map((pl: any) => ({
+                            name: pl.name || '',
+                            jersey_number: pl.jersey_number || null,
+                            batting_order_slot: pl.batting_order_slot ?? null,
+                            positions: pl.positions || [],
+                            batting_line: pl.batting_line || {},
+                            pitches_thrown: pl.pitches_thrown ?? null,
+                            innings_pitched: pl.innings_pitched ?? null,
+                          }))
+                        )
+                        if (sd.team_name && !newTeamName && !opponentTeamId) setNewTeamName(sd.team_name)
+                      }}
+                      className={`text-left rounded-lg border p-2.5 transition-colors ${
+                        chosen
+                          ? 'border-blue-600 bg-blue-50'
+                          : 'border-gray-300 bg-white hover:border-gray-400'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-900">
+                          {sd.team_name || 'Unnamed team'}
+                        </span>
+                        {sd.is_ours && (
+                          <span className="text-[10px] font-semibold uppercase tracking-wide bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded">
+                            Your team
+                          </span>
+                        )}
+                        {chosen && <Check size={14} className="text-blue-600 ml-auto" />}
+                      </span>
+                      <span className="block text-xs text-gray-600 mt-0.5">
+                        {sd.player_count} player{sd.player_count === 1 ? '' : 's'}
+                        {sd.sample?.length > 0 && ` — ${sd.sample.join(', ')}${sd.player_count > sd.sample.length ? '…' : ''}`}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Your own players in an opponent's roster is the specific mess
+              this whole flow exists to prevent, so it gets said loudly and
+              with the names in it. */}
+          {ownPlayersFound.length > 0 && (
+            <div className="mt-3 rounded-lg border border-red-300 bg-red-50 p-3">
+              <p className="text-sm font-semibold text-red-900">
+                {ownPlayersFound.length} of these look like your own players
+              </p>
+              <p className="text-xs text-red-900 mt-0.5">
+                {ownPlayersFound.join(', ')} — {ownPlayersFound.length === 1 ? 'that name is' : 'those names are'}{' '}
+                on your roster. If this is the wrong side of the box score, switch teams above.
+                Otherwise clear {ownPlayersFound.length === 1 ? 'that row' : 'those rows'} before saving —
+                your own players in an opponent&apos;s roster will make their pitching availability wrong.
+              </p>
             </div>
           )}
 
