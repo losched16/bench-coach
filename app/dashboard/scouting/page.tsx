@@ -129,6 +129,9 @@ function ScoutingContent() {
   const [ownTeamName, setOwnTeamName] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'opponents' | 'capture' | 'board'>('opponents')
+  // What a destructive action actually did. Deleting data and showing no
+  // confirmation is how a coach ends up unsure whether it worked.
+  const [dataNotice, setDataNotice] = useState<string | null>(null)
 
   const [opponents, setOpponents] = useState<OpponentTeam[]>([])
   const [matchups, setMatchups] = useState<Matchup[]>([])
@@ -262,9 +265,64 @@ function ScoutingContent() {
   }
 
   const deleteEntry = async (entryId: string) => {
-    if (!coachId || !confirm('Delete this scouting entry? Appearances parsed from it will also be removed.')) return
-    await fetch(`/api/scouting?coachId=${coachId}&entryId=${entryId}`, { method: 'DELETE' })
+    if (!coachId || !confirm('Delete this entry? The games and stats parsed from it go too, and any player left with no games at all is removed.')) return
+    const res = await fetch(`/api/scouting?coachId=${coachId}&entryId=${entryId}`, { method: 'DELETE' })
+    const data = await res.json().catch(() => ({}))
+    // Say what happened. Deleting an entry used to leave its players behind
+    // with nothing to explain the count that stayed on screen.
+    if (data.removedPlayers?.length) {
+      setDataNotice(
+        `Entry deleted, and ${data.removedPlayers.length} player${data.removedPlayers.length === 1 ? '' : 's'} ` +
+        `with no games left: ${data.removedPlayers.slice(0, 6).join(', ')}` +
+        `${data.removedPlayers.length > 6 ? '…' : ''}`
+      )
+    }
     if (selectedOpponentId) await loadDetail(selectedOpponentId)
+    await loadOpponents(coachId)
+  }
+
+  // Remove one tracked player. For the ones a coach can see are wrong — a
+  // stray row from the other side of a box score, a duplicate the merge tool
+  // did not catch.
+  const deletePlayer = async (playerId: string, name: string) => {
+    if (!coachId || !confirm(`Remove ${name} from this team? Their logged games go with them.`)) return
+    const res = await fetch(`/api/scouting?coachId=${coachId}&playerId=${playerId}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      setDataNotice(d.error || 'That player could not be removed.')
+      return
+    }
+    if (selectedOpponentId) await loadDetail(selectedOpponentId)
+    await loadOpponents(coachId)
+  }
+
+  // The cleanup for teams that already carry orphans from before entry
+  // deletion started pruning — which is every team that existed today.
+  const prunePlayers = async (opponentTeamId: string) => {
+    if (!coachId) return
+    const res = await fetch(`/api/scouting?coachId=${coachId}&pruneTeamId=${opponentTeamId}`, { method: 'DELETE' })
+    const data = await res.json().catch(() => ({}))
+    setDataNotice(
+      data.removedPlayers?.length
+        ? `Removed ${data.removedPlayers.length} player${data.removedPlayers.length === 1 ? '' : 's'} with no games behind them.`
+        : 'Nothing to clean up — every player here has at least one logged game.'
+    )
+    if (selectedOpponentId) await loadDetail(selectedOpponentId)
+    await loadOpponents(coachId)
+  }
+
+  const deleteTrackedTeam = async (opponentTeamId: string, name: string) => {
+    if (!coachId) return
+    if (!confirm(`Delete ${name} completely? Every entry, player and logged game for them is removed. This cannot be undone.`)) return
+    const res = await fetch(`/api/scouting?coachId=${coachId}&opponentTeamId=${opponentTeamId}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      setDataNotice(d.error || 'That team could not be deleted.')
+      return
+    }
+    setSelectedOpponentId(null)
+    setDetail(null)
+    setDataNotice(`${name} and everything logged for them has been deleted.`)
     await loadOpponents(coachId)
   }
 
@@ -344,6 +402,23 @@ function ScoutingContent() {
         </div>
       )}
 
+      {/* What the last destructive action actually did. Deleting data and
+          changing a count with no explanation is what made "23 players
+          tracked" so confusing after the entries were gone. */}
+      {dataNotice && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+          <Info size={16} className="text-blue-700 shrink-0 mt-0.5" />
+          <p className="text-sm text-blue-900 flex-1">{dataNotice}</p>
+          <button
+            onClick={() => setDataNotice(null)}
+            className="text-blue-700 hover:text-blue-900 shrink-0"
+            aria-label="Dismiss"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {tab === 'opponents' && !selectedOpponentId && (
         <OpponentList
           opponents={opponents}
@@ -372,6 +447,9 @@ function ScoutingContent() {
           onMerge={handleMerge}
           onClearReview={clearReviewFlag}
           onDeleteEntry={deleteEntry}
+          onDeletePlayer={deletePlayer}
+          onPrunePlayers={prunePlayers}
+          onDeleteTeam={deleteTrackedTeam}
           onViewBoard={() => { setTab('board'); setBoardPrefillId(selectedOpponentId) }}
         />
       )}
@@ -513,7 +591,8 @@ function OpponentList({
 
 function OpponentDetail({
   detail, loading, coachId, teamId, mergeMode, mergeSelection, merging,
-  onBack, onToggleMergeMode, onToggleMergeSelect, onMerge, onClearReview, onDeleteEntry, onViewBoard,
+  onBack, onToggleMergeMode, onToggleMergeSelect, onMerge, onClearReview, onDeleteEntry,
+  onDeletePlayer, onPrunePlayers, onDeleteTeam, onViewBoard,
 }: {
   detail: { team: OpponentTeam; players: OpponentPlayer[]; entries: ScoutingEntry[]; matchups: Matchup[] } | null
   loading: boolean
@@ -528,6 +607,9 @@ function OpponentDetail({
   onMerge: (keepId: string) => void
   onClearReview: (id: string) => void
   onDeleteEntry: (id: string) => void
+  onDeletePlayer: (id: string, name: string) => void
+  onPrunePlayers: (opponentTeamId: string) => void
+  onDeleteTeam: (opponentTeamId: string, name: string) => void
   onViewBoard: () => void
 }) {
   const today = todayStr()
@@ -541,6 +623,11 @@ function OpponentDetail({
   }
 
   const { team, players, entries } = detail
+  // Tracked players with no appearance behind them. Notes are excluded because
+  // a coach typed those by hand and they are not derived from any entry.
+  const emptyPlayers = players.filter(
+    p => (p.appearances?.length || 0) === 0 && !p.notes?.trim()
+  )
   const needsReview = players.filter(p => p.needs_review)
   const stale = team.last_seen ? stalenessOf(team.last_seen, today) : null
 
@@ -563,6 +650,31 @@ function OpponentDetail({
         </div>
       )}
 
+      {/* Players with nothing behind them. opponent_appearances cascades when
+          an entry is deleted and opponent_players did not, so a coach who
+          cleared out a team still saw the old player count and had no way to
+          fix it. Deleting an entry prunes now; this clears the ones already
+          stranded. */}
+      {emptyPlayers.length > 0 && (
+        <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-2">
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-900">
+              {emptyPlayers.length} player{emptyPlayers.length === 1 ? ' has' : 's have'} no logged games
+            </p>
+            <p className="text-xs text-amber-900 mt-0.5">
+              {emptyPlayers.slice(0, 8).map(p => p.name).join(', ')}
+              {emptyPlayers.length > 8 ? '…' : ''} — left behind by entries you deleted.
+            </p>
+          </div>
+          <button
+            onClick={() => onPrunePlayers(team.id)}
+            className="shrink-0 px-3 py-1.5 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800"
+          >
+            Remove them
+          </button>
+        </div>
+      )}
+
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
@@ -577,12 +689,24 @@ function OpponentDetail({
               </div>
             )}
           </div>
-          <button
-            onClick={onViewBoard}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm self-start"
-          >
-            <ClipboardList size={16} /> Pitching Availability
-          </button>
+          <div className="flex items-center gap-2 self-start">
+            <button
+              onClick={onViewBoard}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm"
+            >
+              <ClipboardList size={16} /> Pitching Availability
+            </button>
+            {/* Deleting the whole team existed in the API and was reachable
+                from nowhere, so a coach who wanted to start a team over had no
+                way to do it. */}
+            <button
+              onClick={() => onDeleteTeam(team.id, team.name)}
+              title="Delete this team and everything logged for them"
+              className="flex items-center gap-1.5 px-3 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors text-sm"
+            >
+              <Trash2 size={15} /> Delete team
+            </button>
+          </div>
         </div>
         {team.notes && <p className="mt-3 text-sm text-gray-700 whitespace-pre-wrap">{team.notes}</p>}
       </div>
@@ -662,6 +786,7 @@ function OpponentDetail({
                   <th className="py-2 pr-3">Batting (logged)</th>
                   <th className="py-2 pr-3">Pitching (logged)</th>
                   <th className="py-2 pr-3">Last seen</th>
+                  <th className="py-2 pl-1"><span className="sr-only">Remove</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -719,6 +844,19 @@ function OpponentDetail({
                           : '—'}
                       </td>
                       <td className="py-2 pr-3 text-gray-500">{p.last_seen || '—'}</td>
+                      {/* Per-player removal, for the stray row from the other
+                          side of a box score that the merge tool cannot help
+                          with because it is not a duplicate of anything. */}
+                      <td className="py-2 pl-1">
+                        <button
+                          onClick={() => onDeletePlayer(p.id, p.name)}
+                          title={`Remove ${p.name} from this team`}
+                          aria-label={`Remove ${p.name}`}
+                          className="p-1.5 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
                     </tr>
                   )
                 })}

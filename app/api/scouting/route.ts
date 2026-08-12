@@ -444,6 +444,53 @@ export async function PUT(request: NextRequest) {
 }
 
 // DELETE: remove a scouting entry (appearances cascade) or an opponent team
+/**
+ * Remove tracked players who have nothing behind them any more.
+ *
+ * opponent_appearances cascades when a scouting entry is deleted, but
+ * opponent_players does not — so deleting every entry for a team left the
+ * player rows standing, and a coach who had cleared out Warrington still saw
+ * "23 players tracked". The players were real once; there is simply no longer
+ * any evidence for them.
+ *
+ * A player carrying notes is NOT removed. Those were typed by a human and are
+ * not derived from an entry, so they are theirs to delete explicitly.
+ *
+ * Returns the names removed, so the UI can say what happened rather than
+ * silently changing a number.
+ */
+async function pruneEmptyPlayers(opponentTeamId: string): Promise<string[]> {
+  const { data, error } = await supabaseAdmin
+    .from('opponent_players')
+    .select('id, name, notes, appearances:opponent_appearances(id)')
+    .eq('opponent_team_id', opponentTeamId)
+  if (error) throw error
+
+  const orphans = (data as any[] || []).filter(
+    p => (p.appearances?.length || 0) === 0 && !p.notes?.trim()
+  )
+  if (orphans.length === 0) return []
+
+  const { error: delError } = await supabaseAdmin
+    .from('opponent_players')
+    .delete()
+    .in('id', orphans.map(p => p.id))
+  if (delError) throw delError
+  return orphans.map(p => p.name)
+}
+
+/** The team a tracked player belongs to, or null when it is not this coach's. */
+async function playerTeamIfOwned(playerId: string, coachId: string): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from('opponent_players')
+    .select('opponent_team_id, opponent_teams!inner(coach_id)')
+    .eq('id', playerId)
+    .single()
+  const row = data as any
+  if (!row || row.opponent_teams?.coach_id !== coachId) return null
+  return row.opponent_team_id
+}
+
 export async function DELETE(request: NextRequest) {
   const denied = await guard(request, 'record', { needs: 'teamFeatures' })
   if (denied) return denied
@@ -451,6 +498,10 @@ export async function DELETE(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const entryId = searchParams.get('entryId')
   const opponentTeamId = searchParams.get('opponentTeamId')
+  const playerId = searchParams.get('playerId')
+  // Clean up a team that already has orphaned players from before entry
+  // deletion started pruning.
+  const pruneTeamId = searchParams.get('pruneTeamId')
   const coachId = searchParams.get('coachId')
 
   if (!coachId) {
@@ -459,13 +510,62 @@ export async function DELETE(request: NextRequest) {
 
   try {
     if (entryId) {
+      // Read the team first — after the delete there is nothing to trace it by.
+      const { data: entry } = await supabaseAdmin
+        .from('scouting_entries')
+        .select('opponent_team_id')
+        .eq('id', entryId)
+        .eq('coach_id', coachId)
+        .single()
+
       const { error } = await supabaseAdmin
         .from('scouting_entries')
         .delete()
         .eq('id', entryId)
         .eq('coach_id', coachId)
       if (error) throw error
+
+      // Deleting the entry took its appearances with it. Anyone left with no
+      // games at all was only ever evidence from this entry.
+      let removedPlayers: string[] = []
+      const team = (entry as any)?.opponent_team_id
+      if (team) {
+        try {
+          removedPlayers = await pruneEmptyPlayers(team)
+        } catch (e: any) {
+          // The entry IS gone; failing the request now would tell the coach
+          // the opposite of what happened.
+          console.warn('Scouting delete: could not prune players:', e?.message)
+        }
+      }
+      return NextResponse.json({ success: true, removedPlayers })
+    }
+
+    if (playerId) {
+      const owned = await playerTeamIfOwned(playerId, coachId)
+      if (!owned) {
+        return NextResponse.json({ error: 'That player could not be found.' }, { status: 404 })
+      }
+      const { error } = await supabaseAdmin
+        .from('opponent_players')
+        .delete()
+        .eq('id', playerId)
+      if (error) throw error
       return NextResponse.json({ success: true })
+    }
+
+    if (pruneTeamId) {
+      const { data: owns } = await supabaseAdmin
+        .from('opponent_teams')
+        .select('id')
+        .eq('id', pruneTeamId)
+        .eq('coach_id', coachId)
+        .single()
+      if (!owns) {
+        return NextResponse.json({ error: 'That team could not be found.' }, { status: 404 })
+      }
+      const removedPlayers = await pruneEmptyPlayers(pruneTeamId)
+      return NextResponse.json({ success: true, removedPlayers })
     }
     if (opponentTeamId) {
       const { error } = await supabaseAdmin
@@ -476,7 +576,10 @@ export async function DELETE(request: NextRequest) {
       if (error) throw error
       return NextResponse.json({ success: true })
     }
-    return NextResponse.json({ error: 'entryId or opponentTeamId required' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'entryId, playerId, pruneTeamId or opponentTeamId required' },
+      { status: 400 }
+    )
   } catch (error: any) {
     console.error('Scouting DELETE error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
