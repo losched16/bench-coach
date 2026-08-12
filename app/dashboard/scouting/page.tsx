@@ -15,6 +15,7 @@ import {
   ClipboardList, Users, X, Eye, Info,
 } from 'lucide-react'
 import { TeamOnly } from '@/components/TeamOnly'
+import { reconcileDate } from '@/lib/gameDate'
 import Link from 'next/link'
 
 // ── Types ──────────────────────────────────────────────
@@ -933,6 +934,15 @@ function CaptureForm({
   const [opponentTeamId, setOpponentTeamId] = useState<string>('')
   const [newTeamName, setNewTeamName] = useState('')
   const [occurredOn, setOccurredOn] = useState(todayStr())
+  // Has the coach actually set this, or is it still the "today" default? The
+  // field is never empty, so without this flag there is no way to tell a
+  // deliberate date from a placeholder — and the parser used to overwrite both.
+  const [dateTouched, setDateTouched] = useState(false)
+  // A date read from the image that disagrees with theirs. Offered, never applied.
+  const [dateSuggestion, setDateSuggestion] = useState<{ date: string; note: string } | null>(null)
+  // The image had a date we could not believe and dropped it. Worth saying,
+  // because otherwise the field just quietly stays on today.
+  const [dateNote, setDateNote] = useState<string | null>(null)
   const [tournamentName, setTournamentName] = useState('')
   const [files, setFiles] = useState<File[]>([])
   const [pastedText, setPastedText] = useState('')
@@ -999,6 +1009,8 @@ function CaptureForm({
     setSideReason('')
     setSideConfident(true)
     setOwnPlayersFound([])
+    setDateNote(null)
+    setDateSuggestion(null)
     try {
       // Downscales and rejects formats the API can't read, with a message
       // that says what to do rather than failing opaquely.
@@ -1048,7 +1060,21 @@ function CaptureForm({
         if (data.parsed.team_name && !newTeamName && !opponentTeamId) {
           setNewTeamName(data.parsed.team_name)
         }
-        if (data.parsed.game_date) setOccurredOn(data.parsed.game_date)
+        // The coach is the best source of the date in the room and a
+        // screenshot is the worst, so theirs wins. This used to be an
+        // unconditional assignment: a typed 2026-07-14 was silently replaced
+        // by a parsed 2024-07-14, and every staleness check downstream then
+        // called the entry over a year old.
+        const dateCall = reconcileDate(
+          data.parsed.game_date, occurredOn, dateTouched
+        )
+        if (dateCall.use) setOccurredOn(dateCall.use)
+        setDateSuggestion(
+          dateCall.suggestion && dateCall.note
+            ? { date: dateCall.suggestion, note: dateCall.note }
+            : null
+        )
+        setDateNote(!dateCall.suggestion && dateCall.note ? dateCall.note : null)
       }
       if (entryType === 'bracket' && data.parsed.tournament_name && !tournamentName) {
         setTournamentName(data.parsed.tournament_name)
@@ -1229,9 +1255,33 @@ function CaptureForm({
           <input
             type="date"
             value={occurredOn}
-            onChange={e => setOccurredOn(e.target.value)}
+            onChange={e => { setOccurredOn(e.target.value); setDateTouched(true); setDateSuggestion(null) }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
           />
+          {/* The image disagreed. Offered, never applied — the coach typed a
+              date and a screenshot does not get to overrule them. */}
+          {dateSuggestion && (
+            <div className="mt-1.5 text-xs bg-amber-50 border border-amber-200 rounded p-2">
+              <p className="text-amber-900">{dateSuggestion.note}</p>
+              <div className="flex gap-3 mt-1">
+                <button
+                  onClick={() => { setOccurredOn(dateSuggestion.date); setDateSuggestion(null) }}
+                  className="font-medium text-amber-900 underline"
+                >
+                  Use {dateSuggestion.date}
+                </button>
+                <button
+                  onClick={() => setDateSuggestion(null)}
+                  className="text-amber-800"
+                >
+                  Keep mine
+                </button>
+              </div>
+            </div>
+          )}
+          {dateNote && (
+            <p className="mt-1.5 text-xs text-gray-600">{dateNote}</p>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Tournament (optional)</label>

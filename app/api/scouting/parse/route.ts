@@ -3,6 +3,7 @@ import { textFrom } from '@/lib/claudeText'
 import { requireSession } from '@/lib/authz'
 import { createClient } from '@supabase/supabase-js'
 import { chooseTrackedSide, ownPlayersIn, ParsedSide } from '@/lib/scoutingSides'
+import { todayISO, checkGameDate } from '@/lib/gameDate'
 import { claude as anthropic, describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
 
 // Never prerendered. This route reads the session cookie to decide who is
@@ -32,7 +33,7 @@ A box score shows TWO teams. Extract BOTH of them, separately and completely. Do
 
 Return ONLY valid JSON in this exact shape, no other text:
 {
-  "game_date": "YYYY-MM-DD if visible, else null",
+  "game_date": "YYYY-MM-DD, or null. See the date rule below — do NOT guess a year.",
   "final_score": "e.g. 7-4, or null",
   "teams": [
     {
@@ -63,7 +64,14 @@ Rules:
 - Omit batting_line fields you cannot see rather than inventing zeros; use null for unknown jersey numbers.
 - Keep names exactly as printed (e.g. "T. Smith" stays "T. Smith").
 - confidence reflects how readable the image was: "high" only if names, numbers, and pitch counts were all clearly legible.
-- If the image is not a box score, return {"teams": [], "confidence": "low", "warnings": ["not a box score"]}.`
+- If the image is not a box score, return {"teams": [], "confidence": "low", "warnings": ["not a box score"]}.
+
+THE DATE RULE — read this twice, it is the field most often wrong:
+- Box scores routinely print "Jul 14" or "7/14" with NO YEAR. You do not know the year from that, and you must not invent one.
+- If a full year is printed in the image, use it.
+- If the day and month are printed but the year is NOT, use the most recent year in which that date has already happened, relative to today's date given below. A game shown as "Jul 14" when today is 11 Aug 2026 is 2026-07-14, never 2024-07-14.
+- If you cannot see a date at all, return null. Null is always better than a guess — the coach types the date themselves and their answer wins over yours.
+- Never return a date in the future.`
 
 const RECAP_PROMPT = `Analyze this youth baseball game recap or summary (a screenshot and/or pasted text, likely from GameChanger). Extract scouting-relevant facts about the team described.
 
@@ -183,6 +191,10 @@ export async function POST(request: NextRequest) {
     }))
 
     let promptText = prompt
+    // The model has no clock. Without today's date, resolving a box score that
+    // prints "Jul 14" with no year is guesswork, and the guess lands near its
+    // training data — which is how a July 2026 game was logged as 2024.
+    promptText += `\n\nTODAY'S DATE IS ${todayISO()}. Use it to resolve any date printed without a year, and never return a date after it.`
     // Naming the tracked team helps the model READ an abbreviated scoreboard
     // ("WAR" over a logo) — it does not ask the model to choose a side. That
     // decision stays in lib/scoutingSides.ts, where it can be tested and where
@@ -246,6 +258,19 @@ export async function POST(request: NextRequest) {
               ? Number(p.innings_pitched)
               : null,
         }))
+
+    // A date we cannot believe is worse than no date: it silently ages the
+    // record and every staleness check downstream then discounts good scouting
+    // as historical. Strip it and say why, rather than passing it on.
+    const dateCheck = checkGameDate(parsed.game_date)
+    if (parsed.game_date && !dateCheck.date) {
+      parsed.game_date = null
+      if (dateCheck.note) {
+        parsed.warnings = [...(Array.isArray(parsed.warnings) ? parsed.warnings : []), dateCheck.note]
+      }
+    } else if (dateCheck.date) {
+      parsed.game_date = dateCheck.date
+    }
 
     if (entryType === 'box_score') {
       // The model now returns both teams. Older responses (and any model that
