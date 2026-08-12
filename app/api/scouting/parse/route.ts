@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import { textFrom } from '@/lib/claudeText'
 import { requireSession } from '@/lib/authz'
+import { claude as anthropic, describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
 // prerender pass hands the handler a stand-in Request whose .url and .method
 // throw when touched.
 export const dynamic = 'force-dynamic'
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-})
 
 // Parses scouting screenshots (GameChanger box scores, recaps, tournament
 // brackets) with Claude vision. Returns structured data for the coach to
@@ -187,6 +183,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ parsed })
   } catch (error: any) {
     console.error('Scouting parse error:', error)
+    // An upstream failure is not the coach's fault and must not reach
+    // them as a raw body — on an Anthropic APIError, error.message IS
+    // the JSON response.
+    const upstream = describeClaudeFailure(error)
+    if (upstream) {
+      logClaudeFailure('scouting-parse', error)
+      return NextResponse.json(
+        { error: upstream.message, retryable: upstream.retryable },
+        { status: upstream.status }
+      )
+    }
+
     return NextResponse.json(
       { error: error.message || 'Failed to analyze image' },
       { status: 500 }

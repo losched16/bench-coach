@@ -8,10 +8,8 @@
 // turns drift, and a title that keeps changing is worse than one that's
 // slightly stale, because the coach is scanning for a label they remember.
 
-import Anthropic from '@anthropic-ai/sdk'
 import { textFrom } from './claudeText'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
+import { claude as anthropic } from '@/lib/claudeClient'
 
 export const MAX_TITLE_LENGTH = 48
 

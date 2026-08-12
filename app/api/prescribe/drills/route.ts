@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { migrationHintFor } from '@/lib/migrationHints'
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
 import { scoreDrillRelevance } from '@/lib/analysis'
 import { textFrom } from '@/lib/claudeText'
 import { guard } from '@/lib/authz'
 import { resolveSteps, clampStep, PlanStep } from '@/lib/progression'
+import { claude as anthropic } from '@/lib/claudeClient'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -26,8 +26,6 @@ const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
 export const maxDuration = 60
 

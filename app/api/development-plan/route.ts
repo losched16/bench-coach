@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
 import { COACH_VOICE } from '@/lib/coachVoice'
 import { assembleCoachContext, renderCoachContext } from '@/lib/coachContext'
 import { focusAreaLabel } from '@/lib/focusAreas'
 import { migrationHintFor } from '@/lib/migrationHints'
 import { guard } from '@/lib/authz'
+import { claude as anthropic, describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -29,8 +29,6 @@ const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
 // Long generation, streamed. Without this the platform kills it mid-plan.
 export const maxDuration = 300
@@ -383,6 +381,18 @@ Write the plan.`
     })
   } catch (error: any) {
     console.error('Development plan POST error:', error)
+    // An upstream failure is not the coach's fault and must not reach
+    // them as a raw body — on an Anthropic APIError, error.message IS
+    // the JSON response.
+    const upstream = describeClaudeFailure(error)
+    if (upstream) {
+      logClaudeFailure('development-plan', error)
+      return NextResponse.json(
+        { error: upstream.message, retryable: upstream.retryable },
+        { status: upstream.status }
+      )
+    }
+
     return NextResponse.json({ error: error.message || 'Could not write the plan' }, { status: 500 })
   }
 }

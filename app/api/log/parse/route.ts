@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
 import { textFrom } from '@/lib/claudeText'
 import { matchRosterPlayer, RosterCandidate } from '@/lib/entries'
 import { guard } from '@/lib/authz'
+import { claude as anthropic } from '@/lib/claudeClient'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
 // prerender pass hands the handler a stand-in Request whose .url and .method
 // throw when touched.
 export const dynamic = 'force-dynamic'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

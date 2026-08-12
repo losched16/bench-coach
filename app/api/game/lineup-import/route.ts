@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
 import { textFrom } from '@/lib/claudeText'
 import { matchRosterPlayer, RosterCandidate } from '@/lib/entries'
 import { migrationHintFor } from '@/lib/migrationHints'
 import { guard } from '@/lib/authz'
+import { claude as anthropic, describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -31,8 +31,6 @@ export const dynamic = 'force-dynamic'
 //   position. Nothing about how anyone plays, on either team. For the other
 //   team that is a deliberate boundary, not an oversight: this exists so the
 //   book can say a name instead of "#4", and for nothing else.
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -206,6 +204,18 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Lineup import error:', error)
     const hint = migrationHintFor(error)
+    // An upstream failure is not the coach's fault and must not reach
+    // them as a raw body — on an Anthropic APIError, error.message IS
+    // the JSON response.
+    const upstream = describeClaudeFailure(error)
+    if (upstream) {
+      logClaudeFailure('lineup-import', error)
+      return NextResponse.json(
+        { error: upstream.message, retryable: upstream.retryable },
+        { status: upstream.status }
+      )
+    }
+
     return NextResponse.json(
       { error: hint?.message || error.message || 'Could not read that lineup' },
       { status: 500 }

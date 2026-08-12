@@ -1,11 +1,7 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { COACH_VOICE, CHAT_ADDENDUM } from './coachVoice'
 import { textFrom, requireText } from './claudeText'
 import { drillMenuLine } from './drills'
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-})
+import { claude as anthropic } from '@/lib/claudeClient'
 
 export interface JournalEntry {
   date: string

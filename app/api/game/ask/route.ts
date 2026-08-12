@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
 import { COACH_VOICE } from '@/lib/coachVoice'
 import { requireText } from '@/lib/claudeText'
 import {
   SubRuleSet, DEFAULT_SUB_RULES, PlayerGameState, renderSubstitutionState,
 } from '@/lib/substitutions'
 import { guard } from '@/lib/authz'
+import { claude as anthropic, describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -33,8 +33,6 @@ const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
 // A coach standing on a field will not wait 40 seconds for an answer.
 export const maxDuration = 60
@@ -251,6 +249,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ answer, houseRuleAdded, proposedRuleSet })
   } catch (error: any) {
     console.error('Game ask error:', error)
+    // An upstream failure is not the coach's fault and must not reach
+    // them as a raw body — on an Anthropic APIError, error.message IS
+    // the JSON response.
+    const upstream = describeClaudeFailure(error)
+    if (upstream) {
+      logClaudeFailure('game-ask', error)
+      return NextResponse.json(
+        { error: upstream.message, retryable: upstream.retryable },
+        { status: upstream.status }
+      )
+    }
+
     return NextResponse.json({ error: error.message || 'Could not answer that' }, { status: 500 })
   }
 }

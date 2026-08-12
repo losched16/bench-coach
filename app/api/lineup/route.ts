@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
 import { textFrom } from '@/lib/claudeText'
 import { COACH_VOICE } from '@/lib/coachVoice'
 import {
@@ -8,6 +7,7 @@ import {
   LineupPlayer, LineupMode, Strategy, positionsFor,
 } from '@/lib/lineup'
 import { guard } from '@/lib/authz'
+import { claude as anthropic, describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -32,8 +32,6 @@ const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
 export const maxDuration = 120
 
@@ -213,6 +211,18 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Lineup API error:', error)
+    // An upstream failure is not the coach's fault and must not reach
+    // them as a raw body — on an Anthropic APIError, error.message IS
+    // the JSON response.
+    const upstream = describeClaudeFailure(error)
+    if (upstream) {
+      logClaudeFailure('lineup', error)
+      return NextResponse.json(
+        { error: upstream.message, retryable: upstream.retryable },
+        { status: upstream.status }
+      )
+    }
+
     return NextResponse.json(
       { error: error.message || 'Failed to generate lineup' },
       { status: 500 }

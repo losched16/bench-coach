@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { generateReplacementBlock } from '@/lib/anthropic'
 import { guard } from '@/lib/authz'
 import { visibleDrills } from '@/lib/drills'
+import { describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -99,6 +100,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ options: unique })
   } catch (error: any) {
     console.error('Swap drill API error:', error)
+    // An upstream failure is not the coach's fault and must not reach
+    // them as a raw body — on an Anthropic APIError, error.message IS
+    // the JSON response.
+    const upstream = describeClaudeFailure(error)
+    if (upstream) {
+      logClaudeFailure('practice-swap', error)
+      return NextResponse.json(
+        { error: upstream.message, retryable: upstream.retryable },
+        { status: upstream.status }
+      )
+    }
+
     return NextResponse.json(
       { error: error.message || 'Failed to generate replacement drill' },
       { status: 500 }

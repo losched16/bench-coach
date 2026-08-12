@@ -62,6 +62,19 @@ for (const file of files) {
       )
     }
   }
+
+  // One client, or the retry setting goes missing again.
+  //
+  // Thirteen files each built their own `new Anthropic()`, every one of them
+  // took the SDK default of two retries, and there was nowhere to change it.
+  // A coach uploading scouting screenshots during a busy period got a raw 529
+  // body on screen. lib/claudeClient.ts owns the configuration now.
+  if (!file.endsWith('lib/claudeClient.ts') && /new\s+Anthropic\s*\(/.test(src)) {
+    problems.push(
+      `${file}  constructs its own Anthropic client — import { claude } from ` +
+      `'@/lib/claudeClient' instead, so retry settings apply everywhere`
+    )
+  }
 }
 
 if (problems.length) {
@@ -71,4 +84,7 @@ if (problems.length) {
   process.exit(1)
 }
 
-console.log(`Checked ${files.length} files — all Claude responses read through lib/claudeText.`)
+console.log(
+  `Checked ${files.length} files — all Claude responses read through lib/claudeText, ` +
+  `and every call uses the one configured client.`
+)

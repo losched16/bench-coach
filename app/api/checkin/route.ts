@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { migrationHintFor } from '@/lib/migrationHints'
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
 import { COACH_VOICE } from '@/lib/coachVoice'
 import {
   CheckinEvidence,
@@ -15,6 +14,7 @@ import {
   splitVerdict,
 } from '@/lib/checkin'
 import { guard } from '@/lib/authz'
+import { claude as anthropic, describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -26,8 +26,6 @@ const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
 // Same reasoning as the analysis route: this is a long generation that streams.
 export const maxDuration = 300
@@ -263,7 +261,8 @@ export async function POST(request: NextRequest) {
         } catch (e: any) {
           console.error('Checkin stream error:', e)
           controller.enqueue(encoder.encode(VERDICT_SENTINEL + JSON.stringify({
-            error: e?.message || 'The check-in stopped part-way through. Try again.',
+            // Logged in full server-side; the coach gets the short version.
+            error: describeClaudeFailure(e)?.message || e?.message || 'The check-in stopped part-way through. Try again.',
           })))
         }
         controller.close()

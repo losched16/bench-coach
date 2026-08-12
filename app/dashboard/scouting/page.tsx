@@ -799,6 +799,9 @@ function CaptureForm({
   const [pastedText, setPastedText] = useState('')
   const [parsing, setParsing] = useState(false)
   const [parseError, setParseError] = useState<string | null>(null)
+  // Whether trying the same thing again is worth suggesting. An overloaded
+  // AI service clears in seconds; a screenshot it cannot read never will.
+  const [parseRetryable, setParseRetryable] = useState(false)
   const [parsed, setParsed] = useState<any>(null)
   const [parsedPlayers, setParsedPlayers] = useState<ParsedBoxPlayer[]>([])
   const [notePitching, setNotePitching] = useState('')
@@ -842,6 +845,7 @@ function CaptureForm({
     if (files.length === 0 && !pastedText.trim()) return
     setParsing(true)
     setParseError(null)
+    setParseRetryable(false)
     try {
       // Downscales and rejects formats the API can't read, with a message
       // that says what to do rather than failing opaquely.
@@ -856,7 +860,10 @@ function CaptureForm({
         body: JSON.stringify({ images, text: pastedText.trim() || undefined, entryType }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Parse failed')
+      if (!res.ok) {
+        setParseRetryable(!!data.retryable)
+        throw new Error(data.error || 'Parse failed')
+      }
       setParsed(data.parsed)
       if (entryType === 'box_score') {
         setParsedPlayers(
@@ -879,6 +886,9 @@ function CaptureForm({
         setTournamentName(data.parsed.tournament_name)
       }
     } catch (e: any) {
+      // A fetch that rejects outright never reached the server, so it is worth
+      // another go for the same reason a 529 is.
+      if (e?.name === 'TypeError') setParseRetryable(true)
       setParseError(e.message)
     } finally {
       setParsing(false)
@@ -1123,7 +1133,22 @@ function CaptureForm({
                   : 'Parse recap text'}
             </button>
           )}
-          {parseError && <p className="mt-2 text-sm text-red-600">{parseError}</p>}
+          {parseError && (
+            <div className="mt-2 text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg p-3">
+              <p>{parseError}</p>
+              {/* The screenshots are still in state, so this costs them nothing
+                  but a tap — which is the whole point of saying so. */}
+              {parseRetryable && (
+                <button
+                  onClick={handleParse}
+                  disabled={parsing}
+                  className="mt-2 px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
+                >
+                  {parsing ? 'Trying again…' : 'Try again'}
+                </button>
+              )}
+            </div>
+          )}
 
           {parsed && parsed.warnings?.length > 0 && (
             <div className="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2">

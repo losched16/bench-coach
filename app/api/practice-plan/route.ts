@@ -9,6 +9,7 @@ import { categoriesForPracticeFocus } from '@/lib/focusAreas'
 import { guard } from '@/lib/authz'
 import { visibleDrillsSafe, favoriteDrillIds, drillMenuLine, DRILL_PREFERENCE_NOTE } from '@/lib/drills'
 import { reusableBlock } from '@/lib/practicePlan'
+import { describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -433,7 +434,8 @@ export async function POST(request: NextRequest) {
           send({ type: 'plan', plan: { ...skeleton, blocks: expanded } })
         } catch (e: any) {
           console.error('Practice plan generation error:', e)
-          send({ type: 'error', error: e?.message || 'Failed to generate practice plan' })
+          logClaudeFailure('practice-plan', e)
+          send({ type: 'error', error: describeClaudeFailure(e)?.message || e?.message || 'Failed to generate practice plan' })
         }
         controller.close()
       },

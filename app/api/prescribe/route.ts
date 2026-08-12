@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
 import { assembleCoachContext, renderCoachContext, CoachContext } from '@/lib/coachContext'
 import { AnalysisSection, splitSections, ageGuidanceFor, scoreDrillRelevance, META_SENTINEL } from '@/lib/analysis'
 import { COACH_VOICE } from '@/lib/coachVoice'
@@ -9,6 +8,7 @@ import { textFrom } from '@/lib/claudeText'
 import { commitPrescription } from '@/lib/prescriptions'
 import { guard, requireSession } from '@/lib/authz'
 import { visibleDrills } from '@/lib/drills'
+import { claude as anthropic, describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -21,8 +21,6 @@ const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
 // The analysis is a long generation and the response streams, so the function
 // needs room. Without this Vercel kills it at the platform default (60s on
@@ -368,7 +366,8 @@ export async function POST(request: NextRequest) {
         } catch (e: any) {
           console.error('Analysis stream error:', e)
           controller.enqueue(encoder.encode(META_SENTINEL + JSON.stringify({
-            error: e?.message || 'The analysis stopped part-way through. Try again.',
+            // Logged in full server-side; the coach gets the short version.
+            error: describeClaudeFailure(e)?.message || e?.message || 'The analysis stopped part-way through. Try again.',
           })))
         }
         controller.close()
