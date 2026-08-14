@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { usePageView, useTracker } from '@/lib/tracking'
-import { nameSimilarity, stalenessLabel, stalenessOf, aggregateBattingLines, MIN_PA_FOR_TENDENCY } from '@/lib/scouting'
+import { nameSimilarity, stalenessLabel, stalenessOf, aggregateBattingLines, MIN_PA_FOR_TENDENCY , aggregatePitchingLines} from '@/lib/scouting'
 import { OpponentChat } from '@/components/OpponentChat'
 import { prepareImages, imagesFromClipboard } from '@/lib/imagePrep'
 import { OpponentAnalysis } from '@/components/OpponentAnalysis'
@@ -54,6 +54,7 @@ interface Appearance {
   batting_order_slot: number | null
   positions_played: string[]
   batting_line: any
+  pitching_line?: any
   pitches_thrown: number | null
   innings_pitched: number | null
 }
@@ -105,6 +106,7 @@ interface ParsedBoxPlayer {
   batting_order_slot: number | null
   positions: string[]
   batting_line: any
+  pitching_line?: any
   pitches_thrown: number | null
   innings_pitched: number | null
 }
@@ -839,9 +841,23 @@ function OpponentDetail({
                         ) : '—'}
                       </td>
                       <td className="py-2 pr-3 text-gray-600">
-                        {pitchApps.length > 0
-                          ? `${totalPitches} pitches over ${pitchApps.length} outing${pitchApps.length === 1 ? '' : 's'}`
-                          : '—'}
+                        {pitchApps.length > 0 ? (
+                          <>
+                            {totalPitches} pitches over {pitchApps.length} outing{pitchApps.length === 1 ? '' : 's'}
+                            {/* The line itself. Outings logged before the
+                                pitching line existed have counts and nothing
+                                else, and printing "0 H, 0 BB, 0 K" for them
+                                would read as a shutout rather than as no data. */}
+                            {(() => {
+                              const pl = aggregatePitchingLines(pitchApps)
+                              return (pl.h || pl.bb || pl.k || pl.r) ? (
+                                <span className="block text-xs text-gray-500">
+                                  {pl.ip} IP · {pl.h} H · {pl.r} R ({pl.er} ER) · {pl.bb} BB · {pl.k} K
+                                </span>
+                              ) : null
+                            })()}
+                          </>
+                        ) : '—'}
                       </td>
                       <td className="py-2 pr-3 text-gray-500">{p.last_seen || '—'}</td>
                       {/* Per-player removal, for the stray row from the other
@@ -1042,6 +1058,7 @@ function CaptureForm({
             batting_order_slot: p.batting_order_slot ?? null,
             positions: p.positions || [],
             batting_line: p.batting_line || {},
+            pitching_line: p.pitching_line || {},
             pitches_thrown: p.pitches_thrown ?? null,
             innings_pitched: p.innings_pitched ?? null,
           }))
@@ -1074,6 +1091,13 @@ function CaptureForm({
         if (field.startsWith('bl.')) {
           const key = field.slice(3)
           return { ...p, batting_line: { ...p.batting_line, [key]: value === '' ? undefined : Number(value) } }
+        }
+        // Pitching, which is a different table on the box score and a
+        // different set of numbers: bb here is walks ISSUED, not the batter's
+        // own walks in bl.bb.
+        if (field.startsWith('pl.')) {
+          const key = field.slice(3)
+          return { ...p, pitching_line: { ...p.pitching_line, [key]: value === '' ? undefined : Number(value) } }
         }
         return { ...p, [field]: value }
       })
@@ -1367,6 +1391,7 @@ function CaptureForm({
                             batting_order_slot: pl.batting_order_slot ?? null,
                             positions: pl.positions || [],
                             batting_line: pl.batting_line || {},
+                            pitching_line: pl.pitching_line || {},
                             pitches_thrown: pl.pitches_thrown ?? null,
                             innings_pitched: pl.innings_pitched ?? null,
                           }))
@@ -1452,6 +1477,13 @@ function CaptureForm({
                       <th className="p-2">K</th>
                       <th className="p-2 bg-red-50">Pitches</th>
                       <th className="p-2">IP</th>
+                      {/* The outing, not just its volume. These were read off
+                          the box score and thrown away until now. */}
+                      <th className="p-2" title="Hits allowed">pH</th>
+                      <th className="p-2" title="Runs allowed">pR</th>
+                      <th className="p-2" title="Earned runs">ER</th>
+                      <th className="p-2" title="Walks ISSUED — not the batter's own walks">pBB</th>
+                      <th className="p-2" title="Strikeouts THROWN — not the batter's own strikeouts">pK</th>
                       <th className="p-2"></th>
                     </tr>
                   </thead>
@@ -1488,6 +1520,13 @@ function CaptureForm({
                             onChange={e => updateParsedPlayer(i, 'innings_pitched', e.target.value === '' ? null : Number(e.target.value))}
                             className="w-12 px-1 py-1 border border-gray-200 rounded" />
                         </td>
+                        {(['h', 'r', 'er', 'bb', 'k'] as const).map(key => (
+                          <td className="p-1" key={`pl-${key}`}>
+                            <input type="number" value={p.pitching_line?.[key] ?? ''}
+                              onChange={e => updateParsedPlayer(i, `pl.${key}`, e.target.value)}
+                              className="w-11 px-1 py-1 border border-gray-200 rounded" />
+                          </td>
+                        ))}
                         <td className="p-1">
                           <button onClick={() => setParsedPlayers(prev => prev.filter((_, j) => j !== i))}
                             className="p-1 text-gray-400 hover:text-red-600">

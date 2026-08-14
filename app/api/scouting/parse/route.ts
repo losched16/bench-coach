@@ -47,7 +47,8 @@ Return ONLY valid JSON in this exact shape, no other text:
           "positions": ["P", "SS"],
           "batting_line": {"ab": 3, "h": 2, "2b": 0, "3b": 0, "hr": 0, "rbi": 1, "bb": 1, "k": 0, "sb": 0},
           "pitches_thrown": 45,
-          "innings_pitched": 2.1
+          "innings_pitched": 2.1,
+          "pitching_line": {"ip": 2.1, "h": 3, "r": 2, "er": 1, "bb": 4, "k": 5, "hr": 0, "hbp": 1, "bf": 14, "strikes": 28, "balls": 17}
         }
       ]
     }
@@ -61,7 +62,8 @@ Rules:
 - Never put the same player in both teams. If you genuinely cannot tell which team a player belongs to, leave them out and add a warning naming them.
 - Team names: many youth box scores abbreviate or show only a logo. Return null rather than guessing a team name from the players.
 - pitches_thrown and innings_pitched: null for players who did not pitch. Pitch counts matter most — read them carefully and never guess a number you cannot see.
-- Omit batting_line fields you cannot see rather than inventing zeros; use null for unknown jersey numbers.
+- pitching_line: null for anyone who did not pitch. This is the PITCHING row of the box score, which is a separate table from the batting row and usually further down the page — find it before deciding a pitcher has no line. Its "bb" and "k" are walks ISSUED and strikeouts THROWN, which are completely different numbers from the "bb" and "k" in that same player's batting_line. Never copy one into the other.
+- Omit batting_line and pitching_line fields you cannot see rather than inventing zeros; use null for unknown jersey numbers.
 - Keep names exactly as printed (e.g. "T. Smith" stays "T. Smith").
 - confidence reflects how readable the image was: "high" only if names, numbers, and pitch counts were all clearly legible.
 - If the image is not a box score, return {"teams": [], "confidence": "low", "warnings": ["not a box score"]}.
@@ -241,6 +243,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Every value in a stat line has to be a number or absent. A model that
+    // writes "-" or "" for a column it could not read would otherwise put a
+    // string into JSONB, where it survives all the way to an arithmetic
+    // operation somewhere much less convenient.
+    const cleanNumericLine = (line: any): Record<string, number> | null => {
+      if (!line || typeof line !== 'object') return null
+      const out: Record<string, number> = {}
+      for (const [k, v] of Object.entries(line)) {
+        const n = Number(v)
+        if (v !== null && v !== '' && !isNaN(n)) out[k] = n
+      }
+      return Object.keys(out).length > 0 ? out : null
+    }
+
     // Light cleanup so downstream math is safe.
     const cleanPlayers = (players: any[]) =>
       (players || [])
@@ -257,6 +273,7 @@ export async function POST(request: NextRequest) {
             p.innings_pitched != null && !isNaN(Number(p.innings_pitched))
               ? Number(p.innings_pitched)
               : null,
+          pitching_line: cleanNumericLine(p.pitching_line),
         }))
 
     // A date we cannot believe is worse than no date: it silently ages the

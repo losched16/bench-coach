@@ -15,7 +15,8 @@
     "test:practice-sheet": "npx --yes tsx --tsconfig tsconfig.json scripts/test-practice-sheet.ts",
     "test:templates": "npx --yes tsx --tsconfig tsconfig.json scripts/test-templates.ts",
     "test:scouting-sides": "npx --yes tsx --tsconfig tsconfig.json scripts/test-scouting-sides.ts",
-    "test:game-date": "npx --yes tsx --tsconfig tsconfig.json scripts/test-game-date.ts"
+    "test:game-date": "npx --yes tsx --tsconfig tsconfig.json scripts/test-game-date.ts",
+    "test:pitching-line": "npx --yes tsx --tsconfig tsconfig.json scripts/test-pitching-line.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

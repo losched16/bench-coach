@@ -375,6 +375,77 @@ export function aggregateBattingLines(lines: any[]): BattingTotals {
   return t
 }
 
+export interface PitchingTotals {
+  outings: number
+  /** Real innings, decimal. 2.1 + 1.2 is 4, not 3.3 — see addInnings. */
+  ip: number
+  h: number
+  r: number
+  er: number
+  bb: number
+  k: number
+  hr: number
+  bf: number
+  pitches: number
+}
+
+/**
+ * Add a baseball innings-pitched figure to a running total.
+ *
+ * IP is printed in thirds and looks like a decimal but is not one: 2.1 means
+ * two and one third, and 2.1 + 1.2 is 4 innings, not 3.3. Summing them as
+ * decimals is a classic and completely silent error — the number stays
+ * plausible, it is just wrong, and it gets worse the more outings you add.
+ *
+ * Returns outs, so callers accumulate in outs and convert once at the end.
+ */
+export function inningsToOuts(ip: number): number {
+  if (!ip || isNaN(ip)) return 0
+  const whole = Math.floor(ip)
+  // The fraction is a count of outs (.0, .1, .2), not a proportion. Rounding
+  // guards against 2.0999999 arriving from JSON.
+  const thirds = Math.round((ip - whole) * 10)
+  return whole * 3 + Math.min(2, Math.max(0, thirds))
+}
+
+/** Outs back to the printed form: 7 outs is 2.1. */
+export function outsToInnings(outs: number): number {
+  const whole = Math.floor(outs / 3)
+  return Number(`${whole}.${outs % 3}`)
+}
+
+/**
+ * One pitcher's season line across every outing we have logged.
+ *
+ * Falls back to the appearance's own innings_pitched when a row has no
+ * pitching_line — every outing logged before migration 042 is in that state,
+ * and dropping them would make a pitcher's total innings shrink as soon as the
+ * feature shipped.
+ */
+export function aggregatePitchingLines(
+  appearances: Array<{ pitching_line?: any; innings_pitched?: any; pitches_thrown?: any }>
+): PitchingTotals {
+  const t: PitchingTotals = { outings: 0, ip: 0, h: 0, r: 0, er: 0, bb: 0, k: 0, hr: 0, bf: 0, pitches: 0 }
+  let outs = 0
+  for (const a of appearances || []) {
+    const pitched = Number(a?.pitches_thrown) > 0 || a?.pitching_line || Number(a?.innings_pitched) > 0
+    if (!pitched) continue
+    t.outings++
+    const line = a?.pitching_line
+    outs += inningsToOuts(num(line, 'ip', 'innings', 'innings_pitched') || Number(a?.innings_pitched) || 0)
+    t.h += num(line, 'h', 'hits')
+    t.r += num(line, 'r', 'runs')
+    t.er += num(line, 'er', 'earned_runs')
+    t.bb += num(line, 'bb', 'walks')
+    t.k += num(line, 'k', 'so', 'strikeouts')
+    t.hr += num(line, 'hr', 'home_runs')
+    t.bf += num(line, 'bf', 'batters_faced')
+    t.pitches += Number(a?.pitches_thrown) || num(line, 'pitches')
+  }
+  t.ip = outsToInnings(outs)
+  return t
+}
+
 // Marks the end of a streamed opponent analysis and the start of its JSON
 // tail. Shared so the client splits on exactly the same token.
 export const SCOUT_META_SENTINEL = '\n<<<BENCHCOACH_SCOUT_META>>>'

@@ -10,6 +10,7 @@ import {
   stalenessOf,
   MIN_PA_FOR_TENDENCY,
   PitchCountRuleSet,
+  aggregatePitchingLines,
 } from '@/lib/scouting'
 import { guard, authorizeTeam, can } from '@/lib/authz'
 import { visibleDrills } from '@/lib/drills'
@@ -520,6 +521,10 @@ export async function POST(request: NextRequest) {
                       total_pitches: pitchApps.reduce((s: number, a: any) => s + (a.pitches_thrown || 0), 0),
                       last_date: lastPitch.game_date,
                       last_pitches: lastPitch.pitches_thrown,
+                      // What actually happened on the mound. Until now the
+                      // model could see that a kid threw 62 pitches and had no
+                      // idea whether he walked seven or struck out nine.
+                      line: aggregatePitchingLines(pitchApps),
                     }
                   : null,
               }

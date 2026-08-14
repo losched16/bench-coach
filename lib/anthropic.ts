@@ -42,7 +42,12 @@ export interface ScoutingOpponentContext {
     last_seen?: string | null
     batting?: { games: number; pa: number; ab: number; h: number; bb: number; k: number; xbh: number; sb: number } | null
     small_sample?: boolean         // under ~15 PA — observation, not a tendency
-    pitching?: { outings: number; total_pitches: number; last_date: string; last_pitches: number } | null
+    pitching?: {
+      outings: number; total_pitches: number; last_date: string; last_pitches: number
+      // The outing itself, not just its volume. Pitch count answers "can he
+      // throw"; this answers "should we be worried about him".
+      line?: { ip: number; h: number; r: number; er: number; bb: number; k: number; hr: number; bf: number } | null
+    } | null
   }>
   recent_notes: Array<{ date: string | null; type: string; note: string }>
 }
@@ -542,6 +547,14 @@ ${context.scouting.opponents.map(o => {
       }
       if (p.pitching) {
         line += ` — pitched ${p.pitching.outings} outing${p.pitching.outings === 1 ? '' : 's'}, ${p.pitching.total_pitches} total pitches, last ${p.pitching.last_date} (${p.pitching.last_pitches} pitches)`
+        // Only worth saying when there is something behind it. Outings logged
+        // before the pitching line existed have counts and nothing else, and
+        // "0 H, 0 BB, 0 K" would read as a shutout rather than as no data.
+        const pl = p.pitching.line
+        if (pl && (pl.h || pl.bb || pl.k || pl.r)) {
+          line += `; over ${pl.ip} IP: ${pl.h} H, ${pl.r} R (${pl.er} ER), ${pl.bb} BB, ${pl.k} K`
+          if (pl.hr) line += `, ${pl.hr} HR`
+        }
       }
       if (p.notes) line += ` — notes: ${p.notes}`
       parts.push(line)

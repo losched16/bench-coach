@@ -301,6 +301,13 @@ export async function POST(request: NextRequest) {
           batting_order_slot: p.batting_order_slot ?? null,
           positions_played: p.positions || [],
           batting_line: p.batting_line || null,
+          // Hits, runs, walks issued and strikeouts thrown. Everything except
+          // the pitch count used to be read off the screenshot and dropped, so
+          // a coach could see that a kid threw 62 pitches and never that he
+          // walked seven doing it. Migration 042 added the column; a database
+          // without it fails this insert loudly rather than silently, which is
+          // the right way round for a save the coach is watching.
+          pitching_line: p.pitching_line || null,
           pitches_thrown: p.pitches_thrown ?? null,
           innings_pitched: p.innings_pitched ?? null,
           raw: p,
