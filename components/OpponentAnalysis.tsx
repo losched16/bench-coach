@@ -58,6 +58,15 @@ export function OpponentAnalysis({
   // what is on screen is good, it just will not be here tomorrow.
   const [unsaved, setUnsaved] = useState<string | null>(null)
   const [expanded, setExpanded] = useState(false)
+  // Copy the report so it lands in a Google Doc looking like a report.
+  //
+  // Google Docs, Word and Gmail all read text/html off the clipboard and
+  // re-style it as their own headings and lists. Writing only text/plain — as
+  // navigator.clipboard.writeText does — is why a pasted report arrives as a
+  // wall of text with literal ** and ## in it. Both flavours go on together;
+  // whichever the destination understands, it takes.
+  const [copied, setCopied] = useState(false)
+  const [copyError, setCopyError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!coachId) return
@@ -165,16 +174,10 @@ export function OpponentAnalysis({
     )
   }
 
-  // Copy the report so it lands in a Google Doc looking like a report.
-  //
-  // Google Docs, Word and Gmail all read text/html off the clipboard and
-  // re-style it as their own headings and lists. Writing only text/plain — as
-  // navigator.clipboard.writeText does — is why a pasted report arrives as a
-  // wall of text with literal ** and ## in it. Both flavours go on together;
-  // whichever the destination understands, it takes.
-  const [copied, setCopied] = useState(false)
-  const [copyError, setCopyError] = useState<string | null>(null)
-
+  // State for this lives with the other hooks above, not here: it used to sit
+  // beside this function, which put two useState calls AFTER the `loading`
+  // early return. The first render bailed with nine hooks and the second ran
+  // eleven, so React threw and the whole team page went white.
   const copyReport = async () => {
     const md = streamed ?? analysis?.markdown ?? ''
     if (!md) return
