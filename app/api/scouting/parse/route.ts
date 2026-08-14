@@ -62,7 +62,10 @@ Rules:
 - Never put the same player in both teams. If you genuinely cannot tell which team a player belongs to, leave them out and add a warning naming them.
 - Team names: many youth box scores abbreviate or show only a logo. Return null rather than guessing a team name from the players.
 - pitches_thrown and innings_pitched: null for players who did not pitch. Pitch counts matter most — read them carefully and never guess a number you cannot see.
-- pitching_line: null for anyone who did not pitch. This is the PITCHING row of the box score, which is a separate table from the batting row and usually further down the page — find it before deciding a pitcher has no line. Its "bb" and "k" are walks ISSUED and strikeouts THROWN, which are completely different numbers from the "bb" and "k" in that same player's batting_line. Never copy one into the other.
+- pitching_line: null for anyone who did not pitch. This is the PITCHING table of the box score, which is separate from the batting table and usually further down the page — find it before deciding a pitcher has no line. Its "bb" and "k" are walks ISSUED and strikeouts THROWN, which are completely different numbers from the "bb" and "k" in that same player's batting_line. Never copy one into the other.
+- The pitching table is usually headed: IP, H, R, ER, BB, SO. Map them exactly — IP->ip, H->h, R->r, ER->er, BB->bb, SO->k. A column headed SO or K is strikeouts thrown; put it in "k".
+- IP is printed in thirds, not decimals: "1.1" is one and one third innings and "1.2" is one and two thirds. Copy the printed value exactly. Never convert it, never round it, and never write "1.33".
+- IGNORE ANY TOTALS ROW. Box scores end each table with a row labelled TEAM, TOTALS or similar, holding the sum for the whole side. That is not a player. Never emit it as one, and never let its numbers into any player's line.
 - Omit batting_line and pitching_line fields you cannot see rather than inventing zeros; use null for unknown jersey numbers.
 - Keep names exactly as printed (e.g. "T. Smith" stays "T. Smith").
 - confidence reflects how readable the image was: "high" only if names, numbers, and pitch counts were all clearly legible.
@@ -257,10 +260,18 @@ export async function POST(request: NextRequest) {
       return Object.keys(out).length > 0 ? out : null
     }
 
+    // Every box-score table ends with a TEAM/TOTALS row holding the sum for the
+    // whole side. Read as a player it becomes a phantom with the batting line
+    // of nine kids — and on the pitching table, a "player" who threw every
+    // pitch of the game, which would wreck the availability board. The prompt
+    // says to skip it; this is the control, because a prompt rule is not one.
+    const TOTALS_ROW = /^\s*(team|totals?|team totals?)\s*$/i
+
     // Light cleanup so downstream math is safe.
     const cleanPlayers = (players: any[]) =>
       (players || [])
         .filter((p: any) => p?.name && typeof p.name === 'string')
+        .filter((p: any) => !TOTALS_ROW.test(p.name))
         .map((p: any) => ({
           ...p,
           name: p.name.trim(),
