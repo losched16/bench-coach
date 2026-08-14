@@ -11,7 +11,7 @@ import { prepareImages, imagesFromClipboard } from '@/lib/imagePrep'
 import { OpponentAnalysis } from '@/components/OpponentAnalysis'
 import {
   Search, Plus, Camera, Loader2, ChevronLeft, Trash2, Calendar,
-  AlertTriangle, Check, CheckCircle2, XCircle, HelpCircle, Merge,
+  AlertTriangle, Check, CheckCircle2, XCircle, HelpCircle, Merge, RefreshCw,
   ClipboardList, Users, X, Eye, Info,
 } from 'lucide-react'
 import { TeamOnly } from '@/components/TeamOnly'
@@ -60,6 +60,7 @@ interface Appearance {
 }
 
 interface ScoutingEntry {
+  image_urls?: string[]
   id: string
   entry_type: string
   occurred_on: string | null
@@ -266,6 +267,39 @@ function ScoutingContent() {
     if (selectedOpponentId) await loadDetail(selectedOpponentId)
   }
 
+  // Re-read a game the coach already logged, using the screenshots that were
+  // saved with it. The parser improves; the box scores do not change. Nobody
+  // should have to find four screenshots again because the parser has since
+  // learned where GameChanger hides its pitch counts.
+  const [reparsing, setReparsing] = useState<string | null>(null)
+  const [reparseSeed, setReparseSeed] = useState<any>(null)
+
+  const reparseEntry = async (entryId: string) => {
+    if (!coachId) return
+    setReparsing(entryId)
+    setDataNotice(null)
+    try {
+      const res = await fetch(`/api/scouting/reparse?coachId=${coachId}&entryId=${entryId}`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'That entry could not be reloaded.')
+      // Straight into the capture screen, prefilled — so the coach reviews the
+      // new numbers before they replace the old ones, exactly as they would
+      // for a fresh upload.
+      setReparseSeed({ ...data, replaceEntryId: entryId })
+      setTab('capture')
+      if (data.missingImages > 0) {
+        setDataNotice(
+          `${data.missingImages} screenshot${data.missingImages === 1 ? '' : 's'} from that entry ` +
+          `could not be read back, so the re-read is working from the rest.`
+        )
+      }
+    } catch (e: any) {
+      setDataNotice(e?.message || 'That entry could not be reloaded.')
+    } finally {
+      setReparsing(null)
+    }
+  }
+
   const deleteEntry = async (entryId: string) => {
     if (!coachId || !confirm('Delete this entry? The games and stats parsed from it go too, and any player left with no games at all is removed.')) return
     const res = await fetch(`/api/scouting?coachId=${coachId}&entryId=${entryId}`, { method: 'DELETE' })
@@ -449,6 +483,8 @@ function ScoutingContent() {
           onMerge={handleMerge}
           onClearReview={clearReviewFlag}
           onDeleteEntry={deleteEntry}
+          onReparseEntry={reparseEntry}
+          reparsingId={reparsing}
           onDeletePlayer={deletePlayer}
           onPrunePlayers={prunePlayers}
           onDeleteTeam={deleteTrackedTeam}
@@ -458,6 +494,8 @@ function ScoutingContent() {
 
       {tab === 'capture' && coachId && (
         <CaptureForm
+          seed={reparseSeed}
+          onSeedConsumed={() => setReparseSeed(null)}
           coachId={coachId}
           teamId={teamId}
           ownTeamName={ownTeamName}
@@ -594,7 +632,7 @@ function OpponentList({
 function OpponentDetail({
   detail, loading, coachId, teamId, mergeMode, mergeSelection, merging,
   onBack, onToggleMergeMode, onToggleMergeSelect, onMerge, onClearReview, onDeleteEntry,
-  onDeletePlayer, onPrunePlayers, onDeleteTeam, onViewBoard,
+  onReparseEntry, reparsingId, onDeletePlayer, onPrunePlayers, onDeleteTeam, onViewBoard,
 }: {
   detail: { team: OpponentTeam; players: OpponentPlayer[]; entries: ScoutingEntry[]; matchups: Matchup[] } | null
   loading: boolean
@@ -609,6 +647,8 @@ function OpponentDetail({
   onMerge: (keepId: string) => void
   onClearReview: (id: string) => void
   onDeleteEntry: (id: string) => void
+  onReparseEntry: (id: string) => void
+  reparsingId: string | null
   onDeletePlayer: (id: string, name: string) => void
   onPrunePlayers: (opponentTeamId: string) => void
   onDeleteTeam: (opponentTeamId: string, name: string) => void
@@ -905,6 +945,16 @@ function OpponentDetail({
                   </div>
                   {e.notes && <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">{e.notes}</p>}
                 </div>
+                {(e.image_urls?.length || 0) > 0 && (
+                  <button
+                    onClick={() => onReparseEntry(e.id)}
+                    disabled={reparsingId === e.id}
+                    title="Read these screenshots again with the current parser"
+                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw size={15} className={reparsingId === e.id ? 'animate-spin' : ''} />
+                  </button>
+                )}
                 <button
                   onClick={() => onDeleteEntry(e.id)}
                   className="p-1.5 text-gray-400 hover:text-red-600 flex-shrink-0"
@@ -936,7 +986,7 @@ function ConfidenceBadge({ confidence }: { confidence: string }) {
 // ── Capture form (single screen, no wizard) ────────────
 
 function CaptureForm({
-  coachId, teamId, ownTeamName, opponents, track, onSaved,
+  coachId, teamId, ownTeamName, opponents, track, onSaved, seed, onSeedConsumed,
 }: {
   coachId: string
   teamId: string | null
@@ -944,6 +994,10 @@ function CaptureForm({
   opponents: OpponentTeam[]
   track: (event: string, metadata?: any) => void
   onSaved: (opponentTeamId: string | null) => void
+  // An entry the coach asked to re-read, with its stored screenshots already
+  // fetched. Present only during a re-read.
+  seed?: any
+  onSeedConsumed?: () => void
 }) {
   const supabase = createSupabaseComponentClient()
   const [entryType, setEntryType] = useState<'box_score' | 'recap' | 'observation' | 'bracket'>('box_score')
@@ -966,6 +1020,10 @@ function CaptureForm({
   // Parsed names that match the coach's own roster. Almost always means a
   // row from the wrong side of the box score survived.
   const [ownPlayersFound, setOwnPlayersFound] = useState<string[]>([])
+  // Screenshots pulled back out of storage for a re-read. These stand in for
+  // `files`, which only ever holds things the coach picked this session.
+  const [storedImages, setStoredImages] = useState<Array<{ data: string; mimeType: string }>>([])
+  const [replaceEntryId, setReplaceEntryId] = useState<string | null>(null)
   // Whether trying the same thing again is worth suggesting. An overloaded
   // AI service clears in seconds; a screenshot it cannot read never will.
   const [parseRetryable, setParseRetryable] = useState(false)
@@ -977,6 +1035,24 @@ function CaptureForm({
   const [saving, setSaving] = useState(false)
 
   // Fuzzy-match hint against existing opponents to avoid duplicate teams
+  // Coming in from a re-read: restore the entry's own settings, including the
+  // date the coach chose. A re-read is not a reason to ask them again.
+  useEffect(() => {
+    if (!seed) return
+    setStoredImages(seed.images || [])
+    setReplaceEntryId(seed.replaceEntryId || null)
+    setEntryType(seed.entry.entryType || 'box_score')
+    if (seed.entry.occurredOn) setOccurredOn(seed.entry.occurredOn)
+    setTournamentName(seed.entry.tournamentName || '')
+    setOpponentTeamId(seed.entry.opponentTeamId || '')
+    setNewTeamName('')
+    setParsed(null)
+    setParsedPlayers([])
+    setFiles([])
+    onSeedConsumed?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed])
+
   const suggestion = newTeamName.trim().length >= 3 && !opponentTeamId
     ? opponents
         .map(o => ({ o, sim: nameSimilarity(newTeamName, o.name) }))
@@ -1009,7 +1085,7 @@ function CaptureForm({
   }, [entryType])
 
   const handleParse = async () => {
-    if (files.length === 0 && !pastedText.trim()) return
+    if (files.length === 0 && storedImages.length === 0 && !pastedText.trim()) return
     setParsing(true)
     setParseError(null)
     setParseRetryable(false)
@@ -1020,7 +1096,10 @@ function CaptureForm({
     try {
       // Downscales and rejects formats the API can't read, with a message
       // that says what to do rather than failing opaquely.
-      const { images, errors: imageErrors } = await prepareImages(files)
+      // On a re-read the pictures come from storage rather than a file picker,
+      // and they were already downscaled on the way in the first time.
+      const { images: picked, errors: imageErrors } = await prepareImages(files)
+      const images = picked.length > 0 ? picked : storedImages
       if (images.length === 0 && imageErrors.length > 0) {
         throw new Error(imageErrors.join(' '))
       }
@@ -1141,6 +1220,9 @@ function CaptureForm({
         pastedText: pastedText.trim() || null,
         teamId,
         ownTeamName,
+        // Set on a re-read: the old entry is deleted so this replaces that
+        // game rather than doubling every player's stat line.
+        replaceEntryId: replaceEntryId || undefined,
       }
       if (entryType !== 'bracket') {
         if (opponentTeamId) body.opponentTeamId = opponentTeamId
@@ -1162,6 +1244,8 @@ function CaptureForm({
       if (!res.ok) throw new Error(data.error || 'Save failed')
 
       track('scouting_entry_created', { type: entryType, players: parsedPlayers.length })
+      setStoredImages([])
+      setReplaceEntryId(null)
       onSaved(data.opponentTeamId || null)
     } catch (e: any) {
       alert(e.message)
@@ -1172,6 +1256,18 @@ function CaptureForm({
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 space-y-5">
+      {replaceEntryId && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+          <RefreshCw size={16} className="text-blue-700 shrink-0 mt-0.5" />
+          <p className="text-sm text-blue-900">
+            <strong>Re-reading a game you already logged</strong> using the {storedImages.length}{' '}
+            screenshot{storedImages.length === 1 ? '' : 's'} saved with it. Press Parse, check the
+            numbers, and saving will replace the old version of this game rather than adding a
+            second one.
+          </p>
+        </div>
+      )}
+
       {/* 1. Team */}
       {entryType !== 'bracket' && (
         <div>
@@ -1326,10 +1422,10 @@ function CaptureForm({
             </div>
           )}
 
-          {(files.length > 0 || (pastedText.trim() && entryType === 'recap')) && !parsed && (
+          {(files.length > 0 || storedImages.length > 0 || (pastedText.trim() && entryType === 'recap')) && !parsed && (
             <button
               onClick={handleParse}
-              disabled={parsing || (entryType === 'box_score' && files.length === 0)}
+              disabled={parsing || (entryType === 'box_score' && files.length === 0 && storedImages.length === 0)}
               className="mt-2 flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 text-sm"
             >
               {parsing ? <Loader2 className="animate-spin" size={16} /> : <Camera size={16} />}

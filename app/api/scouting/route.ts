@@ -208,6 +208,9 @@ export async function POST(request: NextRequest) {
       bracket, // reviewed bracket parse { teams, games, tournament_name }
       teamId, // coach's own team, for bracket matchups
       ownTeamName,
+      // Set when the coach re-read an entry they had already logged. The old
+      // one is deleted so this becomes an update rather than a duplicate game.
+      replaceEntryId,
     } = body
 
     if (!coachId || !entryType) {
@@ -242,6 +245,35 @@ export async function POST(request: NextRequest) {
       resolvedTeamId = resolved.id
     }
 
+    // Re-reading a game the coach already logged. Delete the old entry FIRST:
+    // its appearances cascade with it, so the new parse lands as the only
+    // record of that game rather than doubling every player's stat line.
+    //
+    // Deliberately not an UPDATE. The entry is a container for appearances,
+    // and reconciling old rows against new ones — matched how? by name? by
+    // batting slot? — is exactly the kind of guessing that has caused every
+    // other bug on this surface. Delete and re-create is unambiguous.
+    let replacedImageUrls: string[] | null = null
+    if (replaceEntryId) {
+      const { data: old } = await supabaseAdmin
+        .from('scouting_entries')
+        .select('id, image_urls')
+        .eq('id', replaceEntryId)
+        .eq('coach_id', coachId)
+        .single()
+      if (old) {
+        // The screenshots belong to the game, not to the parse. Carry them
+        // across so the entry stays re-readable next time the parser improves.
+        replacedImageUrls = (old as any).image_urls || []
+        const { error: delError } = await supabaseAdmin
+          .from('scouting_entries')
+          .delete()
+          .eq('id', replaceEntryId)
+          .eq('coach_id', coachId)
+        if (delError) throw delError
+      }
+    }
+
     // 2. Create the entry
     const { data: entry, error: entryError } = await supabaseAdmin
       .from('scouting_entries')
@@ -251,7 +283,7 @@ export async function POST(request: NextRequest) {
         entry_type: entryType,
         occurred_on: occurredOn || null,
         tournament_name: tournamentName || null,
-        image_urls: imageUrls || [],
+        image_urls: (imageUrls && imageUrls.length ? imageUrls : replacedImageUrls) || [],
         raw_parse: storedParse,
         parse_status: rawParse ? 'parsed' : 'none',
         parse_confidence: parseConfidence || null,
@@ -314,6 +346,21 @@ export async function POST(request: NextRequest) {
         })
         if (appError) throw appError
         appearancesCreated++
+      }
+
+      // A re-read can drop a player the old parse invented — a TEAM totals row,
+      // or somebody from the other side of the box score. Their appearances
+      // went with the deleted entry, so they are now standing there with
+      // nothing behind them. Same rule as deleting an entry by hand.
+      if (replaceEntryId && resolvedTeamId) {
+        try {
+          const removed = await pruneEmptyPlayers(resolvedTeamId)
+          if (removed.length > 0) {
+            console.log(`Scouting re-read: removed ${removed.length} player(s) with no games left`)
+          }
+        } catch (e: any) {
+          console.warn('Scouting re-read: could not prune players:', e?.message)
+        }
       }
     }
 
