@@ -481,7 +481,7 @@ export async function POST(request: NextRequest) {
             const [playersRes, entriesRes] = await Promise.all([
               supabaseAdmin
                 .from('opponent_players')
-                .select('*, appearances:opponent_appearances(game_date, batting_line, pitches_thrown, positions_played)')
+                .select('*, appearances:opponent_appearances(scouting_entry_id, game_date, batting_line, pitching_line, pitches_thrown, innings_pitched, positions_played)')
                 .eq('opponent_team_id', ot.id),
               // Every entry, not just the ones carrying a note.
               //
@@ -530,30 +530,49 @@ export async function POST(request: NextRequest) {
               }
             })
 
-            // One row per date we have seen them, built from the appearances
-            // and the entries together. Aggregated batting lines alone could
-            // not answer "what happened in the games we've played them".
-            const byDate: Record<string, {
-              kinds: Set<string>; tournament: string | null
+            // ONE ROW PER ENTRY, not per date.
+            //
+            // This used to key on occurred_on, so two games logged on the same
+            // day collapsed into one — and a tournament Saturday is two or
+            // three games. A coach who had logged six told the assistant it
+            // had seen four, which is the kind of wrong that makes somebody
+            // stop trusting the whole surface.
+            //
+            // Appearances carry scouting_entry_id, so each one belongs to the
+            // game it was read from. Rows logged before that was selected fall
+            // back to matching on date, which is the old behaviour and only
+            // ever affects rows we cannot attribute exactly.
+            const byEntry: Record<string, {
+              date: string | null; kind: string | null; tournament: string | null
               players: Set<string>; pitchers: Record<string, number>; note: string | null
             }> = {}
-            const slot = (d: string) => (byDate[d] ||= {
-              kinds: new Set(), tournament: null, players: new Set(), pitchers: {}, note: null,
-            })
 
             for (const e of (entriesRes.data || []) as any[]) {
-              const d = e.occurred_on || 'undated'
-              const g = slot(d)
-              if (e.entry_type) g.kinds.add(e.entry_type)
-              if (e.tournament_name) g.tournament = e.tournament_name
-              // The first note on a date is enough; the full set is below.
-              if (e.notes && !g.note) g.note = e.notes
+              byEntry[e.id] = {
+                date: e.occurred_on || null,
+                kind: e.entry_type || null,
+                tournament: e.tournament_name || null,
+                players: new Set(),
+                pitchers: {},
+                note: e.notes || null,
+              }
+            }
+
+            // Entry ids in date order, so an unattributed appearance lands on
+            // a game from the right day rather than an arbitrary one.
+            const entriesByDate: Record<string, string[]> = {}
+            for (const [id, g] of Object.entries(byEntry)) {
+              if (g.date) (entriesByDate[g.date] ||= []).push(id)
             }
 
             for (const p of (playersRes.data || []) as any[]) {
               for (const a of (p.appearances || []) as any[]) {
-                if (!a.game_date) continue
-                const g = slot(a.game_date)
+                const target =
+                  (a.scouting_entry_id && byEntry[a.scouting_entry_id])
+                    ? a.scouting_entry_id
+                    : (a.game_date ? entriesByDate[a.game_date]?.[0] : null)
+                if (!target) continue
+                const g = byEntry[target]
                 g.players.add(p.name)
                 if ((a.pitches_thrown || 0) > 0) {
                   g.pitchers[p.name] = (g.pitchers[p.name] || 0) + a.pitches_thrown
@@ -561,11 +580,11 @@ export async function POST(request: NextRequest) {
               }
             }
 
-            const games = Object.entries(byDate)
-              .sort((a, b) => b[0].localeCompare(a[0]))
-              .map(([date, g]) => ({
-                date: date === 'undated' ? null : date,
-                kinds: Array.from(g.kinds),
+            const games = Object.values(byEntry)
+              .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+              .map(g => ({
+                date: g.date,
+                kinds: g.kind ? [g.kind] : [],
                 tournament: g.tournament,
                 players_seen: g.players.size,
                 pitchers: Object.entries(g.pitchers).map(([name, pitches]) => ({ name, pitches })),

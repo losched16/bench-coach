@@ -252,7 +252,7 @@ async function gatherOpponentEvidence(
   const { data: appearances } = playerIds.length
     ? await supabaseAdmin
         .from('opponent_appearances')
-        .select('opponent_player_id, game_date, batting_order_slot, positions_played, batting_line, pitches_thrown, innings_pitched')
+        .select('opponent_player_id, game_date, batting_order_slot, positions_played, batting_line, pitching_line, pitches_thrown, innings_pitched')
         .in('opponent_player_id', playerIds)
         .order('game_date', { ascending: false })
     : { data: [] as any[] }
@@ -306,7 +306,16 @@ async function gatherOpponentEvidence(
         ? `\n      pitched ${pitching.length} time(s): ` +
           pitching.map((a: any) =>
             `${a.game_date} — ${a.pitches_thrown ?? '?'} pitches` +
-            `${a.innings_pitched ? `, ${a.innings_pitched} IP` : ''}`
+            `${a.innings_pitched ? `, ${a.innings_pitched} IP` : ''}` +
+            // The outing, not just its size. Without this the report could
+            // only ever say who they lean on, never how he pitches.
+            (a.pitching_line
+              ? `, ${a.pitching_line.h ?? '?'}H ${a.pitching_line.r ?? '?'}R ` +
+                `${a.pitching_line.bb ?? '?'}BB ${a.pitching_line.k ?? '?'}K` +
+                (a.pitching_line.strikes && a.pitches_thrown
+                  ? ` (${Math.round((a.pitching_line.strikes / a.pitches_thrown) * 100)}% strikes)`
+                  : '')
+              : '')
           ).join('; ')
         : '') +
       (p.notes ? `\n      your note: ${p.notes}` : '')
@@ -365,11 +374,23 @@ TWO HARD BOUNDARIES
 
 2. These are children. Write about performance and availability only — what a player did on a field, and what the pitch counts mean for who can throw. Never characterize a child's attitude, character, effort, or body. "Their #7 has thrown 68 pitches in two days" is the job. "Their #7 looks lazy" is not, and neither is anything about how a kid is built.
 
-SAMPLE SIZE IS THE WHOLE GAME HERE
+COMMIT TO A READ
 
-Youth scouting data is thin and you will be tempted to build a story out of eleven plate appearances. Don't. Say "we've only seen him twice" and mean it. A confident wrong read costs a coach a game; an honest "we don't know yet, here's what to watch in the first inning" is worth more and is what a good scout actually says.
+The coach came here for advice, so give them advice. Lead with the answer. Never open a section with what you do not know, how thin the data is, or how old it is — a coach asking about a staff wants names and a plan in the first sentence. Where a sample is genuinely thin, attach it to the claim in a few words ("10-for-18, about 18 PA") rather than spending a paragraph apologising for it, and never make the same caveat twice.
 
-Recency outranks volume. A team that has turned over its roster since April is a different team.`
+That is not licence to invent. It is the difference between "we have four games, which isn't much, and it's from July, so bear that in mind, but..." and "Gio C is their guy — 53 pitches on 7/14 at 75% strikes. He'll be in the zone; be ready early." Both are honest. Only one is useful.
+
+SCOUT THE ARM, NOT THE WORKLOAD
+
+Pitch counts tell you who they lean on. The line tells you how he pitches, which is what the coach can act on. Whenever you have it, say plainly what kind of pitcher each one is and what to do about him:
+- Strike percentage is the headline. 60%+ is a strike-thrower — tell the hitters to be ready early, he is not walking anybody. Around 50% or below is wild — take a pitch and make him prove it.
+- Strikeouts against batters faced: is he missing bats, or is the ball in play?
+- Walks: does he hand out free bases?
+- Hits and runs against innings: is he getting hit, or getting outs?
+Finish each pitcher with one sentence a coach can repeat in the dugout.
+
+Recency outranks volume for what you emphasise — a team that turned its roster over since April is a different team — but say that once, at the end, not as a preamble.
+`
 
 function writeAnalysis(ev: OpponentEvidence, previous: { markdown: string; generated_at: string } | null) {
   const thin = ev.totalPa < MIN_PA_FOR_TENDENCY * 2
@@ -390,10 +411,10 @@ New evidence has come in since. Rewrite the report fully — do not patch it —
 Use these H2 headings, in this order.${previous ? '' : ' Omit "What\'s changed" — this is the first report.'}
 
 ## How they play
-Two or three paragraphs. The shape of this team: do they put the ball in play or strike out, do they run, is the damage concentrated in two hitters or spread through the order. Be explicit about what you are confident in and what you are guessing from a handful of at-bats.${thin ? ' You have very little data here, so most of this section should be honest about that — say what you would need to see to know more.' : ''}
+Two or three paragraphs. The shape of this team: do they put the ball in play or strike out, do they run, is the damage concentrated in two hitters or spread through the order. Name the bats to be careful with and the ones to attack, with the numbers attached.${thin ? ' The sample is small, so keep the claims to what it supports — but still make claims, and put the sample size in a clause rather than a paragraph.' : ''}
 
 ## Their pitching
-Who has pitched, how much, and what that means for availability if you see them again this weekend. Pitch counts and rest are the concrete, checkable part of this report and the part a coach cannot work out in their head — lead with the numbers you actually have. If nobody's pitch counts were logged, say so plainly and tell them what to record next time.
+Name their top two or three arms in the first sentence, in the order you expect to see them, and say why — usage is the evidence. Then, for each one: how he pitches. Strike percentage, walks, strikeouts, whether he gets hit, and one line of approach for your hitters. Availability and rest come after that, with the inference shown. If nobody's pitch counts were logged, say so in one line and tell them what to record next time.
 
 ## Watch for
 Three to five specific, observable things, as bullets. Each one has to be something the coach can actually see from the dugout in the first inning — "their #4 chases the high fastball", "they send the runner on almost every 3-1 count" — not "they're a good hitting team".
