@@ -387,6 +387,18 @@ export interface PitchingTotals {
   hr: number
   bf: number
   pitches: number
+  /** Of those pitches, how many were strikes. 0 when no source printed it. */
+  strikes: number
+  /**
+   * Strikes as a percentage of pitches, or null when we do not know.
+   *
+   * The most useful single number about a youth pitcher and the one a coach
+   * can act on from the dugout. Around 40% is a kid who will walk you if you
+   * wait; around 65% is one who is in the zone and worth attacking early.
+   * Null rather than 0 when unknown, because 0% reads as "throws nothing but
+   * balls" instead of "we did not capture it".
+   */
+  strikePct: number | null
 }
 
 /**
@@ -425,7 +437,7 @@ export function outsToInnings(outs: number): number {
 export function aggregatePitchingLines(
   appearances: Array<{ pitching_line?: any; innings_pitched?: any; pitches_thrown?: any }>
 ): PitchingTotals {
-  const t: PitchingTotals = { outings: 0, ip: 0, h: 0, r: 0, er: 0, bb: 0, k: 0, hr: 0, bf: 0, pitches: 0 }
+  const t: PitchingTotals = { outings: 0, ip: 0, h: 0, r: 0, er: 0, bb: 0, k: 0, hr: 0, bf: 0, pitches: 0, strikes: 0, strikePct: null }
   let outs = 0
   for (const a of appearances || []) {
     const pitched = Number(a?.pitches_thrown) > 0 || a?.pitching_line || Number(a?.innings_pitched) > 0
@@ -441,8 +453,15 @@ export function aggregatePitchingLines(
     t.hr += num(line, 'hr', 'home_runs')
     t.bf += num(line, 'bf', 'batters_faced')
     t.pitches += Number(a?.pitches_thrown) || num(line, 'pitches')
+    t.strikes += num(line, 'strikes', 's')
   }
   t.ip = outsToInnings(outs)
+  // Only meaningful against the pitches we have strike counts for. Dividing by
+  // every pitch would drag the percentage down for any outing logged before
+  // strikes were captured, and quietly report a strike-thrower as wild.
+  t.strikePct = t.strikes > 0 && t.pitches > 0
+    ? Math.round((t.strikes / t.pitches) * 100)
+    : null
   return t
 }
 

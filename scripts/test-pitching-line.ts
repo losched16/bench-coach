@@ -88,6 +88,35 @@ const verbose = aggregatePitchingLines([
 check('long-form stat keys are understood', verbose.k === 3 && verbose.bb === 2 && verbose.h === 1)
 check('...including innings', verbose.ip === 2)
 
+// ── strikes, from the Pitches-Strikes footer ────────────────────────────────
+// GameChanger prints "Pitches-Strikes: Gio C 53-40" in a notes block UNDER the
+// box score, not in the pitching table. 53 pitches, 40 of them strikes.
+
+const gio = aggregatePitchingLines([
+  { pitches_thrown: 53, pitching_line: { ip: 3, h: 9, r: 7, er: 4, bb: 1, k: 1, strikes: 40, bf: 20 } },
+])
+check('strikes are kept', gio.strikes === 40)
+check('strike percentage is computed', gio.strikePct === 75, `got ${gio.strikePct}`)
+check('batters faced are kept', gio.bf === 20)
+
+const austin = aggregatePitchingLines([
+  { pitches_thrown: 37, pitching_line: { ip: 1.1, h: 4, r: 5, er: 5, bb: 1, k: 1, strikes: 21, hbp: 3 } },
+])
+check('a wilder outing scores lower', austin.strikePct === 57, `got ${austin.strikePct}`)
+
+const bothOutings = aggregatePitchingLines([
+  { pitches_thrown: 53, pitching_line: { ip: 3, strikes: 40 } },
+  { pitches_thrown: 34, pitching_line: { ip: 1, strikes: 18 } },
+])
+check('pitches add across outings', bothOutings.pitches === 87)
+check('strikes add across outings', bothOutings.strikes === 58)
+check('the percentage is over the total, not an average of percentages',
+  bothOutings.strikePct === 67, `got ${bothOutings.strikePct}`)
+
+check('no strike data means null, not zero',
+  aggregatePitchingLines([{ pitches_thrown: 40, innings_pitched: 2 }]).strikePct === null,
+  '0% would read as "throws nothing but balls" rather than "not captured"')
+
 console.log('')
 if (failures > 0) { console.log(`${failures} FAILED`); process.exit(1) }
 console.log('ALL PASS')

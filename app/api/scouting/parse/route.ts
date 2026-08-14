@@ -48,7 +48,7 @@ Return ONLY valid JSON in this exact shape, no other text:
           "batting_line": {"ab": 3, "h": 2, "2b": 0, "3b": 0, "hr": 0, "rbi": 1, "bb": 1, "k": 0, "sb": 0},
           "pitches_thrown": 45,
           "innings_pitched": 2.1,
-          "pitching_line": {"ip": 2.1, "h": 3, "r": 2, "er": 1, "bb": 4, "k": 5, "hr": 0, "hbp": 1, "bf": 14, "strikes": 28, "balls": 17}
+          "pitching_line": {"ip": 2.1, "h": 3, "r": 2, "er": 1, "bb": 4, "k": 5, "hr": 0, "hbp": 1, "bf": 14, "strikes": 28}
         }
       ]
     }
@@ -62,6 +62,8 @@ Rules:
 - Never put the same player in both teams. If you genuinely cannot tell which team a player belongs to, leave them out and add a warning naming them.
 - Team names: many youth box scores abbreviate or show only a logo. Return null rather than guessing a team name from the players.
 - pitches_thrown and innings_pitched: null for players who did not pitch. Pitch counts matter most — read them carefully and never guess a number you cannot see.
+- WHERE PITCH COUNTS LIVE. They are usually NOT in the pitching table. GameChanger prints them in a notes block under the box score, on a line labelled "Pitches-Strikes", as a hyphenated pair per pitcher: "Pitches-Strikes: Gio C 53-40, Austin B 37-21, Nash F 34-18". The FIRST number is total pitches thrown and the SECOND is how many of those were strikes. For Gio C that is pitches_thrown 53 and strikes 40. Read that line before deciding a pitcher has no pitch count — it is the single most important number on the page and it is easy to miss because it is not in the table.
+- The same notes block carries other per-pitcher lines worth taking: "Batters Faced: Gio C 20, Austin B 12, Nash F 9" fills "bf", and "HBP: Austin B 3" fills "hbp" for that pitcher. Lines like "WP" (wild pitches) can be ignored.
 - pitching_line: null for anyone who did not pitch. This is the PITCHING table of the box score, which is separate from the batting table and usually further down the page — find it before deciding a pitcher has no line. Its "bb" and "k" are walks ISSUED and strikeouts THROWN, which are completely different numbers from the "bb" and "k" in that same player's batting_line. Never copy one into the other.
 - The pitching table is usually headed: IP, H, R, ER, BB, SO. Map them exactly — IP->ip, H->h, R->r, ER->er, BB->bb, SO->k. A column headed SO or K is strikeouts thrown; put it in "k".
 - IP is printed in thirds, not decimals: "1.1" is one and one third innings and "1.2" is one and two thirds. Copy the printed value exactly. Never convert it, never round it, and never write "1.33".

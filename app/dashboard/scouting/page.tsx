@@ -853,6 +853,7 @@ function OpponentDetail({
                               return (pl.h || pl.bb || pl.k || pl.r) ? (
                                 <span className="block text-xs text-gray-500">
                                   {pl.ip} IP · {pl.h} H · {pl.r} R ({pl.er} ER) · {pl.bb} BB · {pl.k} K
+                                  {pl.strikePct !== null && ` · ${pl.strikePct}% strikes`}
                                 </span>
                               ) : null
                             })()}
@@ -1476,6 +1477,10 @@ function CaptureForm({
                       <th className="p-2">BB</th>
                       <th className="p-2">K</th>
                       <th className="p-2 bg-red-50">Pitches</th>
+                      {/* The other half of GameChanger's "53-40". Strike rate is
+                          the most actionable number a coach gets about an
+                          opposing arm. */}
+                      <th className="p-2 bg-red-50" title="Strikes, from the Pitches-Strikes line">Str</th>
                       <th className="p-2">IP</th>
                       {/* The outing, not just its volume. These were read off
                           the box score and thrown away until now. */}
@@ -1514,6 +1519,11 @@ function CaptureForm({
                           <input type="number" value={p.pitches_thrown ?? ''}
                             onChange={e => updateParsedPlayer(i, 'pitches_thrown', e.target.value === '' ? null : Number(e.target.value))}
                             className="w-14 px-1 py-1 border border-red-200 rounded font-medium" />
+                        </td>
+                        <td className="p-1 bg-red-50">
+                          <input type="number" value={p.pitching_line?.strikes ?? ''}
+                            onChange={e => updateParsedPlayer(i, 'pl.strikes', e.target.value)}
+                            className="w-12 px-1 py-1 border border-red-200 rounded" />
                         </td>
                         <td className="p-1">
                           <input type="number" step="0.1" value={p.innings_pitched ?? ''}

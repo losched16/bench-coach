@@ -46,7 +46,7 @@ export interface ScoutingOpponentContext {
       outings: number; total_pitches: number; last_date: string; last_pitches: number
       // The outing itself, not just its volume. Pitch count answers "can he
       // throw"; this answers "should we be worried about him".
-      line?: { ip: number; h: number; r: number; er: number; bb: number; k: number; hr: number; bf: number } | null
+      line?: { ip: number; h: number; r: number; er: number; bb: number; k: number; hr: number; bf: number; strikes: number; strikePct: number | null } | null
     } | null
   }>
   recent_notes: Array<{ date: string | null; type: string; note: string }>
@@ -554,6 +554,11 @@ ${context.scouting.opponents.map(o => {
         if (pl && (pl.h || pl.bb || pl.k || pl.r)) {
           line += `; over ${pl.ip} IP: ${pl.h} H, ${pl.r} R (${pl.er} ER), ${pl.bb} BB, ${pl.k} K`
           if (pl.hr) line += `, ${pl.hr} HR`
+          // The number a coach can actually use from the dugout. Around 40%
+          // means wait him out; around 65% means he is in the zone.
+          if (pl.strikePct !== null && pl.strikePct !== undefined) {
+            line += `; ${pl.strikePct}% strikes (${pl.strikes} of ${p.pitching.total_pitches})`
+          }
         }
       }
       if (p.notes) line += ` — notes: ${p.notes}`
