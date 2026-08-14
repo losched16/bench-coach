@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { Loader2, Sparkles, RefreshCw, FileText, AlertCircle, Clock } from 'lucide-react'
+import { Loader2, Sparkles, RefreshCw, FileText, AlertCircle, Clock , Copy, Check} from 'lucide-react'
 import { AnalysisProse } from '@/components/AnalysisProse'
-import { splitSections } from '@/lib/analysis'
+import { splitSections, reportToHtml, reportToPlainText } from '@/lib/analysis'
 import { SCOUT_META_SENTINEL } from '@/lib/scouting'
 
 // The standing read on one opponent.
@@ -165,6 +165,79 @@ export function OpponentAnalysis({
     )
   }
 
+  // Copy the report so it lands in a Google Doc looking like a report.
+  //
+  // Google Docs, Word and Gmail all read text/html off the clipboard and
+  // re-style it as their own headings and lists. Writing only text/plain — as
+  // navigator.clipboard.writeText does — is why a pasted report arrives as a
+  // wall of text with literal ** and ## in it. Both flavours go on together;
+  // whichever the destination understands, it takes.
+  const [copied, setCopied] = useState(false)
+  const [copyError, setCopyError] = useState<string | null>(null)
+
+  const copyReport = async () => {
+    const md = streamed ?? analysis?.markdown ?? ''
+    if (!md) return
+    setCopyError(null)
+
+    const meta = {
+      title: `${opponentName} — Scouting Report`,
+      // Provenance travels with it. Once this is in somebody's doc it has left
+      // the app, and a reader three weeks later has no other way to know how
+      // old it is or how much was behind it.
+      subtitle: analysis
+        ? `Written ${new Date(analysis.generated_at).toLocaleDateString()} from ` +
+          `${analysis.entry_count} ${analysis.entry_count === 1 ? 'entry' : 'entries'}` +
+          `${analysis.total_pa > 0 ? ` · ${analysis.total_pa} plate appearances` : ''}`
+        : null,
+      headline: analysis?.headline || null,
+      whatsChanged: analysis?.whats_changed || null,
+    }
+    const html = reportToHtml(md, meta)
+    const text = reportToPlainText(md, meta)
+
+    try {
+      if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/html': new Blob([html], { type: 'text/html' }),
+            'text/plain': new Blob([text], { type: 'text/plain' }),
+          }),
+        ])
+      } else {
+        // Firefox and older Safari have no ClipboardItem. Selecting real DOM
+        // and letting the browser copy it is the old way to get HTML onto a
+        // clipboard, and it still works everywhere.
+        const holder = document.createElement('div')
+        holder.innerHTML = html
+        // Off-screen rather than hidden: display:none cannot be selected.
+        holder.setAttribute('style', 'position:fixed;left:-9999px;top:0;white-space:normal')
+        document.body.appendChild(holder)
+        const range = document.createRange()
+        range.selectNodeContents(holder)
+        const sel = window.getSelection()
+        sel?.removeAllRanges()
+        sel?.addRange(range)
+        const ok = document.execCommand('copy')
+        sel?.removeAllRanges()
+        document.body.removeChild(holder)
+        if (!ok) throw new Error('copy rejected')
+      }
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
+    } catch {
+      // Last resort: plain text is better than nothing, and saying so beats a
+      // button that silently did nothing.
+      try {
+        await navigator.clipboard.writeText(text)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2500)
+      } catch {
+        setCopyError('Your browser blocked the copy. Select the report and copy it by hand.')
+      }
+    }
+  }
+
   const markdown = streamed ?? analysis?.markdown ?? ''
   const sections = markdown ? splitSections(markdown) : []
 
@@ -191,6 +264,23 @@ export function OpponentAnalysis({
           )}
         </div>
 
+        <div className="flex-shrink-0 flex items-center gap-2">
+        {/* Only once there is a finished report to take. Mid-stream it would
+            copy half a sentence. */}
+        {analysis && !running && (
+          <button
+            onClick={copyReport}
+            title="Copy with headings and lists, ready to paste into a doc"
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border transition-colors ${
+              copied
+                ? 'border-green-300 bg-green-50 text-green-700'
+                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {copied ? <Check size={15} /> : <Copy size={15} />}
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+        )}
         <button
           onClick={generate}
           disabled={running || entryCount === 0}
@@ -205,7 +295,12 @@ export function OpponentAnalysis({
             : <Sparkles size={16} />}
           {running ? 'Writing…' : analysis ? 'Update' : 'Write the report'}
         </button>
+        </div>
       </div>
+
+      {copyError && (
+        <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2 mb-3">{copyError}</p>
+      )}
 
       {entryCount === 0 && !analysis && (
         <p className="text-sm text-gray-600">
