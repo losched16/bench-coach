@@ -14,6 +14,7 @@ import {
 } from '@/lib/scouting'
 import { guard, authorizeTeam, can } from '@/lib/authz'
 import { visibleDrills } from '@/lib/drills'
+import { migrationHintFor } from '@/lib/migrationHints'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -395,10 +396,28 @@ export async function POST(request: NextRequest) {
     // Scouting data is scoped to this coach's account only.
     let scouting: ScoutingContext | undefined
     try {
-      const { data: opponentTeams } = await supabaseAdmin
+      // is_own_team is what lets the answer say "you" instead of "them" —
+      // without it, a coach's own scouted games come back looking like
+      // another team's and the comparison reads backwards.
+      //
+      // It arrives in migration 043, and naming a column that does not exist
+      // fails the whole query. Scouting in chat is not worth losing over one
+      // optional field, so an unmigrated database drops back to the columns it
+      // definitely has and every team reads as one being scouted — which is
+      // exactly what it was before 043.
+      const BASE_COLS = 'id, name, age_group, first_seen, last_seen, notes'
+      const withOwn = await supabaseAdmin
         .from('opponent_teams')
-        .select('id, name, age_group, first_seen, last_seen, notes')
+        .select(`${BASE_COLS}, is_own_team`)
         .eq('coach_id', team.coach_id)
+      const fallback =
+        withOwn.error && migrationHintFor(withOwn.error)
+          ? await supabaseAdmin
+              .from('opponent_teams')
+              .select(BASE_COLS)
+              .eq('coach_id', team.coach_id)
+          : null
+      const opponentTeams: any[] | null = (fallback ?? withOwn).data
 
       if (opponentTeams && opponentTeams.length > 0) {
         const recentText = [

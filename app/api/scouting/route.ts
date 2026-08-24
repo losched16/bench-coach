@@ -7,6 +7,7 @@ import {
   OpponentPlayerLite,
 } from '@/lib/scouting'
 import { guard } from '@/lib/authz'
+import { migrationHintFor } from '@/lib/migrationHints'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -19,6 +20,23 @@ const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
+
+// Every handler here ends the same way. A missing column is a migration
+// nobody ran, not a bug the coach can do anything about, so name the file
+// instead of showing them the raw PostgREST text — "Could not find the
+// 'is_own_team' column of 'opponent_teams' in the schema cache" is what they
+// saw before this, and it tells them nothing they can act on.
+//
+// 503 rather than 500, because the request is fine and will succeed once the
+// SQL has run.
+function failed(surface: string, error: any) {
+  console.error(`Scouting ${surface} error:`, error)
+  const hint = migrationHintFor(error)
+  return NextResponse.json(
+    { error: hint?.message || error.message, needsMigration: !!hint },
+    { status: hint ? 503 : 500 }
+  )
+}
 
 // GET: list opponent teams for a coach, or full detail for one opponent
 export async function GET(request: NextRequest) {
@@ -101,8 +119,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ teams, matchups: matchupsRes.data || [] })
   } catch (error: any) {
-    console.error('Scouting GET error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return failed('GET', error)
   }
 }
 
@@ -515,8 +532,7 @@ export async function POST(request: NextRequest) {
       summary: { playersCreated, playersMatched, appearancesCreated, matchupsCreated, teamsCreated },
     })
   } catch (error: any) {
-    console.error('Scouting POST error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return failed('POST', error)
   }
 }
 
@@ -545,8 +561,7 @@ export async function PUT(request: NextRequest) {
     if (error) throw error
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error('Scouting PUT error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return failed('PUT', error)
   }
 }
 
@@ -688,7 +703,6 @@ export async function DELETE(request: NextRequest) {
       { status: 400 }
     )
   } catch (error: any) {
-    console.error('Scouting DELETE error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return failed('DELETE', error)
   }
 }

@@ -69,6 +69,10 @@ const OBJECT_TO_MIGRATION: Array<{ match: RegExp; file: string; what: string }> 
   { match: /\b(scheduled_for|recap_dismissed_at)\b/, file: '039_practice_schedule.sql', what: 'practice dates and recap reminders' },
   // 041 — a coach's own drills, and the ones they starred
   { match: /\b(drill_favorites|created_by_coach_id)\b/, file: '041_coach_drills_and_favorites.sql', what: 'favorite and custom drills' },
+  // 042 — what actually happened in a pitching outing
+  { match: /\bpitching_line\b/, file: '042_pitching_line.sql', what: "hits, walks and strikeouts on a pitching line" },
+  // 043 — scouting your own team alongside the ones you are tracking
+  { match: /\b(is_own_team|linked_team_id)\b/, file: '043_scout_own_team.sql', what: "logging your own team's games" },
 ]
 
 export interface MigrationHint {
