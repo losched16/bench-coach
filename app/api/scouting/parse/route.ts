@@ -174,6 +174,8 @@ export async function POST(request: NextRequest) {
       // The team the coach selected — the SUBJECT of this upload, not our
       // adversary. Most scouting uploads are games we were not playing in.
       trackedTeamName,
+      // The coach is logging their own game. Inverts the "is that us?" guards.
+      trackedIsOwnTeam,
     } = await request.json()
 
     const imageList = Array.isArray(images) ? images : []
@@ -320,6 +322,7 @@ export async function POST(request: NextRequest) {
       const roster = await ourRosterNames(teamId)
       const choice = chooseTrackedSide(sides, {
         trackedTeamName: typeof trackedTeamName === 'string' ? trackedTeamName : null,
+        trackedIsOwnTeam: !!trackedIsOwnTeam,
         ourTeamName: typeof ourTeamName === 'string' ? ourTeamName : null,
         ourRoster: roster,
       })

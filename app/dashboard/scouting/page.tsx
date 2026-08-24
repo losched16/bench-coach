@@ -20,6 +20,7 @@ import Link from 'next/link'
 // ── Types ──────────────────────────────────────────────
 
 interface OpponentTeam {
+  is_own_team?: boolean
   id: string
   name: string
   org_name: string | null
@@ -601,7 +602,17 @@ function OpponentList({
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="font-semibold text-gray-900">{o.name}</div>
+                    <div className="font-semibold text-gray-900 flex items-center gap-2">
+                      {o.name}
+                      {/* Your own record sits in the same list on purpose —
+                          the comparison is the point — but it must never read
+                          as a team you are scouting. */}
+                      {o.is_own_team && (
+                        <span className="text-[10px] font-semibold uppercase tracking-wide bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
+                          Your team
+                        </span>
+                      )}
+                    </div>
                     <div className="text-xs text-gray-500 mt-0.5">
                       {[o.org_name, o.age_group, o.region].filter(Boolean).join(' · ') || '—'}
                     </div>
@@ -1024,6 +1035,10 @@ function CaptureForm({
   // `files`, which only ever holds things the coach picked this session.
   const [storedImages, setStoredImages] = useState<Array<{ data: string; mimeType: string }>>([])
   const [replaceEntryId, setReplaceEntryId] = useState<string | null>(null)
+  // Logging one of our own games rather than a team we are scouting. Same
+  // flow, same review screen — what changes is that our own roster becomes
+  // the thing the parser looks FOR rather than excludes.
+  const [logOwnTeam, setLogOwnTeam] = useState(false)
   // Whether trying the same thing again is worth suggesting. An overloaded
   // AI service clears in seconds; a screenshot it cannot read never will.
   const [parseRetryable, setParseRetryable] = useState(false)
@@ -1116,8 +1131,13 @@ function CaptureForm({
           // The team the coach selected. This is the subject of the upload and
           // outranks every other signal — if they said Warrington, the answer
           // is Warrington or a question, never Springfield.
-          trackedTeamName:
-            opponents.find(o => o.id === opponentTeamId)?.name || newTeamName.trim() || undefined,
+          trackedTeamName: logOwnTeam
+            ? (ownTeamName || undefined)
+            : (opponents.find(o => o.id === opponentTeamId)?.name || newTeamName.trim() || undefined),
+          // Inverts every "is that us?" guard in the side picker. Recognising
+          // our roster normally means we grabbed the wrong half of the box
+          // score; here it is exactly what we want.
+          trackedIsOwnTeam: logOwnTeam,
         }),
       })
       const data = await res.json()
@@ -1188,7 +1208,7 @@ function CaptureForm({
     !saving &&
     (entryType === 'bracket'
       ? !!parsed || files.length === 0 // bracket can be saved after parse (or as a bare note)
-      : !!opponentTeamId || newTeamName.trim().length > 0)
+      : logOwnTeam ? !!teamId : (!!opponentTeamId || newTeamName.trim().length > 0))
 
   const handleSave = async () => {
     if (!canSave) return
@@ -1223,6 +1243,7 @@ function CaptureForm({
         // Set on a re-read: the old entry is deleted so this replaces that
         // game rather than doubling every player's stat line.
         replaceEntryId: replaceEntryId || undefined,
+        logOwnTeam,
       }
       if (entryType !== 'bracket') {
         if (opponentTeamId) body.opponentTeamId = opponentTeamId
@@ -1246,6 +1267,7 @@ function CaptureForm({
       track('scouting_entry_created', { type: entryType, players: parsedPlayers.length })
       setStoredImages([])
       setReplaceEntryId(null)
+      setLogOwnTeam(false)
       onSaved(data.opponentTeamId || null)
     } catch (e: any) {
       alert(e.message)
@@ -1278,11 +1300,41 @@ function CaptureForm({
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Which team are you logging?
           </label>
+          {/* Your own games belong here too. The same published box scores
+              exist for them, and having both sides is what turns a scouting
+              report into a plan — "their #22 throws 75% strikes" is useful,
+              "and our lineup strikes out twice a game" is a plan. */}
+          {teamId && (
+            <div className="flex flex-wrap gap-2 mb-2">
+              <button
+                type="button"
+                onClick={() => { setLogOwnTeam(false) }}
+                className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
+                  !logOwnTeam
+                    ? 'border-blue-600 bg-blue-50 text-blue-800 font-medium'
+                    : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                }`}
+              >
+                A team I&apos;m scouting
+              </button>
+              <button
+                type="button"
+                onClick={() => { setLogOwnTeam(true); setOpponentTeamId(''); setNewTeamName('') }}
+                className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
+                  logOwnTeam
+                    ? 'border-blue-600 bg-blue-50 text-blue-800 font-medium'
+                    : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                }`}
+              >
+                My team{ownTeamName ? ` (${ownTeamName})` : ''}
+              </button>
+            </div>
+          )}
           <p className="text-xs text-gray-500 mb-1.5">
             The team whose players and stats are in this upload. Any team you want to
             track — you don&apos;t have to be playing them.
           </p>
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className={`flex flex-col sm:flex-row gap-2 ${logOwnTeam ? 'hidden' : ''}`}>
             <select
               value={opponentTeamId}
               onChange={e => { setOpponentTeamId(e.target.value); if (e.target.value) setNewTeamName('') }}
@@ -1290,7 +1342,9 @@ function CaptureForm({
             >
               <option value="">— Add a team —</option>
               {opponents.map(o => (
+                o.is_own_team ? null : (
                 <option key={o.id} value={o.id}>{o.name}{o.age_group ? ` (${o.age_group})` : ''}</option>
+                )
               ))}
             </select>
             {!opponentTeamId && (

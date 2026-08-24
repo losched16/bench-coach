@@ -108,6 +108,50 @@ export async function GET(request: NextRequest) {
 
 // Find-or-create an opponent team, reusing an existing record when the name
 // is effectively the same (avoids duplicate team records from typos)
+/**
+ * The tracked record standing for the coach's OWN team, created on demand.
+ *
+ * Keyed on linked_team_id rather than the name, so a coach who types their
+ * team slightly differently one week does not end up scouting themselves twice
+ * and splitting the comparison in half.
+ */
+async function resolveOwnTeamRecord(
+  coachId: string,
+  teamId: string,
+  fallbackName: string
+): Promise<string> {
+  const { data: existing } = await supabaseAdmin
+    .from('opponent_teams')
+    .select('id')
+    .eq('coach_id', coachId)
+    .eq('linked_team_id', teamId)
+    .eq('is_own_team', true)
+    .maybeSingle()
+  if (existing) return (existing as any).id
+
+  // Name and age come from the real roster, so this record matches what the
+  // coach already calls their team everywhere else in the app.
+  const { data: team } = await supabaseAdmin
+    .from('teams')
+    .select('name, age_group')
+    .eq('id', teamId)
+    .single()
+
+  const { data: created, error } = await supabaseAdmin
+    .from('opponent_teams')
+    .insert({
+      coach_id: coachId,
+      name: (team as any)?.name || fallbackName || 'My team',
+      age_group: (team as any)?.age_group || null,
+      is_own_team: true,
+      linked_team_id: teamId,
+    })
+    .select('id')
+    .single()
+  if (error) throw error
+  return (created as any).id
+}
+
 async function resolveOpponentTeam(
   coachId: string,
   newTeam: { name: string; org_name?: string; age_group?: string; region?: string },
@@ -211,6 +255,10 @@ export async function POST(request: NextRequest) {
       // Set when the coach re-read an entry they had already logged. The old
       // one is deleted so this becomes an update rather than a duplicate game.
       replaceEntryId,
+      // The coach is logging one of their OWN games. Same capture flow and the
+      // same row shape — the difference is that everything downstream can say
+      // "you" instead of "them", and put the two side by side.
+      logOwnTeam,
     } = body
 
     if (!coachId || !entryType) {
@@ -237,6 +285,11 @@ export async function POST(request: NextRequest) {
 
     // 1. Resolve the opponent team (not needed for bracket entries)
     let resolvedTeamId: string | null = opponentTeamId || null
+    // Logging one of our own games. Resolved before the opponent path so a
+    // coach who has both a selection and the flag gets the own-team record.
+    if (logOwnTeam && teamId && entryType !== 'bracket') {
+      resolvedTeamId = await resolveOwnTeamRecord(coachId, teamId, ownTeamName || '')
+    }
     if (!resolvedTeamId && entryType !== 'bracket') {
       if (!newTeam?.name) {
         return NextResponse.json({ error: 'opponentTeamId or newTeam required' }, { status: 400 })

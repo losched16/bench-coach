@@ -138,6 +138,38 @@ check('...and says so', /your own team/.test(soloOurs.reason), soloOurs.reason)
 check('a single side matching our roster is also refused',
   chooseTrackedSide([side(null, OURS)], { ourRoster: OURS }).tracked === null)
 
+// ── logging our OWN team's game ─────────────────────────────────────────────
+// Every "is that us?" guard has to invert. Recognising our roster normally
+// means we grabbed the wrong half of the box score; here it is the whole point,
+// and refusing it made logging your own games impossible.
+
+const ownSide = chooseTrackedSide([anonMine, anonTheirs], {
+  ourRoster: OURS, trackedIsOwnTeam: true,
+})
+check('our own roster now SELECTS the side instead of excluding it',
+  ownSide.tracked === anonMine, ownSide.reason)
+check('...confidently', ownSide.confident)
+check('...and it is marked as ours too', ownSide.ours === anonMine)
+check('...and the reason reads as confirmation, not a warning',
+  /your side/.test(ownSide.reason), ownSide.reason)
+
+check('the opposite call still picks the opponent',
+  chooseTrackedSide([anonMine, anonTheirs], { ourRoster: OURS }).tracked === anonTheirs)
+
+const soloOwn = chooseTrackedSide([mine], {
+  ourTeamName: 'Springfield Rangers', trackedIsOwnTeam: true,
+})
+check('a single side that is ours is accepted when that is the point',
+  soloOwn.tracked === mine, soloOwn.reason)
+check('...confidently', soloOwn.confident)
+check('...while the same image is still refused when scouting somebody else',
+  chooseTrackedSide([mine], { ourTeamName: 'Springfield Rangers' }).tracked === null)
+
+check('naming our own team still wins over the roster signal',
+  chooseTrackedSide([mine, theirs], {
+    trackedTeamName: 'Springfield Rangers', trackedIsOwnTeam: true, ourRoster: OURS,
+  }).tracked === mine)
+
 // ── nothing usable ──────────────────────────────────────────────────────────
 
 check('no sides at all is handled', chooseTrackedSide([], { ourRoster: OURS }).tracked === null)

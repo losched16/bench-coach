@@ -164,6 +164,15 @@ export interface SideContext {
   ourTeamName?: string | null
   /** The coach's own player names. A tie-breaker, not the main signal. */
   ourRoster?: string[]
+  /**
+   * The coach is logging their OWN team's game.
+   *
+   * This inverts every "is that us?" guard below. Recognising our own roster
+   * normally means we picked the wrong half of the box score; here it means we
+   * picked the right one, and refusing it — which is what happened before this
+   * flag existed — makes logging your own games impossible.
+   */
+  trackedIsOwnTeam?: boolean
 }
 
 /**
@@ -229,6 +238,12 @@ export function chooseTrackedSide(
       (ctx.ourTeamName && teamNamesMatch(only.team_name || '', ctx.ourTeamName)) ||
       (overlapHits(only, roster) >= OURS_MIN_HITS && rosterOverlap(only, roster) >= OURS_OVERLAP)
     if (looksOurs) {
+      if (ctx.trackedIsOwnTeam) {
+        return {
+          tracked: only, ours: only, confident: true,
+          reason: `Your team${only.team_name ? ` (${only.team_name})` : ''}, as expected.`,
+        }
+      }
       return {
         tracked: null, ours: only, confident: false,
         reason: `That looks like your own team${only.team_name ? ` (${only.team_name})` : ''}. Name the team you're tracking, or check the screenshot.`,
@@ -245,7 +260,7 @@ export function chooseTrackedSide(
   // 2. Our own name is on one side, so the coach means the other one. Only
   //    reachable when they did NOT name a team, which means they are logging a
   //    game they played in.
-  if (ctx.ourTeamName) {
+  if (ctx.ourTeamName && !ctx.trackedIsOwnTeam) {
     const ours = usable.filter(s => teamNamesMatch(s.team_name || '', ctx.ourTeamName!))
     if (ours.length === 1 && usable.length === 2) {
       const other = usable.find(s => s !== ours[0])!
@@ -258,8 +273,24 @@ export function chooseTrackedSide(
     }
   }
 
+  // 3a. Logging our own game: our roster is now the thing we are looking FOR.
+  if (ctx.trackedIsOwnTeam && roster.length > 0 && usable.length === 2) {
+    const scored = usable
+      .map(s => ({ s, hits: overlapHits(s, roster), frac: rosterOverlap(s, roster) }))
+      .sort((a, b) => b.frac - a.frac)
+    const top = scored[0]
+    if (top.hits >= OURS_MIN_HITS && top.frac >= OURS_OVERLAP && top.frac > scored[1].frac) {
+      return {
+        tracked: top.s,
+        ours: top.s,
+        confident: true,
+        reason: `${top.hits} of those players are on your roster — that's your side.`,
+      }
+    }
+  }
+
   // 3. Our players are on one side. Survives unreadable team names.
-  if (roster.length > 0 && usable.length === 2) {
+  if (!ctx.trackedIsOwnTeam && roster.length > 0 && usable.length === 2) {
     const scored = usable
       .map(s => ({ s, hits: overlapHits(s, roster), frac: rosterOverlap(s, roster) }))
       .sort((a, b) => b.frac - a.frac)

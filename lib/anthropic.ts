@@ -16,6 +16,12 @@ export interface JournalEntry {
 
 export interface ScoutingOpponentContext {
   name: string
+  /**
+   * This record is the coach's OWN team, logged from published box scores the
+   * same way an opponent is. Without the flag the model reads its own team's
+   * players as strangers to scout, which is both wrong and unsettling.
+   */
+  is_own_team?: boolean
   age_group?: string | null
   first_seen?: string | null
   last_seen?: string | null
@@ -515,7 +521,20 @@ ${context.scouting.upcomingMatchups.map(m =>
 ).join('\n')}
 ` : ''}
 ${context.scouting.opponents.map(o => {
-  const parts = [`OPPONENT: ${o.name}${o.age_group ? ` (${o.age_group})` : ''} — ${o.entry_count} logged entr${o.entry_count === 1 ? 'y' : 'ies'}, first seen ${o.first_seen || '?'}, last seen ${o.last_seen || '?'}`]
+  const parts = [
+    `${o.is_own_team ? 'YOUR OWN TEAM' : 'OPPONENT'}: ${o.name}${o.age_group ? ` (${o.age_group})` : ''} — ` +
+    `${o.entry_count} logged entr${o.entry_count === 1 ? 'y' : 'ies'}, ` +
+    `first seen ${o.first_seen || '?'}, last seen ${o.last_seen || '?'}`,
+  ]
+  if (o.is_own_team) {
+    parts.push(
+      `  THIS IS THE COACH'S OWN TEAM, logged from box scores the same way an opponent is. ` +
+      `Say "you" and "your" about them, never "they". Use it to compare: their pitcher's ` +
+      `strike rate against your hitters' strikeout rate, their staff's workload against ` +
+      `yours. That comparison is the reason this data exists and it is the most useful ` +
+      `thing you can do with it.`
+    )
+  }
   if (o.staleness_note) parts.push(`  DATA AGE: ${o.staleness_note}`)
   if (o.team_notes) parts.push(`  Coach's team notes: ${o.team_notes}`)
   if (o.recent_notes.length > 0) {

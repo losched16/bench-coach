@@ -594,6 +594,7 @@ export async function POST(request: NextRequest) {
             opponentContexts.push({
               games,
               name: ot.name,
+              is_own_team: !!ot.is_own_team,
               age_group: ot.age_group,
               first_seen: ot.first_seen,
               last_seen: ot.last_seen,
