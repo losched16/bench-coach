@@ -237,6 +237,7 @@ Notes on specific fields:
 - "meta": only facts the article states — age range, practice length, player count, coaches needed. Do not add a "Skill Level" because most plans have one.
 - "skill" on a drill: the category it belongs to, in the article's own words ("balance", "swing path", "tracking"). Omit if the article does not group its drills.
 - "symptoms": only for a problem page — the observable things a coach would see.
+- "equipment" and "players": NEVER INFER THESE. Only what the article names. A throwing drill obviously uses baseballs, and you must still omit "equipment" unless the article says so. This is the field most likely to tempt you and the one where a guess does the most damage: the equipment list becomes a checklist a coach packs a bag from, and a plausible-looking list that is missing the tee sends them to the field without it. An absent list makes them think it through. A confident wrong one does not.
 - Keep the coach's phrasing. His cues are the reason people read this.
 
 ARTICLE TITLE: <TITLE>
