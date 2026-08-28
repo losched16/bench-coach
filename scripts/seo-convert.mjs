@@ -240,7 +240,15 @@ function foundInSource(phrase, source) {
 // prompt supplies, not coaching content.
 const STRUCTURAL = /(^kind$|\.kind$|meta\[\d+\]\.label)/
 
-async function review(slug) {
+/**
+ * Everything worth knowing about a proposal, as data rather than console
+ * output — so `review` can print it and `auto` can gate on it.
+ *
+ * Two independent signals, because they catch different failures:
+ *   suspect — a phrase that is not in the article. Invented content.
+ *   gaps    — a hole or an overlap in the practice clock. Misread structure.
+ */
+function analyze(slug) {
   const { proposal, backup } = paths(slug)
   if (!existsSync(proposal)) die(`No proposal at ${proposal}. Run extract first.`)
   if (!existsSync(backup)) die(`No backup at ${backup}. Run extract first.`)
@@ -248,6 +256,32 @@ async function review(slug) {
   const block = JSON.parse(readFileSync(proposal, 'utf8'))
   const page = JSON.parse(readFileSync(backup, 'utf8'))
   const source = normalize(sourceText(page))
+
+  const suspect = []
+  for (const [path, value] of strings(block)) {
+    if (STRUCTURAL.test(path)) continue
+    if (!foundInSource(value, source)) suspect.push([path, value])
+  }
+
+  const gaps = []
+  let last = null
+  for (const row of block.timeline || []) {
+    if (last !== null && row.from !== undefined && row.from !== last) {
+      gaps.push(`previous block ended at ${last}, "${row.activity}" starts at ${row.from}`)
+    }
+    if (row.to !== undefined) last = row.to
+  }
+
+  const complete = (block.timeline || []).every(r => r.from !== undefined && r.to !== undefined)
+  const total = complete && block.timeline?.length
+    ? block.timeline[block.timeline.length - 1].to
+    : null
+
+  return { block, page, proposal, suspect, gaps, total, clean: suspect.length === 0 && gaps.length === 0 }
+}
+
+function printReview(a) {
+  const { block, page, proposal, suspect, gaps, total } = a
 
   console.log(`\n=== ${page.title} ===`)
   console.log(`URL:  /${page.category}/${page.slug}   (unchanged)`)
@@ -259,16 +293,11 @@ async function review(slug) {
     for (const row of block.timeline) {
       const label = row.time || (row.to !== undefined ? `${row.from}-${row.to}` : `${row.from}+`)
       console.log(`  ${String(label).padEnd(10)} ${row.activity}${row.focus ? `  (${row.focus})` : ''}`)
-      // A gap or an overlap in the clock means the extraction misread the
-      // article, and it is much easier to see here than on the page.
       if (last !== null && row.from !== undefined && row.from !== last) {
         console.log(`     ^^ WARNING: previous block ended at ${last}, this one starts at ${row.from}`)
       }
       if (row.to !== undefined) last = row.to
     }
-    const total = block.timeline.every(r => r.from !== undefined && r.to !== undefined)
-      ? block.timeline[block.timeline.length - 1].to
-      : null
     if (total !== null) console.log(`  TOTAL: ${total} minutes`)
     console.log('')
   }
@@ -280,12 +309,6 @@ async function review(slug) {
       console.log(`  ${d.name}\n     fields: ${fields || '(name only)'}`)
     }
     console.log('')
-  }
-
-  const suspect = []
-  for (const [path, value] of strings(block)) {
-    if (STRUCTURAL.test(path)) continue
-    if (!foundInSource(value, source)) suspect.push([path, value])
   }
 
   if (suspect.length === 0) {
@@ -300,6 +323,16 @@ async function review(slug) {
     console.log(`Edit ${proposal} directly to fix anything wrong, then review again.\n`)
   }
 
+  if (gaps.length) {
+    console.log(`CLOCK: ${gaps.length} gap(s) in the practice timeline.`)
+    gaps.forEach(g => console.log(`  ${g}`))
+    console.log('')
+  }
+}
+
+async function review(slug) {
+  const a = analyze(slug)
+  printReview(a)
   console.log(`If it is right:  node scripts/seo-convert.mjs apply ${slug}`)
 }
 
@@ -314,17 +347,27 @@ async function apply(slug) {
   // rewrite, reorder or drop a single section.
   const content = { ...page.content, resource: block }
 
+  // Enforced rather than reported. The copy-preservation rule is the whole
+  // basis on which this is safe to run against pages that already rank, so a
+  // write that would change the article aborts instead of printing a
+  // mismatch nobody reads.
+  const before = page.content?.sections?.length ?? 0
+  const after = content.sections?.length ?? 0
+  if (before !== after) {
+    die(`REFUSING TO WRITE: sections would go from ${before} to ${after}. The article must survive untouched.`)
+  }
+  if (JSON.stringify(page.content?.sections) !== JSON.stringify(content.sections)) {
+    die('REFUSING TO WRITE: the article body would change. Only `resource` may be added.')
+  }
+
   const { error } = await db()
     .from('seo_pages')
     .update({ content })
     .eq('slug', slug)
   if (error) die(`Update failed: ${error.message}`)
 
-  console.log(`\nApplied to /${page.category}/${page.slug}`)
-  console.log(`Sections before: ${page.content?.sections?.length ?? 0}`)
-  console.log(`Sections after:  ${content.sections?.length ?? 0}   (must match)`)
-  console.log(`\nThe page revalidates hourly. To see it now, redeploy or wait.`)
-  console.log(`To undo:  node scripts/seo-convert.mjs restore ${slug}`)
+  console.log(`Applied to /${page.category}/${page.slug} — ${after} sections, unchanged.`)
+  console.log(`Undo:  node scripts/seo-convert.mjs restore ${slug}`)
 }
 
 async function restore(slug) {
@@ -457,10 +500,110 @@ async function doctor() {
   }
 }
 
-const COMMANDS = { extract, review, apply, restore, list, doctor }
+/**
+ * extract → review → apply, in one command, stopping when it should.
+ *
+ * The three-step flow exists so a human sees the extraction before it goes
+ * live. That is right when the extraction is questionable and pure overhead
+ * when it is clean — and "clean" is a thing the machine can determine: every
+ * phrase traced back to the article, and no holes in the practice clock.
+ *
+ * So the gate stays, and it stays automatic. A clean proposal applies. A
+ * proposal with a single SUSPECT line or one gap in the timeline stops, prints
+ * why, and leaves the file on disk to be edited and re-run. The safety rail is
+ * not that a human looks at everything; it is that a human looks at everything
+ * the checks could not vouch for.
+ *
+ * --force applies anyway. That is for the case where you have read the
+ * flagged lines and they are fine — a rephrasing rather than an invention —
+ * not for getting past the check in a hurry.
+ */
+async function auto(slug, opts = {}) {
+  console.log(`\n──────── ${slug} ────────`)
+  await extract(slug)
+
+  const a = analyze(slug)
+  printReview(a)
+
+  if (!a.clean && !opts.force) {
+    console.log(`HELD BACK. Nothing was written to the page.`)
+    console.log(`  Read the flagged lines, edit ${a.proposal} if needed, then:`)
+    console.log(`    node scripts/seo-convert.mjs apply ${slug}`)
+    return { slug, applied: false, suspect: a.suspect.length, gaps: a.gaps.length }
+  }
+
+  if (!a.clean) console.log('Applying anyway (--force).')
+  await apply(slug)
+  return { slug, applied: true, suspect: a.suspect.length, gaps: a.gaps.length }
+}
+
+/**
+ * The whole 8U cluster, in dependency order.
+ *
+ * Practice plan first because it is the flagship and the one whose extraction
+ * is most likely to need a human eye; the hub last, since what it renders
+ * depends on the spokes existing rather than on its own block.
+ *
+ * Discovered from the database rather than hardcoded, so this works for 10U
+ * the day there is a 10U hub.
+ */
+async function pilot(ageOrHub, opts = {}) {
+  const age = (ageOrHub || '8U').toUpperCase()
+
+  const { data, error } = await db()
+    .from('seo_pages')
+    .select('slug, category, type, age_group, hub_slug, is_published')
+    .eq('is_published', true)
+  if (error) die(error.message)
+
+  const inCluster = data.filter(p => (p.age_group || '').toUpperCase() === age)
+  const hubSlugs = new Set(inCluster.map(p => p.hub_slug).filter(Boolean))
+  // The hub itself may not carry the age tag — it is identified by the spokes
+  // that point at it.
+  const hubs = data.filter(p => p.type === 'hub' && (hubSlugs.has(p.slug) || (p.age_group || '').toUpperCase() === age))
+
+  const ORDER = { 'practice-plans': 0, drills: 1, problems: 2, coaching: 3 }
+  const spokes = inCluster
+    .filter(p => p.type !== 'hub')
+    .sort((a, b) => (ORDER[a.category] ?? 9) - (ORDER[b.category] ?? 9))
+
+  const queue = [...spokes, ...hubs.filter(h => !spokes.some(s => s.slug === h.slug))]
+  if (queue.length === 0) die(`No published ${age} pages found.`)
+
+  console.log(`\n${age} cluster: ${queue.length} pages`)
+  queue.forEach(p => console.log(`  /${p.category}/${p.slug}`))
+
+  const results = []
+  for (const p of queue) {
+    try {
+      results.push(await auto(p.slug, opts))
+    } catch (e) {
+      console.log(`\nERROR on ${p.slug}: ${e?.message || e}`)
+      results.push({ slug: p.slug, applied: false, error: true })
+    }
+  }
+
+  const applied = results.filter(r => r.applied)
+  const held = results.filter(r => !r.applied)
+
+  console.log(`\n════════ ${age} SUMMARY ════════`)
+  console.log(`Applied:    ${applied.length}`)
+  applied.forEach(r => console.log(`  ${r.slug}`))
+  if (held.length) {
+    console.log(`Held back:  ${held.length}`)
+    held.forEach(r => console.log(
+      `  ${r.slug}${r.error ? '  (error)' : `  ${r.suspect} suspect, ${r.gaps} clock gap(s)`}`
+    ))
+    console.log(`\nEach held page has a proposal in ${OUT_DIR}/ — edit it, then apply.`)
+  }
+  console.log(`\nPages revalidate hourly. Redeploy to see them immediately.`)
+}
+
+const COMMANDS = { extract, review, apply, restore, list, doctor, auto, pilot }
 
 async function main() {
   const fn = COMMANDS[command]
+  const force = rest.includes('--force') || slug === '--force'
   if (!fn) {
     console.log(`
 BenchCoach SEO conversion
@@ -484,11 +627,26 @@ BenchCoach SEO conversion
   node scripts/seo-convert.mjs doctor
       Broken hub links, orphans, duplicate titles, odd canonicals, thin pages.
       Reports only — changes nothing.
+
+  node scripts/seo-convert.mjs auto <slug> [--force]
+      extract + review + apply in one go. Applies only if every phrase traces
+      back to the article and the practice clock has no holes. Otherwise it
+      stops and tells you what to look at.
+
+  node scripts/seo-convert.mjs pilot [8U] [--force]
+      The same, across a whole age group's cluster, in a sensible order.
+      Prints a summary of what went live and what is waiting on you.
 `)
     process.exit(command ? 1 : 0)
   }
-  if (fn !== list && !slug) die(`${command} needs a slug.`)
-  await fn(slug)
+  // `pilot` takes an age group and defaults to 8U; `list` and `doctor` take
+  // nothing. Everything else needs a slug.
+  const NO_SLUG = [list, doctor]
+  const OPTIONAL_SLUG = [pilot]
+  if (!NO_SLUG.includes(fn) && !OPTIONAL_SLUG.includes(fn) && (!slug || slug.startsWith('--'))) {
+    die(`${command} needs a slug.`)
+  }
+  await fn(slug && !slug.startsWith('--') ? slug : undefined, { force })
 }
 
 main().catch(e => die(e?.message || String(e)))
