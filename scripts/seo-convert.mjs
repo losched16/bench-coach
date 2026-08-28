@@ -31,12 +31,31 @@
 // wrong in. The whole point is that a human reads the flagged lines before
 // anything ships.
 //
-// Environment:
-//   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ANTHROPIC_API_KEY
+// CREDENTIALS — read this before wiring it up
+//
+// Two ways in, and they are not equivalent:
+//
+//   SEO_DATABASE_URL      preferred. A Postgres connection string for a role
+//                         that can do nothing but SELECT and UPDATE
+//                         seo_pages. See migrations/045_seo_editor_role.sql.
+//
+//   SUPABASE_SERVICE_ROLE_KEY   fallback. Bypasses RLS on every table in the
+//                         project — it can read every coach's roster and
+//                         delete anything. It works, and it is far more
+//                         authority than this script needs.
+//
+// The narrow role exists because the blast radius of a leaked credential
+// should match the job it was issued for. Worst case with SEO_DATABASE_URL is
+// somebody editing marketing copy. Worst case with the service key is the
+// whole database.
+//
+// Also needs: ANTHROPIC_API_KEY, and NEXT_PUBLIC_SUPABASE_URL when falling
+// back to the service key.
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { createClient } from '@supabase/supabase-js'
+import pg from 'pg'
 import Anthropic from '@anthropic-ai/sdk'
 
 const OUT_DIR = 'seo-conversions'
@@ -55,8 +74,90 @@ function need(name) {
   return v
 }
 
+/**
+ * A tiny query surface over whichever credential is available.
+ *
+ * Only four operations are needed, so rather than pull in a query builder the
+ * two backends implement the same four methods. The Postgres path is
+ * preferred; the Supabase path is what runs when only the service key exists.
+ */
+function store() {
+  const url = process.env.SEO_DATABASE_URL
+  if (url) return pgStore(url)
+
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    die(
+      'No database credential.\n' +
+      '  Preferred: SEO_DATABASE_URL — a scoped role that can only touch seo_pages.\n' +
+      '             Create it with migrations/045_seo_editor_role.sql.\n' +
+      '  Fallback:  SUPABASE_SERVICE_ROLE_KEY (+ NEXT_PUBLIC_SUPABASE_URL), which\n' +
+      '             can read and delete every table in the project.'
+    )
+  }
+  console.log('Using SUPABASE_SERVICE_ROLE_KEY. A scoped SEO_DATABASE_URL would be safer — see migrations/045.')
+  return supabaseStore()
+}
+
+function pgStore(connectionString) {
+  // Supabase requires TLS but serves a cert this client will not chain to a
+  // local root. The connection is still encrypted; only the CA check is
+  // relaxed, which is the documented posture for their pooler.
+  //
+  // sslmode=disable in the URL turns it off entirely — that exists for a
+  // local Postgres with no TLS at all, and should never appear in a string
+  // pointing at Supabase.
+  const noSsl = /[?&]sslmode=disable\b/.test(connectionString)
+  const pool = new pg.Pool({
+    connectionString,
+    ssl: noSsl ? false : { rejectUnauthorized: false },
+    max: 2,
+  })
+  return {
+    async one(slug) {
+      const { rows } = await pool.query('SELECT * FROM seo_pages WHERE slug = $1', [slug])
+      return rows[0] || null
+    },
+    async all(columns) {
+      const { rows } = await pool.query(`SELECT ${columns} FROM seo_pages`)
+      return rows
+    },
+    async setContent(slug, content) {
+      const { rowCount } = await pool.query(
+        'UPDATE seo_pages SET content = $1 WHERE slug = $2',
+        [JSON.stringify(content), slug]
+      )
+      if (rowCount !== 1) throw new Error(`expected to update 1 row, updated ${rowCount}`)
+    },
+    async close() { await pool.end() },
+  }
+}
+
+function supabaseStore() {
+  const client = createClient(need('NEXT_PUBLIC_SUPABASE_URL'), need('SUPABASE_SERVICE_ROLE_KEY'))
+  return {
+    async one(slug) {
+      const { data } = await client.from('seo_pages').select('*').eq('slug', slug).single()
+      return data || null
+    },
+    async all(columns) {
+      const { data, error } = await client.from('seo_pages').select(columns)
+      if (error) throw new Error(error.message)
+      return data || []
+    },
+    async setContent(slug, content) {
+      const { error } = await client.from('seo_pages').update({ content }).eq('slug', slug)
+      if (error) throw new Error(error.message)
+    },
+    async close() {},
+  }
+}
+
+// One connection for the whole run rather than one per query — `pilot` makes
+// three or four calls per page and a pool per call would be silly.
+let _store = null
 function db() {
-  return createClient(need('NEXT_PUBLIC_SUPABASE_URL'), need('SUPABASE_SERVICE_ROLE_KEY'))
+  if (!_store) _store = store()
+  return _store
 }
 
 function paths(slug) {
@@ -68,13 +169,9 @@ function paths(slug) {
 }
 
 async function fetchPage(slug) {
-  const { data, error } = await db()
-    .from('seo_pages')
-    .select('*')
-    .eq('slug', slug)
-    .single()
-  if (error || !data) die(`No page with slug "${slug}". ${error?.message || ''}`)
-  return data
+  const page = await db().one(slug)
+  if (!page) die(`No page with slug "${slug}".`)
+  return page
 }
 
 /** Every word the article actually contains, for the invention check. */
@@ -347,26 +444,31 @@ async function apply(slug) {
   // rewrite, reorder or drop a single section.
   const content = { ...page.content, resource: block }
 
-  // Enforced rather than reported. The copy-preservation rule is the whole
-  // basis on which this is safe to run against pages that already rank, so a
-  // write that would change the article aborts instead of printing a
-  // mismatch nobody reads.
-  const before = page.content?.sections?.length ?? 0
-  const after = content.sections?.length ?? 0
-  if (before !== after) {
-    die(`REFUSING TO WRITE: sections would go from ${before} to ${after}. The article must survive untouched.`)
-  }
-  if (JSON.stringify(page.content?.sections) !== JSON.stringify(content.sections)) {
-    die('REFUSING TO WRITE: the article body would change. Only `resource` may be added.')
+  // Preservation is guaranteed by construction above — `content` spreads the
+  // live `page.content` and adds one key, so the article cannot change no
+  // matter what the proposal contains. Asserting that here would be
+  // comparing a value with itself.
+  //
+  // The failure that IS reachable: the article was edited between `extract`
+  // and `apply`. The proposal's phrases were checked against prose that no
+  // longer exists, so the invention check that cleared it is void — it may
+  // now describe a drill the page stopped mentioning. Rare by hand, much less
+  // rare once this runs unattended.
+  if (existsSync(backup)) {
+    const atExtract = JSON.parse(readFileSync(backup, 'utf8'))
+    if (JSON.stringify(atExtract.content?.sections) !== JSON.stringify(page.content?.sections)) {
+      die(
+        `REFUSING TO WRITE: the article changed since this proposal was extracted.\n` +
+        `  Everything that vouched for it was checked against the old text.\n` +
+        `  Re-run:  node scripts/seo-convert.mjs auto ${slug}`
+      )
+    }
   }
 
-  const { error } = await db()
-    .from('seo_pages')
-    .update({ content })
-    .eq('slug', slug)
-  if (error) die(`Update failed: ${error.message}`)
+  await db().setContent(slug, content)
 
-  console.log(`Applied to /${page.category}/${page.slug} — ${after} sections, unchanged.`)
+  const sections = content.sections?.length ?? 0
+  console.log(`Applied to /${page.category}/${page.slug} — ${sections} sections, unchanged.`)
   console.log(`Undo:  node scripts/seo-convert.mjs restore ${slug}`)
 }
 
@@ -375,20 +477,13 @@ async function restore(slug) {
   if (!existsSync(backup)) die(`No backup at ${backup}.`)
   const page = JSON.parse(readFileSync(backup, 'utf8'))
 
-  const { error } = await db()
-    .from('seo_pages')
-    .update({ content: page.content })
-    .eq('slug', slug)
-  if (error) die(`Restore failed: ${error.message}`)
+  await db().setContent(slug, page.content)
   console.log(`Restored /${page.category}/${page.slug} to its state at extract time.`)
 }
 
 async function list() {
-  const { data, error } = await db()
-    .from('seo_pages')
-    .select('slug, category, type, title, age_group, is_published, hub_slug, content')
-    .order('category')
-  if (error) die(error.message)
+  const data = (await db().all('slug, category, type, title, age_group, is_published, hub_slug, content'))
+    .sort((a, b) => (a.category || '').localeCompare(b.category || ''))
 
   console.log(`\n${data.length} pages\n`)
   for (const p of data) {
@@ -413,10 +508,9 @@ async function list() {
  * Reports only. Nothing here changes a row.
  */
 async function doctor() {
-  const { data, error } = await db()
-    .from('seo_pages')
-    .select('slug, category, type, title, meta_description, canonical, hub_slug, related_slugs, age_group, is_published, content')
-  if (error) die(error.message)
+  const data = await db().all(
+    'slug, category, type, title, meta_description, canonical, hub_slug, related_slugs, age_group, is_published, content'
+  )
 
   const published = data.filter(p => p.is_published)
   const bySlug = new Map(data.map(p => [p.slug, p]))
@@ -550,11 +644,8 @@ async function auto(slug, opts = {}) {
 async function pilot(ageOrHub, opts = {}) {
   const age = (ageOrHub || '8U').toUpperCase()
 
-  const { data, error } = await db()
-    .from('seo_pages')
-    .select('slug, category, type, age_group, hub_slug, is_published')
-    .eq('is_published', true)
-  if (error) die(error.message)
+  const data = (await db().all('slug, category, type, age_group, hub_slug, is_published'))
+    .filter(p => p.is_published)
 
   const inCluster = data.filter(p => (p.age_group || '').toUpperCase() === age)
   const hubSlugs = new Set(inCluster.map(p => p.hub_slug).filter(Boolean))
@@ -649,4 +740,11 @@ BenchCoach SEO conversion
   await fn(slug && !slug.startsWith('--') ? slug : undefined, { force })
 }
 
-main().catch(e => die(e?.message || String(e)))
+main()
+  .then(async () => { if (_store) await _store.close() })
+  .catch(async e => {
+    // Closed before dying, or a pg pool keeps the process alive past the
+    // error message and the script looks hung rather than failed.
+    if (_store) await _store.close().catch(() => {})
+    die(e?.message || String(e))
+  })
