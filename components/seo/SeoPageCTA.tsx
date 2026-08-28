@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { trackSeoEvent } from '@/lib/seoTracking'
 
 interface SeoPageCTAProps {
   ageGroup?: string
@@ -38,12 +41,14 @@ export function SeoPageCTA({ ageGroup }: SeoPageCTAProps) {
       <div className="flex flex-col sm:flex-row gap-4">
         <Link
           href="/auth/signup"
+          onClick={() => trackSeoEvent('seo_to_app_cta', { age_group: ageGroup, location: 'page_cta', destination: '/auth/signup' })}
           className="px-6 py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors text-center"
         >
           Start Your Free Trial →
         </Link>
         <Link
           href="/#how-it-works"
+          onClick={() => trackSeoEvent('seo_to_app_cta', { age_group: ageGroup, location: 'page_cta', destination: '/#how-it-works' })}
           className="px-6 py-3 bg-slate-700 text-white rounded-lg font-bold hover:bg-slate-600 transition-colors text-center"
         >
           See How It Works
