@@ -23,6 +23,11 @@ const EXEMPT = {
   'app/api/team/invite/accept/route.ts':  'a token IS the credential — the caller is not a member yet',
   'app/api/team/invite/route.ts':         'checks the session and owner/admin role inline',
   'app/api/team/members/route.ts':        'checks the session and owner/admin role inline',
+  // Anonymous by design: it counts what visitors do on the public marketing
+  // pages, and those visitors have no account. Writes nothing but a name from
+  // a fixed allowlist and a few length-capped strings, and stores no
+  // identifier — so there is no principal to authorize and nothing to leak.
+  'app/api/track/seo/route.ts':           'public marketing pages — the visitors it measures have no session',
 }
 
 const GUARDS = ['guard(', 'requireSession(', 'requireAdmin(', 'authorizeTeam(', 'authorizeGame(', 'authorizeCoach(', 'authorizeThread(']

@@ -542,8 +542,24 @@ export interface SeoPage {
   age_group?: string
   topic?: string
   primary_keyword?: string
+  /**
+   * Optional. Overrides the <title> tag without touching the H1.
+   *
+   * A page's headline and its search result are not the same job: "8U
+   * Baseball Practice Plan: Complete 60-Minute Practice" wins a click, and
+   * reads as keyword soup at the top of the page. Absent, the title is used
+   * for both, as it always was.
+   */
+  meta_title?: string
   content: {
     intro?: string
+    /**
+     * The structured, do-it-now half of the page: schedule, drills,
+     * equipment, metadata. Optional and additive — a page without one renders
+     * exactly as it did before the resource layer existed. Shape and
+     * validation live in lib/seoResource.ts.
+     */
+    resource?: any
     sections: Array<{
       heading: string
       body: string

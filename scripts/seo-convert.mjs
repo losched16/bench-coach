@@ -1,0 +1,494 @@
+#!/usr/bin/env node
+// Convert an existing SEO page into a structured resource — without writing a
+// word of new content.
+//
+// WHY THIS IS A SCRIPT AND NOT A MIGRATION
+//
+// The pages live in the `seo_pages` table, and their content is prose written
+// by a coach about practices he actually ran. Turning that into a schedule and
+// a set of drill cards is an extraction problem, not an authoring one: every
+// timing, drill name, cue and mistake in the output has to have come out of
+// the article. There is no way to write that as a fixed SQL statement, and
+// there is no version of this worth doing that invents the missing parts.
+//
+// So the flow is deliberately three steps with a human in the middle:
+//
+//   node scripts/seo-convert.mjs extract <slug>   → writes a proposal + backup
+//   node scripts/seo-convert.mjs review  <slug>   → shows it, flags invention
+//   node scripts/seo-convert.mjs apply   <slug>   → writes it to the page
+//
+// `extract` never writes to the database. `apply` never runs without a
+// proposal that `review` has been able to check. And `extract` always saves
+// the untouched original to seo-conversions/<slug>.backup.json first, so any
+// conversion can be undone with `restore`.
+//
+// THE INVENTION CHECK
+//
+// `review` takes every string in the proposed block and looks for it in the
+// source article. Anything it cannot find is printed as SUSPECT. This is a
+// blunt instrument — a rephrased cue is flagged even when it is faithful, and
+// a reordered sentence looks new — and that is the correct direction to be
+// wrong in. The whole point is that a human reads the flagged lines before
+// anything ships.
+//
+// Environment:
+//   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ANTHROPIC_API_KEY
+
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
+import { join } from 'path'
+import { createClient } from '@supabase/supabase-js'
+import Anthropic from '@anthropic-ai/sdk'
+
+const OUT_DIR = 'seo-conversions'
+const MODEL = 'claude-opus-5'
+
+const [, , command, slug, ...rest] = process.argv
+
+function die(msg) {
+  console.error(`\n${msg}\n`)
+  process.exit(1)
+}
+
+function need(name) {
+  const v = process.env[name]
+  if (!v) die(`${name} is not set. This script talks to your live database and needs it.`)
+  return v
+}
+
+function db() {
+  return createClient(need('NEXT_PUBLIC_SUPABASE_URL'), need('SUPABASE_SERVICE_ROLE_KEY'))
+}
+
+function paths(slug) {
+  if (!existsSync(OUT_DIR)) mkdirSync(OUT_DIR, { recursive: true })
+  return {
+    proposal: join(OUT_DIR, `${slug}.json`),
+    backup: join(OUT_DIR, `${slug}.backup.json`),
+  }
+}
+
+async function fetchPage(slug) {
+  const { data, error } = await db()
+    .from('seo_pages')
+    .select('*')
+    .eq('slug', slug)
+    .single()
+  if (error || !data) die(`No page with slug "${slug}". ${error?.message || ''}`)
+  return data
+}
+
+/** Every word the article actually contains, for the invention check. */
+function sourceText(page) {
+  const parts = [page.title, page.meta_description, page.content?.intro || '']
+  for (const s of page.content?.sections || []) {
+    parts.push(s.heading, s.body)
+    parts.push(...(s.list_items || []), ...(s.coaching_cues || []), ...(s.common_mistakes || []))
+    if (s.cta) parts.push(s.cta.title || '', s.cta.body || '')
+  }
+  for (const f of page.schema_faq || []) parts.push(f.question, f.answer)
+  return parts.join('\n')
+}
+
+/** Strip tags and normalise whitespace/quotes so comparisons are about words. */
+function normalize(s) {
+  return String(s)
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/[’‘]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/[–—]/g, '-')
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+    .trim()
+}
+
+const KIND_BY_CATEGORY = {
+  'practice-plans': 'practice-plan',
+  drills: 'drill-library',
+  coaching: 'age-hub',
+  problems: 'problem',
+}
+
+const EXTRACT_PROMPT = `You are restructuring an existing youth baseball coaching article into structured data.
+
+THE ONE RULE: you are extracting, not writing. Every value you output must come from the article below. You may shorten and you may reformat. You may not add coaching advice, invent a drill, invent a timing, invent a cue, or fill a field because it looks empty.
+
+If the article does not say how long a drill takes, omit "duration". If it never describes an easier variation, omit "easierVariation". A missing field is correct and expected. A field you made up is a defect that will be caught and will waste someone's afternoon.
+
+Return ONLY a JSON object of this shape. Omit any key you cannot fill from the article:
+
+{
+  "kind": "<KIND>",
+  "meta": [{"label": "Age", "value": "..."}],
+  "objective": "one sentence, from the article",
+  "equipment": ["..."],
+  "setup": ["..."],
+  "timeline": [{"from": 0, "to": 10, "activity": "...", "focus": "...", "drill": "<matching drill name, if any>"}],
+  "drills": [{
+    "name": "...", "bestFor": "...", "duration": "...", "players": "...",
+    "equipment": ["..."], "skill": "...", "setup": "...",
+    "instructions": ["..."], "coachingCues": ["..."], "commonMistakes": ["..."],
+    "easierVariation": "...", "harderVariation": "..."
+  }],
+  "rosterVariants": [{"players": "9 players", "guidance": "..."}],
+  "symptoms": ["..."]
+}
+
+Notes on specific fields:
+- "timeline": from/to are MINUTES FROM THE START of practice, as integers. Use the article's real timings. If the article gives durations but not a running clock, add them up in the order the article presents them. If a block's timing is genuinely not stated, omit that row rather than guessing where it falls.
+- "meta": only facts the article states — age range, practice length, player count, coaches needed. Do not add a "Skill Level" because most plans have one.
+- "skill" on a drill: the category it belongs to, in the article's own words ("balance", "swing path", "tracking"). Omit if the article does not group its drills.
+- "symptoms": only for a problem page — the observable things a coach would see.
+- Keep the coach's phrasing. His cues are the reason people read this.
+
+ARTICLE TITLE: <TITLE>
+
+ARTICLE:
+<ARTICLE>`
+
+function articleForPrompt(page) {
+  const out = [page.content?.intro || '']
+  for (const s of page.content?.sections || []) {
+    out.push(`\n## ${s.heading}\n${s.body}`)
+    if (s.list_items?.length) out.push(s.list_items.map(i => `- ${i}`).join('\n'))
+    if (s.coaching_cues?.length) out.push('Coaching cues:\n' + s.coaching_cues.map(i => `- ${i}`).join('\n'))
+    if (s.common_mistakes?.length) out.push('Common mistakes:\n' + s.common_mistakes.map(i => `- ${i}`).join('\n'))
+  }
+  return out.join('\n').replace(/<[^>]+>/g, '').trim()
+}
+
+async function extract(slug) {
+  const page = await fetchPage(slug)
+  const { proposal, backup } = paths(slug)
+
+  // The original, saved before anything else happens. The copy-preservation
+  // rule is only as good as the ability to put it back.
+  writeFileSync(backup, JSON.stringify(page, null, 2))
+  console.log(`Backed up the current page to ${backup}`)
+
+  const kind = KIND_BY_CATEGORY[page.category]
+  if (!kind) die(`No resource kind for category "${page.category}".`)
+
+  const anthropic = new Anthropic({ apiKey: need('ANTHROPIC_API_KEY'), maxRetries: 5 })
+
+  const prompt = EXTRACT_PROMPT
+    .replace('<KIND>', kind)
+    .replace('<TITLE>', page.title)
+    .replace('<ARTICLE>', articleForPrompt(page))
+
+  console.log(`Reading "${page.title}" (${page.category}/${page.slug})...`)
+
+  const response = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 8000,
+    thinking: { type: 'adaptive' },
+    messages: [{ role: 'user', content: prompt }],
+  })
+
+  // content[0] is a thinking block on this model — take the text blocks.
+  const text = response.content
+    .filter(b => b.type === 'text')
+    .map(b => b.text)
+    .join('')
+    .trim()
+
+  const json = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
+  let block
+  try {
+    block = JSON.parse(json)
+  } catch (e) {
+    writeFileSync(proposal + '.raw.txt', text)
+    die(`The model did not return usable JSON. Raw output saved to ${proposal}.raw.txt`)
+  }
+
+  block.kind = kind
+  writeFileSync(proposal, JSON.stringify(block, null, 2))
+  console.log(`\nProposal written to ${proposal}`)
+  console.log(`Next:  node scripts/seo-convert.mjs review ${slug}`)
+}
+
+/** Walk every string in the proposal, with a path, for reporting. */
+function* strings(value, path = '') {
+  if (typeof value === 'string') { yield [path, value]; return }
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) yield* strings(value[i], `${path}[${i}]`)
+    return
+  }
+  if (value && typeof value === 'object') {
+    for (const [k, v] of Object.entries(value)) yield* strings(v, path ? `${path}.${k}` : k)
+  }
+}
+
+/**
+ * Is this phrase in the article?
+ *
+ * Exact substring first. Failing that, a word-overlap score, so a cue that was
+ * shortened from a sentence still passes while a cue nobody wrote does not.
+ */
+function foundInSource(phrase, source) {
+  const p = normalize(phrase)
+  if (p.length < 4) return true          // "Age", "60", "3" — labels, not content
+  if (source.includes(p)) return true
+  const words = p.split(' ').filter(w => w.length > 3)
+  if (words.length === 0) return true
+  const hits = words.filter(w => source.includes(w)).length
+  return hits / words.length >= 0.8
+}
+
+// Keys whose values are ours rather than the author's — structural labels the
+// prompt supplies, not coaching content.
+const STRUCTURAL = /(^kind$|\.kind$|meta\[\d+\]\.label)/
+
+async function review(slug) {
+  const { proposal, backup } = paths(slug)
+  if (!existsSync(proposal)) die(`No proposal at ${proposal}. Run extract first.`)
+  if (!existsSync(backup)) die(`No backup at ${backup}. Run extract first.`)
+
+  const block = JSON.parse(readFileSync(proposal, 'utf8'))
+  const page = JSON.parse(readFileSync(backup, 'utf8'))
+  const source = normalize(sourceText(page))
+
+  console.log(`\n=== ${page.title} ===`)
+  console.log(`URL:  /${page.category}/${page.slug}   (unchanged)`)
+  console.log(`Kind: ${block.kind}\n`)
+
+  if (block.timeline?.length) {
+    console.log('TIMELINE')
+    let last = null
+    for (const row of block.timeline) {
+      const label = row.time || (row.to !== undefined ? `${row.from}-${row.to}` : `${row.from}+`)
+      console.log(`  ${String(label).padEnd(10)} ${row.activity}${row.focus ? `  (${row.focus})` : ''}`)
+      // A gap or an overlap in the clock means the extraction misread the
+      // article, and it is much easier to see here than on the page.
+      if (last !== null && row.from !== undefined && row.from !== last) {
+        console.log(`     ^^ WARNING: previous block ended at ${last}, this one starts at ${row.from}`)
+      }
+      if (row.to !== undefined) last = row.to
+    }
+    const total = block.timeline.every(r => r.from !== undefined && r.to !== undefined)
+      ? block.timeline[block.timeline.length - 1].to
+      : null
+    if (total !== null) console.log(`  TOTAL: ${total} minutes`)
+    console.log('')
+  }
+
+  if (block.drills?.length) {
+    console.log(`DRILLS (${block.drills.length})`)
+    for (const d of block.drills) {
+      const fields = Object.keys(d).filter(k => k !== 'name').join(', ')
+      console.log(`  ${d.name}\n     fields: ${fields || '(name only)'}`)
+    }
+    console.log('')
+  }
+
+  const suspect = []
+  for (const [path, value] of strings(block)) {
+    if (STRUCTURAL.test(path)) continue
+    if (!foundInSource(value, source)) suspect.push([path, value])
+  }
+
+  if (suspect.length === 0) {
+    console.log('INVENTION CHECK: every phrase traces back to the article.\n')
+  } else {
+    console.log(`INVENTION CHECK: ${suspect.length} phrase(s) not found in the article.`)
+    console.log('Read each one. A rephrasing is fine; a new coaching claim is not.\n')
+    for (const [path, value] of suspect) {
+      console.log(`  SUSPECT ${path}`)
+      console.log(`          "${value}"\n`)
+    }
+    console.log(`Edit ${proposal} directly to fix anything wrong, then review again.\n`)
+  }
+
+  console.log(`If it is right:  node scripts/seo-convert.mjs apply ${slug}`)
+}
+
+async function apply(slug) {
+  const { proposal, backup } = paths(slug)
+  if (!existsSync(proposal)) die(`No proposal at ${proposal}. Run extract first.`)
+  const block = JSON.parse(readFileSync(proposal, 'utf8'))
+
+  const page = await fetchPage(slug)
+
+  // The article is carried across verbatim. This adds a key; it does not
+  // rewrite, reorder or drop a single section.
+  const content = { ...page.content, resource: block }
+
+  const { error } = await db()
+    .from('seo_pages')
+    .update({ content })
+    .eq('slug', slug)
+  if (error) die(`Update failed: ${error.message}`)
+
+  console.log(`\nApplied to /${page.category}/${page.slug}`)
+  console.log(`Sections before: ${page.content?.sections?.length ?? 0}`)
+  console.log(`Sections after:  ${content.sections?.length ?? 0}   (must match)`)
+  console.log(`\nThe page revalidates hourly. To see it now, redeploy or wait.`)
+  console.log(`To undo:  node scripts/seo-convert.mjs restore ${slug}`)
+}
+
+async function restore(slug) {
+  const { backup } = paths(slug)
+  if (!existsSync(backup)) die(`No backup at ${backup}.`)
+  const page = JSON.parse(readFileSync(backup, 'utf8'))
+
+  const { error } = await db()
+    .from('seo_pages')
+    .update({ content: page.content })
+    .eq('slug', slug)
+  if (error) die(`Restore failed: ${error.message}`)
+  console.log(`Restored /${page.category}/${page.slug} to its state at extract time.`)
+}
+
+async function list() {
+  const { data, error } = await db()
+    .from('seo_pages')
+    .select('slug, category, type, title, age_group, is_published, hub_slug, content')
+    .order('category')
+  if (error) die(error.message)
+
+  console.log(`\n${data.length} pages\n`)
+  for (const p of data) {
+    const converted = p.content?.resource ? ' [structured]' : ''
+    const pub = p.is_published ? '' : ' (unpublished)'
+    console.log(`  /${p.category}/${p.slug}${converted}${pub}`)
+    console.log(`     ${p.title}`)
+    if (p.hub_slug) console.log(`     hub: ${p.hub_slug}`)
+  }
+  console.log('')
+}
+
+/**
+ * Everything about the page set that could keep a URL out of the index.
+ *
+ * Written against "11 URLs crawled — currently not indexed" in Search
+ * Console. Google does not say which eleven or why, but the usual causes are
+ * mechanical and visible from here: a page nothing links to, a page thin
+ * enough to look like a stub, two pages saying the same thing, or a canonical
+ * pointing somewhere unexpected.
+ *
+ * Reports only. Nothing here changes a row.
+ */
+async function doctor() {
+  const { data, error } = await db()
+    .from('seo_pages')
+    .select('slug, category, type, title, meta_description, canonical, hub_slug, related_slugs, age_group, is_published, content')
+  if (error) die(error.message)
+
+  const published = data.filter(p => p.is_published)
+  const bySlug = new Map(data.map(p => [p.slug, p]))
+  const problems = []
+  const notes = []
+
+  // Anything a spoke points at that is not a live hub is a broken rung in the
+  // hierarchy — the breadcrumb and the "back to guide" banner both go
+  // nowhere.
+  for (const p of published) {
+    if (p.type !== 'spoke' || !p.hub_slug) continue
+    const hub = bySlug.get(p.hub_slug)
+    if (!hub) problems.push(`${p.slug}: hub_slug "${p.hub_slug}" does not exist`)
+    else if (!hub.is_published) problems.push(`${p.slug}: hub "${p.hub_slug}" is unpublished`)
+  }
+
+  // A related_slugs entry that does not resolve renders nothing at all —
+  // silently, which is how it survives.
+  for (const p of published) {
+    for (const rel of p.related_slugs || []) {
+      const target = bySlug.get(rel)
+      if (!target) problems.push(`${p.slug}: related_slugs -> "${rel}" does not exist`)
+      else if (!target.is_published) problems.push(`${p.slug}: related_slugs -> "${rel}" is unpublished`)
+    }
+  }
+
+  // Orphans. A page no hub claims and nothing links to is reachable only from
+  // the sitemap, and that is the profile of a URL that gets crawled and left.
+  const linked = new Set()
+  for (const p of published) {
+    for (const rel of p.related_slugs || []) linked.add(rel)
+    if (p.hub_slug) linked.add(p.hub_slug)
+  }
+  for (const p of published) {
+    if (p.type === 'hub') continue
+    const hasHub = !!p.hub_slug && bySlug.get(p.hub_slug)?.is_published
+    if (!hasHub && !linked.has(p.slug)) {
+      problems.push(`${p.slug}: orphan — no hub, and no other page links to it`)
+    }
+  }
+
+  // Duplicate titles and descriptions read as duplicate pages.
+  const seenTitle = new Map()
+  const seenDesc = new Map()
+  for (const p of published) {
+    const t = (p.title || '').trim().toLowerCase()
+    const d = (p.meta_description || '').trim().toLowerCase()
+    if (t) { if (seenTitle.has(t)) problems.push(`${p.slug}: same title as ${seenTitle.get(t)}`); else seenTitle.set(t, p.slug) }
+    if (d) { if (seenDesc.has(d)) problems.push(`${p.slug}: same meta description as ${seenDesc.get(d)}`); else seenDesc.set(d, p.slug) }
+  }
+
+  for (const p of published) {
+    if (!p.meta_description) problems.push(`${p.slug}: no meta description`)
+    else if (p.meta_description.length > 160) notes.push(`${p.slug}: meta description is ${p.meta_description.length} chars (truncates around 160)`)
+
+    // A canonical that does not point at this page is telling Google to index
+    // something else. Occasionally deliberate; always worth seeing.
+    const expected = `https://www.mybenchcoach.com/${p.category}/${p.slug}`
+    if (p.canonical && p.canonical !== expected) {
+      problems.push(`${p.slug}: canonical points at ${p.canonical}, not ${expected}`)
+    }
+
+    const words = JSON.stringify(p.content || {}).split(/\s+/).length
+    if (words < 300) notes.push(`${p.slug}: ~${words} words — thin enough that Google may skip it`)
+  }
+
+  console.log(`\n${data.length} pages, ${published.length} published, ${data.length - published.length} unpublished`)
+  const structured = published.filter(p => p.content?.resource).length
+  console.log(`${structured} carry a structured resource block\n`)
+
+  if (problems.length === 0) console.log('No indexation problems found.\n')
+  else {
+    console.log(`PROBLEMS (${problems.length})`)
+    problems.forEach(p => console.log(`  ${p}`))
+    console.log('')
+  }
+  if (notes.length) {
+    console.log(`WORTH A LOOK (${notes.length})`)
+    notes.forEach(n => console.log(`  ${n}`))
+    console.log('')
+  }
+}
+
+const COMMANDS = { extract, review, apply, restore, list, doctor }
+
+async function main() {
+  const fn = COMMANDS[command]
+  if (!fn) {
+    console.log(`
+BenchCoach SEO conversion
+
+  node scripts/seo-convert.mjs list
+      Every page, and which ones already carry a resource block.
+
+  node scripts/seo-convert.mjs extract <slug>
+      Backs up the page, then extracts a structured block from its own prose.
+      Writes a proposal file. Does NOT touch the page.
+
+  node scripts/seo-convert.mjs review <slug>
+      Prints the proposal and flags any phrase that is not in the article.
+
+  node scripts/seo-convert.mjs apply <slug>
+      Adds the block to the page. The article is carried across untouched.
+
+  node scripts/seo-convert.mjs restore <slug>
+      Puts the page back the way extract found it.
+
+  node scripts/seo-convert.mjs doctor
+      Broken hub links, orphans, duplicate titles, odd canonicals, thin pages.
+      Reports only — changes nothing.
+`)
+    process.exit(command ? 1 : 0)
+  }
+  if (fn !== list && !slug) die(`${command} needs a slug.`)
+  await fn(slug)
+}
+
+main().catch(e => die(e?.message || String(e)))

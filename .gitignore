@@ -32,3 +32,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# SEO conversion working files: page backups pulled from the database and the
+# structured proposals under review. Real content, machine-specific, and the
+# `restore` command depends on the backups staying put locally.
+seo-conversions/

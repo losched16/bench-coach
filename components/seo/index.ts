@@ -6,3 +6,13 @@ export { SeoPageBreadcrumbs } from './SeoPageBreadcrumbs'
 export { SeoHubSpokes } from './SeoHubSpokes'
 export { SeoMoreInCategory } from './SeoMoreInCategory'
 export { SeoSpokeHubBanner } from './SeoSpokeHubBanner'
+
+// The resource layer — the structured, utility-first half of a converted page.
+export { SeoResourceSection } from './SeoResourceSection'
+export { SeoStructuredData } from './SeoStructuredData'
+export { AgeHubPaths } from './AgeHubPaths'
+export { PracticeTimeline } from './PracticeTimeline'
+export { DrillLibrary, DrillTable, DrillDetail, DrillJumpNav } from './DrillLibrary'
+export { ResourceMetaBar, ResourceObjective, ResourcePrep, RosterVariants } from './ResourceSummary'
+export { ResourceActionBar, AddDrillButton } from './ResourceActionBar'
+export { RelatedResourceCard } from './RelatedResourceCard'
