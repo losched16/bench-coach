@@ -2,6 +2,7 @@ import { COACH_VOICE, CHAT_ADDENDUM } from './coachVoice'
 import { textFrom, requireText } from './claudeText'
 import { drillMenuLine } from './drills'
 import { claude as anthropic } from '@/lib/claudeClient'
+import { watchUrl } from '@/lib/drillVideo'
 
 export interface JournalEntry {
   date: string
@@ -521,7 +522,7 @@ ${context.drillResources.map((d: any, i: number) => {
   if (d.common_flaws_fixed?.length) lines.push(`   fixes: ${d.common_flaws_fixed.slice(0, 6).join(', ')}`)
   if (d.mechanic_focus?.length) lines.push(`   trains: ${d.mechanic_focus.slice(0, 5).join(', ')}`)
   if (d.equipment_needed?.length) lines.push(`   needs: ${d.equipment_needed.join(', ')}`)
-  if (d.youtube_url) lines.push(`   video: ${d.youtube_url}`)
+  { const link = watchUrl(d); if (link) lines.push(`   video: ${link}`) }
   if (d.channel) lines.push(`   source: ${d.channel}`)
   if (i < 5 && d.ai_coaching_notes) lines.push(`   coaching: ${String(d.ai_coaching_notes).slice(0, 240)}`)
   return lines.join('\n')

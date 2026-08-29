@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { Play, ChevronDown, ChevronUp } from 'lucide-react'
+import { embedUrl, parseStartFromUrl } from '@/lib/drillVideo'
 
 interface ChatMessageContentProps {
   content: string
@@ -14,6 +15,12 @@ const YOUTUBE_REGEX = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|yout
 interface VideoEmbed {
   videoId: string
   fullUrl: string
+  // Seconds into the video this drill actually starts. Chat renders from the
+  // model's prose rather than from drill rows, so the URL is the only place a
+  // timestamp can arrive — and it used to be parsed off and discarded, which
+  // meant a coach clicking "Low Tee" in chat got the twelve-minute compilation
+  // from its opening titles no matter what the library knew.
+  startSeconds: number
   startIndex: number
   endIndex: number
 }
@@ -33,13 +40,14 @@ export function ChatMessageContent({ content, role }: ChatMessageContentProps) {
       videos.push({
         videoId: match[1],
         fullUrl: match[0],
+        startSeconds: parseStartFromUrl(match[0]),
         startIndex: match.index,
         endIndex: match.index + match[0].length,
       })
     }
 
     // Split content into text parts and video markers
-    const textParts: { type: 'text' | 'video'; content: string; videoId?: string }[] = []
+    const textParts: { type: 'text' | 'video'; content: string; videoId?: string; startSeconds?: number }[] = []
     let lastIndex = 0
 
     videos.forEach((video, idx) => {
@@ -55,6 +63,7 @@ export function ChatMessageContent({ content, role }: ChatMessageContentProps) {
         type: 'video',
         content: video.fullUrl,
         videoId: video.videoId,
+        startSeconds: video.startSeconds,
       })
       lastIndex = video.endIndex
     })
@@ -133,7 +142,10 @@ export function ChatMessageContent({ content, role }: ChatMessageContentProps) {
               <div className="border-t border-gray-200">
                 <div className="aspect-video bg-black">
                   <iframe
-                    src={`https://www.youtube.com/embed/${part.videoId}?rel=0`}
+                    src={embedUrl({
+                      youtube_video_id: part.videoId,
+                      youtube_start_seconds: part.startSeconds,
+                    }) || ''}
                     title="Drill Video"
                     className="w-full h-full"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

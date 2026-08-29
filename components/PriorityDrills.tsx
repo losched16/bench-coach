@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Play, RefreshCw, Loader2, AlertCircle, Wrench, Shuffle } from 'lucide-react'
 import { DrillOptions, OptionDrill } from './DrillOptions'
+import { watchUrl } from '@/lib/drillVideo'
 
 // The drills attached to a running priority.
 //
@@ -184,7 +185,7 @@ export function PriorityDrills({ prescriptionId, coachId, onSwapped }: Props) {
             <div className="flex items-center gap-3 mt-2 flex-wrap">
               {(d.youtube_url || d.youtube_video_id) && (
                 <a
-                  href={d.youtube_url || `https://www.youtube.com/watch?v=${d.youtube_video_id}`}
+                  href={watchUrl(d) || '#'}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-700"

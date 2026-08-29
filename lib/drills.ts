@@ -1,3 +1,5 @@
+import { hasSegment, formatTimestamp } from './drillVideo'
+
 // Who can see which drills.
 //
 // drill_resources holds two kinds of row. created_by_coach_id IS NULL is the
@@ -245,7 +247,7 @@ export function drillMenuLine(d: any, isFavorite: boolean): string {
     `- ${marks}"${d.drill_name}" (${d.skill_category}` +
     `${d.difficulty_level ? `, ${d.difficulty_level}` : ''}` +
     `${d.age_range ? `, ages ${d.age_range}` : ''})` +
-    (d.youtube_video_id ? ` [video: ${d.youtube_video_id}]` : '') +
+    (d.youtube_video_id ? ` [video: ${d.youtube_video_id}${hasSegment(d) ? ` @${formatTimestamp(d.youtube_start_seconds)}` : ''}]` : '') +
     (d.description ? ` — ${String(d.description).slice(0, 130)}` : '') +
     (d.mechanic_focus?.length ? ` | trains: ${d.mechanic_focus.slice(0, 4).join(', ')}` : '') +
     (d.equipment_needed?.length ? ` | needs: ${d.equipment_needed.join(', ')}` : '')

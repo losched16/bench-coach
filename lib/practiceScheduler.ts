@@ -159,8 +159,8 @@ const norm = (s: any) =>
  * Conservative on purpose, because the expensive mistake here is suppressing a
  * real progression. 103 of the 206 drills share a video with something else,
  * and most of those are legitimately distinct segments of one compilation —
- * "Tee Work", "Low Tee" and "High Tee" all come off the same film and a coach
- * running all three is running a progression, not the same drill three times.
+ * "Tee Work" and "Low Tee" both come off q7CPS0RYDPM, and a coach running them
+ * in sequence is running a progression, not the same drill twice.
  *
  * So a shared video alone is never enough. Two things are redundant only when
  * one name contains the other (the long-form and short-form entries of a

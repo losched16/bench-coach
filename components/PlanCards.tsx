@@ -12,6 +12,7 @@ import { createSupabaseComponentClient } from '@/lib/supabase'
 import { focusAreaLabel, focusAreaChip, FOCUS_AREAS, FocusArea } from '@/lib/focusAreas'
 import { DrillSwap } from './DrillSwap'
 import { DrillVideo } from './DrillVideo'
+import { watchUrl } from '@/lib/drillVideo'
 
 // Plans, as cards.
 //
@@ -824,7 +825,7 @@ function DrillCard({
             </button>
             {(d.youtube_url || d.youtube_video_id) && (
               <a
-                href={d.youtube_url || `https://www.youtube.com/watch?v=${d.youtube_video_id}`}
+                href={watchUrl(d) || '#'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-gray-500 underline"

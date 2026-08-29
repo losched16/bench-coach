@@ -39,6 +39,7 @@
 // and text alone can only get a drill into consideration.
 
 import { visibleDrills, DRILL_FIELDS, DrillRecord } from '@/lib/drills'
+import { watchUrl } from '@/lib/drillVideo'
 import { scoreDrillRelevance } from '@/lib/analysis'
 import { Diagnosis, TaxonomyRow, diagnose, loadTaxonomy, ageCaveats } from '@/lib/drillDiagnosis'
 
@@ -521,7 +522,14 @@ export function renderDrillMenu(
     if (asArray(d.equipment_needed).length) {
       lines.push(`   needs: ${asArray(d.equipment_needed).join(', ')}`)
     }
-    if (d.youtube_video_id) lines.push(`   video: ${d.youtube_video_id}`)
+    // The full link rather than the bare id, so a drill anchored to a
+    // segment of a compilation reaches the coach at that segment. Chat renders
+    // whatever URL the model writes, and a bare id gives it nowhere to put a
+    // timestamp.
+    if (d.youtube_video_id) {
+      const link = watchUrl(d)
+      lines.push(`   video: ${d.youtube_video_id}${link ? `  (${link})` : ''}`)
+    }
     if (i < withNotes && d.ai_coaching_notes) {
       lines.push(`   coaching: ${String(d.ai_coaching_notes).slice(0, 240)}`)
     }

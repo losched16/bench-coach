@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Play, Wrench, Check, X, RefreshCw, Loader2, RotateCcw, Shuffle } from 'lucide-react'
 import { DrillOptions, OptionDrill } from './DrillOptions'
+import { watchUrl } from '@/lib/drillVideo'
 
 // Judging the drills before they become the plan.
 //
@@ -124,7 +125,7 @@ export function DrillReview({
 
                 {(d.youtube_url || d.youtube_video_id) && (
                   <a
-                    href={d.youtube_url || `https://www.youtube.com/watch?v=${d.youtube_video_id}`}
+                    href={watchUrl(d) || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-700 mt-2"

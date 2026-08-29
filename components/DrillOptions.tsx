@@ -1,6 +1,7 @@
 'use client'
 
 import { Play, Wrench, Loader2, X } from 'lucide-react'
+import { watchUrl } from '@/lib/drillVideo'
 
 // Alternatives for one drill slot, to pick from.
 //
@@ -80,7 +81,7 @@ export function DrillOptions({ options, loading, replacingName, onPick, onCancel
                     video library — don't make them commit to see it. */}
                 {(o.youtube_url || o.youtube_video_id) && (
                   <a
-                    href={o.youtube_url || `https://www.youtube.com/watch?v=${o.youtube_video_id}`}
+                    href={watchUrl(o) || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700"

@@ -7,6 +7,7 @@ import { Search, Filter, Play, Clock, Users, MapPin, ChevronDown, ChevronUp, X, 
 import { usePageView } from '@/lib/tracking'
 import { visibleDrills } from '@/lib/drills'
 import { DrillForm } from '@/components/DrillForm'
+import { embedUrl } from '@/lib/drillVideo'
 
 interface DrillResource {
   id: string
@@ -526,7 +527,7 @@ export default function DrillLibraryPage() {
             {selectedDrill.youtube_video_id && (
               <div className="aspect-video bg-black">
                 <iframe
-                  src={`https://www.youtube.com/embed/${selectedDrill.youtube_video_id}?rel=0`}
+                  src={embedUrl(selectedDrill) || ''}
                   title={selectedDrill.drill_name}
                   className="w-full h-full"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

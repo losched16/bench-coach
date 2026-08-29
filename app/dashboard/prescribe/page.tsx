@@ -11,6 +11,7 @@ import { usePageView, useTracker } from '@/lib/tracking'
 import { SupersedeConfirm, Superseding } from '@/components/SupersedeConfirm'
 import { PrescriptionSections } from '@/components/PrescriptionSections'
 import { splitSections, META_SENTINEL } from '@/lib/analysis'
+import { thumbnailUrl, watchUrl } from '@/lib/drillVideo'
 
 interface Problem { slug: string; label: string; skill_category: string | null }
 
@@ -366,13 +367,13 @@ function PrescribeContent() {
                   <div key={d.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
                     {d.youtube_video_id && (
                       <a
-                        href={d.youtube_url || `https://www.youtube.com/watch?v=${d.youtube_video_id}`}
+                        href={watchUrl(d) || '#'}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex-shrink-0 relative group"
                       >
                         <img
-                          src={d.thumbnail_url || `https://img.youtube.com/vi/${d.youtube_video_id}/mqdefault.jpg`}
+                          src={thumbnailUrl(d, 'mq') || ''}
                           alt=""
                           className="w-32 h-[72px] object-cover rounded"
                         />

@@ -147,9 +147,10 @@ alone.
 ## 4. Redundancy — conservative on purpose
 
 103 of 206 drills share a video with something else. Most are legitimately
-distinct segments of one compilation: **Tee Work, Low Tee and Line Drive Pro
-all come off the same film**, and a coach running all three is running a
-progression, not the same drill three times.
+distinct segments of one compilation: **Tee Work and Low Tee both come off
+q7CPS0RYDPM** (Line Drive Pro is on a different video — corrected in Phase 2D),
+and a coach running them in sequence is running a progression, not the same
+drill twice.
 
 So a shared video alone is never enough to suppress. Two drills are redundant
 only when the names are identical once punctuation is stripped, or when one

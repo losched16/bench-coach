@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Play, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
+import { embedUrl, thumbnailUrl as videoThumbnail, videoIdFor } from '@/lib/drillVideo'
 
 interface DrillVideoProps {
   drillName: string
@@ -37,20 +38,25 @@ export function DrillVideo({
   const [isPlaying, setIsPlaying] = useState(false)
 
   // Extract video ID from URL if not provided directly
-  const videoId = youtubeVideoId || extractVideoId(youtubeUrl)
+  const videoId = videoIdFor({ youtube_video_id: youtubeVideoId, youtube_url: youtubeUrl })
 
   if (!videoId) {
     return null // No video available
   }
 
-  const thumbnail = thumbnailUrl || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
-
-  // youtube-nocookie honours ?start= the same as youtube.com. Guarded because a
-  // negative or non-finite value silently makes the whole embed fail rather
-  // than ignoring the parameter.
-  const start = Number.isFinite(startSeconds) && (startSeconds as number) > 0
-    ? `&start=${Math.floor(startSeconds as number)}`
-    : ''
+  // Both built by lib/drillVideo so this component agrees with every other
+  // surface about where the drill starts. The guard against a negative or
+  // non-finite startSeconds lives there now — such a value does not degrade
+  // gracefully, it fails the whole embed.
+  const asDrill = {
+    youtube_video_id: videoId,
+    youtube_url: youtubeUrl,
+    thumbnail_url: thumbnailUrl,
+    youtube_start_seconds: startSeconds,
+  }
+  const thumbnail = videoThumbnail(asDrill) || undefined
+  const inlineSrc = embedUrl(asDrill) || ''
+  const autoplaySrc = embedUrl(asDrill, { autoplay: true }) || ''
 
   if (compact) {
     // Compact inline version - expandable
@@ -76,7 +82,7 @@ export function DrillVideo({
           <div className="border-t border-gray-200">
             <div className="aspect-video bg-black">
               <iframe
-                src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0${start}`}
+                src={inlineSrc}
                 title={drillName}
                 className="w-full h-full"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -123,7 +129,7 @@ export function DrillVideo({
         // Embedded player
         <div className="aspect-video bg-black">
           <iframe
-            src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0&autoplay=1${start}`}
+            src={autoplaySrc}
             title={drillName}
             className="w-full h-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -198,27 +204,5 @@ export function DrillVideoLookup({
   )
 }
 
-// Helper to extract YouTube video ID from various URL formats
-function extractVideoId(url?: string): string | null {
-  if (!url) return null
-
-  // youtube.com/watch?v=VIDEO_ID
-  let match = url.match(/watch\?v=([a-zA-Z0-9_-]+)/)
-  if (match) return match[1]
-
-  // youtu.be/VIDEO_ID
-  match = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/)
-  if (match) return match[1]
-
-  // youtube.com/shorts/VIDEO_ID
-  match = url.match(/\/shorts\/([a-zA-Z0-9_-]+)/)
-  if (match) return match[1]
-
-  // youtube.com/embed/VIDEO_ID
-  match = url.match(/\/embed\/([a-zA-Z0-9_-]+)/)
-  if (match) return match[1]
-
-  return null
-}
 
 export default DrillVideo
