@@ -815,6 +815,11 @@ export interface PracticeInputs {
   // everybody. Empty means unknown, and the model should assume the ordinary
   // kit rather than refuse to plan.
   equipmentAvailable?: string[]
+  // The time budget and the drills that fit it, from lib/practiceScheduler.
+  // A recommendation the model may depart from — it knows things the
+  // scheduler does not — but the budget itself is enforced on the way out
+  // regardless, so a plan that ignores it gets trimmed rather than shipped.
+  scheduleGuidance?: string
 }
 
 // The situation, written once and reused by both phases. Sending it to every
@@ -827,7 +832,7 @@ Focus areas: ${i.focus.join(', ')}
 ${i.objective ? `\nTHE COACH'S #1 GOAL FOR TONIGHT — every block must earn its place against this:\n${i.objective}\n` : ''}${i.constraints ? `\nWHAT THE COACH SAID THEY WANT — this outranks everything else here:\n${i.constraints}\n` : ''}${i.equipmentAvailable?.length ? `\nWHAT THEY HAVE WITH THEM — you may not require anything outside this list:\n${i.equipmentAvailable.join(', ')}\nIf a drill you want needs something they do not have, either adapt it and say so in the setup, or pick a different drill. Never write a block a coach cannot physically run.\n` : ''}
 - Currently working on: ${c.team.primary_goals.length > 0 ? c.team.primary_goals.join(', ') : 'Not specified'}
 ${c.teamNotes.length > 0 ? `- Current issues: ${c.teamNotes.map(n => n.note).join('; ')}` : ''}
-${i.loopContext ? `\nWHAT WE'RE ALREADY WORKING ON — build around this, don't ignore it:\n\n${i.loopContext}\n` : ''}${i.rosterSection ? `\n${i.rosterSection}\n` : ''}`
+${i.loopContext ? `\nWHAT WE'RE ALREADY WORKING ON — build around this, don't ignore it:\n\n${i.loopContext}\n` : ''}${i.rosterSection ? `\n${i.rosterSection}\n` : ''}${i.scheduleGuidance ? `\n${i.scheduleGuidance}\n` : ''}`
 }
 
 function drillMenu(i: PracticeInputs): string {
@@ -858,7 +863,9 @@ You are doing the THINKING half of the job: deciding what this practice is, in w
     messages: [{ role: 'user', content: `${practiceSituation(i)}
 ${drillMenu(i)}
 
-Design the practice. Warm-up, two to four named drill blocks, a competitive game with real rules, cool-down. Durations must add to about ${i.duration} minutes.
+Design the practice. Warm-up, two to four named drill blocks, a competitive game with real rules, cool-down.
+
+The block minutes must add to ${i.duration} or less — never more. A practice that runs over is a coach still going when the parents have arrived. Finishing three or four minutes short is fine and often better than padding; do not add a weak block just to fill the clock. For a short session, drop blocks rather than shrinking every block to nothing: two real drills beat six three-minute ones.
 
 Every block must be a REAL, NAMED drill — "Alligator Ground Balls", "Four Corners Rundown". Never a category like "Fielding Practice" or "Throwing Assessment".
 

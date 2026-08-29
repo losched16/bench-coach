@@ -7,9 +7,14 @@ import {
 import { assembleCoachContext, renderCoachContext } from '@/lib/coachContext'
 import { categoriesForPracticeFocus } from '@/lib/focusAreas'
 import { guard } from '@/lib/authz'
-import { visibleDrillsSafe, favoriteDrillIds, drillMenuLine, DRILL_PREFERENCE_NOTE } from '@/lib/drills'
+import { visibleDrillsSafe, favoriteDrillIds, drillMenuLine, DRILL_PREFERENCE_NOTE, DRILL_FIELDS } from '@/lib/drills'
 import { reusableBlock } from '@/lib/practicePlan'
 import { describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
+import { retrieveDrills } from '@/lib/drillRetrieval'
+import { constraintsFromText, ageFromText } from '@/lib/drillConstraints'
+import {
+  computeBudget, schedulePractice, describeSchedule, fitBlocks, estimateBlockCount,
+} from '@/lib/practiceScheduler'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -173,57 +178,90 @@ export async function POST(request: NextRequest) {
       fullConstraints += `\n\nRECENT PRACTICE RECAPS (use these to make this plan better):\n${recapContext}`
     }
 
-    // Only the drills that could plausibly be in THIS practice. Sending all
-    // 100 with their full coaching notes was tens of thousands of input tokens
-    // per request, most of it about skills the coach did not pick — and it is
-    // the single biggest reason this took so long.
+    // Which drills could plausibly be in THIS practice.
     //
-    // ai_coaching_notes and safety_notes are deliberately not selected: they
-    // are long prose written for the drill page, and the model is choosing a
-    // drill here, not running it.
+    // This used to be `skill_category ilike any(...)` with `.limit(45)`, which
+    // had two problems beyond being a second implementation of drill selection.
+    // The taxonomy was invisible to it, so a coach whose focus was "hitting"
+    // got 45 arbitrary hitting drills rather than the ones that fix the thing
+    // they actually described. And `.limit(45)` is applied by PostgREST before
+    // any ordering, so WHICH 45 was down to physical row order — the same
+    // class of bug as the hundred-row ceiling chat used to have.
+    //
+    // It now goes through the shared retrieval layer, the same one chat uses:
+    // taxonomy first, then category, then text, with age and operational
+    // filtering, coach scoping and deterministic tiebreaks all decided in one
+    // place. Nothing about scoring or filtering is reimplemented here.
     const wantedCategories = categoriesForPracticeFocus(focus)
 
-    const DRILL_SELECT = 'id, drill_name, skill_category, description, youtube_video_id, channel, age_range, difficulty_level, mechanic_focus, equipment_needed, created_by_coach_id'
+    // What the coach is actually trying to fix, in their words. The focus
+    // areas alone are categories; the objective and the constraints box are
+    // where "he keeps dropping his back shoulder" gets typed, and that is the
+    // sentence the taxonomy can diagnose.
+    const retrievalQuery = [
+      typeof objective === 'string' ? objective : '',
+      typeof constraints === 'string' ? constraints : '',
+      focus.join(', '),
+    ].filter(Boolean).join('. ')
 
-    // ilike-any rather than `in`, because the stored categories are
-    // inconsistently cased.
-    const narrow = (q: any) => {
-      let out = q
-      if (wantedCategories.length > 0) {
-        out = out.or(wantedCategories.map(c => `skill_category.ilike.${c}`).join(','))
-      }
-      return out.limit(45)
-    }
-
-    const matchedResult = await visibleDrillsSafe(
-      supabaseAdmin, team.coach_id, DRILL_SELECT, narrow
-    )
-    const matched = matchedResult.data
-    let drillsDegraded = matchedResult.degraded
-
-    // Loud, because the failure mode here is a plan generated with an empty
-    // drill library — which produces a worse plan and no error at all.
-    if (matchedResult.error) {
-      console.error('Practice plan: drill library query failed:', matchedResult.error)
-    }
+    // Read out of the same free text. Absence stays absence — a coach who did
+    // not mention a gym is not asking for indoor drills, and must not have
+    // outdoor drills filtered away on a guess.
+    const textConstraints = constraintsFromText(retrievalQuery)
 
     // Which of these the coach has starred. Favorites are a preference the
     // model is told about, not a filter — a coach with four favorites should
     // still get a full practice.
     const favorites = await favoriteDrillIds(supabaseAdmin, team.coach_id)
 
+    // Deeper than chat's dozen: a 120-minute practice needs enough candidates
+    // to fill six blocks without repeating itself, and the scheduler drops
+    // redundant and over-budget entries out of this pool rather than being
+    // handed exactly as many as will fit.
+    const RETRIEVAL_LIMIT = 30
+
+    let drillsDegraded = false
+    let retrieval: Awaited<ReturnType<typeof retrieveDrills>> | null = null
+    try {
+      retrieval = await retrieveDrills({
+        supabase: supabaseAdmin,
+        coachId: team.coach_id,
+        query: retrievalQuery,
+        categories: wantedCategories,
+        // The team's age band, not a number typed by anyone — "10U" is what
+        // the product stores and what a coach thinks in.
+        playerAge: ageFromText(String(team.age_group || '')),
+        indoorOutdoor: textConstraints.indoorOutdoor,
+        spaceAvailable: textConstraints.spaceAvailable,
+        availableEquipment: Array.isArray(equipmentAvailable) && equipmentAvailable.length
+          ? equipmentAvailable : null,
+        favorites,
+        limit: RETRIEVAL_LIMIT,
+      })
+    } catch (e: any) {
+      // Retrieval reaches the model to diagnose the coach's sentence. If that
+      // is unavailable the practice is still worth generating, so fall through
+      // to the library-wide query below rather than failing the request.
+      console.error('Practice plan: shared retrieval failed:', e?.message)
+    }
+
+    let drillResources: any[] | null = retrieval ? retrieval.drills : null
+
     // A focus with no library coverage (confidence, focus/behavior) would
     // otherwise send nothing at all, and the plan loses its videos.
-    let drillResources = matched
-    if (!matched || matched.length < 8) {
+    //
+    // The ceiling here is deliberately the whole visible library rather than a
+    // number: this is the "we found almost nothing" path, and capping it at 45
+    // was how a fallback meant to widen the pool ended up narrowing it.
+    if (!drillResources || drillResources.length < 8) {
       const wide = await visibleDrillsSafe(
-        supabaseAdmin, team.coach_id, DRILL_SELECT, (q: any) => q.limit(45)
+        supabaseAdmin, team.coach_id, DRILL_FIELDS, (q: any) => q.limit(500)
       )
       if (wide.error) {
         console.error('Practice plan: fallback drill query failed:', wide.error)
       }
       drillResources = wide.data
-      drillsDegraded = drillsDegraded || wide.degraded
+      drillsDegraded = wide.degraded
     }
 
     // Drills the coach explicitly asked for.
@@ -236,7 +274,7 @@ export async function POST(request: NextRequest) {
     const wantedIds: string[] = Array.isArray(mustIncludeDrillIds) ? mustIncludeDrillIds : []
     if (wantedIds.length > 0) {
       const picked = await visibleDrillsSafe(
-        supabaseAdmin, team.coach_id, DRILL_SELECT,
+        supabaseAdmin, team.coach_id, DRILL_FIELDS,
         (q: any) => q.in('id', wantedIds)
       )
       if (picked.error) {
@@ -349,6 +387,41 @@ export async function POST(request: NextRequest) {
     // of the coach staring at "Picking the drills…".
     const loopContext = await loopContextPromise
 
+    // How much of the requested time is actually available for drills, and
+    // which of the retrieved drills fit into it.
+    //
+    // This is a RECOMMENDATION to the generator, not a plan. The model still
+    // decides the practice — it knows things the scheduler does not, like that
+    // the coach said they have a game on Saturday — and the arithmetic is
+    // checked again on the way out. But a model told "you have 34 minutes of
+    // drill time and these six drills fit it" writes a better practice than
+    // one told "durations must add to about 60 minutes" and left to guess.
+    //
+    // Duration deliberately plays no part in retrieval, only here. Phase 2B
+    // verified that populating est_duration_minutes changes nothing about
+    // which drills rank where, and that separation is worth keeping: a
+    // 5-minute drill should never beat a better 15-minute one on relevance.
+    const blockCount = estimateBlockCount(duration)
+    const budget = computeBudget(duration, { blockCount })
+    const schedule = retrieval
+      ? schedulePractice({ candidates: retrieval.scored, budget })
+      : null
+
+    // Observational only — a weak duration estimate never disqualifies a
+    // drill. Logged so the drills the planner actually leans on can be the
+    // first ones to get real rep counts written into them, rather than
+    // hand-editing all 134 blind.
+    if (schedule) {
+      const noDuration = schedule.rejected.filter(r => r.reason === 'no-duration')
+      if (noDuration.length > 0) {
+        console.warn(
+          `Practice plan: ${noDuration.length} retrieved drills have no est_duration_minutes ` +
+          `and could not be time-scheduled — run migrations/047_drill_durations.sql. ` +
+          noDuration.slice(0, 5).map(r => `"${r.drill.drill_name}"`).join(', ')
+        )
+      }
+    }
+
     // Streamed as progress lines, then the finished plan. The client waited on
     // a single JSON response before, so a 40-second generation was 40 seconds
     // of nothing — which is what "taking way too long" mostly was.
@@ -371,6 +444,7 @@ export async function POST(request: NextRequest) {
             ? objective.trim() : undefined,
           equipmentAvailable: Array.isArray(equipmentAvailable) && equipmentAvailable.length
             ? equipmentAvailable : undefined,
+          scheduleGuidance: schedule ? describeSchedule(schedule) : undefined,
         }
 
         // Sent before anything is awaited, so bytes are on the wire within
@@ -392,7 +466,26 @@ export async function POST(request: NextRequest) {
           // and decides the whole new shape; the expansions just write out the
           // blocks they are handed.
           const skeleton = await generatePracticeSkeleton(inputs)
-          const blocks: any[] = Array.isArray(skeleton.blocks) ? skeleton.blocks : []
+          const rawBlocks: any[] = Array.isArray(skeleton.blocks) ? skeleton.blocks : []
+
+          // Make the arithmetic true.
+          //
+          // The generator is asked for durations that add to "about" the
+          // requested minutes, and mostly complies. Mostly is not a contract,
+          // and a 60-minute request coming back as 72 minutes of blocks is a
+          // coach running fifteen minutes over in the dark with parents
+          // waiting. Nothing counted before this.
+          //
+          // Trims proportionally first so every block keeps its shape and its
+          // place, and only drops blocks when trimming alone cannot get there.
+          const fitted = fitBlocks(rawBlocks, duration)
+          if (fitted.adjustments.length > 0) {
+            console.warn(
+              `Practice plan: schedule corrected for team ${teamId} — ${fitted.adjustments.join('; ')}`
+            )
+          }
+          const blocks = fitted.blocks
+
           send({ type: 'skeleton', plan: { ...skeleton, blocks } })
 
           // On a rebuild, a block that came back with the same name and the

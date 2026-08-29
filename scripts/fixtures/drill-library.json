@@ -32,7 +32,7 @@
         "tee",
         "balls"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": false,
       "ai_coaching_notes": "Cue: athletic posture + keep hands above ball; match bat path to pitch plane.",
@@ -79,7 +79,7 @@
         "bat",
         "PVC pipe"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": false,
       "ai_coaching_notes": "Cue: athletic posture + keep hands above ball; match bat path to pitch plane.",
@@ -125,7 +125,7 @@
       "equipment_needed": [
         "bat"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": false,
       "ai_coaching_notes": "Cue: athletic posture + keep hands above ball; match bat path to pitch plane.",
@@ -172,7 +172,7 @@
       "equipment_needed": [
         "bat"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": false,
       "ai_coaching_notes": "Cue: athletic posture + keep hands above ball; match bat path to pitch plane.",
@@ -218,7 +218,7 @@
       "equipment_needed": [
         "bat"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": false,
       "ai_coaching_notes": "Cue: athletic posture + keep hands above ball; match bat path to pitch plane.",
@@ -264,7 +264,7 @@
       "equipment_needed": [
         "bat"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": false,
       "ai_coaching_notes": "Cue: athletic posture + keep hands above ball; match bat path to pitch plane.",
@@ -311,7 +311,7 @@
         "bat",
         "balls"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": true,
       "ai_coaching_notes": "Coach: start slow; emphasize eyes/head still; quality reps > volume.",
@@ -358,7 +358,7 @@
         "bat",
         "balls"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": true,
       "ai_coaching_notes": "Coach: start slow; emphasize eyes/head still; quality reps > volume.",
@@ -406,7 +406,7 @@
         "balls",
         "sunflower seeds"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": true,
       "ai_coaching_notes": "Coach: start slow; emphasize eyes/head still; quality reps > volume.",
@@ -453,7 +453,7 @@
         "bat",
         "balls"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": true,
       "ai_coaching_notes": "Coach: start slow; emphasize eyes/head still; quality reps > volume.",
@@ -499,7 +499,7 @@
       "equipment_needed": [
         "bat"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": false,
       "ai_coaching_notes": "Cue: angle barrel to target; catch ball with bat; deaden contact.",
@@ -546,7 +546,7 @@
         "bat",
         "lacrosse stick (target)"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": false,
       "ai_coaching_notes": "Cue: angle barrel to target; catch ball with bat; deaden contact.",
@@ -593,7 +593,7 @@
         "baseballs",
         "towel/mat (optional)"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Medium",
       "requires_partner": true,
       "ai_coaching_notes": "Cue: stable head; rotate through hips/torso; finish balanced.",
@@ -639,7 +639,7 @@
       "equipment_needed": [
         "baseballs"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Medium-large",
       "requires_partner": true,
       "ai_coaching_notes": "Cue: stable head; rotate through hips/torso; finish balanced.",
@@ -685,7 +685,7 @@
       "equipment_needed": [
         "baseballs"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Medium",
       "requires_partner": true,
       "ai_coaching_notes": "Cue: stable head; rotate through hips/torso; finish balanced.",
@@ -731,7 +731,7 @@
       "equipment_needed": [
         "baseballs"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Medium",
       "requires_partner": true,
       "ai_coaching_notes": "Cue: glove-side target; separate on time; smooth arm circle; good follow-through.",
@@ -777,7 +777,7 @@
       "equipment_needed": [
         "baseballs"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Medium",
       "requires_partner": true,
       "ai_coaching_notes": "Cue: glove-side target; separate on time; smooth arm circle; good follow-through.",
@@ -823,7 +823,7 @@
       "equipment_needed": [
         "baseballs"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Medium",
       "requires_partner": true,
       "ai_coaching_notes": "Cue: glove-side target; separate on time; smooth arm circle; good follow-through.",
@@ -917,7 +917,7 @@
         "glove",
         "balls"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Medium",
       "requires_partner": false,
       "ai_coaching_notes": "Cue: low hips, quiet head; field out front; quick exchange.",
@@ -963,7 +963,7 @@
       "equipment_needed": [
         "bat"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": false,
       "ai_coaching_notes": "Cue: angle barrel to target; catch ball with bat; deaden contact.",
@@ -1586,7 +1586,7 @@
         "soft training balls",
         "baseballs"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": true,
       "ai_coaching_notes": "Start with placed balls (no throw) to groove the shape, then rolled balls, then short-hop throws. Cue 'round your shoulders, chin down, deaden it in front.' Left/right blocks push off the opposite foot.",
@@ -1634,7 +1634,7 @@
       "max_age": 8,
       "age_range": "6-8",
       "equipment_needed": null,
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": true,
       "ai_coaching_notes": "Cue: thumbs together above waist, pinkies together below; 'give' with hands.",
@@ -1678,7 +1678,7 @@
       "max_age": 8,
       "age_range": "6-8",
       "equipment_needed": null,
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": true,
       "ai_coaching_notes": "Cue: thumbs together above waist, pinkies together below; 'give' with hands.",
@@ -1722,7 +1722,7 @@
       "max_age": 12,
       "age_range": "9-12",
       "equipment_needed": null,
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": true,
       "ai_coaching_notes": "Cue: thumbs together above waist, pinkies together below; 'give' with hands.",
@@ -1770,7 +1770,7 @@
         "stopwatch (optional)"
       ],
       "indoor_outdoor": "Outdoor",
-      "space_required": "Full field",
+      "space_required": "Full Field",
       "requires_partner": false,
       "ai_coaching_notes": "Cue: explosive first 3 steps; efficient turns; eyes on coach.",
       "competition_level": "both",
@@ -1817,7 +1817,7 @@
         "stopwatch (optional)"
       ],
       "indoor_outdoor": "Outdoor",
-      "space_required": "Full field",
+      "space_required": "Full Field",
       "requires_partner": true,
       "ai_coaching_notes": "Cue: explosive first 3 steps; efficient turns; eyes on coach.",
       "competition_level": "both",
@@ -1864,7 +1864,7 @@
         "stopwatch (optional)"
       ],
       "indoor_outdoor": "Outdoor",
-      "space_required": "Full field",
+      "space_required": "Full Field",
       "requires_partner": false,
       "ai_coaching_notes": "Cue: explosive first 3 steps; efficient turns; eyes on coach.",
       "competition_level": "both",
@@ -1911,7 +1911,7 @@
         "stopwatch (optional)"
       ],
       "indoor_outdoor": "Outdoor",
-      "space_required": "Full field",
+      "space_required": "Full Field",
       "requires_partner": false,
       "ai_coaching_notes": "Cue: explosive first 3 steps; efficient turns; eyes on coach.",
       "competition_level": "both",
@@ -2322,7 +2322,7 @@
         "baseballs",
         "pitching machine (optional)"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": true,
       "ai_coaching_notes": "Mix locations randomly and don't telegraph. Score each rep: blocked-in-front = 2, blocked-away = 1, past = 0; track weekly. Add a runner-on-third scenario so recovery-to-throw matters.",
@@ -2380,7 +2380,7 @@
         "stopwatch"
       ],
       "indoor_outdoor": "Outdoor",
-      "space_required": "Full field",
+      "space_required": "Full Field",
       "requires_partner": true,
       "ai_coaching_notes": "Time every rep glove-to-glove. Cue 'feet start the throw' — the exchange happens while the feet replace. Start dry (no ball), then from a partner's toss, then live machine pitches.",
       "competition_level": "both",
@@ -2489,7 +2489,7 @@
         "sliding mat or grass area",
         "loose bases"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Medium",
       "requires_partner": false,
       "ai_coaching_notes": "Run as a rotating station during practice. Every player gets volume without dirt burn. Watch for the trail leg flattening out — keep the figure-4. Add a coach pointing left/right so runners slide to a side of the bag.",
@@ -3392,7 +3392,7 @@
         "stopwatch"
       ],
       "indoor_outdoor": "Outdoor",
-      "space_required": "Full field",
+      "space_required": "Full Field",
       "requires_partner": true,
       "ai_coaching_notes": "Run against a live pitcher working from the stretch. Chart every rep: safe jump / late / picked. Teach one tell at a time (heel lift, shoulder lean, head pattern). Time first-move-to-second and track improvement.",
       "competition_level": "both",
@@ -3549,7 +3549,7 @@
         "cones"
       ],
       "indoor_outdoor": "Outdoor",
-      "space_required": "Full field",
+      "space_required": "Full Field",
       "requires_partner": true,
       "ai_coaching_notes": "Walk the whole team through each scenario at half speed with no ball first — every player physically moves to their spot. Then add a rolled ball, then a thrown ball. Quiz players: 'ball in the right-center gap, runner on first — where do you go?'",
       "competition_level": "both",
@@ -4446,7 +4446,7 @@
         "bases"
       ],
       "indoor_outdoor": "Outdoor",
-      "space_required": "Full field",
+      "space_required": "Full Field",
       "requires_partner": true,
       "ai_coaching_notes": "Add runners so decisions are real: runner on first, ball to left-center — where's the throw? Let the cutoff man call 'cut two / cut three / let it go' loudly. Rotate players through cutoff roles so everyone learns both ends.",
       "competition_level": "both",
@@ -4701,7 +4701,7 @@
         "bases"
       ],
       "indoor_outdoor": "Outdoor",
-      "space_required": "Full field",
+      "space_required": "Full Field",
       "requires_partner": true,
       "ai_coaching_notes": "Machine or fungo fires balls into the gaps on a fixed interval so tempo never drops. Run double-cut sequences on balls to the wall. Score runs-prevented vs. bases-gained to make it competitive between defensive groups.",
       "competition_level": "both",
@@ -5392,7 +5392,7 @@
         "balls",
         "front-toss screen or machine"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Medium",
       "requires_partner": true,
       "ai_coaching_notes": "Machine or feeder mixes speeds with a 2:1 fastball bias. Cue 'swing fastball, adjust down and long' — the barrel stays through the hitting zone so late recognition still produces fair contact. Track hard-hit rate on the off-speed only.",
@@ -8085,7 +8085,7 @@
       "equipment_needed": [
         "bat"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": false,
       "ai_coaching_notes": "Cue: athletic posture + keep hands above ball; match bat path to pitch plane.",
@@ -8384,7 +8384,7 @@
       "equipment_needed": [
         "baseballs"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Medium",
       "requires_partner": true,
       "ai_coaching_notes": "Cue: glove-side target; separate on time; smooth arm circle; good follow-through.",
@@ -8584,7 +8584,7 @@
       "max_age": 8,
       "age_range": "6-8",
       "equipment_needed": null,
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": true,
       "ai_coaching_notes": "Cue: thumbs together above waist, pinkies together below; 'give' with hands.",
@@ -8901,7 +8901,7 @@
         "baseballs",
         "cones"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": false,
       "ai_coaching_notes": "Run as a daily 10-minute series from knees to full speed. Cue 'thumb down, see the ball into the glove, work through it.' The right foot plants outside the ball on a true backhand — check plant position every rep.",
@@ -8956,7 +8956,7 @@
         "tee",
         "balls"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Medium",
       "requires_partner": true,
       "ai_coaching_notes": "Start on the tee set deep in the zone. Cue 'let it get to your back hip, hit the inside half.' Progress through the five methods as each sticks. Success is direction, not distance — a firm ground ball the other way counts.",
@@ -9178,7 +9178,7 @@
         "fungo"
       ],
       "indoor_outdoor": "Outdoor",
-      "space_required": "Full field",
+      "space_required": "Full Field",
       "requires_partner": true,
       "ai_coaching_notes": "Hit tweeners between the infield and outfield on purpose. Teach the rule plainly: the outfielder coming in owns any ball he can reach — infielders yield to his call. Freeze the play after each rep and ask 'whose ball, and why?'",
       "competition_level": "both",
@@ -9235,7 +9235,7 @@
         "live pitching or machine"
       ],
       "indoor_outdoor": "Outdoor",
-      "space_required": "Full field",
+      "space_required": "Full Field",
       "requires_partner": true,
       "ai_coaching_notes": "Split the team; each hitter draws a situation card (sac to third, push past the pitcher, squeeze). Points only for executed bunts against live pitching. Losing team does field cleanup — pressure makes the reps real.",
       "competition_level": "both",
@@ -9291,7 +9291,7 @@
         "bases or target"
       ],
       "indoor_outdoor": "Outdoor",
-      "space_required": "Full field",
+      "space_required": "Full Field",
       "requires_partner": true,
       "ai_coaching_notes": "Only for game-on-the-line situations — teach the distinction from the routine knee-down block. Cue 'attack, glove-side foot, crow hop through the ball.' Chart throw time and accuracy to a plate-sized target.",
       "competition_level": "both",
@@ -9346,7 +9346,7 @@
         "balls",
         "net"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": false,
       "ai_coaching_notes": "Tee on the outer third, slightly deep. Cue 'knob to the ball, barrel late.' Rolling over the outside pitch means the barrel released early — reset with three one-arm bottom-hand swings, then return to full swings.",
@@ -9401,7 +9401,7 @@
         "baseballs",
         "glove"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": true,
       "ai_coaching_notes": "Start at short distance playing catch with the grip — no mound. Cue 'throw the fastball, the grip does the work.' If the ball sails, the grip is too shallow; if it dies into the dirt, too deep. Find the middle.",
@@ -9512,7 +9512,7 @@
         "baseballs",
         "glove"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": true,
       "ai_coaching_notes": "Have the pitcher test 2-3 grips over two weeks of catch play and keep whichever kills the most speed with the least effort. Small hands usually can't do a true circle — three-finger is the honest starting point. Revisit each off-season as hands grow.",
@@ -9568,7 +9568,7 @@
         "helmet",
         "live or machine pitching"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Medium",
       "requires_partner": true,
       "ai_coaching_notes": "Hitter stands in the box wearing a helmet with a glove and catches the pitch, calling 'fastball' or 'change' as early as possible. Score correct early calls. Rotate hitters standing in during bullpens for free reps.",
@@ -9625,7 +9625,7 @@
         "balls",
         "front-toss screen"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Medium",
       "requires_partner": true,
       "ai_coaching_notes": "Front toss with random speed changes: the feeder varies fast/slow without telling. Cue 'stride to hit the fastball, keep the hands back for the change.' The stride lands on time — the hands wait.",
@@ -9683,7 +9683,7 @@
         "live or machine pitching"
       ],
       "indoor_outdoor": "Outdoor",
-      "space_required": "Full field",
+      "space_required": "Full Field",
       "requires_partner": true,
       "ai_coaching_notes": "Run situational BP: runner at second, nobody out, hitter must move him. Only pitches middle-away get swings — pulling a ball on the ground to short is a failed rep even if it's a 'hit.' Score execution, not outcomes.",
       "competition_level": "both",
@@ -9740,7 +9740,7 @@
         "tee",
         "balls"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": false,
       "ai_coaching_notes": "Order matters: heavy (feel sequence) → light (move fast) → game bat (transfer). Full intent on every swing — lazy overload swings teach slow. Measure with a swing sensor or simple phone video if no sensor.",
@@ -9795,7 +9795,7 @@
         "balls",
         "cones or towels as targets"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": true,
       "ai_coaching_notes": "Lay towels or cone lanes down each line. Feeder calls 'first side' or 'third side' mid-toss. Cue 'catch it with the barrel' — soft top hand gives with contact. Chase the ball angle with the knob, not the barrel.",
@@ -9850,7 +9850,7 @@
         "light bands",
         "open space"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": false,
       "ai_coaching_notes": "The routine happens within 15 minutes of the last pitch, every outing — consistency is the entire point. Keep everything light and rhythmic; recovery work should feel easier than warm-up work. Log soreness the next day to show players it works.",
@@ -9906,7 +9906,7 @@
         "tennis balls or soft baseballs",
         "catcher's gear"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": true,
       "ai_coaching_notes": "Start bare-glove with tennis balls from short distance. Cue 'catch the ball moving toward the zone, not away.' Watch for the elbow locking out — a slightly bent elbow keeps hands soft.",
@@ -9962,7 +9962,7 @@
         "baseballs",
         "catcher's gear"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": true,
       "ai_coaching_notes": "Run as a 5-station circuit. Cue 'beat it to the spot' — glove arrives where the pitch will be before the ball does. Freeze each catch for a one-count to build the stick habit.",
@@ -10123,7 +10123,7 @@
         "catcher's gear",
         "pitching machine (optional)"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": true,
       "ai_coaching_notes": "Only introduce after two-knee receiving is consistent. Check the free leg still allows a block or throw. Increase pitch speed gradually — machine work is ideal for high-rep edges.",
@@ -10178,7 +10178,7 @@
         "J-bands or light resistance bands",
         "fence or anchor point"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": false,
       "ai_coaching_notes": "Anchor at elbow height and keep tension light — these are activation reps, not strength maxes. Cue 'slow out, slow back' with no band snap. Make it the non-negotiable first station before any throwing.",
@@ -10233,7 +10233,7 @@
         "J-bands or resistance bands",
         "anchor point"
       ],
-      "indoor_outdoor": "Indoor/Outdoor",
+      "indoor_outdoor": "Both",
       "space_required": "Small",
       "requires_partner": false,
       "ai_coaching_notes": "Run as a standalone mini-workout on lighter throwing days, not tacked onto a max-effort session. Cue controlled 2-second tempo each direction. Elbows stay at the set height — dropping the elbow is the giveaway fatigue sign to stop.",
