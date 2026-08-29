@@ -82,17 +82,68 @@ const DIFFICULTY_TO_LEVEL: Record<string, number> = {
 }
 
 /**
+ * The library curates on a FOUR-point scale; this plan has THREE stages.
+ *
+ * That mismatch was being handled by `Math.min(3, level)`, which quietly put
+ * levels 3 and 4 in the same step. A production export shows what those levels
+ * actually mean, and they are not the same thing at all:
+ *
+ *   level 1 — 10 drills, 100% Beginner     "Tee Work", "Stance & Athletic Position"
+ *   level 2 — 26 drills,  96% Beginner     "Baby Steps – Hip Load", "From Your Knees"
+ *   level 3 — 54 drills,  96% Intermediate "High Tee", "Load to Launch"
+ *   level 4 — 18 drills, 100% Advanced     "Game-Speed Reaction Blocking",
+ *                                          "Catcher Throw-Down Footwork"
+ *
+ * So the clamp was putting rehearsal drills and game-speed drills in "Take it
+ * to the game" together — which is precisely the distinction the third stage
+ * exists to make, and the reason a parent could be told to run High Tee under
+ * a heading promising full-speed reacting.
+ *
+ * Read against the stage descriptions at the top of this file, the scale lines
+ * up cleanly: levels 1 and 2 are both teaching the feel in constrained
+ * positions, level 3 is the same movement with reps at controlled speed, and
+ * level 4 is the only band that is actually live. Hence:
+ */
+const LEVEL_TO_STAGE: Record<number, number> = {
+  1: 1,  // get the feel     — tee work, stance, static positions
+  2: 2,  // make it stick    — with the ball, controlled: soft toss, from the knees
+  3: 2,  // make it stick    — same job, harder: High Tee, Load to Launch
+  4: 3,  // take it live     — the only band that is actually game speed
+}
+
+// Levels 2 and 3 share a stage because the library says they do the same job.
+// Both are "same movement, more reps, closer to real speed"; they differ by
+// difficulty (level 2 is 96% Beginner, level 3 is 96% Intermediate), not by
+// kind. Level 4 is the only band where the drills react rather than rehearse,
+// and it is the only one that belongs under a heading promising full speed.
+//
+// This is a deliberate reinterpretation of level 3, which the clamp used to
+// put in the final stage. Worth naming: an alternative fix would add a fourth
+// stage and leave every level meaning what it meant. That was rejected because
+// the three-stage shape at the top of this file is a coaching position, not an
+// implementation detail, and inventing a fourth stage means writing coaching
+// guidance nobody asked for. If that trade turns out to be wrong, this table
+// is the only thing that has to change.
+
+/**
  * Which stage a drill belongs to.
  *
- * progression_level is the curated answer and wins. difficulty_level is the
- * fallback for library rows that predate the curation. Anything still unknown
- * lands in the middle — putting an unlabelled drill at step 1 would tell a
- * parent to start there, and putting it at step 3 would hide it behind two
- * gates it may not belong behind.
+ * progression_level is the curated answer and wins, mapped through the table
+ * above. difficulty_level is the fallback for library rows that predate the
+ * curation — 98 of 206 have no progression_level. Anything still unknown lands
+ * in the middle: putting an unlabelled drill at step 1 would tell a parent to
+ * start there, and putting it at step 3 would hide it behind two gates it may
+ * not belong behind.
+ *
+ * A level above 4 (nothing in production has one, but the column is a plain
+ * int) falls to the last stage rather than being dropped.
  */
 export function stageOf(drill: ProgressionDrill): number {
   const p = drill.progression_level
-  if (typeof p === 'number' && p >= 1) return Math.min(3, Math.round(p))
+  if (typeof p === 'number' && p >= 1) {
+    const level = Math.round(p)
+    return LEVEL_TO_STAGE[level] ?? STAGES[STAGES.length - 1].level
+  }
   const d = (drill.difficulty_level || '').toLowerCase()
   return DIFFICULTY_TO_LEVEL[d] ?? 2
 }

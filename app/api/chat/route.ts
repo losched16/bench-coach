@@ -13,7 +13,10 @@ import {
   aggregatePitchingLines,
 } from '@/lib/scouting'
 import { guard, authorizeTeam, can } from '@/lib/authz'
-import { visibleDrills } from '@/lib/drills'
+import { visibleDrills, favoriteDrillIds } from '@/lib/drills'
+import { retrieveDrills, RetrievalResult, describeRetrieval } from '@/lib/drillRetrieval'
+import { constraintsFromText, ageFromText } from '@/lib/drillConstraints'
+import { checkGrounding, stripUngroundedVideos } from '@/lib/drillGrounding'
 import { migrationHintFor } from '@/lib/migrationHints'
 
 // Never prerendered. This route reads the session cookie to decide who is
@@ -270,18 +273,55 @@ export async function POST(request: NextRequest) {
 
     const drillsSummary = savedDrills?.map(d => `${d.title} (${d.category})`) || []
 
-    // Load drill resources library for AI to reference
+    // Retrieve drills that answer THIS question.
+    //
+    // This used to be `visibleDrills(...).limit(100)` — the first hundred rows
+    // the database happened to return, in no order, pasted into the prompt.
+    // The coach's question did not participate in selection at all, and with
+    // 206 drills in the library that made roughly half of it invisible on any
+    // given request, non-deterministically.
+    //
+    // Now the question is read against the problem taxonomy, the whole visible
+    // library is eligible, and a dozen ranked candidates go to the model.
     let drillResources: any[] = []
+    let retrieval: RetrievalResult | null = null
     try {
-      const { data: resources } = await visibleDrills(
-        supabaseAdmin,
-        team.coach_id,
-        'id, drill_name, skill_category, description, youtube_url, youtube_video_id, channel, age_range, difficulty_level, mechanic_focus, common_flaws_fixed, equipment_needed, ai_coaching_notes, safety_notes, created_by_coach_id'
-      ).limit(100)
+      // Age comes from the player only when the coach is actually asking
+      // about one — a thread scoped to a player, or a playerId on the request.
+      // A team-scope question has no single age, and inventing one from the
+      // age group would filter the library against a number nobody gave us.
+      let playerAge: number | null = null
+      if (playerId) {
+        const { data: p } = await supabaseAdmin
+          .from('players').select('birth_year').eq('id', playerId).single()
+        const by = (p as any)?.birth_year
+        if (by) playerAge = new Date().getFullYear() - by
+      }
+      // "my 8-year-old" in the question itself, for the kid who is not on the
+      // roster or is not the player this thread is scoped to.
+      if (playerAge == null) playerAge = ageFromText(message)
 
-      drillResources = resources || []
+      retrieval = await retrieveDrills({
+        supabase: supabaseAdmin,
+        coachId: team.coach_id,
+        query: message,
+        playerAge,
+        // Only what the coach actually said. Constraints read out of their own
+        // words — nothing is assumed, and an unmentioned constraint stays
+        // unknown rather than becoming a filter.
+        ...constraintsFromText(message),
+        favorites: await favoriteDrillIds(supabaseAdmin, team.coach_id),
+      })
+
+      drillResources = retrieval.drills
+      console.log(
+        `Chat drill retrieval: "${String(message).slice(0, 60)}" -> ` +
+        `${retrieval.debug.retrievalPath}, ${retrieval.debug.candidateCountAfterFilters} eligible, ` +
+        `${retrieval.debug.returned} returned` +
+        (retrieval.diagnosis?.slugs.length ? ` [${retrieval.diagnosis.slugs.join(', ')}]` : '')
+      )
     } catch (e) {
-      console.warn('Could not load drill resources (table may not exist yet)')
+      console.warn('Drill retrieval failed:', (e as any)?.message)
     }
 
     // Load recent practice recaps
@@ -822,6 +862,7 @@ export async function POST(request: NextRequest) {
       activePlaybooks: playbookContext,
       savedDrills: drillsSummary,
       drillResources: drillResources.length > 0 ? drillResources : undefined,
+      drillContext: retrieval ? describeRetrieval(retrieval) : undefined,
       practiceRecaps: practiceRecaps.length > 0 ? practiceRecaps : undefined,
       playerStats: playerStats.length > 0 ? playerStats : undefined,
       gameData: gameData.length > 0 ? gameData : undefined,
@@ -836,7 +877,31 @@ export async function POST(request: NextRequest) {
     })) || []
 
     // Generate response
-    const response = await generateChatResponse(message, context, conversationHistory)
+    let response = await generateChatResponse(message, context, conversationHistory)
+
+    // Did it stay inside the library it was given?
+    //
+    // The prompt asks it to; nothing checked until now. A fabricated video id
+    // renders as a dead embed and a fabricated drill name sends a coach
+    // looking for something that does not exist — both cost more trust than
+    // the answer earned. Unknown video links are stripped (the advice around
+    // them is usually fine); unknown drill names are logged rather than
+    // rewritten, because editing prose to enforce a rule reliably produces
+    // something worse than the problem.
+    if (drillResources.length > 0 && response?.message) {
+      const grounding = checkGrounding(response.message, drillResources as any)
+      if (!grounding.ok) {
+        console.warn('Chat grounding:', {
+          unknownVideoIds: grounding.unknownVideoIds,
+          unknownDrillNames: grounding.unknownDrillNames,
+          candidates: drillResources.length,
+        })
+        response = {
+          ...response,
+          message: stripUngroundedVideos(response.message, grounding),
+        }
+      }
+    }
 
     // Which conversation this belongs to. The client names it explicitly now
     // that a team can have many; falling back to the most recently used one

@@ -182,10 +182,20 @@ export interface TeamContext {
       notes: string | null
     }>
   }>
+  /** One line on how these drills were chosen — diagnosis, filters applied. */
+  drillContext?: string
   drillResources?: Array<{
+    id?: string
     drill_name: string
     skill_category: string
     description: string
+    primary_skill?: string
+    secondary_skill?: string
+    tags?: string[]
+    indoor_outdoor?: string
+    space_required?: string
+    requires_partner?: boolean
+    created_by_coach_id?: string | null
     youtube_url?: string
     youtube_video_id?: string
     channel?: string
@@ -488,29 +498,55 @@ Pitch counts are the one place to be proactive without being asked — flag a pl
 ` : ''}
 
 ${context.drillResources && context.drillResources.length > 0 ? `
-DRILL RESOURCES LIBRARY:
-You have access to a curated library of ${context.drillResources.length} drills with YouTube video demonstrations from trusted channels. When recommending a drill, ALWAYS check this library first and include the YouTube link so the coach can see it demonstrated.
+DRILLS RETRIEVED FOR THIS QUESTION (${context.drillResources.length}):
+These were selected from the full BenchCoach library by reading what the coach
+just asked against a catalogue of named coaching problems, then filtering on
+age and on whatever they told you about their situation. They are ranked — the
+first is the best match, not merely the first row of a table.
+${context.drillContext ? `\n${context.drillContext}\n` : ''}
+${context.drillResources.map((d: any, i: number) => {
+  const facts = [
+    d.skill_category,
+    d.difficulty_level,
+    d.age_range ? `ages ${d.age_range}` : null,
+    d.indoor_outdoor,
+    d.space_required ? `${d.space_required} space` : null,
+    d.requires_partner === true ? 'needs a partner' : d.requires_partner === false ? 'works solo' : null,
+  ].filter(Boolean).join(' · ')
+  const lines = [
+    `${i + 1}. "${d.drill_name}"${d.created_by_coach_id ? "  [the coach's own drill]" : ''}`,
+    `   ${facts}`,
+  ]
+  if (d.description) lines.push(`   ${String(d.description).slice(0, 200)}`)
+  if (d.common_flaws_fixed?.length) lines.push(`   fixes: ${d.common_flaws_fixed.slice(0, 6).join(', ')}`)
+  if (d.mechanic_focus?.length) lines.push(`   trains: ${d.mechanic_focus.slice(0, 5).join(', ')}`)
+  if (d.equipment_needed?.length) lines.push(`   needs: ${d.equipment_needed.join(', ')}`)
+  if (d.youtube_url) lines.push(`   video: ${d.youtube_url}`)
+  if (d.channel) lines.push(`   source: ${d.channel}`)
+  if (i < 5 && d.ai_coaching_notes) lines.push(`   coaching: ${String(d.ai_coaching_notes).slice(0, 240)}`)
+  return lines.join('\n')
+}).join('\n\n')}
 
-Available drills:
-${context.drillResources.map(d => 
-  `- "${d.drill_name}" (${d.skill_category}, ${d.difficulty_level || 'all levels'})
-     ${d.common_flaws_fixed?.length ? `Fixes: ${d.common_flaws_fixed.join(', ')}` : ''}
-     Ages: ${d.age_range || 'all ages'}
-     ${d.youtube_url ? `📹 Video: ${d.youtube_url}` : ''}
-     ${d.channel ? `Source: ${d.channel}` : ''}
-     ${d.description || ''}`
-).join('\n')}
-
-IMPORTANT INSTRUCTIONS FOR DRILL RECOMMENDATIONS:
-1. When you suggest a drill from the library, ALWAYS include the YouTube link
-2. Credit the source channel (e.g., "Here's a great video from Dominate The Diamond...")
-3. Include the coaching cues if available
-4. Mention safety notes when relevant
-5. Format like this:
-   "I'd recommend the **High Tee Drill** to fix that uppercut. Here's an excellent video demonstration from Dominate The Diamond: https://www.youtube.com/watch?v=..."
-
-This helps coaches who may not know the drill see exactly how it's done with proper form.
-` : ''}
+USING THESE DRILLS:
+1. When you name a BenchCoach drill, it MUST be one of the drills listed above,
+   spelled exactly as written. Do not invent a drill name, do not invent a
+   video link, and do not describe a drill as being "in the library" unless it
+   is in this list. A coach who searches for a drill you made up finds nothing
+   and stops trusting the rest of the answer.
+2. Include the video link and credit the channel when you recommend one.
+3. This list is a shortlist, not an instruction to use all of it. Two or three
+   well-chosen drills beat six.
+4. You are NOT required to recommend a drill at all. Plenty of good coaching
+   answers are about what to say, what to stop doing, or what to expect at this
+   age. Answer the question that was asked.
+5. General technique advice from your own knowledge is fine and welcome — just
+   do not dress it up as a BenchCoach library drill.
+${context.drillResources.some((d: any) => d.created_by_coach_id) ? `6. A drill marked [the coach's own drill] was written by this coach. Use their name and their wording as written — do not rewrite or improve it.\n` : ''}` : `
+No library drill matched this question closely enough to be worth putting in
+front of the coach. Answer from your own coaching knowledge, and do not
+reference the BenchCoach drill library or name drills as though they came from
+it.
+`}
 
 ${context.scouting && (context.scouting.opponents.length > 0 || context.scouting.upcomingMatchups.length > 0) ? `
 OPPONENT SCOUTING DATA (the coach's own logged notes and box scores):

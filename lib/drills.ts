@@ -16,14 +16,94 @@
 // through here, because "remember to add the filter" has never once been a
 // control that holds.
 
+/**
+ * One drill, as production actually stores it.
+ *
+ * Written down because the shape was previously expressed three incompatible
+ * ways — a runtime column string, a six-field scoring interface, and `any[]`
+ * everywhere else — and the three disagreed about which columns exist. A
+ * read-only export of production settled it; this is that answer.
+ *
+ * Everything is optional except id and drill_name, because it is: the audit
+ * measured est_duration_minutes at 0/206 and safety_notes at 38/206. A
+ * consumer that assumes a field is there is wrong about this table.
+ */
+export interface DrillRecord {
+  id: string
+  drill_name: string
+  description?: string | null
+
+  // Classification. skill_category is the coarse bucket the practice planner
+  // filters on; primary_skill is a finer-grained label that exists on every
+  // row and, until now, nothing read.
+  skill_category?: string | null
+  primary_skill?: string | null
+  secondary_skill?: string | null
+  tags?: string[] | null
+
+  // What it trains and what it fixes. Both are free-text arrays and both are
+  // the closest thing this library has to retrieval tags.
+  mechanic_focus?: string[] | null
+  common_flaws_fixed?: string[] | null
+
+  // Fit
+  difficulty_level?: string | null
+  progression_level?: number | null
+  min_age?: number | null
+  max_age?: number | null
+  age_range?: string | null
+  competition_level?: string | null
+
+  // Operational. All three are populated on every production row and were
+  // invisible to every recommendation surface before this change.
+  equipment_needed?: string[] | null
+  indoor_outdoor?: string | null
+  space_required?: string | null
+  requires_partner?: boolean | null
+
+  // Coaching
+  ai_coaching_notes?: string | null
+  safety_notes?: string | null
+  success_markers?: string[] | null
+  reps_guidance?: string | null
+  frequency_guidance?: string | null
+  est_duration_minutes?: number | null
+
+  // Video
+  youtube_video_id?: string | null
+  youtube_url?: string | null
+  youtube_start_seconds?: number | null
+  thumbnail_url?: string | null
+  channel?: string | null
+
+  // Provenance and scoping
+  status?: string | null
+  source?: string | null
+  created_by_coach_id?: string | null
+
+  // The table has more columns than any surface needs; this keeps a `select('*')`
+  // caller assignable without widening the documented shape.
+  [key: string]: any
+}
+
 // Everything a surface needs to render or choose a drill. One list, so adding
 // a column does not mean hunting six select strings.
+//
+// primary_skill, secondary_skill, tags, indoor_outdoor, space_required and
+// requires_partner were added after a production export showed they exist and
+// are populated — four of them on every single row — while being absent from
+// this string, which is the only reason chat, prescribe and the practice
+// planner could not see them. age_range was in the same position: used by
+// drillMenuLine and by the chat prompt, and fetched only because those two
+// callers happened to name it themselves.
 export const DRILL_FIELDS =
   'id, drill_name, description, youtube_video_id, youtube_url, thumbnail_url, ' +
-  'channel, youtube_start_seconds, skill_category, difficulty_level, ' +
-  'progression_level, equipment_needed, ai_coaching_notes, safety_notes, ' +
-  'min_age, max_age, competition_level, mechanic_focus, common_flaws_fixed, ' +
-  'reps_guidance, frequency_guidance, success_markers, status, created_by_coach_id'
+  'channel, youtube_start_seconds, skill_category, primary_skill, secondary_skill, ' +
+  'tags, difficulty_level, progression_level, equipment_needed, ai_coaching_notes, ' +
+  'safety_notes, min_age, max_age, age_range, competition_level, mechanic_focus, ' +
+  'common_flaws_fixed, indoor_outdoor, space_required, requires_partner, ' +
+  'reps_guidance, frequency_guidance, success_markers, est_duration_minutes, ' +
+  'status, source, created_by_coach_id'
 
 /**
  * A drill_resources query scoped to what this coach may see: the curated

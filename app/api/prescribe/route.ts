@@ -8,6 +8,7 @@ import { textFrom } from '@/lib/claudeText'
 import { commitPrescription } from '@/lib/prescriptions'
 import { guard, requireSession } from '@/lib/authz'
 import { visibleDrills } from '@/lib/drills'
+import { diagnose, TaxonomyRow, TAXONOMY_FIELDS } from '@/lib/drillDiagnosis'
 import { claude as anthropic, describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
 
 // Never prerendered. This route reads the session cookie to decide who is
@@ -40,16 +41,6 @@ const ANALYSIS_MODEL = 'claude-opus-5'
 
 const DIFFICULTY_RANK: Record<string, number> = { Beginner: 1, Intermediate: 2, Advanced: 3 }
 
-interface TaxonomyRow {
-  slug: string
-  label: string
-  skill_category: string | null
-  description: string | null
-  aliases: string[] | null
-  do_not_coach_flag?: boolean | null
-  do_not_coach_note?: string | null
-  age_relevance?: string[] | null
-}
 
 // ---------------------------------------------------------------------------
 // GET — returns the problem taxonomy for the quick-pick chips on the UI.
@@ -435,66 +426,6 @@ ${list}`
 }
 
 // --- diagnosis: semantic match with deterministic alias fallback ------------
-async function diagnose(
-  complaint: string,
-  tax: TaxonomyRow[],
-): Promise<{ slugs: string[]; categories: string[] }> {
-  const list = tax.map(t => `- ${t.slug} (${t.skill_category}): ${t.label}${t.aliases?.length ? ` — e.g. ${t.aliases.slice(0, 6).join(', ')}` : ''}`).join('\n')
-  const allCategories = Array.from(new Set(tax.map(t => t.skill_category).filter(Boolean))) as string[]
-
-  const prompt = `A youth baseball coach describes something they want help with. Two jobs:
-
-1. Match it to the 1-3 most relevant problem slugs, most relevant first. Many requests are goals rather than flaws ("add velocity", "hit for more power") and will not match any slug — that is fine, return an empty array. Do not force a bad match.
-2. Name the skill area(s) it belongs to, whether or not a slug matched, so we can search the drill library. Use only values from the category list.
-
-Return ONLY JSON: {"slugs": ["late-timing"], "categories": ["Hitting"]}
-
-COACH SAYS: "${complaint}"
-
-CATEGORIES: ${allCategories.join(', ')}
-
-PROBLEMS:
-${list}`
-
-  try {
-    const res = await anthropic.messages.create({
-      model: DIAGNOSE_MODEL,
-      max_tokens: 200,
-      messages: [{ role: 'user', content: prompt }],
-    })
-    const text = textFrom(res)
-    const m = text.match(/\{[\s\S]*\}/)
-    if (m) {
-      const parsed = JSON.parse(m[0]) as { slugs?: string[]; categories?: string[] }
-      const validSlugs = (parsed.slugs || []).filter(x => tax.some(t => t.slug === x)).slice(0, 3)
-      const validCats = (parsed.categories || []).filter(c =>
-        tax.some(t => (t.skill_category || '').toLowerCase() === String(c).toLowerCase())
-      )
-      // Normalize category casing back to what the database stores
-      const canonicalCats = validCats.map(c =>
-        (tax.find(t => (t.skill_category || '').toLowerCase() === String(c).toLowerCase())?.skill_category) || c
-      )
-      if (validSlugs.length || canonicalCats.length) {
-        return { slugs: validSlugs, categories: Array.from(new Set(canonicalCats)) }
-      }
-    }
-  } catch (e) {
-    console.warn('Claude diagnosis failed, falling back to alias match:', (e as any)?.message)
-  }
-
-  // Fallback: substring match of complaint against aliases/labels.
-  const c = complaint.toLowerCase()
-  const scored = tax.map(t => {
-    const terms = [t.label.toLowerCase(), ...(t.aliases || []).map(a => a.toLowerCase())]
-    const score = terms.reduce((s, term) => s + (term.length > 3 && c.includes(term) ? 1 : 0), 0)
-    return { slug: t.slug, score }
-  }).filter(x => x.score > 0).sort((a, b) => b.score - a.score)
-  const fallbackSlugs = scored.slice(0, 3).map(x => x.slug)
-  const fallbackCats = Array.from(new Set(
-    fallbackSlugs.map(sl => tax.find(t => t.slug === sl)?.skill_category).filter(Boolean)
-  )) as string[]
-  return { slugs: fallbackSlugs, categories: fallbackCats }
-}
 
 
 // ---------------------------------------------------------------------------
