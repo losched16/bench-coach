@@ -130,12 +130,16 @@ real per-drill signal.
 |---|---|
 | 5 | 15 |
 | 8 | 71 |
-| 10 | 92 |
+| 10 | 93 |
 | 12 | 15 |
 | 15 | 9 |
 | 20 | 3 |
 
 Median 10 min. Whole library end to end: 1,946 min (32.4 h).
+
+(The 10-minute count read 92 in the first draft of this table — it was taken
+from a replica run with one row hand-edited out. Production confirms 93, and
+the six buckets total 206.)
 
 ### By category
 
