@@ -52,8 +52,8 @@ const has = (r: any, re: RegExp) => names(r).some((n: string) => re.test(n))
 
 console.log('=== the fixture is the real library ===')
 check('206 drills', DRILLS.length === 206)
-check('48 problems', PROBLEMS.length === 48)
-check('311 mappings', MAPPINGS.length === 311)
+check('49 problems after 046', PROBLEMS.length === 49)
+check('348 mappings after 046', MAPPINGS.length === 348)
 
 console.log('\n=== the eight coach questions ===')
 
@@ -144,6 +144,72 @@ console.log('\n=== the eight coach questions ===')
   check('   ...and they are throwing/pitching drills',
     r.scored.slice(0, 5).some((s: any) => /pitching|throwing|arm care/i.test(String(s.drill.skill_category))),
     names(r).slice(0, 5).join(' | '))
+}
+
+console.log('\n=== taxonomy coverage (migration 046) ===')
+{
+  // THE PHASE 2A ACCEPTANCE TEST. Before 046 this diagnosed to nothing and
+  // text-matched a pitching drill on the word "shoulder". The library never
+  // used the phrase "back shoulder" — it says "dropping the barrel" and
+  // "under balls" — so this was a translation gap, not a missing drill.
+  const variants = [
+    'My 8-year-old keeps dropping his back shoulder when he swings.',
+    'He keeps dropping my back shoulder',
+    'his back shoulder drops',
+    'back shoulder drops on every swing',
+    'rear shoulder dropping badly',
+    'he is dipping the back shoulder',
+    'shoulder dipping through the zone',
+    'his back side collapsing at contact',
+    'rear side collapsing',
+    'he is dumping the barrel',
+    'swinging under the ball a lot',
+  ]
+  for (const v of variants) {
+    const dx = diagnoseByAlias(v, PROBLEMS)
+    check(`"${v.slice(0, 44)}" diagnoses`, dx.slugs.includes('uppercutting'),
+      JSON.stringify(dx.slugs))
+  }
+
+  const r = retrieve('My 8-year-old keeps dropping his back shoulder when he swings.')
+  check('back shoulder returns the curated uppercut sequence',
+    r.scored.slice(0, 3).every((s: any) => s.reason.curated),
+    names(r).slice(0, 3).join(' | '))
+  check('...led by Tee Work', /tee work/i.test(String(r.scored[0]?.drill.drill_name)),
+    String(r.scored[0]?.drill.drill_name))
+  check('...on the taxonomy path, not text', r.debug.retrievalPath !== 'textual', r.debug.retrievalPath)
+  check('...with no pitching drill in the top 3',
+    !r.scored.slice(0, 3).some((s: any) => /pitching/i.test(String(s.drill.skill_category))))
+
+  // The new entry, and the drill that was mapped to nothing before it existed.
+  check('loses-posture exists', PROBLEMS.some(p => p.slug === 'loses-posture'))
+  const post = retrieve('he keeps standing up in the swing and losing his knee bend')
+  check('standing up in the swing diagnoses to loses-posture',
+    post.dx.slugs.includes('loses-posture'), JSON.stringify(post.dx.slugs))
+  check('...and reaches the Bucket Drill, which was mapped to nothing before 046',
+    names(post).some((n: string) => /bucket drill/i.test(n)), names(post).slice(0, 5).join(' | '))
+
+  // NEGATIVE CASES. The fallback must stay conservative — a goal, and a broad
+  // phrase, must both be allowed to match nothing.
+  check('a goal still matches no slug',
+    diagnoseByAlias('How do I help my pitcher throw harder?', PROBLEMS).slugs.length === 0,
+    JSON.stringify(diagnoseByAlias('How do I help my pitcher throw harder?', PROBLEMS).slugs))
+  check('bare "shoulder" is not an alias',
+    diagnoseByAlias('his shoulder is bothering him', PROBLEMS).slugs.length === 0,
+    JSON.stringify(diagnoseByAlias('his shoulder is bothering him', PROBLEMS).slugs))
+  check('a vague question matches nothing',
+    diagnoseByAlias('how do I get my team to stop making errors', PROBLEMS).slugs.length === 0,
+    JSON.stringify(diagnoseByAlias('how do I get my team to stop making errors', PROBLEMS).slugs))
+  check('"poor communication" does not fire on a parents question',
+    !diagnoseByAlias('we have poor communication with the parents', PROBLEMS).slugs.includes('outfield-communication'),
+    'generic flaw strings were handled as mappings, deliberately not aliases')
+
+  // Provenance must survive the migration.
+  check('curated mappings are still exactly 75',
+    MAPPINGS.filter((m: any) => m.curated).length === 75,
+    String(MAPPINGS.filter((m: any) => m.curated).length))
+  check('046 added only auto mappings',
+    MAPPINGS.length === 348 && MAPPINGS.filter((m: any) => m.curated).length === 75)
 }
 
 console.log('\n=== filters: applied when known, skipped when not ===')
