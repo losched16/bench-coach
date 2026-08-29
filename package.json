@@ -21,7 +21,10 @@
     "test:report-copy": "npx --yes tsx --tsconfig tsconfig.json scripts/test-report-copy.ts",
     "test:seo-resource": "npx --yes tsx --tsconfig tsconfig.json scripts/test-seo-resource.ts",
     "test:drill-retrieval": "npx --yes tsx --tsconfig tsconfig.json scripts/test-drill-retrieval.ts",
-    "eval:drill-retrieval": "npx --yes tsx --tsconfig tsconfig.json scripts/evaluate-drill-retrieval.ts"
+    "test:drill-durations": "npx --yes tsx --tsconfig tsconfig.json scripts/test-drill-durations.ts",
+    "eval:drill-retrieval": "npx --yes tsx --tsconfig tsconfig.json scripts/evaluate-drill-retrieval.ts",
+    "sim:practice-budget": "npx --yes tsx --tsconfig tsconfig.json scripts/simulate-practice-budget.ts",
+    "estimate:durations": "node scripts/estimate-drill-durations.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",
