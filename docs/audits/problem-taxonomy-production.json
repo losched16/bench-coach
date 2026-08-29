@@ -1,0 +1,1032 @@
+{
+  "exported_at": "2026-08-29T10:33:01.397Z",
+  "source": "problem_taxonomy",
+  "count": 48,
+  "columns_present": [
+    "age_relevance",
+    "aliases",
+    "created_at",
+    "description",
+    "do_not_coach_flag",
+    "do_not_coach_note",
+    "label",
+    "skill_category",
+    "slug"
+  ],
+  "rows": [
+    {
+      "slug": "late-timing",
+      "label": "Late / poor timing",
+      "skill_category": "Hitting",
+      "description": "Hitter is behind the pitch, especially on faster pitching.",
+      "aliases": [
+        "poor timing",
+        "timing",
+        "late on fast pitching",
+        "late on faster pitching",
+        "late swing",
+        "behind the ball",
+        "slow bat",
+        "slow bat speed",
+        "slow bat to the zone",
+        "slow bat to zone",
+        "slow recognition",
+        "slow hands"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "casting",
+      "label": "Casting / long swing",
+      "skill_category": "Hitting",
+      "description": "Hands drift away from the body; long, loopy bat path that is late and weak.",
+      "aliases": [
+        "casting",
+        "casting (getting long)",
+        "casting hands away from body",
+        "long swing",
+        "long swing path",
+        "long loopy swing",
+        "loopy swing",
+        "looping",
+        "dragging the bat",
+        "dragging barrel",
+        "dragging the barrel",
+        "barrel dragging on low pitches"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "pulling-head",
+      "label": "Pulling head / eyes off ball",
+      "skill_category": "Hitting",
+      "description": "Head and eyes leave the ball before contact.",
+      "aliases": [
+        "pulling head",
+        "head pulling off",
+        "head pulling",
+        "pulling off the ball",
+        "looking away before contact",
+        "not watching the ball",
+        "not tracking the ball",
+        "losing track of ball",
+        "poor tracking",
+        "not tracking through contact"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "lunging",
+      "label": "Lunging / poor balance",
+      "skill_category": "Hitting",
+      "description": "Weight drifts forward early; hitter lunges instead of rotating in balance.",
+      "aliases": [
+        "poor balance",
+        "loss of balance",
+        "drifting forward before swing",
+        "drifting / losing balance",
+        "lunging",
+        "swaying instead of rotating",
+        "leaking weight forward",
+        "leaking weight",
+        "leaking",
+        "no axis to swing around",
+        "no axis"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "flying-open",
+      "label": "Flying open / no load",
+      "skill_category": "Hitting",
+      "description": "No load or early shoulder opening; upper and lower body fire together.",
+      "aliases": [
+        "no load",
+        "passive swing",
+        "early shoulder opening",
+        "flying open early",
+        "spinning out",
+        "no separation between upper and lower body",
+        "losing torque"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "rolling-over",
+      "label": "Rolling over / weak top hand",
+      "skill_category": "Hitting",
+      "description": "Wrists roll early, producing weak ground balls to the pull side.",
+      "aliases": [
+        "rolling over",
+        "rolling over too early",
+        "weak top hand",
+        "getting around the ball"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "stepping-in-bucket",
+      "label": "Steps in the bucket",
+      "skill_category": "Hitting",
+      "description": "Front foot strides away from the plate / open instead of toward the pitcher.",
+      "aliases": [
+        "stepping in the bucket",
+        "stepping out",
+        "striding across body",
+        "poor stride direction",
+        "landing open (turned out front foot)",
+        "landing open"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "barring-arm",
+      "label": "Barring front arm / disconnected",
+      "skill_category": "Hitting",
+      "description": "Front arm bars out and the swing disconnects from the body.",
+      "aliases": [
+        "barring front arm",
+        "barring the front arm",
+        "disconnected swing",
+        "swinging with arms only",
+        "poor extension",
+        "no extension"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "plate-confidence",
+      "label": "Low confidence / fear at the plate",
+      "skill_category": "Hitting",
+      "description": "Hesitant or fearful in the box; reluctant to commit to a swing.",
+      "aliases": [
+        "no confidence at the plate",
+        "fear of swinging",
+        "fear at the plate",
+        "fear of ball / low confidence"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "throwing-mechanics",
+      "label": "Poor throwing mechanics",
+      "skill_category": "Throwing",
+      "description": "General arm-path / sequencing breakdown; slinging or all-arm throws.",
+      "aliases": [
+        "poor mechanics",
+        "poor arm path",
+        "sloppy mechanics",
+        "scarecrow arm action",
+        "arm pain / poor mechanics",
+        "poor arm preparation",
+        "throwing with only the arm",
+        "throwing with only arm",
+        "throwing with entire arm not forearm/wrist",
+        "slinging the ball",
+        "sling arm action"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "short-arming",
+      "label": "Short-arming",
+      "skill_category": "Throwing",
+      "description": "Arm does not extend through release; throw is short and tense.",
+      "aliases": [
+        "short-arming",
+        "short arming",
+        "stopping arm short",
+        "stopping short",
+        "no arm extension",
+        "no arm extension through release"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "no-follow-through-throw",
+      "label": "No follow-through (throwing)",
+      "skill_category": "Throwing",
+      "description": "Arm stops at release instead of finishing across the body.",
+      "aliases": [
+        "no follow-through",
+        "weak follow-through",
+        "incomplete follow-through",
+        "short follow-through",
+        "improper follow-through"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "weak-throws",
+      "label": "Weak throws / arm strength",
+      "skill_category": "Throwing",
+      "description": "Low velocity and carry; no momentum into the throw.",
+      "aliases": [
+        "weak throws",
+        "weak velocity",
+        "no momentum",
+        "no momentum into ball",
+        "weak crow hop"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "inaccurate-throws",
+      "label": "Inaccurate throws",
+      "skill_category": "Throwing",
+      "description": "Throws miss the target; no step or alignment to the target.",
+      "aliases": [
+        "inaccurate throwing",
+        "inaccurate throws",
+        "poor accuracy",
+        "throwing off-line",
+        "inaccuracy",
+        "no specific target focus",
+        "no target focus",
+        "no step",
+        "not stepping toward target",
+        "no stepping toward target",
+        "throwing across body",
+        "striding across body",
+        "no alignment to target",
+        "chest not facing target"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "no-wrist-snap",
+      "label": "No wrist snap",
+      "skill_category": "Throwing",
+      "description": "No wrist/finger snap at release; ball lacks backspin.",
+      "aliases": [
+        "no wrist snap",
+        "poor wrist snap"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "slow-transfer",
+      "label": "Slow transfer / exchange",
+      "skill_category": "Fielding (Infield)",
+      "description": "Slow glove-to-hand exchange and footwork from catch to throw.",
+      "aliases": [
+        "slow transfer",
+        "slow transitions",
+        "slow transitions from catch to throw",
+        "slow ball transfer",
+        "slow transfers",
+        "slow hands on transfer",
+        "slow hands",
+        "slow release",
+        "extra steps before throw",
+        "fumbling",
+        "poor transfer speed",
+        "poor transition rhythm",
+        "poor fielding-to-throw transition",
+        "poor throwing after fielding"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "fielding-flat-footed",
+      "label": "Fields flat-footed / not in front",
+      "skill_category": "Fielding (Infield)",
+      "description": "Fields standing up / flat-footed instead of low and in front.",
+      "aliases": [
+        "fielding flat-footed",
+        "standing flat-footed",
+        "flat-footed throws",
+        "not getting in front of the ball",
+        "standing up instead of dropping",
+        "poor fielding position"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "poor-fielding-footwork",
+      "label": "Poor fielding footwork / approach",
+      "skill_category": "Fielding (Infield)",
+      "description": "Bad approach angles, leaving holes, stabbing at the ball.",
+      "aliases": [
+        "poor footwork",
+        "leaving holes between legs",
+        "inconsistent fielding mechanics",
+        "poor approach angles",
+        "stabbing at the ball",
+        "stabbing at ball",
+        "deflecting balls too far",
+        "poor body angle"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "backpedaling-flyballs",
+      "label": "Backpedals / bad routes on fly balls",
+      "skill_category": "Fielding (Fly Balls)",
+      "description": "Backpedals instead of turning and running; inefficient routes.",
+      "aliases": [
+        "backpedaling instead of turning and running",
+        "backpedaling on fly balls",
+        "poor route efficiency",
+        "lazy routes to fly balls",
+        "poor positioning under fly balls",
+        "freezing on balls hit overhead",
+        "poor route efficiency",
+        "lazy routes"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "fear-fly-balls",
+      "label": "Fear of fly balls",
+      "skill_category": "Fielding (Fly Balls)",
+      "description": "Tentative or fearful tracking and catching of fly balls overhead.",
+      "aliases": [
+        "fear of fly balls"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "fear-of-ball",
+      "label": "Fear of the ball / turns away",
+      "skill_category": "Catching",
+      "description": "Flinches, turns away, or closes eyes on an incoming ball.",
+      "aliases": [
+        "fear of the ball",
+        "fear of ball",
+        "fear of ball / low confidence",
+        "turning away",
+        "fear of throwing",
+        "fear of catching"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "bad-base-turns",
+      "label": "Bad base-running turns",
+      "skill_category": "Baserunning",
+      "description": "Wide, slow turns; does not hit the inside of the bag.",
+      "aliases": [
+        "running past bases without proper turns",
+        "wide inefficient turns",
+        "wide/slow base turns",
+        "not hitting inside of bag",
+        "slowing down before base",
+        "running in foul territory"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "base-awareness",
+      "label": "Poor base awareness / hesitation",
+      "skill_category": "Baserunning",
+      "description": "Hesitates, does not know when to advance or take a lead.",
+      "aliases": [
+        "poor base awareness",
+        "not knowing when to advance",
+        "hesitation on the bases",
+        "forgetting to take a lead"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "slow-first-step",
+      "label": "Slow first step / acceleration",
+      "skill_category": "Baserunning",
+      "description": "Slow to accelerate out of the box or off the base.",
+      "aliases": [
+        "slow first step",
+        "poor acceleration",
+        "poor body control when changing direction"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "rushing-delivery",
+      "label": "Rushing the delivery",
+      "skill_category": "Pitching",
+      "description": "Rushes through the balance point; lower and upper half out of sync.",
+      "aliases": [
+        "rushing",
+        "rushing delivery",
+        "rushing the delivery",
+        "rushing through balance point",
+        "skipping phases of delivery",
+        "static delivery",
+        "pitching from a standstill"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "balance-leg-lift",
+      "label": "Poor balance at leg lift / falls off",
+      "skill_category": "Pitching",
+      "description": "Wobbles at leg lift or falls off to the side of the mound.",
+      "aliases": [
+        "poor balance on one leg",
+        "poor balance at leg lift",
+        "wobbly delivery",
+        "falling off to one side",
+        "falling off the mound",
+        "falling off to the side",
+        "no balance point"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "inconsistent-release",
+      "label": "Inconsistent release / command",
+      "skill_category": "Pitching",
+      "description": "Release point and command vary pitch to pitch.",
+      "aliases": [
+        "inconsistent release point",
+        "releasing ball too early",
+        "poor command",
+        "no backspin on fastball",
+        "poor spin",
+        "poor backspin",
+        "slowing arm at release"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "no-hip-lead",
+      "label": "No hip lead / separation",
+      "skill_category": "Pitching",
+      "description": "Hips and shoulders rotate together; no separation or hip lead.",
+      "aliases": [
+        "no hip lead",
+        "no hip engagement",
+        "hip stall",
+        "hips and shoulders rotating together (no separation)",
+        "early opening",
+        "losing front side"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "inconsistent-stride",
+      "label": "Inconsistent stride / lands off-line",
+      "skill_category": "Pitching",
+      "description": "Stride length/direction varies; lands off-line to the target.",
+      "aliases": [
+        "striding across body (arm-side)",
+        "striding too far open (glove-side)",
+        "inconsistent stride length",
+        "landing off-line",
+        "inconsistent stride"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "cold-arm",
+      "label": "Throws without warming up / arm soreness",
+      "skill_category": "Arm Care",
+      "description": "Throws cold; stiffness or soreness from inadequate warm-up.",
+      "aliases": [
+        "cold arm throwing",
+        "throwing without warming up",
+        "skipping warm-up",
+        "skipping warm-up progression",
+        "arm soreness from inadequate warm-up",
+        "stiff shoulders",
+        "tight shoulders",
+        "poor range of motion",
+        "restricted range of motion",
+        "cold throwing",
+        "arm tightness",
+        "cold muscles",
+        "insufficient shoulder mobility"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "catcher-receiving",
+      "label": "Stabs / pulls pitches out of the zone (receiving & framing)",
+      "skill_category": "Catching",
+      "description": "Catcher stabs at pitches or carries them out of the zone instead of quietly receiving and framing strikes.",
+      "aliases": [
+        "poor receiving",
+        "stabbing at pitches",
+        "stabbing pitches",
+        "carrying pitches out of the zone",
+        "pulling pitches out of the zone",
+        "loses strikes for the pitcher",
+        "bad framing",
+        "poor framing",
+        "framing",
+        "receiving",
+        "hard hands behind the plate",
+        "noisy glove",
+        "can't stick pitches"
+      ],
+      "created_at": "2026-08-04T15:36:04.218439+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "catcher-blocking",
+      "label": "Won't block balls in the dirt",
+      "skill_category": "Catching",
+      "description": "Turns the glove or bails to the side instead of dropping to block pitches in the dirt.",
+      "aliases": [
+        "can't block",
+        "won't block",
+        "poor blocking",
+        "balls in the dirt get past",
+        "picks instead of blocks",
+        "turns head on balls in the dirt",
+        "bails on balls in the dirt",
+        "too many passed balls",
+        "wild pitches get by",
+        "blocking"
+      ],
+      "created_at": "2026-08-04T15:36:04.218439+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "cutoffs-relays",
+      "label": "Misses the cutoff man / poor relays",
+      "skill_category": "Team Defense",
+      "description": "Outfield throws sail past the cutoff man; relays are slow, off-line, or go to the wrong base.",
+      "aliases": [
+        "misses the cutoff man",
+        "missing cutoffs",
+        "airmails the cutoff",
+        "doesn't hit the cutoff",
+        "poor relays",
+        "slow relay throws",
+        "doesn't line up on relays",
+        "throws to the wrong base",
+        "no cutoff man",
+        "cutoffs",
+        "relays",
+        "cuts and relays"
+      ],
+      "created_at": "2026-08-04T15:36:04.218439+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "rundowns",
+      "label": "Panics in rundowns",
+      "skill_category": "Team Defense",
+      "description": "Rundowns turn chaotic — too many throws, the runner escapes, nobody covers a base.",
+      "aliases": [
+        "panics in rundowns",
+        "bad rundowns",
+        "pickle chaos",
+        "too many throws in rundowns",
+        "runner escapes rundowns",
+        "doesn't follow the throw",
+        "rundown",
+        "pickle",
+        "rundown defense"
+      ],
+      "created_at": "2026-08-04T15:36:04.218439+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "first-base-footwork",
+      "label": "Fumbles footwork around first base",
+      "skill_category": "Fielding (Infield)",
+      "description": "First baseman can't find the bag, stretches too early, or can't handle off-line throws and short hops.",
+      "aliases": [
+        "first base footwork",
+        "can't find the bag",
+        "stretches too early",
+        "pulls foot off the bag",
+        "can't pick throws at first",
+        "poor scoops at first",
+        "first baseman fundamentals",
+        "misses off-line throws at first",
+        "playing first base"
+      ],
+      "created_at": "2026-08-04T15:36:04.218439+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "outfield-communication",
+      "label": "No call / collides on fly balls",
+      "skill_category": "Fielding (Fly Balls)",
+      "description": "Fielders don't call the ball — collisions, dropped balls, or everyone deferring to each other.",
+      "aliases": [
+        "doesn't call the ball",
+        "no communication in the outfield",
+        "outfielders collide",
+        "collisions on fly balls",
+        "two players let it drop",
+        "nobody calls it",
+        "poor priority on fly balls",
+        "doesn't call off the infielder",
+        "outfield communication",
+        "priority calls"
+      ],
+      "created_at": "2026-08-04T15:36:04.218439+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "no-situational-hitting",
+      "label": "No situational hitting / can't move runners",
+      "skill_category": "Hitting",
+      "description": "Same approach every at-bat; can't move runners over, hit behind them, or drive in a run with an out.",
+      "aliases": [
+        "can't move runners",
+        "no situational hitting",
+        "doesn't hit behind the runner",
+        "can't go opposite field",
+        "pull happy",
+        "no sac fly",
+        "doesn't advance runners",
+        "no approach with runners on",
+        "no productive outs",
+        "situational hitting"
+      ],
+      "created_at": "2026-08-04T15:36:04.218439+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "cant-bunt",
+      "label": "Can't get a bunt down",
+      "skill_category": "Bunting",
+      "description": "Pops bunts up, misses entirely, or can't place them — no reliable sacrifice bunt.",
+      "aliases": [
+        "can't bunt",
+        "can't get a bunt down",
+        "pops up bunts",
+        "bad bunt technique",
+        "afraid to bunt",
+        "can't place bunts",
+        "sacrifice bunt",
+        "bunting for a hit",
+        "stabs at the bunt",
+        "bunting"
+      ],
+      "created_at": "2026-08-04T15:36:04.218439+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "arm-fatigue",
+      "label": "Arm fatigue / no arm-care routine",
+      "skill_category": "Arm Care",
+      "description": "Arm gets tired or sore across the season; no band work or recovery routine to build durability.",
+      "aliases": [
+        "arm gets tired",
+        "arm fatigue",
+        "sore arm after pitching",
+        "no arm care routine",
+        "needs j-bands",
+        "j-band routine",
+        "weak rotator cuff",
+        "no recovery routine",
+        "dead arm",
+        "arm conditioning",
+        "arm durability"
+      ],
+      "created_at": "2026-08-04T15:36:04.218439+00:00",
+      "do_not_coach_flag": false,
+      "do_not_coach_note": null,
+      "age_relevance": []
+    },
+    {
+      "slug": "one-hand-catching",
+      "label": "One-handed / stabs at the ball",
+      "skill_category": "Catching",
+      "description": "Catches one-handed or stabs instead of using two hands with soft give.",
+      "aliases": [
+        "one-hand catching",
+        "no two-hand catch",
+        "stabbing at the ball",
+        "stabbing at ball",
+        "dropping glove",
+        "poor hand positioning",
+        "wrong glove orientation",
+        "wrong glove position",
+        "only knowing one glove position"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": true,
+      "do_not_coach_note": "At 6-8 one-handed catching is usually hand strength, not habit, and two-hand cues at this stage often teach stabbing at the ball. Build it through volume rather than form correction: lots of easy catches they succeed at, glove-side-only reps, and short-hop games that make securing the ball the fun part. It tightens up as their hands get stronger — but keep the reps coming, it does not fix itself from neglect.",
+      "age_relevance": [
+        "9U",
+        "10U",
+        "11U",
+        "12U",
+        "13U+"
+      ]
+    },
+    {
+      "slug": "inconsistent-contact",
+      "label": "Inconsistent / weak contact",
+      "skill_category": "Hitting",
+      "description": "Contact quality and location vary swing to swing.",
+      "aliases": [
+        "inconsistent contact",
+        "weak contact",
+        "poor contact",
+        "inconsistent contact on off-speed",
+        "inconsistent contact direction",
+        "poor hand-eye coordination",
+        "poor hand eye coordination"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": true,
+      "do_not_coach_note": "Whiffs at 6-7 are the developmental stage, so the lever is swing volume, not mechanical instruction. Tee work and close front toss where they get 40-50 swings and make contact often builds the pattern faster than any cue. Avoid stance and hand-path corrections at this age — they fragment a swing the player is still assembling. If contact is not improving after several weeks of volume, look at pitch height and tee position before touching mechanics.",
+      "age_relevance": [
+        "8U",
+        "9U",
+        "10U",
+        "11U",
+        "12U",
+        "13U+"
+      ]
+    },
+    {
+      "slug": "two-strike-approach",
+      "label": "Two-strike approach",
+      "skill_category": "Hitting",
+      "description": "Same aggressive swing in every count; no two-strike adjustment.",
+      "aliases": [
+        "same swing in all counts",
+        "poor two-strike discipline",
+        "panic with two strikes",
+        "swinging at bad pitches",
+        "poor adjustment to different pitch levels"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": true,
+      "do_not_coach_note": "Before about 9-10, running a separate two-strike mode splits attention and usually makes both swings worse. Work the underlying skill instead: swinging at strikes and taking balls, as one decision rather than two approaches. Strike-zone games where they call pitches from the on-deck circle build the recognition that a two-strike approach later depends on.",
+      "age_relevance": [
+        "10U",
+        "11U",
+        "12U",
+        "13U+"
+      ]
+    },
+    {
+      "slug": "uppercutting",
+      "label": "Uppercutting / bad swing plane",
+      "skill_category": "Hitting",
+      "description": "Swing plane does not match the pitch — big uppercut or chopping down.",
+      "aliases": [
+        "uppercutting",
+        "uppercut",
+        "uppercut swing",
+        "chopping down on ball",
+        "poor swing plane",
+        "bad swing path",
+        "poor bat path",
+        "poor launch angle"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": true,
+      "do_not_coach_note": "A slightly uphill swing path is correct and should not be flattened — \"swing level\" cues at this age reliably produce choppers. What IS worth fixing is the extreme version: back shoulder collapsing, head pulling off, everything popped up. Attack that through tee height and contact point rather than verbal cues about swing plane — set the tee at the top of the zone and let the ball position teach the path. High tee work plus contact-point drills change this faster than any instruction about the swing itself.",
+      "age_relevance": [
+        "9U",
+        "10U",
+        "11U",
+        "12U",
+        "13U+"
+      ]
+    },
+    {
+      "slug": "low-arm-slot",
+      "label": "Low arm slot / sidearm",
+      "skill_category": "Throwing",
+      "description": "Elbow drops below the shoulder; ball comes out sidearm.",
+      "aliases": [
+        "low arm slot",
+        "sidearm throws",
+        "throwing sideways",
+        "dropping elbow below shoulder",
+        "elbow dropping below shoulder",
+        "inconsistent arm slot"
+      ],
+      "created_at": "2026-06-29T21:55:23.737401+00:00",
+      "do_not_coach_flag": true,
+      "do_not_coach_note": "A lower arm slot at 6-8 usually reflects arm strength rather than mechanics, and forcing \"over the top\" at this age can create arm pain. Raise it indirectly: catch-play volume for strength, and drills from one knee that make a higher slot the path of least resistance. Do not cue arm position directly — build the strength and the slot follows. Revisit explicit mechanics at 9+.",
+      "age_relevance": [
+        "9U",
+        "10U",
+        "11U",
+        "12U",
+        "13U+"
+      ]
+    },
+    {
+      "slug": "base-stealing",
+      "label": "Poor jumps / can't steal bases",
+      "skill_category": "Baserunning",
+      "description": "Gets bad jumps, doesn't read the pitcher, and can't take extra bases on steals.",
+      "aliases": [
+        "can't steal bases",
+        "bad jumps",
+        "slow jump on steals",
+        "gets picked off",
+        "no secondary lead",
+        "doesn't read the pitcher",
+        "late steal break",
+        "poor crossover step on steals",
+        "delayed steal",
+        "frozen on steal attempts",
+        "base stealing",
+        "stealing bases"
+      ],
+      "created_at": "2026-08-04T15:36:04.218439+00:00",
+      "do_not_coach_flag": true,
+      "do_not_coach_note": "If the league does not permit leads or steals yet, the transferable work is what actually makes stealing easy later: first-step quickness, reading the ball off the bat, and aggressive turns at the bag. Train those now rather than pickoff reads and lead footwork, which have nowhere to be used and will need re-teaching when the rules change anyway.",
+      "age_relevance": [
+        "10U",
+        "11U",
+        "12U",
+        "13U+"
+      ]
+    },
+    {
+      "slug": "no-changeup",
+      "label": "Doesn't have a changeup / one speed only",
+      "skill_category": "Pitching",
+      "description": "Throws only fastballs; no safe off-speed pitch to change hitters' timing.",
+      "aliases": [
+        "no changeup",
+        "doesn't have a changeup",
+        "needs an offspeed pitch",
+        "one speed pitcher",
+        "only throws fastballs",
+        "changeup grip",
+        "change up",
+        "no second pitch",
+        "wants to throw a curveball too young",
+        "pitch grips"
+      ],
+      "created_at": "2026-08-04T15:36:04.218439+00:00",
+      "do_not_coach_flag": true,
+      "do_not_coach_note": "Adding a second pitch before about 10U splits limited practice reps and usually costs fastball command, which is the thing that actually gets outs at this age. Put the work into repeating the delivery and throwing strikes. If the player wants an off-speed feel, a grip change thrown with identical fastball arm speed is far safer than teaching a distinct pitch — no wrist manipulation, no slowing the arm.",
+      "age_relevance": [
+        "10U",
+        "11U",
+        "12U",
+        "13U+"
+      ]
+    },
+    {
+      "slug": "cant-hit-offspeed",
+      "label": "Fooled by off-speed / poor pitch recognition",
+      "skill_category": "Hitting",
+      "description": "Out on the front foot against changeups and slower pitches; can't recognize speed changes out of the hand.",
+      "aliases": [
+        "can't hit offspeed",
+        "can't hit the changeup",
+        "fooled by slow pitches",
+        "out in front of offspeed",
+        "poor pitch recognition",
+        "can't recognize spin",
+        "struggles against slow pitchers",
+        "way out in front",
+        "off balance against slow stuff",
+        "pitch recognition"
+      ],
+      "created_at": "2026-08-04T15:36:04.218439+00:00",
+      "do_not_coach_flag": true,
+      "do_not_coach_note": "Almost nobody throws real off-speed at this age, so what looks like a pitch-recognition problem is usually timing or tracking. Work general timing with varied front-toss speeds from the same arm slot, and vision work like calling pitch location from the on-deck circle. Save actual pitch identification for when they are seeing pitches that need identifying.",
+      "age_relevance": [
+        "10U",
+        "11U",
+        "12U",
+        "13U+"
+      ]
+    },
+    {
+      "slug": "cant-slide",
+      "label": "Can't slide / slides late or wrong",
+      "skill_category": "Baserunning",
+      "description": "Doesn't know how to slide; slides late, headfirst into bases, or with injury-prone form.",
+      "aliases": [
+        "can't slide",
+        "doesn't slide",
+        "afraid to slide",
+        "slides late",
+        "slides headfirst",
+        "bad sliding form",
+        "doesn't know how to slide",
+        "jams fingers sliding",
+        "no pop-up slide",
+        "sliding"
+      ],
+      "created_at": "2026-08-04T15:36:04.218439+00:00",
+      "do_not_coach_flag": true,
+      "do_not_coach_note": "Before 8-9U sliding is rarely needed and often not permitted, so it is not usually the highest-value thing to spend a practice on. When you do teach it, one session on wet grass in long pants covers the mechanics safely — feet-first, hands up, no last-second decisions. Until then, base-running speed and tight turns are the better use of the same time.",
+      "age_relevance": [
+        "9U",
+        "10U",
+        "11U",
+        "12U",
+        "13U+"
+      ]
+    }
+  ]
+}

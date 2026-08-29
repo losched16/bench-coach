@@ -35,6 +35,20 @@ import { createClient } from '@supabase/supabase-js'
 
 const OUT_DIR = 'docs/audits'
 
+// Node's global fetch ignores HTTPS_PROXY. curl honours it, so in a proxied
+// sandbox curl reaches Supabase and this script gets a 403 from a transparent
+// block — which reads like a credentials problem and is not one. Node 22
+// gained NODE_USE_ENV_PROXY to opt in; it must be set before startup, so the
+// script cannot set it for itself and says so instead of failing obscurely.
+if (process.env.HTTPS_PROXY && !process.env.NODE_USE_ENV_PROXY) {
+  console.error(
+    '\nHTTPS_PROXY is set but NODE_USE_ENV_PROXY is not, so fetch would bypass\n' +
+    'the proxy and be blocked. Re-run as:\n\n' +
+    `  NODE_USE_ENV_PROXY=1 node ${process.argv[1]} ${process.argv.slice(2).join(' ')}\n`
+  )
+  process.exit(1)
+}
+
 function die(msg) { console.error(`\n${msg}\n`); process.exit(1) }
 
 function need(name) {
@@ -138,8 +152,15 @@ function toCsv(rows, columns) {
   return lines.join('\n') + '\n'
 }
 
+/** --prefix production  ->  drill-library-production.{csv,json} */
+function outPrefix() {
+  const i = process.argv.indexOf('--prefix')
+  return i !== -1 && process.argv[i + 1] ? process.argv[i + 1] : 'current-state'
+}
+
 async function exportLibrary({ drills, map, problems }) {
   if (!existsSync(OUT_DIR)) mkdirSync(OUT_DIR, { recursive: true })
+  const prefix = outPrefix()
 
   // Problem mappings attached per drill, so a reviewer can see what each drill
   // is claimed to fix without joining two files by hand. Marked as JOINED in
@@ -172,9 +193,9 @@ async function exportLibrary({ drills, map, problems }) {
     return rank(a) - rank(b) || a.localeCompare(b)
   })
 
-  writeFileSync(`${OUT_DIR}/drill-library-current-state.csv`, toCsv(enriched, columns))
+  writeFileSync(`${OUT_DIR}/drill-library-${prefix}.csv`, toCsv(enriched, columns))
   writeFileSync(
-    `${OUT_DIR}/drill-library-current-state.json`,
+    `${OUT_DIR}/drill-library-${prefix}.json`,
     JSON.stringify({
       exported_at: new Date().toISOString(),
       note: 'Verbatim from drill_resources. Keys prefixed _joined are from drill_problem_map / problem_taxonomy, not columns on the drill.',
@@ -185,8 +206,41 @@ async function exportLibrary({ drills, map, problems }) {
     }, null, 2)
   )
 
-  console.log(`\nWrote ${OUT_DIR}/drill-library-current-state.csv  (${enriched.length} rows, ${columns.length} columns)`)
-  console.log(`Wrote ${OUT_DIR}/drill-library-current-state.json`)
+  // The two joined tables, verbatim and unflattened. The per-drill _joined_*
+  // keys above are a convenience view; these are the rows as stored, with
+  // every column they actually have — which is what a mapping-coverage
+  // analysis needs and what the flattened form loses.
+  writeFileSync(
+    `${OUT_DIR}/problem-taxonomy-${prefix}.json`,
+    JSON.stringify({
+      exported_at: new Date().toISOString(),
+      source: 'problem_taxonomy',
+      count: problems.length,
+      columns_present: Array.from(problems.reduce((set, p) => {
+        Object.keys(p).forEach(k => set.add(k)); return set
+      }, new Set())).sort(),
+      rows: problems,
+    }, null, 2)
+  )
+  writeFileSync(
+    `${OUT_DIR}/drill-problem-map-${prefix}.json`,
+    JSON.stringify({
+      exported_at: new Date().toISOString(),
+      source: 'drill_problem_map',
+      count: map.length,
+      columns_present: Array.from(map.reduce((set, m) => {
+        Object.keys(m).forEach(k => set.add(k)); return set
+      }, new Set())).sort(),
+      curated: map.filter(m => m.curated === true).length,
+      not_curated: map.filter(m => m.curated !== true).length,
+      rows: map,
+    }, null, 2)
+  )
+
+  console.log(`\nWrote ${OUT_DIR}/drill-library-${prefix}.csv  (${enriched.length} rows, ${columns.length} columns)`)
+  console.log(`Wrote ${OUT_DIR}/drill-library-${prefix}.json`)
+  console.log(`Wrote ${OUT_DIR}/problem-taxonomy-${prefix}.json  (${problems.length} rows)`)
+  console.log(`Wrote ${OUT_DIR}/drill-problem-map-${prefix}.json  (${map.length} rows)`)
 }
 
 // ── counting helpers ────────────────────────────────────────────────────────
