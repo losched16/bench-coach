@@ -21,13 +21,6 @@ interface SeoStructuredDataProps {
   hub?: { title: string; slug: string; category: string } | null
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  coaching: 'Coaching Guides',
-  drills: 'Drills',
-  'practice-plans': 'Practice Plans',
-  problems: 'Common Problems',
-}
-
 /** ISO 8601 duration. 60 → "PT60M". */
 function isoMinutes(m: number): string {
   return `PT${m}M`
@@ -36,13 +29,14 @@ function isoMinutes(m: number): string {
 export function SeoStructuredData({ page, block, hub }: SeoStructuredDataProps) {
   const url = page.canonical || `${SITE_ORIGIN}/${page.category}/${page.slug}`
 
-  // Mirrors the visible trail in SeoPageBreadcrumbs, including the fact that
-  // the category is a label rather than a link — it gets no `item`, because
-  // there is no category page to point at and inventing one would be markup
-  // describing a URL that 404s.
+  // The visible trail in SeoPageBreadcrumbs includes the category as an
+  // unlinked label, but that level is omitted here: Google requires `item`
+  // on every ListItem except the last, there is no category page to point
+  // at, and inventing one would be markup describing a URL that 404s. A
+  // BreadcrumbList is allowed to skip levels; it is not allowed a linkless
+  // middle entry — Search Console rejects the whole list as invalid.
   const crumbs: any[] = [
     { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_ORIGIN },
-    { '@type': 'ListItem', position: 2, name: CATEGORY_LABELS[page.category] || page.category },
   ]
   if (hub) {
     crumbs.push({
