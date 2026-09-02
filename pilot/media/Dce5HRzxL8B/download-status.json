@@ -1,8 +1,20 @@
 {
   "shortcode": "Dce5HRzxL8B",
-  "attempted_at": "2026-09-02T03:18:01.409Z",
-  "attempts": [],
+  "attempted_at": "2026-09-02T03:22:44.520Z",
+  "attempts": [
+    {
+      "method": "direct",
+      "url": "https://api.apify.com/v2/key-value-stores/jM0xcjrDs8vsxvqXK/records/Dce5HRzxL8B_Videobypolkperformance.mp4",
+      "ok": false,
+      "error": "fetch failed <- Request was cancelled. <- UND_ERR_ABORTED: Proxy response (403) !== 200 when HTTP Tunneling"
+    },
+    {
+      "method": "apify-kv",
+      "ok": false,
+      "skipped": true,
+      "error": "APIFY_TOKEN not set"
+    }
+  ],
   "ok": false,
-  "attempted": false,
-  "error": "no downloaded_video_url in the ingested record"
+  "error": "direct: fetch failed <- Request was cancelled. <- UND_ERR_ABORTED: Proxy response (403) !== 200 when HTTP Tunneling | apify-kv: APIFY_TOKEN not set"
 }

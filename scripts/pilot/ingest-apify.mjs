@@ -71,6 +71,12 @@ export function normalizeRecord(rec, ctx) {
     media: {
       type: pick(rec, 'type', 'productType', 'mediaType'),
       downloaded_video_url: pick(rec, 'downloadedVideo', 'downloadedVideoUrl', 'videoUrl', 'video_url'),
+      // The Instagram CDN URL, kept separately: it expires, but it is the
+      // only other place the bytes exist if the Apify store is unreachable.
+      alternate_video_url: pick(rec, 'videoUrl', 'video_url') !== pick(rec, 'downloadedVideo', 'downloadedVideoUrl', 'videoUrl', 'video_url')
+        ? pick(rec, 'videoUrl', 'video_url') : null,
+      audio_url: pick(rec, 'audioUrl'),
+      dimensions: rec.dimensionsWidth && rec.dimensionsHeight ? { width: rec.dimensionsWidth, height: rec.dimensionsHeight } : null,
       display_url: pick(rec, 'displayUrl', 'thumbnailUrl'),
       duration_seconds: Number.isFinite(duration) ? duration : null,
       // Filled in by download-media.mjs. Never trusted from the export.

@@ -21,6 +21,19 @@ import { join } from 'path'
 import { mkdirSync, writeFileSync } from 'fs'
 import { readJson, writeJson, exists, fileSize, probeDurationSeconds, nowIso, P } from './lib.mjs'
 
+// undici reports a blocked or refused connection as a bare "fetch failed" with
+// the real reason on .cause. A status file that says "fetch failed" cannot be
+// acted on; one that says "CONNECT tunnel failed, response 403" can.
+function describe(e) {
+  const parts = [String(e?.message || e)]
+  let c = e?.cause
+  for (let i = 0; c && i < 3; i++) {
+    parts.push(`${c.code ? c.code + ': ' : ''}${c.message || String(c)}`)
+    c = c.cause
+  }
+  return Array.from(new Set(parts)).join(' <- ')
+}
+
 async function fetchToFile(url, dest, headers = {}) {
   const res = await fetch(url, { headers, redirect: 'follow' })
   if (!res.ok) {
@@ -61,12 +74,17 @@ export async function downloadOne(source) {
     status.attempts.push({ method: 'direct', url, ok: true, bytes })
     return { ...status, ok: true, local_path: dest, bytes, duration_seconds: duration }
   } catch (e) {
-    status.attempts.push({ method: 'direct', url, ok: false, error: String(e.message || e) })
+    status.attempts.push({ method: 'direct', url, ok: false, error: describe(e) })
   }
 
   // Attempt 2: Apify record store, only if configured.
+  // The export's downloadedVideo is itself an Apify key-value-store URL, so
+  // the authenticated retry uses that same URL; a separate field is only
+  // consulted if the primary URL was something else (e.g. the Instagram CDN).
   const token = process.env.APIFY_TOKEN
-  const kvUrl = source.provenance?.apify_kv_url || source.media?.apify_kv_url
+  const kvUrl = /api\.apify\.com\/v2\/key-value-stores\//.test(url)
+    ? url
+    : (source.provenance?.apify_kv_url || source.media?.apify_kv_url || source.media?.alternate_video_url)
   if (token && kvUrl) {
     try {
       const bytes = await fetchToFile(kvUrl, dest, { Authorization: `Bearer ${token}` })
@@ -75,7 +93,7 @@ export async function downloadOne(source) {
       status.attempts.push({ method: 'apify-kv', url: kvUrl, ok: true, bytes })
       return { ...status, ok: true, local_path: dest, bytes, duration_seconds: duration }
     } catch (e) {
-      status.attempts.push({ method: 'apify-kv', url: kvUrl, ok: false, error: String(e.message || e) })
+      status.attempts.push({ method: 'apify-kv', url: kvUrl, ok: false, error: describe(e) })
     }
   } else {
     status.attempts.push({

@@ -177,6 +177,28 @@ ok('stub: flagged as a stub at top level and per source', stub.stub === true && 
 ok('stub: nothing pretends to be evidence', stub.sources.every(s => s.caption === '' && s.transcript === null && s.media.downloaded_video_url === null))
 
 // ---------------------------------------------------------------------------
+// 6b. Deterministic caption seeding — the one allowed pre-population
+//
+// Asserted against the REAL manifest, because the behaviour only fires when
+// the brief's expected names are all found verbatim in a real caption.
+// ---------------------------------------------------------------------------
+if (exists(P.manifest)) {
+  const man = readJson(P.manifest)
+  const dcc = man.sources.find(s => s.shortcode === 'DccQM89N1vx')
+  if (dcc && !readJson(P.input).stub) {
+    ok('seed: DccQM89N1vx hint is verified against the caption', dcc.hints?.verified_in_caption === true)
+    eq('seed: all four names found', dcc.hints?.found?.length, 4)
+    eq('seed: four units seeded', dcc.extracted_units.length, 4)
+    ok('seed: every unit is marked as caption-parsed', dcc.extracted_units.every(u => u.seeded_by === 'caption-parse'))
+    ok('seed: every unit carries its caption span', dcc.extracted_units.every(u => typeof u.source_evidence.caption_span === 'string' && u.source_evidence.caption_span.length > 10))
+    ok('seed: nothing judgemental was filled in',
+      dcc.extracted_units.every(u => u.final_classification === null && u.human_decision === null &&
+        u.visual_notes === null && u.benchcoach_candidates.length === 0 && u.inferred_fields.skill_category === null))
+    ok('seed: no other source was seeded', man.sources.filter(s => s.shortcode !== 'DccQM89N1vx').every(s => s.extracted_units.length === 0))
+  }
+}
+
+// ---------------------------------------------------------------------------
 // 7. Production untouched — the reference export IS the check
 // ---------------------------------------------------------------------------
 ok('safety: no pilot script imports a Supabase write path', (() => {

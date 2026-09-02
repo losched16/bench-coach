@@ -132,6 +132,19 @@ as skipped.
 
 Exit code 2 if any download failed.
 
+In this export every `downloadedVideo` is an **Apify key-value-store URL**
+(`api.apify.com/v2/key-value-stores/…`), not an Instagram CDN link. That is
+better for durability — KV records do not expire the way CDN URLs do — but
+`api.apify.com` is blocked in the remote build container. The status file
+records the real cause rather than undici's bare "fetch failed":
+
+```
+fetch failed <- Request was cancelled. <- UND_ERR_ABORTED: Proxy response (403) !== 200 when HTTP Tunneling
+```
+
+The Instagram CDN link is kept as `media.alternate_video_url` in case the
+Apify store is ever unreachable from a machine that *can* reach Instagram.
+
 ### 4. Extract frames and contact sheets
 
 ```
@@ -159,9 +172,16 @@ Assembles `pilot/calibration-manifest.json` from the ingested input, the
 download statuses and the frame manifests. Re-runnable: judgement fields from a
 previous manifest are carried forward so a review in progress is not wiped.
 
-The only pre-populated judgement-adjacent field is a `hints` block on
-`DccQM89N1vx` recording the brief's stated expectation of four named drills —
-as a hint to verify, not as extracted units.
+**One narrow exception to "never pre-populate."** The brief said `DccQM89N1vx`
+names four drills. The manifest checks that claim against the caption
+deterministically and records the outcome in `hints` either way. When every
+expected name is found verbatim — as it is: the caption lists them in a
+"Name - benefit" structure and says "reps of each drill" — the four names and
+their caption lines are seeded as units marked `seeded_by: caption-parse`.
+That is transcription of what the creator wrote, not a judgement about what
+the video shows. Every field a reviewer has to decide — `inferred_fields`,
+`benchcoach_candidates`, `final_classification` — stays empty, and the test
+suite asserts it. No other source is seeded.
 
 ### 6. Search candidate BenchCoach drills
 

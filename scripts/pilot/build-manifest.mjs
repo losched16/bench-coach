@@ -25,6 +25,43 @@ const reference = {
   map: exists(join(P.reference, 'drill_problem_map.json')) ? readJson(join(P.reference, 'drill_problem_map.json')) : null,
 }
 
+const EXPECTED_DRILLS = {
+  DccQM89N1vx: ['Split Grip Swings', 'Open 45s', 'Jump Backs', 'Side Flips'],
+}
+
+function hintFor(s) {
+  const expected = EXPECTED_DRILLS[s.shortcode]
+  if (!expected) return null
+  const hay = `${s.caption}\n${s.transcript || ''}`.toLowerCase()
+  const found = expected.filter(n => hay.includes(n.toLowerCase()))
+  const missing = expected.filter(n => !found.includes(n))
+  return {
+    expected_named_drills: expected,
+    verified_in_caption: missing.length === 0,
+    found, missing,
+    note: missing.length === 0
+      ? 'all expected names appear verbatim in the caption; units seeded from it'
+      : `stated in the pilot brief; ${missing.length} name(s) not found in caption or transcript — verify against the video`,
+  }
+}
+
+/** The caption's own "Name - benefit" lines, only when every expected name is present. */
+function seedFromCaption(s) {
+  const hint = hintFor(s)
+  if (!hint || !hint.verified_in_caption) return []
+  const units = []
+  const lines = String(s.caption).split(/\r?\n/)
+  hint.expected_named_drills.forEach((name, i) => {
+    const line = lines.find(l => l.toLowerCase().includes(name.toLowerCase()))
+    const u = emptyUnit(s.shortcode, i + 1, 'drill', name)
+    u.source_evidence.caption_span = line ? line.trim() : name
+    u.seeded_by = 'caption-parse'
+    u.seeded_note = 'name and span transcribed from the caption; nothing below this line is populated'
+    units.push(u)
+  })
+  return units
+}
+
 const sources = input.sources.map(s => {
   const dir = join(P.media, s.shortcode)
   const framesJson = join(dir, 'frames.json')
@@ -51,16 +88,21 @@ const sources = input.sources.map(s => {
       frame_count: frames?.frame_count ?? 0,
     },
 
-    // Deterministic from metadata only. The user-stated expectation that
-    // DccQM89N1vx names four drills is a HINT for the reviewer, not a unit —
-    // it is recorded so nobody has to remember it, and left unverified.
-    hints: prev?.hints ?? (s.shortcode === 'DccQM89N1vx'
-      ? { expected_named_drills: ['Split Grip Swings', 'Open 45s', 'Jump Backs', 'Side Flips'],
-          note: 'stated in the pilot brief; verify against caption/transcript before extracting units' }
-      : null),
+    // The brief stated DccQM89N1vx names four drills. That is checked here
+    // against the caption, deterministically, and the outcome recorded either
+    // way — a verified hint and an unverified one are different facts.
+    hints: hintFor(s),
 
     // Judgement fields. Carried forward if a previous manifest had them.
-    extracted_units: prev?.extracted_units?.length ? prev.extracted_units : [],
+    //
+    // One narrow exception to "never pre-populate": when a caption lists
+    // drills verbatim in a "Name - benefit" structure and the brief's expected
+    // names are all found, the NAMES and their caption spans are seeded as
+    // units. That is transcription of what the creator wrote, not a judgement
+    // about what the video shows. unit_type is 'drill' only because the
+    // caption itself says "reps of each drill". Everything a reviewer has to
+    // decide — inferred fields, candidates, classification — stays empty.
+    extracted_units: prev?.extracted_units?.length ? prev.extracted_units : seedFromCaption(s),
     visual_notes: prev?.visual_notes ?? null,
     inferred_fields: prev?.inferred_fields ?? null,
     benchcoach_candidates: prev?.benchcoach_candidates ?? [],
