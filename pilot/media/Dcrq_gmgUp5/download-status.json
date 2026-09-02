@@ -1,0 +1,8 @@
+{
+  "shortcode": "Dcrq_gmgUp5",
+  "attempted_at": "2026-09-02T03:18:01.408Z",
+  "attempts": [],
+  "ok": false,
+  "attempted": false,
+  "error": "no downloaded_video_url in the ingested record"
+}

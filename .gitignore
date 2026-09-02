@@ -37,3 +37,10 @@ next-env.d.ts
 # structured proposals under review. Real content, machine-specific, and the
 # `restore` command depends on the backups staying put locally.
 seo-conversions/
+
+# Drill-intelligence pilot: local tools and downloaded media stay out of git.
+# Reference exports, ingested input and the manifest are committed.
+pilot/.tools/
+pilot/media/**/source.mp4
+pilot/media/**/frames/
+pilot/media/_adhoc/

@@ -1,0 +1,2096 @@
+{
+  "exported_at": "2026-09-02T03:08:04.769Z",
+  "source": "supabase drill_problem_map via PostgREST (read-only)",
+  "project_ref": "chdpqsumqospnaztvfqe",
+  "count": 348,
+  "rows": [
+    {
+      "drill_id": "012241e0-c2ce-4a32-b037-39f90bd35437",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "012241e0-c2ce-4a32-b037-39f90bd35437",
+      "problem_slug": "weak-throws",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "01316f5d-8ea2-451f-a243-5e5edbd47d74",
+      "problem_slug": "slow-transfer",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "0200c065-9f6f-4a76-bd9a-22e46141a6ce",
+      "problem_slug": "inaccurate-throws",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "0200c065-9f6f-4a76-bd9a-22e46141a6ce",
+      "problem_slug": "low-arm-slot",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "0200c065-9f6f-4a76-bd9a-22e46141a6ce",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "023d2682-3b38-4917-9ae2-6346e30c9abf",
+      "problem_slug": "no-changeup",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "02521925-f738-4f32-a8e5-cc2951732244",
+      "problem_slug": "inaccurate-throws",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "02521925-f738-4f32-a8e5-cc2951732244",
+      "problem_slug": "low-arm-slot",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "02521925-f738-4f32-a8e5-cc2951732244",
+      "problem_slug": "no-follow-through-throw",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "0339e559-16cd-4912-94f6-a895ab8dc119",
+      "problem_slug": "barring-arm",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "0339e559-16cd-4912-94f6-a895ab8dc119",
+      "problem_slug": "casting",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "0339e559-16cd-4912-94f6-a895ab8dc119",
+      "problem_slug": "flying-open",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "0339e559-16cd-4912-94f6-a895ab8dc119",
+      "problem_slug": "late-timing",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "0339e559-16cd-4912-94f6-a895ab8dc119",
+      "problem_slug": "lunging",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "037c8a5a-327f-42cf-a2a1-bd550fed9e68",
+      "problem_slug": "casting",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "037c8a5a-327f-42cf-a2a1-bd550fed9e68",
+      "problem_slug": "late-timing",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "03eab7d0-7e67-4143-91e5-b8e4e783014a",
+      "problem_slug": "low-arm-slot",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "03eab7d0-7e67-4143-91e5-b8e4e783014a",
+      "problem_slug": "lunging",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "03eab7d0-7e67-4143-91e5-b8e4e783014a",
+      "problem_slug": "no-hip-lead",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "03eab7d0-7e67-4143-91e5-b8e4e783014a",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "09b8ebeb-a43d-40db-b1ae-eaa44e48f82c",
+      "problem_slug": "fear-of-ball",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "09b8ebeb-a43d-40db-b1ae-eaa44e48f82c",
+      "problem_slug": "one-hand-catching",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "09b8ebeb-a43d-40db-b1ae-eaa44e48f82c",
+      "problem_slug": "poor-fielding-footwork",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "09efef50-4077-4e64-80cc-e7d31a8aaa23",
+      "problem_slug": "barring-arm",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "09efef50-4077-4e64-80cc-e7d31a8aaa23",
+      "problem_slug": "casting",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "0c9a28d6-8fcf-4000-82fa-a1216ed45916",
+      "problem_slug": "outfield-communication",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "0d6f53b2-ca7d-45ae-b0d2-eac1d8c13f9a",
+      "problem_slug": "fear-of-ball",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "0d6f53b2-ca7d-45ae-b0d2-eac1d8c13f9a",
+      "problem_slug": "inconsistent-contact",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "0d6f53b2-ca7d-45ae-b0d2-eac1d8c13f9a",
+      "problem_slug": "stepping-in-bucket",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "0dba3ce4-0df5-4905-b95b-09705a5595d5",
+      "problem_slug": "outfield-communication",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "0ddcfd4a-2520-4d3a-ae98-b647bf07c49b",
+      "problem_slug": "casting",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "0ddcfd4a-2520-4d3a-ae98-b647bf07c49b",
+      "problem_slug": "rolling-over",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "0ddcfd4a-2520-4d3a-ae98-b647bf07c49b",
+      "problem_slug": "uppercutting",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "0e5e88b4-7b3c-4325-b658-179e638a8c24",
+      "problem_slug": "inconsistent-contact",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "0e5e88b4-7b3c-4325-b658-179e638a8c24",
+      "problem_slug": "rolling-over",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "14e902d5-2cfc-47fc-8670-52a5b8942f45",
+      "problem_slug": "lunging",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "14e902d5-2cfc-47fc-8670-52a5b8942f45",
+      "problem_slug": "no-hip-lead",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "18e0cf1e-7f9b-4e51-9125-db81b04811a3",
+      "problem_slug": "inconsistent-contact",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "18e0cf1e-7f9b-4e51-9125-db81b04811a3",
+      "problem_slug": "late-timing",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "18e0cf1e-7f9b-4e51-9125-db81b04811a3",
+      "problem_slug": "pulling-head",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "192913af-c080-4361-b20e-f88f29db530f",
+      "problem_slug": "poor-fielding-footwork",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "192913af-c080-4361-b20e-f88f29db530f",
+      "problem_slug": "slow-transfer",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "19e2c8a9-d4a2-48bc-a511-0471f030d2e2",
+      "problem_slug": "backpedaling-flyballs",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "19e2c8a9-d4a2-48bc-a511-0471f030d2e2",
+      "problem_slug": "fear-fly-balls",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "19e2c8a9-d4a2-48bc-a511-0471f030d2e2",
+      "problem_slug": "pulling-head",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "1a1767cc-35ca-47f3-ad7d-5a920add6597",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "1c406241-97b4-425d-8f16-89ade2dbbc22",
+      "problem_slug": "loses-posture",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "1cf0e1cf-3ea6-4610-85ab-73cad0708d37",
+      "problem_slug": "lunging",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "1cf0e1cf-3ea6-4610-85ab-73cad0708d37",
+      "problem_slug": "rushing-delivery",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "22aad66e-9d36-4b43-9d87-5b402d6621a0",
+      "problem_slug": "lunging",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "22aad66e-9d36-4b43-9d87-5b402d6621a0",
+      "problem_slug": "rushing-delivery",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "252404f0-38c3-481f-a18b-f7ce0262903f",
+      "problem_slug": "lunging",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "252404f0-38c3-481f-a18b-f7ce0262903f",
+      "problem_slug": "poor-fielding-footwork",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "252404f0-38c3-481f-a18b-f7ce0262903f",
+      "problem_slug": "stepping-in-bucket",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "253fee8d-d86f-497b-83db-44e622fb0a2d",
+      "problem_slug": "rushing-delivery",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "253fee8d-d86f-497b-83db-44e622fb0a2d",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "25b42f9f-7769-47ac-ad0e-f9140091660e",
+      "problem_slug": "cold-arm",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "25b42f9f-7769-47ac-ad0e-f9140091660e",
+      "problem_slug": "no-wrist-snap",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "25b42f9f-7769-47ac-ad0e-f9140091660e",
+      "problem_slug": "short-arming",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "25b42f9f-7769-47ac-ad0e-f9140091660e",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "26332028-2d32-4f42-817e-c8628f2bdbcd",
+      "problem_slug": "flying-open",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "26332028-2d32-4f42-817e-c8628f2bdbcd",
+      "problem_slug": "lunging",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "267777ed-01d2-4985-a4aa-5a1c41299f11",
+      "problem_slug": "fear-of-ball",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "267777ed-01d2-4985-a4aa-5a1c41299f11",
+      "problem_slug": "one-hand-catching",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "267777ed-01d2-4985-a4aa-5a1c41299f11",
+      "problem_slug": "poor-fielding-footwork",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "267777ed-01d2-4985-a4aa-5a1c41299f11",
+      "problem_slug": "pulling-head",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "282be624-51e9-4a06-ab37-7646b0a3da8b",
+      "problem_slug": "cant-slide",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "28d76619-82c7-4b4f-aaa8-16464ba10b1b",
+      "problem_slug": "inaccurate-throws",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "28d76619-82c7-4b4f-aaa8-16464ba10b1b",
+      "problem_slug": "short-arming",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "28d76619-82c7-4b4f-aaa8-16464ba10b1b",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "29ba52d6-4c87-40be-9c07-e0e760bf4cbc",
+      "problem_slug": "lunging",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "29ba52d6-4c87-40be-9c07-e0e760bf4cbc",
+      "problem_slug": "one-hand-catching",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "2b5adf22-f8b1-4cfe-87e9-fe7ec1a1957e",
+      "problem_slug": "arm-fatigue",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "2b5adf22-f8b1-4cfe-87e9-fe7ec1a1957e",
+      "problem_slug": "cold-arm",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "2b5adf22-f8b1-4cfe-87e9-fe7ec1a1957e",
+      "problem_slug": "weak-throws",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "2d15c6de-d4a9-414a-9755-533140dd68b0",
+      "problem_slug": "poor-fielding-footwork",
+      "sort_order": 91,
+      "curated": false
+    },
+    {
+      "drill_id": "2da70c16-18d3-4b63-8eca-12804ac048ea",
+      "problem_slug": "rundowns",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "2db609fb-e152-400c-8927-038809eb062f",
+      "problem_slug": "cant-bunt",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "2f5901d2-ed57-4f6b-9dcc-6d1dc6110ef9",
+      "problem_slug": "poor-fielding-footwork",
+      "sort_order": 90,
+      "curated": false
+    },
+    {
+      "drill_id": "3269f5db-7541-42a7-b085-0b209f0dd8a6",
+      "problem_slug": "inaccurate-throws",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "3269f5db-7541-42a7-b085-0b209f0dd8a6",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "32b31e2c-78f6-47a2-a166-7ce9a3053969",
+      "problem_slug": "barring-arm",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "32b31e2c-78f6-47a2-a166-7ce9a3053969",
+      "problem_slug": "plate-confidence",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "32b31e2c-78f6-47a2-a166-7ce9a3053969",
+      "problem_slug": "pulling-head",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "32d3b75f-3d94-4048-b1e1-26a3d87e9449",
+      "problem_slug": "bad-base-turns",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "32d3b75f-3d94-4048-b1e1-26a3d87e9449",
+      "problem_slug": "slow-first-step",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "35a5e10e-9713-4887-ad07-030b421db06f",
+      "problem_slug": "bad-base-turns",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "35a5e10e-9713-4887-ad07-030b421db06f",
+      "problem_slug": "base-awareness",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "35a5e10e-9713-4887-ad07-030b421db06f",
+      "problem_slug": "fielding-flat-footed",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "35a5e10e-9713-4887-ad07-030b421db06f",
+      "problem_slug": "slow-first-step",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "367642e8-dfd4-4988-90e5-f2c4d10b3401",
+      "problem_slug": "slow-transfer",
+      "sort_order": 91,
+      "curated": false
+    },
+    {
+      "drill_id": "37f0c306-4c6c-4fa6-8491-96fa90893be9",
+      "problem_slug": "cutoffs-relays",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "38d1c493-6e09-4708-8cb7-7fab7eda189f",
+      "problem_slug": "flying-open",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "38d1c493-6e09-4708-8cb7-7fab7eda189f",
+      "problem_slug": "loses-posture",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "38d1c493-6e09-4708-8cb7-7fab7eda189f",
+      "problem_slug": "no-follow-through-throw",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "38d1c493-6e09-4708-8cb7-7fab7eda189f",
+      "problem_slug": "stepping-in-bucket",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "38d1c493-6e09-4708-8cb7-7fab7eda189f",
+      "problem_slug": "uppercutting",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "3a2f690d-095d-46ea-98e8-088a7a7ea7db",
+      "problem_slug": "inaccurate-throws",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "3a2f690d-095d-46ea-98e8-088a7a7ea7db",
+      "problem_slug": "rushing-delivery",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "3a2f690d-095d-46ea-98e8-088a7a7ea7db",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "3ac709ad-ed24-436f-ae50-31c43c4261a7",
+      "problem_slug": "no-changeup",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "3cc99259-c968-4977-bd66-c168250a27b8",
+      "problem_slug": "slow-transfer",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "3cc99259-c968-4977-bd66-c168250a27b8",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "3df6814c-4d77-4592-8693-9fd419ded05c",
+      "problem_slug": "cold-arm",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "3f2af696-fe22-4fb6-936f-fefe7d86681a",
+      "problem_slug": "arm-fatigue",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "3f2af696-fe22-4fb6-936f-fefe7d86681a",
+      "problem_slug": "cold-arm",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "40b34435-fd5f-4263-ae2f-b53083ce4531",
+      "problem_slug": "late-timing",
+      "sort_order": 90,
+      "curated": false
+    },
+    {
+      "drill_id": "40eebd5c-d2ab-4245-92bc-5cf73e68ba87",
+      "problem_slug": "lunging",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "4106c25c-beeb-4d11-b1aa-eb9aa85978ae",
+      "problem_slug": "base-stealing",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "4148cfe0-4a27-4abc-a754-dcd5f2544f0e",
+      "problem_slug": "barring-arm",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "4148cfe0-4a27-4abc-a754-dcd5f2544f0e",
+      "problem_slug": "casting",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "4148cfe0-4a27-4abc-a754-dcd5f2544f0e",
+      "problem_slug": "late-timing",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "41ff62cc-fb54-4266-8d0c-083a1c341161",
+      "problem_slug": "no-follow-through-throw",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "41ff62cc-fb54-4266-8d0c-083a1c341161",
+      "problem_slug": "short-arming",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "41ff62cc-fb54-4266-8d0c-083a1c341161",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "4483bfeb-19df-401b-97ce-6f97e527a99b",
+      "problem_slug": "lunging",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "455f390b-dd25-4389-a65d-9485f7b6fa53",
+      "problem_slug": "inaccurate-throws",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "455f390b-dd25-4389-a65d-9485f7b6fa53",
+      "problem_slug": "no-follow-through-throw",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "455f390b-dd25-4389-a65d-9485f7b6fa53",
+      "problem_slug": "slow-transfer",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "455f390b-dd25-4389-a65d-9485f7b6fa53",
+      "problem_slug": "weak-throws",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "45f3c274-4d4c-473f-bb3a-a74ecd64ef04",
+      "problem_slug": "no-follow-through-throw",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "45f3c274-4d4c-473f-bb3a-a74ecd64ef04",
+      "problem_slug": "short-arming",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "478cb186-6370-494d-b94a-47136344ccd8",
+      "problem_slug": "catcher-receiving",
+      "sort_order": 4,
+      "curated": true
+    },
+    {
+      "drill_id": "4fa59dec-86b0-46f7-bb31-f59382b1e9f4",
+      "problem_slug": "cant-hit-offspeed",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "4fa59dec-86b0-46f7-bb31-f59382b1e9f4",
+      "problem_slug": "inconsistent-contact",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "4fa59dec-86b0-46f7-bb31-f59382b1e9f4",
+      "problem_slug": "late-timing",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "4fa59dec-86b0-46f7-bb31-f59382b1e9f4",
+      "problem_slug": "pulling-head",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "50087451-2665-4c78-b968-ca56e9ceec3b",
+      "problem_slug": "inaccurate-throws",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "530bc412-32f9-4d31-b892-f95ebced2514",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "5357926b-8cb2-4ca4-86e7-ee389f6793d5",
+      "problem_slug": "bad-base-turns",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "5381544c-f5e5-4e30-a9e8-fe049a090a07",
+      "problem_slug": "flying-open",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "5381544c-f5e5-4e30-a9e8-fe049a090a07",
+      "problem_slug": "inconsistent-contact",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "5381544c-f5e5-4e30-a9e8-fe049a090a07",
+      "problem_slug": "late-timing",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "54cf8f72-be57-478b-8a6d-bb084cadbddf",
+      "problem_slug": "late-timing",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "54cf8f72-be57-478b-8a6d-bb084cadbddf",
+      "problem_slug": "pulling-head",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "55afb864-a8b0-496c-9b08-3e6805c7902d",
+      "problem_slug": "casting",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "55afb864-a8b0-496c-9b08-3e6805c7902d",
+      "problem_slug": "rolling-over",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "5afa81e5-ec55-4066-b62f-1b535884060b",
+      "problem_slug": "first-base-footwork",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "5b5b59e9-4906-4ba5-ad8b-1e9608041ef5",
+      "problem_slug": "inaccurate-throws",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "5b5b59e9-4906-4ba5-ad8b-1e9608041ef5",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "5c529012-7999-489d-90cb-4ccbeab94846",
+      "problem_slug": "fear-of-ball",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "5c529012-7999-489d-90cb-4ccbeab94846",
+      "problem_slug": "plate-confidence",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "5f398d5c-6377-4119-b5b7-99b81f4b8028",
+      "problem_slug": "catcher-receiving",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "6103f317-ff80-4422-a86a-e83d9e15d80b",
+      "problem_slug": "cant-bunt",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "62b2ed36-03da-4e9d-a424-1d94620fde7d",
+      "problem_slug": "cutoffs-relays",
+      "sort_order": 4,
+      "curated": true
+    },
+    {
+      "drill_id": "64b38072-cd1c-4f0f-a3e1-9958c8cb0736",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "64c760e9-fb4d-449a-ba23-81dd057e0b11",
+      "problem_slug": "poor-fielding-footwork",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "64c760e9-fb4d-449a-ba23-81dd057e0b11",
+      "problem_slug": "slow-transfer",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "6759598d-9bfc-47b2-91f1-31c77fc97cb5",
+      "problem_slug": "barring-arm",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "6759598d-9bfc-47b2-91f1-31c77fc97cb5",
+      "problem_slug": "cold-arm",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "6759598d-9bfc-47b2-91f1-31c77fc97cb5",
+      "problem_slug": "no-wrist-snap",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "6759598d-9bfc-47b2-91f1-31c77fc97cb5",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "6829d43b-3680-4524-bc97-16cb75d645a0",
+      "problem_slug": "inaccurate-throws",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "6829d43b-3680-4524-bc97-16cb75d645a0",
+      "problem_slug": "inconsistent-stride",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "6829d43b-3680-4524-bc97-16cb75d645a0",
+      "problem_slug": "stepping-in-bucket",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "69d859e5-5214-4b2d-b42f-07fcc56ff519",
+      "problem_slug": "low-arm-slot",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "69d859e5-5214-4b2d-b42f-07fcc56ff519",
+      "problem_slug": "no-follow-through-throw",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "69d859e5-5214-4b2d-b42f-07fcc56ff519",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "6a2c9dc7-f08c-47fd-9a08-f9e117f466cb",
+      "problem_slug": "inconsistent-contact",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "6a2c9dc7-f08c-47fd-9a08-f9e117f466cb",
+      "problem_slug": "uppercutting",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "6c2e8d58-e7f0-4727-b561-cb61bca27e25",
+      "problem_slug": "first-base-footwork",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "6c655fff-6181-4b7b-b22b-e1401e2e1f27",
+      "problem_slug": "cant-hit-offspeed",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "6d491e2a-be0d-4c9a-94c4-6d66f6d6bfb8",
+      "problem_slug": "inconsistent-contact",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "6d491e2a-be0d-4c9a-94c4-6d66f6d6bfb8",
+      "problem_slug": "pulling-head",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "726384a7-dacf-440b-8b42-381843a01722",
+      "problem_slug": "one-hand-catching",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "731d15d2-5e07-4a45-abb4-96163738905e",
+      "problem_slug": "late-timing",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "73c7c466-4de3-45a1-ad1b-bfc7100bb5a0",
+      "problem_slug": "balance-leg-lift",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "73c7c466-4de3-45a1-ad1b-bfc7100bb5a0",
+      "problem_slug": "inconsistent-release",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "73c7c466-4de3-45a1-ad1b-bfc7100bb5a0",
+      "problem_slug": "low-arm-slot",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "73c7c466-4de3-45a1-ad1b-bfc7100bb5a0",
+      "problem_slug": "no-follow-through-throw",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "73c7c466-4de3-45a1-ad1b-bfc7100bb5a0",
+      "problem_slug": "rushing-delivery",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "73f5fef2-af64-4577-998d-da854cebb0cf",
+      "problem_slug": "fielding-flat-footed",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "73f5fef2-af64-4577-998d-da854cebb0cf",
+      "problem_slug": "short-arming",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "73f5fef2-af64-4577-998d-da854cebb0cf",
+      "problem_slug": "weak-throws",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "744a47da-ef0c-42b0-b961-1175aaad42d9",
+      "problem_slug": "backpedaling-flyballs",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "744a47da-ef0c-42b0-b961-1175aaad42d9",
+      "problem_slug": "slow-first-step",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "7563acaf-50dc-4e28-b332-764a6a31c932",
+      "problem_slug": "balance-leg-lift",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "7563acaf-50dc-4e28-b332-764a6a31c932",
+      "problem_slug": "low-arm-slot",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "7563acaf-50dc-4e28-b332-764a6a31c932",
+      "problem_slug": "no-follow-through-throw",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "7563acaf-50dc-4e28-b332-764a6a31c932",
+      "problem_slug": "rushing-delivery",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "769ab66e-93c9-41bb-8519-91bd3e0ab186",
+      "problem_slug": "no-situational-hitting",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "77722605-74bc-44b8-9581-fdd1c7d9a4d3",
+      "problem_slug": "inconsistent-release",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "77722605-74bc-44b8-9581-fdd1c7d9a4d3",
+      "problem_slug": "no-wrist-snap",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "781605ce-10f5-400c-b7e2-6243915b5da2",
+      "problem_slug": "fielding-flat-footed",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "781605ce-10f5-400c-b7e2-6243915b5da2",
+      "problem_slug": "poor-fielding-footwork",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "7a2a344c-b2d7-4bf6-b0a2-e1dec8d835ab",
+      "problem_slug": "inconsistent-contact",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "7a2a344c-b2d7-4bf6-b0a2-e1dec8d835ab",
+      "problem_slug": "uppercutting",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "7ae1f28a-6e16-4163-b481-1b89226397eb",
+      "problem_slug": "outfield-communication",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "7bff401e-095e-447b-83e8-bc6cc750c85d",
+      "problem_slug": "flying-open",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "7bff401e-095e-447b-83e8-bc6cc750c85d",
+      "problem_slug": "inconsistent-contact",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "7bff401e-095e-447b-83e8-bc6cc750c85d",
+      "problem_slug": "weak-throws",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "7d82c674-bbcf-44da-99cf-4c1a8e1c123f",
+      "problem_slug": "inconsistent-release",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "7d82c674-bbcf-44da-99cf-4c1a8e1c123f",
+      "problem_slug": "no-wrist-snap",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "808e703f-d60e-4a0b-8cbd-845bcb4cc1bb",
+      "problem_slug": "catcher-blocking",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "8219d6db-fbe4-4ee2-93e5-4b5ecd46b12c",
+      "problem_slug": "balance-leg-lift",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "8219d6db-fbe4-4ee2-93e5-4b5ecd46b12c",
+      "problem_slug": "inconsistent-release",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "8219d6db-fbe4-4ee2-93e5-4b5ecd46b12c",
+      "problem_slug": "rushing-delivery",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "84930859-7689-4f1f-a9ba-5e71b4991af9",
+      "problem_slug": "slow-transfer",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "84ce5709-6afa-44ad-8a73-2e7c8320dd99",
+      "problem_slug": "no-situational-hitting",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "868fa15d-bfde-4487-83af-d5b27e8962ba",
+      "problem_slug": "low-arm-slot",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "868fa15d-bfde-4487-83af-d5b27e8962ba",
+      "problem_slug": "lunging",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "868fa15d-bfde-4487-83af-d5b27e8962ba",
+      "problem_slug": "no-follow-through-throw",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "868fa15d-bfde-4487-83af-d5b27e8962ba",
+      "problem_slug": "rushing-delivery",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "874e0c3a-14d6-4edd-beed-e943c1373d6d",
+      "problem_slug": "uppercutting",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "8f19ecd6-4892-46be-9f0c-b1aef17a86d6",
+      "problem_slug": "casting",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "8f19ecd6-4892-46be-9f0c-b1aef17a86d6",
+      "problem_slug": "rolling-over",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "91bc52cf-a234-4ad3-97a6-6df6038c752c",
+      "problem_slug": "rundowns",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "9300e679-69a7-4757-b74d-172103654860",
+      "problem_slug": "barring-arm",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "9300e679-69a7-4757-b74d-172103654860",
+      "problem_slug": "inconsistent-contact",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "9300e679-69a7-4757-b74d-172103654860",
+      "problem_slug": "late-timing",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "9300e679-69a7-4757-b74d-172103654860",
+      "problem_slug": "rolling-over",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "9335a346-33a3-4bd1-b65c-2664f9c7fcfb",
+      "problem_slug": "cant-slide",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "93cf7e08-9bd0-48c3-a344-26e092c651e7",
+      "problem_slug": "barring-arm",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "93cf7e08-9bd0-48c3-a344-26e092c651e7",
+      "problem_slug": "inconsistent-release",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "93cf7e08-9bd0-48c3-a344-26e092c651e7",
+      "problem_slug": "short-arming",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "94124e82-c8f2-411b-9daa-f0a1a176663e",
+      "problem_slug": "inconsistent-release",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "94124e82-c8f2-411b-9daa-f0a1a176663e",
+      "problem_slug": "no-wrist-snap",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "94124e82-c8f2-411b-9daa-f0a1a176663e",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "966c4b46-bc36-4589-9bce-ca0682e24c13",
+      "problem_slug": "casting",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "966c4b46-bc36-4589-9bce-ca0682e24c13",
+      "problem_slug": "inconsistent-contact",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "966c4b46-bc36-4589-9bce-ca0682e24c13",
+      "problem_slug": "rolling-over",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "971dccd3-bc0f-4043-9e2d-3417fc6f7361",
+      "problem_slug": "slow-transfer",
+      "sort_order": 90,
+      "curated": false
+    },
+    {
+      "drill_id": "977c1fd1-12b0-42c6-8b8b-e3a90303e385",
+      "problem_slug": "cold-arm",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "97efe128-5367-4ad5-959e-9c32f3b565e3",
+      "problem_slug": "backpedaling-flyballs",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "97efe128-5367-4ad5-959e-9c32f3b565e3",
+      "problem_slug": "slow-transfer",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "97efe128-5367-4ad5-959e-9c32f3b565e3",
+      "problem_slug": "weak-throws",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "9a6f58a3-0172-47e6-b159-8eb98306f5ca",
+      "problem_slug": "one-hand-catching",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "9d2b4035-6c2c-4ae2-891c-c617aee30d22",
+      "problem_slug": "no-changeup",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "9d95c228-0f42-487d-bfa0-164df2646c50",
+      "problem_slug": "arm-fatigue",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "9e9405f3-80fb-4ad6-928c-e7749be5e0f6",
+      "problem_slug": "flying-open",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "9e9405f3-80fb-4ad6-928c-e7749be5e0f6",
+      "problem_slug": "lunging",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "a1914ed5-c1e1-4123-ad4c-66685131199b",
+      "problem_slug": "catcher-blocking",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "a1914ed5-c1e1-4123-ad4c-66685131199b",
+      "problem_slug": "fear-of-ball",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "a1914ed5-c1e1-4123-ad4c-66685131199b",
+      "problem_slug": "fielding-flat-footed",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "a1914ed5-c1e1-4123-ad4c-66685131199b",
+      "problem_slug": "poor-fielding-footwork",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "a50f834a-2912-4b0d-9da2-e6856760b644",
+      "problem_slug": "flying-open",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "a50f834a-2912-4b0d-9da2-e6856760b644",
+      "problem_slug": "no-hip-lead",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "a54d536f-e4f0-4dd5-91d2-d007bd274250",
+      "problem_slug": "balance-leg-lift",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "a54d536f-e4f0-4dd5-91d2-d007bd274250",
+      "problem_slug": "inconsistent-stride",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "a54d536f-e4f0-4dd5-91d2-d007bd274250",
+      "problem_slug": "rushing-delivery",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "a559ea0e-7d73-4920-905f-ccb86e117f4e",
+      "problem_slug": "balance-leg-lift",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "a559ea0e-7d73-4920-905f-ccb86e117f4e",
+      "problem_slug": "lunging",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "a663b235-d115-4a52-a9d4-b33ba37e0e2a",
+      "problem_slug": "cold-arm",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "a663b235-d115-4a52-a9d4-b33ba37e0e2a",
+      "problem_slug": "fear-of-ball",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "a663b235-d115-4a52-a9d4-b33ba37e0e2a",
+      "problem_slug": "inaccurate-throws",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "a663b235-d115-4a52-a9d4-b33ba37e0e2a",
+      "problem_slug": "no-follow-through-throw",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "ab8f57ca-ebf4-49b7-8f08-e62e5dd54a3f",
+      "problem_slug": "cold-arm",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "ab8f57ca-ebf4-49b7-8f08-e62e5dd54a3f",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "abd7b4c8-d0a6-4ae5-ba4d-81b816da87c0",
+      "problem_slug": "barring-arm",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "abd7b4c8-d0a6-4ae5-ba4d-81b816da87c0",
+      "problem_slug": "casting",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "abd7b4c8-d0a6-4ae5-ba4d-81b816da87c0",
+      "problem_slug": "lunging",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "abd7b4c8-d0a6-4ae5-ba4d-81b816da87c0",
+      "problem_slug": "uppercutting",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "ac27e607-b52e-4865-8240-5a9b7795a410",
+      "problem_slug": "barring-arm",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "ac27e607-b52e-4865-8240-5a9b7795a410",
+      "problem_slug": "casting",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "ad6b8ea5-77db-4779-a08a-d59ae44bcdfc",
+      "problem_slug": "fielding-flat-footed",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "ad6b8ea5-77db-4779-a08a-d59ae44bcdfc",
+      "problem_slug": "weak-throws",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "aeae3e6a-487e-4f74-874d-edfeb83d3446",
+      "problem_slug": "no-situational-hitting",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "b194ff1d-f857-47d5-911c-0bab06c6e6bc",
+      "problem_slug": "cold-arm",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "b1c3653c-82a0-446e-a9cb-0dd5ebf09864",
+      "problem_slug": "no-hip-lead",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "b1c3653c-82a0-446e-a9cb-0dd5ebf09864",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "b1f220a4-fdc3-4750-810f-b431e0c8a16f",
+      "problem_slug": "cutoffs-relays",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "b22aa9c8-7cd1-4dc0-bba3-c66b03396e21",
+      "problem_slug": "inaccurate-throws",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "b22aa9c8-7cd1-4dc0-bba3-c66b03396e21",
+      "problem_slug": "no-hip-lead",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "b22aa9c8-7cd1-4dc0-bba3-c66b03396e21",
+      "problem_slug": "stepping-in-bucket",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "b3534518-f0df-4f30-8378-0b7d084e5fb9",
+      "problem_slug": "slow-transfer",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "b610bf25-fbc7-46e3-9c8a-16e07224bf70",
+      "problem_slug": "cant-slide",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "b67499b8-314b-415f-a789-c0b90f1f9a3f",
+      "problem_slug": "arm-fatigue",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "b9bb75c7-9ed0-47ee-9d11-2de953510027",
+      "problem_slug": "base-stealing",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "ba88a3cd-b2ae-430b-bd5e-d06c53f58838",
+      "problem_slug": "casting",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "ba88a3cd-b2ae-430b-bd5e-d06c53f58838",
+      "problem_slug": "late-timing",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "babe5481-655c-4c2e-9985-2465937c1067",
+      "problem_slug": "catcher-blocking",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "bca3c9cb-536d-4066-b9d5-5d960f4eb9a7",
+      "problem_slug": "base-awareness",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "bd106179-ca57-47ef-9e7e-5f8f235405b0",
+      "problem_slug": "inconsistent-contact",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "bd106179-ca57-47ef-9e7e-5f8f235405b0",
+      "problem_slug": "uppercutting",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "ca7017e4-6fa1-4440-8d93-e08dd55eeaa8",
+      "problem_slug": "two-strike-approach",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "ce379eeb-fa92-47f0-b41f-dd3831ebc5bc",
+      "problem_slug": "arm-fatigue",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "ce798b52-883f-4cf3-a6b8-311ef084a1be",
+      "problem_slug": "inconsistent-release",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "ce798b52-883f-4cf3-a6b8-311ef084a1be",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "cf43c787-c5f1-4188-9aff-e574b2b08c0a",
+      "problem_slug": "cant-bunt",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "cf56cda8-d397-4ed7-873b-560b78d6473e",
+      "problem_slug": "rushing-delivery",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "cf56cda8-d397-4ed7-873b-560b78d6473e",
+      "problem_slug": "weak-throws",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "d38bd8d0-2293-41ce-a97d-b5cb15f47fbc",
+      "problem_slug": "inconsistent-contact",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "d38bd8d0-2293-41ce-a97d-b5cb15f47fbc",
+      "problem_slug": "late-timing",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "d38bd8d0-2293-41ce-a97d-b5cb15f47fbc",
+      "problem_slug": "pulling-head",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "d4efaaad-808d-4e4f-8539-9c56c5c1835a",
+      "problem_slug": "inaccurate-throws",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "d4efaaad-808d-4e4f-8539-9c56c5c1835a",
+      "problem_slug": "slow-transfer",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "d685834e-1b6a-45ad-b06a-d7cf63447eef",
+      "problem_slug": "first-base-footwork",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "d6a3170b-ec74-4e4f-96df-64fba2aed225",
+      "problem_slug": "cold-arm",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "d6a3170b-ec74-4e4f-96df-64fba2aed225",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "d873c9db-09cd-406c-b53b-fbd6d5033185",
+      "problem_slug": "slow-transfer",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "dac833d7-c4f6-42ce-8409-ea83dd77fa65",
+      "problem_slug": "rundowns",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "daea5efc-42ce-4a83-9f07-a867dd6fbddd",
+      "problem_slug": "backpedaling-flyballs",
+      "sort_order": 90,
+      "curated": false
+    },
+    {
+      "drill_id": "dfa91c84-6ce8-4d03-9c5d-4252adc5fe3d",
+      "problem_slug": "cold-arm",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "dfa91c84-6ce8-4d03-9c5d-4252adc5fe3d",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "e40632d7-5ffb-42e9-9652-bd9a49e68ff5",
+      "problem_slug": "late-timing",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "e40632d7-5ffb-42e9-9652-bd9a49e68ff5",
+      "problem_slug": "slow-transfer",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "e4309ffb-fa02-4c6d-ac87-a6580e8c5bff",
+      "problem_slug": "low-arm-slot",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "e4309ffb-fa02-4c6d-ac87-a6580e8c5bff",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "e597ce36-5625-42f2-a378-30052499bb18",
+      "problem_slug": "uppercutting",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "e5d28c39-30b0-48fd-9534-8a43cd8154db",
+      "problem_slug": "lunging",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "e5d28c39-30b0-48fd-9534-8a43cd8154db",
+      "problem_slug": "no-hip-lead",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "e7bd95b6-d491-49e2-a383-7fc381e7b0ce",
+      "problem_slug": "catcher-receiving",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "e9b7c3c8-ce7b-44d9-9311-cacf9354400d",
+      "problem_slug": "inaccurate-throws",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "e9b7c3c8-ce7b-44d9-9311-cacf9354400d",
+      "problem_slug": "no-follow-through-throw",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "e9b7c3c8-ce7b-44d9-9311-cacf9354400d",
+      "problem_slug": "no-hip-lead",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "e9b7c3c8-ce7b-44d9-9311-cacf9354400d",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "ebd5359b-cccd-4249-b2d9-6e66987535eb",
+      "problem_slug": "fear-of-ball",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "ebd5359b-cccd-4249-b2d9-6e66987535eb",
+      "problem_slug": "inconsistent-contact",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "ebd5359b-cccd-4249-b2d9-6e66987535eb",
+      "problem_slug": "late-timing",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "ebd5359b-cccd-4249-b2d9-6e66987535eb",
+      "problem_slug": "plate-confidence",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "ebd5359b-cccd-4249-b2d9-6e66987535eb",
+      "problem_slug": "throwing-mechanics",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "ee6aa905-1e2c-4f96-8eff-4dc22fc01d4f",
+      "problem_slug": "inconsistent-contact",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "ee6aa905-1e2c-4f96-8eff-4dc22fc01d4f",
+      "problem_slug": "pulling-head",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "eec48dc4-af21-406e-95a2-9db5e22b7596",
+      "problem_slug": "late-timing",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "eec48dc4-af21-406e-95a2-9db5e22b7596",
+      "problem_slug": "pulling-head",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "ef98c922-d86a-46ea-913c-903b41c8ba2e",
+      "problem_slug": "cutoffs-relays",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "efc92935-5d8b-48d1-b56a-ac965f0f3716",
+      "problem_slug": "barring-arm",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "efc92935-5d8b-48d1-b56a-ac965f0f3716",
+      "problem_slug": "short-arming",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "f0c8b459-6bb1-499b-8fae-3969e7917846",
+      "problem_slug": "fear-of-ball",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "f0c8b459-6bb1-499b-8fae-3969e7917846",
+      "problem_slug": "fielding-flat-footed",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "f1bf25fb-0167-4b61-b196-675b2ba14280",
+      "problem_slug": "uppercutting",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "f1e620a8-1016-4097-b104-502ddcab967a",
+      "problem_slug": "slow-transfer",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "f35c8a06-d0e9-4a8b-ac8a-efffb204f026",
+      "problem_slug": "flying-open",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "f35c8a06-d0e9-4a8b-ac8a-efffb204f026",
+      "problem_slug": "late-timing",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "f35c8a06-d0e9-4a8b-ac8a-efffb204f026",
+      "problem_slug": "lunging",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "f35c8a06-d0e9-4a8b-ac8a-efffb204f026",
+      "problem_slug": "stepping-in-bucket",
+      "sort_order": 2,
+      "curated": true
+    },
+    {
+      "drill_id": "f47eba7c-bf41-4e1a-8a65-882f6fdcb0b1",
+      "problem_slug": "inconsistent-stride",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "f5a6bed9-86d9-4578-85f9-8449c0fc1e33",
+      "problem_slug": "casting",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "f5a6bed9-86d9-4578-85f9-8449c0fc1e33",
+      "problem_slug": "two-strike-approach",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "f94e3f9c-0bd7-41a4-9479-c1ffcbaf5212",
+      "problem_slug": "flying-open",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "f94e3f9c-0bd7-41a4-9479-c1ffcbaf5212",
+      "problem_slug": "lunging",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "f94e3f9c-0bd7-41a4-9479-c1ffcbaf5212",
+      "problem_slug": "no-follow-through-throw",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "f94e3f9c-0bd7-41a4-9479-c1ffcbaf5212",
+      "problem_slug": "uppercutting",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "f94e6efc-9146-469b-bee2-c46466d882aa",
+      "problem_slug": "one-hand-catching",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "f9d5d796-ce11-4964-bc70-a3ce5f8a607f",
+      "problem_slug": "base-stealing",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "fbbe6484-8b9d-486b-839e-23114e600c77",
+      "problem_slug": "slow-transfer",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "fd2b2033-22ec-48f1-96c9-646bb2a1a6f3",
+      "problem_slug": "cant-hit-offspeed",
+      "sort_order": 3,
+      "curated": true
+    },
+    {
+      "drill_id": "fe58cb41-277b-4757-bd46-dc78206d4d45",
+      "problem_slug": "catcher-receiving",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "fe58cb41-277b-4757-bd46-dc78206d4d45",
+      "problem_slug": "one-hand-catching",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "fe58cb41-277b-4757-bd46-dc78206d4d45",
+      "problem_slug": "poor-fielding-footwork",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "fe94a671-1d24-40fe-9771-4c7f5f708c14",
+      "problem_slug": "inconsistent-contact",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "fe94a671-1d24-40fe-9771-4c7f5f708c14",
+      "problem_slug": "late-timing",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "feb4908a-bcde-4744-9a56-010c49b01072",
+      "problem_slug": "cant-hit-offspeed",
+      "sort_order": 1,
+      "curated": true
+    },
+    {
+      "drill_id": "ffc26e2a-7801-42b7-b610-9a996527e638",
+      "problem_slug": "flying-open",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "ffc26e2a-7801-42b7-b610-9a996527e638",
+      "problem_slug": "inconsistent-release",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "ffc26e2a-7801-42b7-b610-9a996527e638",
+      "problem_slug": "no-hip-lead",
+      "sort_order": 100,
+      "curated": false
+    },
+    {
+      "drill_id": "ffc26e2a-7801-42b7-b610-9a996527e638",
+      "problem_slug": "weak-throws",
+      "sort_order": 100,
+      "curated": false
+    }
+  ]
+}

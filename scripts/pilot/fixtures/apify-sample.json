@@ -1,0 +1,31 @@
+[
+  {
+    "_fixture_note": "SYNTHETIC. Validates the ingest schema only. Shortcodes are fake, text is placeholder. Not the real pilot data.",
+    "inputUrl": "https://www.instagram.com/reel/FIXTURE0001/",
+    "shortCode": "FIXTURE0001",
+    "type": "Video",
+    "caption": "Fixture caption. Four named drills: Alpha Swings, Beta 45s, Gamma Backs, Delta Flips. #fixture",
+    "transcript": "Fixture transcript. First we do alpha swings. Then beta forty-fives. Then gamma backs. Finish with delta flips.",
+    "ownerUsername": "fixture_coach",
+    "ownerFullName": "Fixture Coach",
+    "timestamp": "2026-08-20T14:03:00.000Z",
+    "videoDuration": 42.5,
+    "downloadedVideo": "https://example.invalid/fixture0001.mp4",
+    "displayUrl": "https://example.invalid/fixture0001.jpg",
+    "likesCount": 10,
+    "commentsCount": 2,
+    "videoViewCount": 100,
+    "hashtags": ["fixture"]
+  },
+  {
+    "_fixture_note": "SYNTHETIC. Uses the alternate field names Apify actors sometimes emit.",
+    "url": "https://www.instagram.com/p/FIXTURE0002/",
+    "shortcode": "FIXTURE0002",
+    "type": "Video",
+    "caption": "Second fixture, one drill.",
+    "ownerUsername": "fixture_coach_two",
+    "takenAtTimestamp": 1755700000,
+    "duration": 28,
+    "videoUrl": "https://example.invalid/fixture0002.mp4"
+  }
+]

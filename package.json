@@ -29,7 +29,14 @@
     "sim:practice-budget": "npx --yes tsx --tsconfig tsconfig.json scripts/simulate-practice-budget.ts",
     "estimate:durations": "node scripts/estimate-drill-durations.mjs",
     "eval:practice-plan": "npx --yes tsx --tsconfig tsconfig.json scripts/evaluate-practice-plan.ts",
-    "curate:video-segments": "node scripts/curate-video-segments.mjs"
+    "curate:video-segments": "node scripts/curate-video-segments.mjs",
+    "pilot:export": "NODE_USE_ENV_PROXY=1 node scripts/pilot/export-reference.mjs",
+    "pilot:ingest": "node scripts/pilot/ingest-apify.mjs",
+    "pilot:download": "NODE_USE_ENV_PROXY=1 node scripts/pilot/download-media.mjs",
+    "pilot:frames": "node scripts/pilot/extract-frames.mjs",
+    "pilot:manifest": "node scripts/pilot/build-manifest.mjs",
+    "pilot:search": "node scripts/pilot/search-drills.mjs",
+    "pilot:test": "node scripts/pilot/test-pilot.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

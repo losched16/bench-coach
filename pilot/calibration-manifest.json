@@ -1,0 +1,199 @@
+{
+  "pilot": "instagram-drill-intelligence-calibration",
+  "generated_at": "2026-09-02T03:18:44.811Z",
+  "ingested_at": "2026-09-02T03:18:01.300Z",
+  "apify_export_file": null,
+  "reference_snapshot": {
+    "exported_at": "2026-09-02T03:08:04.769Z",
+    "drill_resources": 206,
+    "problem_taxonomy": 49,
+    "drill_problem_map": 348,
+    "curated_mappings": 75
+  },
+  "unit_types": [
+    "drill",
+    "variation",
+    "progression",
+    "regression",
+    "coaching_insight",
+    "taxonomy_insight",
+    "questionable",
+    "reject"
+  ],
+  "unit_template": {
+    "unit_id": "SHORTCODE-u1",
+    "unit_type": null,
+    "name": null,
+    "source_evidence": {
+      "caption_span": null,
+      "transcript_span": null,
+      "frame_refs": []
+    },
+    "visual_notes": null,
+    "inferred_fields": {
+      "skill_category": null,
+      "primary_skill": null,
+      "mechanic_focus": [],
+      "common_flaws_fixed": [],
+      "equipment_needed": [],
+      "min_age": null,
+      "max_age": null,
+      "difficulty_level": null,
+      "indoor_outdoor": null,
+      "space_required": null,
+      "requires_partner": null
+    },
+    "benchcoach_candidates": [],
+    "final_classification": null,
+    "human_decision": null
+  },
+  "source_count": 5,
+  "media_summary": {
+    "downloaded": 0,
+    "failed": 0,
+    "pending": 0,
+    "no_url": 5,
+    "with_frames": 0
+  },
+  "sources": [
+    {
+      "shortcode": "DZvJFoNgz8C",
+      "platform": "instagram",
+      "creator": null,
+      "source_url": "https://www.instagram.com/p/DZvJFoNgz8C/",
+      "posted_at": null,
+      "caption": "",
+      "transcript": null,
+      "duration_seconds": null,
+      "media": {
+        "retrieval_status": "no-url",
+        "retrieval_error": "no downloaded_video_url in the ingested record",
+        "local_path": null,
+        "frames_dir": null,
+        "frames_manifest": null,
+        "contact_sheet": null,
+        "frame_count": 0
+      },
+      "hints": null,
+      "extracted_units": [],
+      "visual_notes": null,
+      "inferred_fields": null,
+      "benchcoach_candidates": [],
+      "final_classification": null,
+      "human_decision": null
+    },
+    {
+      "shortcode": "Dcrq_gmgUp5",
+      "platform": "instagram",
+      "creator": null,
+      "source_url": "https://www.instagram.com/p/Dcrq_gmgUp5/",
+      "posted_at": null,
+      "caption": "",
+      "transcript": null,
+      "duration_seconds": null,
+      "media": {
+        "retrieval_status": "no-url",
+        "retrieval_error": "no downloaded_video_url in the ingested record",
+        "local_path": null,
+        "frames_dir": null,
+        "frames_manifest": null,
+        "contact_sheet": null,
+        "frame_count": 0
+      },
+      "hints": null,
+      "extracted_units": [],
+      "visual_notes": null,
+      "inferred_fields": null,
+      "benchcoach_candidates": [],
+      "final_classification": null,
+      "human_decision": null
+    },
+    {
+      "shortcode": "DccQM89N1vx",
+      "platform": "instagram",
+      "creator": null,
+      "source_url": "https://www.instagram.com/p/DccQM89N1vx/",
+      "posted_at": null,
+      "caption": "",
+      "transcript": null,
+      "duration_seconds": null,
+      "media": {
+        "retrieval_status": "no-url",
+        "retrieval_error": "no downloaded_video_url in the ingested record",
+        "local_path": null,
+        "frames_dir": null,
+        "frames_manifest": null,
+        "contact_sheet": null,
+        "frame_count": 0
+      },
+      "hints": {
+        "expected_named_drills": [
+          "Split Grip Swings",
+          "Open 45s",
+          "Jump Backs",
+          "Side Flips"
+        ],
+        "note": "stated in the pilot brief; verify against caption/transcript before extracting units"
+      },
+      "extracted_units": [],
+      "visual_notes": null,
+      "inferred_fields": null,
+      "benchcoach_candidates": [],
+      "final_classification": null,
+      "human_decision": null
+    },
+    {
+      "shortcode": "Dcd4H4gIb6v",
+      "platform": "instagram",
+      "creator": null,
+      "source_url": "https://www.instagram.com/p/Dcd4H4gIb6v/",
+      "posted_at": null,
+      "caption": "",
+      "transcript": null,
+      "duration_seconds": null,
+      "media": {
+        "retrieval_status": "no-url",
+        "retrieval_error": "no downloaded_video_url in the ingested record",
+        "local_path": null,
+        "frames_dir": null,
+        "frames_manifest": null,
+        "contact_sheet": null,
+        "frame_count": 0
+      },
+      "hints": null,
+      "extracted_units": [],
+      "visual_notes": null,
+      "inferred_fields": null,
+      "benchcoach_candidates": [],
+      "final_classification": null,
+      "human_decision": null
+    },
+    {
+      "shortcode": "Dce5HRzxL8B",
+      "platform": "instagram",
+      "creator": null,
+      "source_url": "https://www.instagram.com/p/Dce5HRzxL8B/",
+      "posted_at": null,
+      "caption": "",
+      "transcript": null,
+      "duration_seconds": null,
+      "media": {
+        "retrieval_status": "no-url",
+        "retrieval_error": "no downloaded_video_url in the ingested record",
+        "local_path": null,
+        "frames_dir": null,
+        "frames_manifest": null,
+        "contact_sheet": null,
+        "frame_count": 0
+      },
+      "hints": null,
+      "extracted_units": [],
+      "visual_notes": null,
+      "inferred_fields": null,
+      "benchcoach_candidates": [],
+      "final_classification": null,
+      "human_decision": null
+    }
+  ],
+  "safety": "Read-only pilot. No script under scripts/pilot/ writes to drill_resources, problem_taxonomy or drill_problem_map."
+}

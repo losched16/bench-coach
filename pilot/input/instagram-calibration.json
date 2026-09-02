@@ -1,0 +1,214 @@
+{
+  "pilot": "instagram-drill-intelligence-calibration",
+  "ingested_at": "2026-09-02T03:18:01.300Z",
+  "apify_export_file": null,
+  "stub": true,
+  "unit_types": [
+    "drill",
+    "variation",
+    "progression",
+    "regression",
+    "coaching_insight",
+    "taxonomy_insight",
+    "questionable",
+    "reject"
+  ],
+  "source_count": 5,
+  "sources": [
+    {
+      "platform": "instagram",
+      "platform_content_id": "DZvJFoNgz8C",
+      "shortcode": "DZvJFoNgz8C",
+      "source_url": "https://www.instagram.com/p/DZvJFoNgz8C/",
+      "creator": {
+        "username": null,
+        "full_name": null,
+        "id": null
+      },
+      "caption": "",
+      "transcript": null,
+      "posted_at": null,
+      "media": {
+        "type": null,
+        "downloaded_video_url": null,
+        "display_url": null,
+        "duration_seconds": null,
+        "local_path": null,
+        "retrieval_status": "no-url",
+        "retrieval_error": "no downloaded_video_url in the ingested record"
+      },
+      "engagement": {
+        "likes": null,
+        "comments": null,
+        "views": null
+      },
+      "hashtags": [],
+      "provenance": {
+        "ingested_at": "2026-09-02T03:18:01.300Z",
+        "apify_export_file": null,
+        "apify_record_index": 0,
+        "apify_record_id": null,
+        "raw_field_names": [],
+        "stub": true,
+        "stub_note": "Shortcode supplied by the pilot brief. No Apify export was available; re-run ingest with the real file."
+      },
+      "extracted_units": []
+    },
+    {
+      "platform": "instagram",
+      "platform_content_id": "Dcrq_gmgUp5",
+      "shortcode": "Dcrq_gmgUp5",
+      "source_url": "https://www.instagram.com/p/Dcrq_gmgUp5/",
+      "creator": {
+        "username": null,
+        "full_name": null,
+        "id": null
+      },
+      "caption": "",
+      "transcript": null,
+      "posted_at": null,
+      "media": {
+        "type": null,
+        "downloaded_video_url": null,
+        "display_url": null,
+        "duration_seconds": null,
+        "local_path": null,
+        "retrieval_status": "no-url",
+        "retrieval_error": "no downloaded_video_url in the ingested record"
+      },
+      "engagement": {
+        "likes": null,
+        "comments": null,
+        "views": null
+      },
+      "hashtags": [],
+      "provenance": {
+        "ingested_at": "2026-09-02T03:18:01.300Z",
+        "apify_export_file": null,
+        "apify_record_index": 1,
+        "apify_record_id": null,
+        "raw_field_names": [],
+        "stub": true,
+        "stub_note": "Shortcode supplied by the pilot brief. No Apify export was available; re-run ingest with the real file."
+      },
+      "extracted_units": []
+    },
+    {
+      "platform": "instagram",
+      "platform_content_id": "DccQM89N1vx",
+      "shortcode": "DccQM89N1vx",
+      "source_url": "https://www.instagram.com/p/DccQM89N1vx/",
+      "creator": {
+        "username": null,
+        "full_name": null,
+        "id": null
+      },
+      "caption": "",
+      "transcript": null,
+      "posted_at": null,
+      "media": {
+        "type": null,
+        "downloaded_video_url": null,
+        "display_url": null,
+        "duration_seconds": null,
+        "local_path": null,
+        "retrieval_status": "no-url",
+        "retrieval_error": "no downloaded_video_url in the ingested record"
+      },
+      "engagement": {
+        "likes": null,
+        "comments": null,
+        "views": null
+      },
+      "hashtags": [],
+      "provenance": {
+        "ingested_at": "2026-09-02T03:18:01.300Z",
+        "apify_export_file": null,
+        "apify_record_index": 2,
+        "apify_record_id": null,
+        "raw_field_names": [],
+        "stub": true,
+        "stub_note": "Shortcode supplied by the pilot brief. No Apify export was available; re-run ingest with the real file."
+      },
+      "extracted_units": []
+    },
+    {
+      "platform": "instagram",
+      "platform_content_id": "Dcd4H4gIb6v",
+      "shortcode": "Dcd4H4gIb6v",
+      "source_url": "https://www.instagram.com/p/Dcd4H4gIb6v/",
+      "creator": {
+        "username": null,
+        "full_name": null,
+        "id": null
+      },
+      "caption": "",
+      "transcript": null,
+      "posted_at": null,
+      "media": {
+        "type": null,
+        "downloaded_video_url": null,
+        "display_url": null,
+        "duration_seconds": null,
+        "local_path": null,
+        "retrieval_status": "no-url",
+        "retrieval_error": "no downloaded_video_url in the ingested record"
+      },
+      "engagement": {
+        "likes": null,
+        "comments": null,
+        "views": null
+      },
+      "hashtags": [],
+      "provenance": {
+        "ingested_at": "2026-09-02T03:18:01.300Z",
+        "apify_export_file": null,
+        "apify_record_index": 3,
+        "apify_record_id": null,
+        "raw_field_names": [],
+        "stub": true,
+        "stub_note": "Shortcode supplied by the pilot brief. No Apify export was available; re-run ingest with the real file."
+      },
+      "extracted_units": []
+    },
+    {
+      "platform": "instagram",
+      "platform_content_id": "Dce5HRzxL8B",
+      "shortcode": "Dce5HRzxL8B",
+      "source_url": "https://www.instagram.com/p/Dce5HRzxL8B/",
+      "creator": {
+        "username": null,
+        "full_name": null,
+        "id": null
+      },
+      "caption": "",
+      "transcript": null,
+      "posted_at": null,
+      "media": {
+        "type": null,
+        "downloaded_video_url": null,
+        "display_url": null,
+        "duration_seconds": null,
+        "local_path": null,
+        "retrieval_status": "no-url",
+        "retrieval_error": "no downloaded_video_url in the ingested record"
+      },
+      "engagement": {
+        "likes": null,
+        "comments": null,
+        "views": null
+      },
+      "hashtags": [],
+      "provenance": {
+        "ingested_at": "2026-09-02T03:18:01.300Z",
+        "apify_export_file": null,
+        "apify_record_index": 4,
+        "apify_record_id": null,
+        "raw_field_names": [],
+        "stub": true,
+        "stub_note": "Shortcode supplied by the pilot brief. No Apify export was available; re-run ingest with the real file."
+      },
+      "extracted_units": []
+    }
+  ]
+}
