@@ -1,0 +1,10 @@
+# Secrets. Never commit.
+.env
+.env.local
+.env.*.local
+
+# Live API responses may contain workspace data.
+out/
+*.log
+
+node_modules/

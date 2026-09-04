@@ -1,0 +1,17 @@
+{
+  "name": "benchcoach-attio-crm",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "BenchCoach League Sales CRM schema as code for Attio. Audit, apply, verify.",
+  "scripts": {
+    "audit": "node --env-file-if-exists=.env audit.mjs",
+    "apply": "node --env-file-if-exists=.env apply.mjs",
+    "apply:commit": "node --env-file-if-exists=.env apply.mjs --commit",
+    "verify": "node --env-file-if-exists=.env verify.mjs",
+    "test": "node test-schema.mjs"
+  },
+  "engines": {
+    "node": ">=20.6"
+  }
+}
