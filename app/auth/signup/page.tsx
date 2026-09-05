@@ -56,8 +56,18 @@ function SignupForm() {
         }).catch(err => console.error('GHL tracking error:', err))
 
         // Check for pending invite - go there instead of paywall
+        //
+        // The league token is checked FIRST. A coach can hold both — they were
+        // invited to a friend's team last spring and their league invited them
+        // this spring — and the league one is the one they are standing in
+        // right now. Sending them to a stale team invitation instead would
+        // strand them somewhere they did not ask to go, and the league link
+        // they just clicked would be gone.
+        const pendingLeagueInvite = sessionStorage.getItem('pendingLeagueInviteToken')
         const pendingInvite = sessionStorage.getItem('pendingInviteToken')
-        if (pendingInvite) {
+        if (pendingLeagueInvite) {
+          router.push(`/league/invite/${pendingLeagueInvite}`)
+        } else if (pendingInvite) {
           router.push(`/invite/${pendingInvite}`)
         } else if (redirect) {
           router.push(redirect)

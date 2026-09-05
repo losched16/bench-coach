@@ -32,7 +32,16 @@ export default function OnboardingPage() {
   // Check for pending invite or existing team access on mount
   useEffect(() => {
     const checkAccess = async () => {
-      // First check for pending invite
+      // First check for pending invite. A league-sponsored coach must never be
+      // walked through season/team/player setup — their league already created
+      // the team, and asking them to make another one is the "second version of
+      // BenchCoach" this layer exists to avoid.
+      const pendingLeagueInvite = sessionStorage.getItem('pendingLeagueInviteToken')
+      if (pendingLeagueInvite) {
+        router.push(`/league/invite/${pendingLeagueInvite}`)
+        return
+      }
+
       const pendingInvite = sessionStorage.getItem('pendingInviteToken')
       if (pendingInvite) {
         router.push(`/invite/${pendingInvite}`)

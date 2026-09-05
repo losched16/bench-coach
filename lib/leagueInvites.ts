@@ -176,6 +176,46 @@ export function inviteExpiry(now: Date = new Date(), days: number = LEAGUE_INVIT
 }
 
 /**
+ * Should accepting this invitation make the coach the OWNER of the team?
+ *
+ * This is the rule that keeps "league coaches use normal BenchCoach" true
+ * rather than aspirational.
+ *
+ * teams.coach_id is NOT NULL, so a league admin building next season's teams in
+ * February has to own them — there is nobody else yet. If it stopped there, the
+ * head coach who accepts in March would be a guest on their own team: no Staff
+ * page, no billing, unable to invite their own assistants, and unable to delete
+ * a team they created everything in. That is a visibly worse product than the
+ * one they would have bought themselves, which is the exact thing the league
+ * layer is not allowed to be.
+ *
+ * So the admin's ownership is a PLACEHOLDER, and accepting a head-coach
+ * invitation claims it.
+ *
+ * Both guards matter. Ownership moves only when the invitation was for a head
+ * coach, and only when the current owner is an administrator of that same
+ * league — so a team already run by a real coach is never taken from them by
+ * someone opening an invitation link. When either guard fails the coach still
+ * joins, as staff, and nothing is transferred.
+ */
+export function shouldTransferOwnership(opts: {
+  intendedRole: string
+  // The user who currently owns the team, via teams.coach_id → coaches.user_id.
+  currentOwnerUserId: string | null
+  acceptingUserId: string
+  // Is that current owner an administrator of the league doing the inviting?
+  // Resolved by the caller against league_members — a placeholder owner is a
+  // league admin, a real coach is not.
+  currentOwnerIsLeagueAdmin: boolean
+}): boolean {
+  if (opts.intendedRole !== 'head_coach') return false
+  if (!opts.currentOwnerUserId) return false
+  // Already theirs. Not an error, and not a transfer either.
+  if (opts.currentOwnerUserId === opts.acceptingUserId) return false
+  return opts.currentOwnerIsLeagueAdmin
+}
+
+/**
  * Has this league run out of the coaches it paid for?
  *
  * coach_limit is NULL for unlimited, matching lib/tiers.ts. Counted against

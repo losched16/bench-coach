@@ -5,10 +5,11 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { useRole } from '@/lib/useRole'
 import { useEntitlements } from '@/lib/useEntitlements'
+import { useLeague } from '@/lib/useLeague'
 import Link from 'next/link'
 import Image from 'next/image'
 import { CaptureMenu } from '@/components/CaptureMenu'
-import { MessageSquare, Users, StickyNote, ClipboardList, Home, LogOut, Plus, UserPlus, Trash2, Settings, Bookmark, HelpCircle, Brain, UsersRound, UserCircle, Menu, X, Calendar, BarChart3, Activity, Target, Search, CalendarCheck, Timer } from 'lucide-react'
+import { MessageSquare, Users, StickyNote, ClipboardList, Home, LogOut, Plus, UserPlus, Trash2, Settings, Bookmark, HelpCircle, Brain, UsersRound, UserCircle, Menu, X, Calendar, BarChart3, Activity, Target, Search, CalendarCheck, Timer, Building2 } from 'lucide-react'
 
 
 interface Team {
@@ -65,6 +66,12 @@ function DashboardContent({
   // independently, so a typed URL gets the same answer.
   const { teamFeatures } = useEntitlements(coachId)
 
+  // Who is providing this, and do they run a league. Two small additions to the
+  // shell and deliberately nothing more: a league coach is using ordinary
+  // BenchCoach, and the moment this becomes a "League Edition" with its own
+  // chrome we have built the second product this layer exists to avoid.
+  const { admin: leagueAdminOf, sponsored, sponsors } = useLeague()
+
   // Get teamId from URL or use first team
   const urlTeamId = searchParams.get('teamId')
 
@@ -112,7 +119,15 @@ function DashboardContent({
         return
       }
 
-      // Check for pending invite - redirect there first
+      // Check for pending invite - redirect there first. League before team,
+      // for the reason spelled out in the signup page: the league link is the
+      // one they just clicked.
+      const pendingLeagueInvite = sessionStorage.getItem('pendingLeagueInviteToken')
+      if (pendingLeagueInvite) {
+        router.push(`/league/invite/${pendingLeagueInvite}`)
+        return
+      }
+
       const pendingInvite = sessionStorage.getItem('pendingInviteToken')
       if (pendingInvite) {
         router.push(`/invite/${pendingInvite}`)
@@ -263,6 +278,10 @@ function DashboardContent({
       // marked — a parent on the Personal plan keeps a scorebook and counts
       // pitches for their own kid. What they don't have is a team to run.
       needsTeam?: boolean
+      // Link to the href exactly as given, without the ?teamId every other
+      // destination carries. League administration is not scoped to a team —
+      // most commissioners do not have one.
+      raw?: boolean
     }>
   }> = [
     {
@@ -328,6 +347,16 @@ function DashboardContent({
       ),
     }))
     .filter(g => g.items.length > 0)
+
+  // Only for people who actually run a league. A coach whose league PAYS for
+  // them is not an administrator and must not see this — useLeague starts
+  // empty precisely so it never flashes at them while the answer is in flight.
+  if (leagueAdminOf.length > 0) {
+    navGroups.push({
+      label: 'League',
+      items: [{ label: 'League Admin', href: '/league-admin', icon: Building2, raw: true }],
+    })
+  }
 
   if (loading) {
     return (
@@ -513,7 +542,7 @@ function DashboardContent({
                     return (
                       <Link
                         key={item.href}
-                        href={`${item.href}?teamId=${selectedTeamId}`}
+                        href={item.raw ? item.href : `${item.href}?teamId=${selectedTeamId}`}
                         onClick={() => setMobileMenuOpen(false)}
                         className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                           isActive
@@ -568,7 +597,7 @@ function DashboardContent({
                     return (
                       <Link
                         key={item.href}
-                        href={`${item.href}?teamId=${selectedTeamId}`}
+                        href={item.raw ? item.href : `${item.href}?teamId=${selectedTeamId}`}
                         className={`flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors ${
                           isActive
                             ? 'bg-red-50 text-red-700 font-medium'
@@ -602,6 +631,22 @@ function DashboardContent({
       {roleLabel && role !== 'owner' && (
         <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 print:hidden">
           <p className="max-w-7xl mx-auto text-xs text-blue-900">{roleLabel}</p>
+        </div>
+      )}
+
+      {/* Who is paying for this. One line, once, and nothing else in the app
+          changes — a sponsored coach is using ordinary BenchCoach and should
+          not be reminded of it on every surface.
+
+          It earns its place for two reasons. A coach who was handed this by
+          their league needs to know it is not a trial about to ask for a card;
+          and when the league does not renew, they have already been told for
+          months who to ask about it. */}
+      {sponsored && sponsors.length > 0 && (
+        <div className="bg-slate-50 border-b border-slate-200 px-4 py-2 print:hidden">
+          <p className="max-w-7xl mx-auto text-xs text-slate-600">
+            Provided by <span className="font-semibold text-slate-800">{sponsors[0].name}</span>
+          </p>
         </div>
       )}
 

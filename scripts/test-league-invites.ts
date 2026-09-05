@@ -14,6 +14,7 @@ import {
   withinCoachLimit,
   generateInviteToken,
   isIntendedRole,
+  shouldTransferOwnership,
   LEAGUE_INVITE_TTL_DAYS,
   LeagueInvitationRow,
 } from '@/lib/leagueInvites'
@@ -177,6 +178,49 @@ eq('an empty intended role falls back to contributor', teamRoleFor(''), 'contrib
 ok('head_coach is an intended role', isIntendedRole('head_coach'))
 ok('assistant_coach is an intended role', isIntendedRole('assistant_coach'))
 ok('viewer is not an intended role', !isIntendedRole('viewer'))
+
+// ---------------------------------------------------------------------------
+// 4b. Ownership transfer
+//
+// The rule that keeps "league coaches use normal BenchCoach" true. A league
+// admin has to own the teams they create in February, because teams.coach_id
+// is NOT NULL and there is nobody else yet — so that ownership is a placeholder
+// and a head coach accepting in March claims it.
+//
+// The two guards are the whole safety story: a team already run by a real coach
+// must never be taken from them by someone opening a link.
+// ---------------------------------------------------------------------------
+const transfer = (over: Partial<Parameters<typeof shouldTransferOwnership>[0]> = {}) =>
+  shouldTransferOwnership({
+    intendedRole: 'head_coach',
+    currentOwnerUserId: 'admin-user',
+    acceptingUserId: 'coach-user',
+    currentOwnerIsLeagueAdmin: true,
+    ...over,
+  })
+
+ok('head coach claims a team held by a league admin', transfer())
+
+ok('an assistant coach never takes ownership',
+  !transfer({ intendedRole: 'assistant_coach' }))
+
+// The load-bearing one. The current owner is a real coach already running this
+// team — a team associated to the league after the fact, or a second head coach
+// invited to an existing side. Their team is not up for grabs.
+ok('a team owned by a real coach is never transferred',
+  !transfer({ currentOwnerIsLeagueAdmin: false }))
+
+ok('no transfer when the accepting coach already owns it',
+  !transfer({ currentOwnerUserId: 'coach-user' }))
+
+ok('no transfer when the team has no resolvable owner',
+  !transfer({ currentOwnerUserId: null }))
+
+// Both guards must hold, not either.
+ok('assistant + real owner is still no transfer',
+  !transfer({ intendedRole: 'assistant_coach', currentOwnerIsLeagueAdmin: false }))
+ok('an unknown intended role never transfers',
+  !transfer({ intendedRole: 'commissioner' }))
 
 // ---------------------------------------------------------------------------
 // 5. Expiry stamping

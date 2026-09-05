@@ -21,6 +21,13 @@ const EXEMPT = {
   'app/api/stripe/portal/route.ts':       'own session; opens the caller’s own portal',
   'app/api/ghl/track-signup/route.ts':    'runs at signup, before a session exists',
   'app/api/team/invite/accept/route.ts':  'a token IS the credential — the caller is not a member yet',
+  // Same reason as the team invite above, and the same shape: the caller is
+  // not a member of the league or the team yet, so there is no membership to
+  // check. The 256-bit token we issued stands in for it, the claimed userId is
+  // verified against auth.admin.getUserById before anything is written, and
+  // every property of the invitation is re-read from the database rather than
+  // trusted from the request.
+  'app/api/league/invite/accept/route.ts': 'a token IS the credential — the caller is not a member yet',
   'app/api/team/invite/route.ts':         'checks the session and owner/admin role inline',
   'app/api/team/members/route.ts':        'checks the session and owner/admin role inline',
   // Anonymous by design: it counts what visitors do on the public marketing

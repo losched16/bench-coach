@@ -55,6 +55,32 @@ function SubscribeContent() {
       return
     }
 
+    // Their league is paying. Checked BEFORE the team-membership and
+    // legacy-owner branches below, both of which would also have let a
+    // sponsored coach through — but incidentally, as a side effect of owning a
+    // team, rather than because we established that somebody is paying for
+    // them. Showing a checkout page to a coach whose league already bought
+    // this is the worst bug this feature can have, so it is refused on purpose
+    // and not by luck.
+    //
+    // Note what is NOT done here: is_subscribed is not written. Sponsorship
+    // stays an answer computed from the licence, so the day the league lapses
+    // this check simply stops returning true and the coach lands on the plans
+    // below — which is the intended fallback, with no cleanup required.
+    try {
+      const res = await fetch('/api/league/me')
+      const league = await res.json()
+      if (res.ok && league?.sponsorship?.sponsored) {
+        const teamId = league.sponsorship.teamIds?.[0]
+        router.push(teamId ? `/dashboard?teamId=${teamId}` : '/dashboard')
+        return
+      }
+    } catch {
+      // Fall through to the existing checks. A failed league lookup must not
+      // strand a coach on a blank page — worst case they see the plans, which
+      // is exactly what they saw before this feature existed.
+    }
+
     // Check if user has team memberships (invited users)
     const { data: memberships } = await supabase
       .from('team_members')
