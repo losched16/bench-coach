@@ -84,6 +84,12 @@ const ALLOWED_RPCS = {
   bc_release_league_seat:
     'migration 050 — sets one invitation back to pending. Touches league_invitations ' +
     'only and returns a boolean.',
+  bc_provision_league:
+    'migration 051 — creates a league, its first owner and its first licence in one ' +
+    'transaction. Writes leagues, league_members and league_licenses; reads auth.users ' +
+    'only to confirm the owner id exists. Returns ids and a refusal reason, never coach ' +
+    'content. Called from /api/admin/leagues, which is product-owner tooling behind ' +
+    'requireAdmin() — not a league-facing surface a commissioner can reach.',
 }
 
 const LEAGUE_ROUTE_DIRS = ['app/api/league', 'app/api/league-admin']

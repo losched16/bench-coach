@@ -40,7 +40,9 @@
     "test:league-entitlements": "npx --yes tsx --tsconfig tsconfig.json scripts/test-league-entitlements.ts",
     "test:league-invites": "npx --yes tsx --tsconfig tsconfig.json scripts/test-league-invites.ts",
     "verify:league-privacy": "node scripts/verify-league-privacy.mjs",
-    "test:migration-050": "bash scripts/test-migration-050.sh"
+    "test:migration-050": "bash scripts/test-migration-050.sh",
+    "test:migration-051": "bash scripts/test-migration-051.sh",
+    "test:league-provisioning": "npx --yes tsx --tsconfig tsconfig.json scripts/test-league-provisioning.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

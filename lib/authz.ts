@@ -479,7 +479,20 @@ export async function callerCoachId(): Promise<string | null> {
 export async function requireAdmin() {
   const supabase = await sessionClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const allowed = (process.env.ADMIN_EMAIL || '').trim().toLowerCase()
+
+  // ADMIN_EMAIL first, NEXT_PUBLIC_ADMIN_EMAIL as a fallback.
+  //
+  // The admin PAGE gates on NEXT_PUBLIC_ADMIN_EMAIL and the admin APIs gated on
+  // ADMIN_EMAIL, so a deployment that set only the public one rendered the
+  // whole admin area and then 404'd every request it made. Two names for one
+  // identity, and the failure looked like a bug in the page.
+  //
+  // Accepting either is not a loosening: this still requires a real signed-in
+  // session whose Supabase-verified email matches, and still fails closed when
+  // neither variable is set. What it removes is a configuration trap. The admin
+  // address was never a secret — it is already compiled into the client bundle.
+  const allowed = (process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || '')
+    .trim().toLowerCase()
 
   if (!user?.email || !allowed || user.email.toLowerCase() !== allowed) {
     // 404 rather than 403: an admin surface should not confirm it exists.

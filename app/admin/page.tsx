@@ -185,12 +185,23 @@ export default function AdminDashboard() {
               <p className="text-xs text-slate-500">Analytics Dashboard</p>
             </div>
           </div>
-          <button
-            onClick={() => { loadOverview(); loadAlerts() }}
-            className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors"
-          >
-            <RefreshCw size={14} /> Refresh
-          </button>
+          <div className="flex items-center gap-4">
+            {/* Provisioning lives on its own page: creating leagues is a
+                different job from reading analytics, and burying it in a tab
+                would put a write action inside a read-only dashboard. */}
+            <a
+              href="/admin/leagues"
+              className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors"
+            >
+              <Trophy size={14} /> Leagues
+            </a>
+            <button
+              onClick={() => { loadOverview(); loadAlerts() }}
+              className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors"
+            >
+              <RefreshCw size={14} /> Refresh
+            </button>
+          </div>
         </div>
       </div>
 
