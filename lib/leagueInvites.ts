@@ -175,6 +175,17 @@ export function inviteExpiry(now: Date = new Date(), days: number = LEAGUE_INVIT
   return new Date(now.getTime() + days * 24 * 60 * 60 * 1000).toISOString()
 }
 
+export type TransferRefusal =
+  | 'not_head_coach'
+  | 'no_owner'
+  | 'already_owner'
+  | 'not_a_placeholder'
+  | 'team_has_activity'
+
+export type TransferDecision =
+  | { transfer: true }
+  | { transfer: false; reason: TransferRefusal }
+
 /**
  * Should accepting this invitation make the coach the OWNER of the team?
  *
@@ -192,31 +203,73 @@ export function inviteExpiry(now: Date = new Date(), days: number = LEAGUE_INVIT
  * So the admin's ownership is a PLACEHOLDER, and accepting a head-coach
  * invitation claims it.
  *
- * Both guards matter. Ownership moves only when the invitation was for a head
- * coach, and only when the current owner is an administrator of that same
- * league — so a team already run by a real coach is never taken from them by
- * someone opening an invitation link. When either guard fails the coach still
- * joins, as staff, and nothing is transferred.
+ * WHY THIS NO LONGER ASKS WHETHER THE OWNER IS A LEAGUE ADMIN
+ *
+ * The first version's test was "the current owner administers this league".
+ * That is a heuristic, and it is wrong in a case that will certainly happen: a
+ * commissioner who also coaches a team in their own league. Their real team —
+ * real roster, real practice plans, a season of notes — satisfied that test,
+ * and would have been transferred to whoever opened a head-coach invitation
+ * pointing at it. The owner's ROLE says nothing about whether a particular team
+ * is a placeholder.
+ *
+ * So placeholder-ness is now a recorded fact: teams.league_placeholder_owner_id
+ * is set at creation by league provisioning and cleared on claim. A team is
+ * claimable only while its owner IS the recorded placeholder holder, which
+ * makes claiming a one-way, once-only transition and leaves every ordinarily
+ * created team permanently untransferable.
+ *
+ * `teamHasActivity` is belt to that braces. A placeholder should be empty by
+ * definition, so activity means an assumption has already broken somewhere —
+ * and the safe response to a broken assumption is to leave the data alone and
+ * add the coach as staff instead.
  */
-export function shouldTransferOwnership(opts: {
+export function decideOwnershipTransfer(opts: {
   intendedRole: string
-  // The user who currently owns the team, via teams.coach_id → coaches.user_id.
+  // teams.coach_id — who owns it right now.
+  currentOwnerCoachId: string | null
+  // teams.league_placeholder_owner_id — who is holding it, if anyone.
+  placeholderOwnerCoachId: string | null
+  // The owning coach row's user, for the "it is already mine" case.
   currentOwnerUserId: string | null
   acceptingUserId: string
-  // Is that current owner an administrator of the league doing the inviting?
-  // Resolved by the caller against league_members — a placeholder owner is a
-  // league admin, a real coach is not.
-  currentOwnerIsLeagueAdmin: boolean
-}): boolean {
-  if (opts.intendedRole !== 'head_coach') return false
-  if (!opts.currentOwnerUserId) return false
+  // Any roster, plan, conversation or game on this team. A placeholder has none.
+  teamHasActivity: boolean
+}): TransferDecision {
+  if (opts.intendedRole !== 'head_coach') return { transfer: false, reason: 'not_head_coach' }
+  if (!opts.currentOwnerCoachId) return { transfer: false, reason: 'no_owner' }
+
   // Already theirs. Not an error, and not a transfer either.
-  if (opts.currentOwnerUserId === opts.acceptingUserId) return false
-  return opts.currentOwnerIsLeagueAdmin
+  if (opts.currentOwnerUserId && opts.currentOwnerUserId === opts.acceptingUserId) {
+    return { transfer: false, reason: 'already_owner' }
+  }
+
+  // The load-bearing condition. NULL here means an ordinary team; a value that
+  // no longer matches the owner means the team has already been claimed once.
+  if (!opts.placeholderOwnerCoachId || opts.placeholderOwnerCoachId !== opts.currentOwnerCoachId) {
+    return { transfer: false, reason: 'not_a_placeholder' }
+  }
+
+  if (opts.teamHasActivity) return { transfer: false, reason: 'team_has_activity' }
+
+  return { transfer: true }
 }
 
 /**
  * Has this league run out of the coaches it paid for?
+ *
+ * ADVISORY ONLY. This is for showing "28 of 30 seats used" on the commissioner's
+ * dashboard. It is NOT what enforces the limit.
+ *
+ * Enforcement lives in bc_claim_league_seat() (migration 050), which takes a row
+ * lock on the licence, counts accepted invitations and flips the invitation to
+ * accepted inside one transaction. It has to be there rather than here: a
+ * read-then-write in application code lets two coaches accepting the last seat
+ * both read "29 of 30" and both proceed, which is exactly what this function
+ * used to permit when the route called it directly.
+ *
+ * Kept because a number on a dashboard is worth having, and deliberately not
+ * kept as a gate. Two sources of truth for a limit means the limit has none.
  *
  * coach_limit is NULL for unlimited, matching lib/tiers.ts. Counted against
  * ACCEPTED invitations rather than pending ones: a commissioner should be able

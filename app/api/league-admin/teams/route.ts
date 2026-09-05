@@ -123,6 +123,16 @@ export async function POST(request: NextRequest) {
         league_id: leagueId,
         league_season_id: leagueSeasonId || null,
         league_division_id: leagueDivisionId || null,
+        // The marker that makes this team claimable, recorded as a fact at
+        // creation rather than inferred later from the owner's league role.
+        //
+        // It says: this coach row owns the team on behalf of a head coach who
+        // has not arrived yet. The accept route transfers ownership only while
+        // coach_id still equals this, and clears it on claim — so a team is
+        // claimable exactly once, and a team created through ordinary coach
+        // onboarding (NULL here) can never be transferred at all, whoever owns
+        // it and whatever roles they hold.
+        league_placeholder_owner_id: coachId,
       })
       .select('id, name, age_group, league_division_id')
       .maybeSingle()

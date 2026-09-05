@@ -296,6 +296,194 @@ CREATE INDEX IF NOT EXISTS idx_teams_league_division
   ON teams(league_division_id) WHERE league_division_id IS NOT NULL;
 
 -- ----------------------------------------------------------------------------
+-- 7b. Placeholder ownership, stated rather than inferred
+-- ----------------------------------------------------------------------------
+-- teams.coach_id is NOT NULL, so a league administrator building next season's
+-- teams in February has to own them — there is nobody else yet. When the head
+-- coach accepts in March, that ownership transfers to them, because a league
+-- coach who cannot manage their own staff or team is a visibly worse product
+-- than the one they would have bought.
+--
+-- The first implementation decided "is this a placeholder?" by asking whether
+-- the current owner happens to be an administrator of the league. That is a
+-- HEURISTIC, and it is wrong in a case that will certainly occur: a
+-- commissioner who also coaches a team in their own league. Their real team,
+-- with their real roster and their real practice plans, would have been
+-- transferred away to whoever opened a head-coach invitation pointing at it.
+--
+-- So placeholder-ness is recorded as a fact at creation instead. This column
+-- holds the coach row that is holding the team ON BEHALF of a coach who has not
+-- arrived yet. Transfer is permitted only while
+--
+--     teams.coach_id = teams.league_placeholder_owner_id
+--
+-- and the column is set to NULL the moment the team is claimed, so a team can
+-- be claimed exactly once and never again. A team created through ordinary
+-- coach onboarding has NULL here and is therefore never transferable, whoever
+-- owns it and whatever roles they hold.
+ALTER TABLE teams
+  ADD COLUMN IF NOT EXISTS league_placeholder_owner_id UUID
+    REFERENCES coaches(id) ON DELETE SET NULL;
+
+-- Partial: only league-provisioned teams awaiting a coach are ever looked up
+-- this way, and that is a small set that empties as a season fills.
+CREATE INDEX IF NOT EXISTS idx_teams_placeholder
+  ON teams(league_placeholder_owner_id) WHERE league_placeholder_owner_id IS NOT NULL;
+
+-- ----------------------------------------------------------------------------
+-- 7c. Claiming an invitation, and a seat, atomically
+-- ----------------------------------------------------------------------------
+-- Two races meet here, and both were previously lost.
+--
+-- 1. THE INVITATION. The accept route used to do its work — create a coach row,
+--    move a team, insert a membership — and only THEN mark the invitation
+--    accepted with a conditional UPDATE. So two people opening the same link at
+--    once both passed validation, both wrote, and only then did one discover it
+--    had lost. The loser's side effects stayed.
+--
+-- 2. THE SEAT. coach_limit was checked by counting accepted invitations and
+--    then writing. Two coaches accepting the last seat both read "29 of 30" and
+--    both proceeded.
+--
+-- One function fixes both, because they are the same transition: an invitation
+-- becoming accepted IS a seat being taken.
+--
+-- FOR UPDATE on the licence row is what serialises it. Concurrent callers for
+-- the same league queue behind that lock, so the count each one reads already
+-- includes every accept that committed before it. A league with no licence row
+-- cannot reach here — the route checks that first — but the function still
+-- refuses rather than assuming.
+--
+-- SECURITY DEFINER because it is called with the service role from a route that
+-- has already authorized the caller by token; it is not reachable from the
+-- browser client, which has no policy allowing it to see league_invitations at
+-- all.
+--
+-- Returns a single row: whether the seat was claimed, and if not, why. The
+-- route maps `reason` onto an HTTP status. Returning a reason rather than
+-- raising keeps an expected refusal ("already accepted") from arriving as a
+-- 500.
+CREATE OR REPLACE FUNCTION bc_claim_league_seat(
+  p_invitation_id UUID,
+  p_league_id     UUID
+)
+RETURNS TABLE (claimed BOOLEAN, reason TEXT, seats_used INT, coach_limit INT)
+AS $$
+DECLARE
+  v_limit    INT;
+  v_used     INT;
+  v_status   TEXT;
+  v_licensed BOOLEAN;
+BEGIN
+  -- Serialise every concurrent claim for this league behind the licence row.
+  -- Ordered and limited so the lock target is deterministic when a league has
+  -- more than one live licence.
+  SELECT l.coach_limit, TRUE
+    INTO v_limit, v_licensed
+  FROM league_licenses l
+  WHERE l.league_id = p_league_id
+    AND l.status IN ('trial', 'active')
+    AND (l.starts_at IS NULL OR l.starts_at <= NOW())
+    AND (l.ends_at   IS NULL OR l.ends_at   >  NOW())
+  ORDER BY l.created_at DESC
+  LIMIT 1
+  FOR UPDATE;
+
+  IF NOT COALESCE(v_licensed, FALSE) THEN
+    RETURN QUERY SELECT FALSE, 'league_unlicensed'::TEXT, 0, NULL::INT;
+    RETURN;
+  END IF;
+
+  -- Re-read the invitation under the lock. Its status may have changed since
+  -- the route validated it.
+  SELECT i.status INTO v_status
+  FROM league_invitations i
+  WHERE i.id = p_invitation_id AND i.league_id = p_league_id
+  FOR UPDATE;
+
+  IF v_status IS NULL THEN
+    RETURN QUERY SELECT FALSE, 'not_found'::TEXT, 0, v_limit;
+    RETURN;
+  END IF;
+
+  IF v_status <> 'pending' THEN
+    -- 'accepted' is the common case and means somebody got here first — which
+    -- is usually the same person clicking twice.
+    RETURN QUERY SELECT FALSE, ('invitation_' || v_status)::TEXT, 0, v_limit;
+    RETURN;
+  END IF;
+
+  SELECT count(*)::INT INTO v_used
+  FROM league_invitations i
+  WHERE i.league_id = p_league_id AND i.status = 'accepted';
+
+  IF v_limit IS NOT NULL AND v_used >= v_limit THEN
+    RETURN QUERY SELECT FALSE, 'coach_limit_reached'::TEXT, v_used, v_limit;
+    RETURN;
+  END IF;
+
+  UPDATE league_invitations
+  SET status = 'accepted', accepted_at = NOW()
+  WHERE id = p_invitation_id AND status = 'pending';
+
+  RETURN QUERY SELECT TRUE, NULL::TEXT, v_used + 1, v_limit;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Releasing a claim, for when the work AFTER claiming fails.
+--
+-- The route claims the invitation first and then does the team work, so a
+-- failure in that second half must hand the seat back rather than leaving a
+-- coach with an invitation marked accepted that never actually did anything.
+-- Conditional on 'accepted' so this can never revive a revoked invitation.
+CREATE OR REPLACE FUNCTION bc_release_league_seat(p_invitation_id UUID)
+RETURNS BOOLEAN AS $$
+DECLARE
+  v_rows INT;
+BEGIN
+  UPDATE league_invitations
+  SET status = 'pending', accepted_at = NULL
+  WHERE id = p_invitation_id AND status = 'accepted';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  RETURN v_rows > 0;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Neither function is callable by a signed-in browser client.
+--
+-- This matters more than it looks. Both are SECURITY DEFINER, so they run with
+-- the definer's rights and are not subject to RLS — which is the point, and
+-- also means that a function left EXECUTE-able by `authenticated` is a hole
+-- straight through every policy in this file. bc_claim_league_seat() in
+-- particular can flip an invitation to accepted.
+--
+-- Wrapped in a role-existence check so the migration also applies to a plain
+-- Postgres used for staging, where Supabase's anon/authenticated/service_role
+-- do not exist. Without this the whole file aborts on the first REVOKE.
+DO $$
+DECLARE
+  fn TEXT;
+  rl TEXT;
+BEGIN
+  FOREACH fn IN ARRAY ARRAY[
+    'bc_claim_league_seat(UUID, UUID)',
+    'bc_release_league_seat(UUID)'
+  ] LOOP
+    EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC', fn);
+
+    FOREACH rl IN ARRAY ARRAY['anon', 'authenticated'] LOOP
+      IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = rl) THEN
+        EXECUTE format('REVOKE ALL ON FUNCTION %s FROM %I', fn, rl);
+      END IF;
+    END LOOP;
+
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+      EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO service_role', fn);
+    END IF;
+  END LOOP;
+END $$;
+
+-- ----------------------------------------------------------------------------
 -- 8. Who am I in this league?
 -- ----------------------------------------------------------------------------
 -- SECURITY DEFINER and STABLE for the same reasons as the bc_team_* family in

@@ -165,6 +165,22 @@ export async function POST(request: NextRequest) {
           .select('id, email, status, team_id, intended_role, invited_at, expires_at').maybeSingle()
 
     if (error) {
+      // 23505 is the partial unique index from migration 050 doing its job:
+      // one pending invitation per email per league. The select-then-insert
+      // above is not atomic, so two commissioners inviting the same coach at
+      // the same moment race, and the loser lands here.
+      //
+      // That is an EXPECTED outcome, not a server fault. It used to surface as
+      // a generic 500 — "Could not create that invitation" — which reads as
+      // "the product is broken" when the truth is "your colleague just did
+      // this". The index is what guarantees only one row exists; this only
+      // decides how the loser is told.
+      if ((error as any).code === '23505') {
+        return NextResponse.json({
+          error: 'This coach already has a pending invitation to this league.',
+          reason: 'already_invited',
+        }, { status: 409 })
+      }
       console.error('Create league invitation failed:', error)
       return NextResponse.json({ error: 'Could not create that invitation' }, { status: 500 })
     }

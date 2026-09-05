@@ -14,7 +14,7 @@ import {
   withinCoachLimit,
   generateInviteToken,
   isIntendedRole,
-  shouldTransferOwnership,
+  decideOwnershipTransfer,
   LEAGUE_INVITE_TTL_DAYS,
   LeagueInvitationRow,
 } from '@/lib/leagueInvites'
@@ -183,44 +183,96 @@ ok('viewer is not an intended role', !isIntendedRole('viewer'))
 // 4b. Ownership transfer
 //
 // The rule that keeps "league coaches use normal BenchCoach" true. A league
-// admin has to own the teams they create in February, because teams.coach_id
-// is NOT NULL and there is nobody else yet — so that ownership is a placeholder
+// admin has to own the teams they create in February, because teams.coach_id is
+// NOT NULL and there is nobody else yet — so that ownership is a placeholder
 // and a head coach accepting in March claims it.
 //
-// The two guards are the whole safety story: a team already run by a real coach
-// must never be taken from them by someone opening a link.
+// The first implementation asked "is the current owner a league admin?". That
+// is a heuristic and it is WRONG for a commissioner who also coaches in their
+// own league: their real team, with a real roster, satisfied it. Placeholder
+// status is now a recorded fact — teams.league_placeholder_owner_id — and the
+// tests below pin every way that fact can fail to hold.
 // ---------------------------------------------------------------------------
-const transfer = (over: Partial<Parameters<typeof shouldTransferOwnership>[0]> = {}) =>
-  shouldTransferOwnership({
+const PLACEHOLDER = 'coach-admin'
+
+const transfer = (over: Partial<Parameters<typeof decideOwnershipTransfer>[0]> = {}) =>
+  decideOwnershipTransfer({
     intendedRole: 'head_coach',
+    currentOwnerCoachId: PLACEHOLDER,
+    placeholderOwnerCoachId: PLACEHOLDER,
     currentOwnerUserId: 'admin-user',
     acceptingUserId: 'coach-user',
-    currentOwnerIsLeagueAdmin: true,
+    teamHasActivity: false,
     ...over,
   })
 
-ok('head coach claims a team held by a league admin', transfer())
+// TransferDecision is a discriminated union, so a refusal reason is only
+// reachable after narrowing — which is the type working as intended: nothing
+// can read `.reason` off a decision that succeeded.
+const reasonOf = (d: ReturnType<typeof decideOwnershipTransfer>) => d.transfer ? null : d.reason
 
-ok('an assistant coach never takes ownership',
-  !transfer({ intendedRole: 'assistant_coach' }))
+ok('head coach claims an unclaimed placeholder team', transfer().transfer)
 
-// The load-bearing one. The current owner is a real coach already running this
-// team — a team associated to the league after the fact, or a second head coach
-// invited to an existing side. Their team is not up for grabs.
-ok('a team owned by a real coach is never transferred',
-  !transfer({ currentOwnerIsLeagueAdmin: false }))
+eq('an assistant coach never takes ownership',
+  reasonOf(transfer({ intendedRole: 'assistant_coach' })), 'not_head_coach')
+eq('an unknown intended role never transfers',
+  reasonOf(transfer({ intendedRole: 'commissioner' })), 'not_head_coach')
 
-ok('no transfer when the accepting coach already owns it',
-  !transfer({ currentOwnerUserId: 'coach-user' }))
+// THE ONE THE HEURISTIC GOT WRONG.
+//
+// A commissioner who also coaches a team in their own league. Under the old
+// rule the owner "is a league admin" was true, and their real team would have
+// been transferred to whoever opened a head-coach invitation pointing at it.
+// A team created through ordinary onboarding has no placeholder marker, so it
+// is now permanently untransferable regardless of what roles its owner holds.
+eq('a league admin’s OWN real team is never transferred',
+  reasonOf(transfer({ placeholderOwnerCoachId: null })), 'not_a_placeholder')
 
-ok('no transfer when the team has no resolvable owner',
-  !transfer({ currentOwnerUserId: null }))
+// Already claimed once: the marker was cleared on the first transfer, so the
+// owner no longer matches it. Claiming is one-way and once-only.
+eq('a team already claimed cannot be claimed again',
+  reasonOf(transfer({ currentOwnerCoachId: 'coach-real', placeholderOwnerCoachId: null })),
+  'not_a_placeholder')
 
-// Both guards must hold, not either.
-ok('assistant + real owner is still no transfer',
-  !transfer({ intendedRole: 'assistant_coach', currentOwnerIsLeagueAdmin: false }))
-ok('an unknown intended role never transfers',
-  !transfer({ intendedRole: 'commissioner' }))
+// The marker survives but ownership has moved on — belt to the compare-and-set
+// in the route.
+eq('a stale placeholder marker does not authorise a transfer',
+  reasonOf(transfer({ currentOwnerCoachId: 'coach-real', placeholderOwnerCoachId: PLACEHOLDER })),
+  'not_a_placeholder')
+
+// A team owned by a genuine coach who is not a league admin at all.
+eq('a team owned by a real coach is never transferred',
+  reasonOf(transfer({ currentOwnerCoachId: 'coach-real', placeholderOwnerCoachId: null })),
+  'not_a_placeholder')
+
+// Belt to that braces. A placeholder is empty by definition, so activity means
+// an assumption already broke — leave the data alone and join as staff.
+eq('a placeholder with real activity on it is not transferred',
+  reasonOf(transfer({ teamHasActivity: true })), 'team_has_activity')
+
+eq('no transfer when the accepting coach already owns it',
+  reasonOf(transfer({ currentOwnerUserId: 'coach-user' })), 'already_owner')
+eq('no transfer when the team has no owner at all',
+  reasonOf(transfer({ currentOwnerCoachId: null })), 'no_owner')
+
+// Ordering: identity is checked before placeholder status, so a coach who
+// already owns their team is told that rather than "not a placeholder".
+eq('already-owner outranks placeholder checks',
+  reasonOf(transfer({ currentOwnerUserId: 'coach-user', placeholderOwnerCoachId: null })),
+  'already_owner')
+
+// Every refusal must name a reason — a bare `false` gives the route nothing to
+// log and nothing to tell the coach.
+for (const bad of [
+  { intendedRole: 'assistant_coach' },
+  { placeholderOwnerCoachId: null },
+  { teamHasActivity: true },
+  { currentOwnerCoachId: null },
+  { currentOwnerUserId: 'coach-user' },
+]) {
+  const d = transfer(bad as any)
+  ok(`refusal carries a reason: ${JSON.stringify(bad)}`, d.transfer === false && !!d.reason)
+}
 
 // ---------------------------------------------------------------------------
 // 5. Expiry stamping

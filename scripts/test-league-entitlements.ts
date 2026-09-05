@@ -20,6 +20,7 @@ import {
   LicenseRow,
 } from '@/lib/leagueEntitlements'
 import { canManageLeague, isLeagueRole } from '@/lib/leagueAuthz'
+import { readFileSync } from 'fs'
 
 let passed = 0
 const failures: string[] = []
@@ -363,6 +364,310 @@ for (const cap of ['view', 'manage', 'administer'] as const) {
 // league_members. This asserts the trap exists rather than that it is sprung.
 eq('the strings collide, which is why the lookup table must not',
   ['owner', 'admin'].filter(r => isLeagueRole(r)).join(','), 'owner,admin')
+
+// ---------------------------------------------------------------------------
+// 5b. Boundaries, offsets and multiple licences
+//
+// The cases most likely to be got wrong once, quietly, and only noticed when a
+// league complains that its coaches lost access a day early — or kept it a
+// month late.
+// ---------------------------------------------------------------------------
+
+// Timezone offsets. NOW is 12:00Z, which is 08:00-04:00 — the same instant. A
+// contract date typed in local time by a salesperson must behave identically to
+// the same moment written in UTC, because it IS the same moment.
+ok('an end date expressed with an offset is the same instant as UTC',
+  !isLicenseLive(license({ ends_at: '2027-05-15T08:00:00-04:00' }), NOW))
+ok('a start date expressed with an offset is the same instant as UTC',
+  isLicenseLive(license({ starts_at: '2027-05-15T08:00:00-04:00' }), NOW))
+ok('an offset date an hour later is still in the future',
+  !isLicenseLive(license({ starts_at: '2027-05-15T09:00:00-04:00' }), NOW))
+// A bare date with no time is midnight UTC on that day.
+ok('a date-only end in the past is not live',
+  !isLicenseLive(license({ ends_at: '2027-05-15' }), NOW))
+ok('a date-only start earlier this year is live',
+  isLicenseLive(license({ starts_at: '2027-01-01' }), NOW))
+
+// One millisecond either side of the boundary, so the comparison operators are
+// pinned rather than inferred.
+ok('one ms before ends_at is still live',
+  isLicenseLive(license({ ends_at: new Date(NOW.getTime() + 1).toISOString() }), NOW))
+ok('one ms after starts_at is live',
+  isLicenseLive(license({ starts_at: new Date(NOW.getTime() - 1).toISOString() }), NOW))
+ok('one ms before starts_at is not live',
+  !isLicenseLive(license({ starts_at: new Date(NOW.getTime() + 1).toISOString() }), NOW))
+
+// Multiple and overlapping licences for one league. A renewal signed before the
+// old one lapses is the normal shape of a renewing customer, and the coach must
+// not blink out of access in the overlap.
+{
+  const e = decideEntitlements(facts({
+    ownedTeams: [{ id: 't1', league_id: 'league-1' }],
+    licenses: [
+      license({ id: 'old', ends_at: '2027-06-01T00:00:00Z' }),
+      license({ id: 'new', starts_at: '2027-05-01T00:00:00Z', ends_at: '2028-06-01T00:00:00Z' }),
+    ],
+  }))
+  ok('overlapping licences keep the coach sponsored', e.leagueSponsored)
+  // Soonest expiry is still reported, which is conservative: it is the next
+  // date on which something could change, even if a renewal already covers it.
+  eq('overlapping licences report the soonest end', e.expiresAt, '2027-06-01T00:00:00Z')
+}
+
+// A dead licence alongside a live one must not poison the live one.
+{
+  const e = decideEntitlements(facts({
+    ownedTeams: [{ id: 't1', league_id: 'league-1' }],
+    licenses: [license({ id: 'dead', status: 'canceled' }), license({ id: 'live' })],
+  }))
+  ok('one live licence among dead ones still sponsors', e.leagueSponsored)
+}
+
+// Every dead status together.
+{
+  const e = decideEntitlements(facts({
+    ownedTeams: [{ id: 't1', league_id: 'league-1' }],
+    licenses: ['expired', 'suspended', 'canceled'].map((status, i) =>
+      license({ id: `l${i}`, status })),
+  }))
+  ok('a pile of dead licences grants nothing', !e.leagueSponsored)
+  eq('a pile of dead licences leaves no access', e.source, 'none')
+}
+
+// A team that has left the league. league_id is cleared (or the league row was
+// deleted, which sets it NULL), so the licence covers nothing for this coach
+// even though it is perfectly live.
+{
+  const e = decideEntitlements(facts({
+    ownedTeams: [{ id: 't1', league_id: null }],
+    licenses: [license()],
+  }))
+  ok('a team no longer affiliated is not sponsored', !e.leagueSponsored)
+  eq('...and has no access of its own', e.source, 'none')
+}
+
+// SEASON SCOPE — a deliberate Phase 1 decision, asserted so it cannot drift.
+//
+// league_licenses.league_season_id exists so an annual contract can be told
+// apart from a Spring-only one. It is NOT consulted when deciding sponsorship:
+// access is granted league-wide for as long as the licence is live, and the
+// dates are what bound it.
+//
+// The alternative — matching a licence's season against the team's
+// league_season_id — was rejected for Phase 1 because a team whose season is
+// mislabelled, or not yet assigned, would silently lose access mid-season, and
+// the failure would look like a bug in the product rather than a data problem.
+// Dates are the honest boundary. If per-season entitlement is ever wanted, it
+// needs its own decision and its own tests.
+{
+  const e = decideEntitlements(facts({
+    ownedTeams: [{ id: 't1', league_id: 'league-1' }],
+    licenses: [license({ league_season_id: 'season-spring' })],
+  }))
+  ok('a season-scoped licence still sponsors the league', e.leagueSponsored)
+}
+{
+  const e = decideEntitlements(facts({
+    ownedTeams: [{ id: 't1', league_id: 'league-1' }],
+    licenses: [license({ league_season_id: 'season-fall', ends_at: '2027-01-02T00:00:00Z' })],
+  }))
+  ok('a season-scoped licence past its dates sponsors nothing', !e.leagueSponsored)
+}
+
+// A coach on teams in two leagues, only one of which pays.
+{
+  const e = decideEntitlements(facts({
+    ownedTeams: [{ id: 'paid', league_id: 'league-1' }, { id: 'unpaid', league_id: 'league-2' }],
+    licenses: [license({ league_id: 'league-1' })],
+  }))
+  eq('only the paying league’s team is sponsored', e.sponsoredTeamIds.join(','), 'paid')
+  eq('only the paying league is named', e.leagues.join(','), 'league-1')
+}
+
+// ---------------------------------------------------------------------------
+// 6. The database and the app must agree about who runs a league
+//
+// There are two enforcement points — RLS policies calling bc_league_at_least(),
+// and API routes calling requireLeagueRole() — and they carry SEPARATE copies
+// of the role ordering. If those ever disagree, the database and the app
+// disagree about who is a commissioner, and the disagreement is silent.
+//
+// Reading the ordering back out of the SQL is the only way to assert it. A
+// comment saying "keep these in sync" is not a check.
+// ---------------------------------------------------------------------------
+{
+  const sql = readFileSync('migrations/050_league_layer.sql', 'utf8')
+
+  const fn = sql.slice(
+    sql.indexOf('FUNCTION bc_league_rank'),
+    sql.indexOf('$$ LANGUAGE sql IMMUTABLE', sql.indexOf('FUNCTION bc_league_rank')),
+  )
+  ok('migration defines bc_league_rank()', fn.length > 0)
+
+  const sqlRanks: Record<string, number> = {}
+  for (const m of Array.from(fn.matchAll(/WHEN\s+'([a-z_]+)'\s+THEN\s+(-?\d+)/g))) {
+    sqlRanks[m[1]] = Number(m[2])
+  }
+
+  // The app's ordering, derived from behaviour rather than from a private
+  // constant: canManageLeague() is what the routes actually use.
+  const APP_ORDER = ['division_admin', 'coaching_director', 'admin', 'commissioner', 'owner']
+
+  eq('SQL knows exactly the five league roles',
+    Object.keys(sqlRanks).sort().join(','), APP_ORDER.slice().sort().join(','))
+
+  // Same relative ordering, checked pairwise rather than by absolute number, so
+  // renumbering is fine and reordering is not.
+  for (let i = 1; i < APP_ORDER.length; i++) {
+    const lower = APP_ORDER[i - 1], higher = APP_ORDER[i]
+    ok(`SQL ranks ${higher} above ${lower}`, sqlRanks[higher] > sqlRanks[lower])
+    // And the app agrees: whatever the higher role can do, it can do at least
+    // everything the lower one can.
+    for (const cap of ['view', 'manage', 'administer'] as const) {
+      if (canManageLeague(lower as any, cap)) {
+        ok(`app: ${higher} inherits ${lower}'s ${cap}`, canManageLeague(higher as any, cap))
+      }
+    }
+  }
+
+  // ── No policy may reach a team-scoped or private table ──
+  //
+  // The privacy verifier checks this too. Repeated here because it is the
+  // assertion that keeps league membership from becoming a backdoor into team
+  // data, and it deserves to fail a test run as well as a build check.
+  const policies = sql.match(/CREATE POLICY[\s\S]*?;/gi) || []
+  ok('migration 050 creates policies', policies.length > 0)
+
+  const policyTargets = policies
+    .map(p => (p.match(/\bON\s+([a-z_]+)/i) || [])[1])
+    .filter(Boolean) as string[]
+
+  for (const t of policyTargets) {
+    ok(`policy target "${t}" is a league table, not a team or content table`,
+      t.startsWith('league'))
+  }
+
+  // Every policy is read-only. A write policy would let the browser client
+  // create leagues or invitations directly, bypassing requireLeagueRole().
+  for (const p of policies) {
+    ok('every league policy is SELECT-only', /FOR\s+SELECT/i.test(p))
+  }
+
+  // ── league_invitations: RLS on, zero policies ──
+  ok('league_invitations has RLS enabled',
+    /ALTER TABLE league_invitations ENABLE ROW LEVEL SECURITY/i.test(sql))
+  ok('league_invitations has no policy — invite tokens are bearer credentials',
+    !policyTargets.includes('league_invitations'))
+
+  // ── No recursive RLS ──
+  //
+  // bc_in_league_team() reads teams and team_members. That is safe ONLY while
+  // no policy using it sits on those tables — a policy that has to query the
+  // table it protects is infinite recursion. Migration 034 hit this, which is
+  // why its helpers are SECURITY DEFINER, and it is why this is asserted rather
+  // than assumed.
+  for (const p of policies) {
+    if (!/bc_in_league_team/.test(p)) continue
+    const target = (p.match(/\bON\s+([a-z_]+)/i) || [])[1]
+    ok(`bc_in_league_team is not used in a policy on a table it reads (${target})`,
+      target !== 'teams' && target !== 'team_members')
+  }
+
+  // Both helpers must be SECURITY DEFINER, or they would be evaluated with the
+  // caller's rights and be blocked by the very policies they exist to serve.
+  for (const helper of ['bc_league_role', 'bc_in_league_team', 'bc_league_at_least']) {
+    const at = sql.indexOf(`FUNCTION ${helper}`)
+    ok(`${helper}() exists`, at !== -1)
+    ok(`${helper}() is SECURITY DEFINER`,
+      at !== -1 && sql.slice(at, at + 900).includes('SECURITY DEFINER'))
+  }
+
+  // ── The seat-claim functions must be unreachable from the browser ──
+  for (const fnName of ['bc_claim_league_seat', 'bc_release_league_seat']) {
+    ok(`${fnName}() exists`, sql.includes(`CREATE OR REPLACE FUNCTION ${fnName}`))
+    // The REVOKEs live in one DO block that loops the functions and skips
+    // roles a plain Postgres does not have, so both the function name and the
+    // role must appear inside that SAME block — not merely somewhere in the
+    // file, which a laxer check would accept from a comment.
+    const revokeStart = sql.lastIndexOf('DO $$', sql.indexOf('REVOKE ALL ON FUNCTION'))
+    const revokeEnd = sql.indexOf('END $$;', sql.indexOf('REVOKE ALL ON FUNCTION'))
+    const block = revokeStart === -1 ? '' : sql.slice(revokeStart, revokeEnd)
+    ok(`${fnName}() is revoked from authenticated`,
+      block.includes(fnName) && block.includes('authenticated'))
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 7. Subscription invariants that are otherwise invisible
+//
+// These are properties of the SOURCE rather than of a return value, and there
+// is no way to observe them from a unit test of a function that does I/O. They
+// are asserted here because each one is a regression that would ship silently:
+// nothing would throw, no test would fail, and the damage would show up in
+// billing or in a support queue weeks later.
+// ---------------------------------------------------------------------------
+{
+  const authz = readFileSync('lib/authz.ts', 'utf8')
+
+  // THE RULE, checked across every file the league layer added: nothing may
+  // write coaches.is_subscribed. Sponsorship is computed from a live licence,
+  // never stamped onto a coach — otherwise the day a league stops paying, its
+  // coaches keep a flag that says they bought something, and nothing reconciles
+  // it.
+  const leagueSources = [
+    'lib/leagueEntitlements.ts', 'lib/leagueAuthz.ts', 'lib/leagueInvites.ts',
+    'app/api/league/invite/accept/route.ts', 'app/api/league/me/route.ts',
+    'app/api/league-admin/overview/route.ts', 'app/api/league-admin/teams/route.ts',
+    'app/api/league-admin/invitations/route.ts', 'app/api/league-admin/members/route.ts',
+    'app/api/league-admin/seasons/route.ts', 'app/api/league-admin/divisions/route.ts',
+    'app/api/admin/leagues/route.ts',
+  ]
+  for (const file of leagueSources) {
+    const src = readFileSync(file, 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '')
+    // An assignment or an object key, as opposed to reading it in a select.
+    ok(`${file} never writes is_subscribed`,
+      !/is_subscribed\s*[:=]\s*(true|false|[A-Za-z_$])/.test(src))
+    ok(`${file} never writes subscription_tier`,
+      !/subscription_tier\s*[:=]\s*['"]/.test(src))
+  }
+
+  // assertTeamFeatures must try the OWNER'S OWN PLAN first and return before
+  // touching the league. A paying coach is the overwhelmingly common case and
+  // must not pay a second round trip on every guarded request to answer a
+  // question about a league they are not in.
+  const fn = authz.slice(
+    authz.indexOf('export async function assertTeamFeatures'),
+    authz.indexOf('export async function authorizeTeam'),
+  )
+  ok('assertTeamFeatures() exists', fn.length > 0)
+
+  const earlyReturn = fn.indexOf('teamFeatures) return')
+  const leagueCall = fn.indexOf('isTeamLeagueSponsored')
+  ok('assertTeamFeatures short-circuits on the owner plan before any league lookup',
+    earlyReturn !== -1 && leagueCall !== -1 && earlyReturn < leagueCall)
+
+  // The league lookup is reached only with a teamId, so a coach-scoped route
+  // (authorizeCoach, which resolves no team) behaves exactly as it did before
+  // the league layer existed.
+  ok('the league lookup is guarded by the presence of a teamId',
+    /if\s*\(\s*teamId\s*&&\s*await\s+isTeamLeagueSponsored/.test(fn))
+
+  // guard() must hand the team through, or per-team sponsorship silently never
+  // applies and every league coach is refused Coach-plan surfaces.
+  ok('guard() passes the resolved teamId to assertTeamFeatures',
+    /assertTeamFeatures\(\s*actor\.ownerCoachId\s*,\s*actor\.teamId\s*\)/.test(authz))
+
+  // authorizeCoach resolves no team, so it must not invent one.
+  const coachFn = authz.slice(
+    authz.indexOf('export async function authorizeCoach'),
+    authz.indexOf('const REFUSALS'),
+  )
+  ok('authorizeCoach returns no teamId, leaving coach-scoped routes unchanged',
+    // \b matters: the function has a `teamIds` local (plural) for the coach's
+    // teams, and a substring match reads that as a teamId being returned.
+    coachFn.length > 0 && !/\bteamId\b/.test(coachFn))
+}
 
 // ---------------------------------------------------------------------------
 console.log(`\nleague entitlements: ${passed} passed, ${failures.length} failed`)
