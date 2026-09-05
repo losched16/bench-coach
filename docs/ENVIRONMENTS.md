@@ -12,23 +12,34 @@ matters — the one thing that blocks a staging environment from existing at all
 
 ## The blocker: the repository cannot build this database
 
-**No migration in this repository creates `coaches`, `teams`, `players`,
-`drill_resources`, `seo_pages`, `playbook_templates`, `practice_sessions`,
-`practice_plans`, `chat_threads`, `chat_messages`, `games` or `seasons`.**
+**24 of production's 79 tables and views are created by no file in this
+repository** — including `drill_resources`, `games`, `team_members`,
+`seo_pages` and `playbook_templates`.
 
-Production has 79 tables. The migrations in `migrations/` account for about 25
-of them, and every one of those 25 is *additive* — `001_prescription_engine.sql`
-opens by `ALTER TABLE drill_resources`, a table that does not exist on an empty
-database. The core schema was created by hand in the Supabase dashboard over
-the life of the project and exists nowhere in version control.
+`supabase-schema.sql` at the repo root creates 14 tables and the migrations
+create 30; the remaining 24 were made by hand in the Supabase dashboard and
+exist nowhere in version control. Because `001_prescription_engine.sql` opens
+by `ALTER TABLE drill_resources`, the chain fails on its first statement:
+bootstrapping from the repository today produces **28 of 79 tables, with 35 of
+48 migrations failing**.
 
 So the obvious plan — "create a new Supabase project, run the migrations, done"
-— does not work. It fails on the first file.
+— does not work.
 
-Verify it yourself, read-only, against any database:
+**`docs/BASELINE.md` is the full treatment**: the object-by-object manifest,
+the migration-boundary decision, the corrected capture command, and the RLS and
+SECURITY DEFINER audit of everything that could be reconstructed.
+
+Verify it yourself. Against any database, read-only:
 
 ```
 npm run db:report
+```
+
+Or with no database at all, against a throwaway PostgreSQL cluster:
+
+```
+npm run verify:bootstrap
 ```
 
 That prints which migrations a database looks to have (inferred from the objects
@@ -41,21 +52,23 @@ A baseline. `migrations/000_baseline.sql`, containing the schema production
 actually has, so that an empty project plus `000` plus `001…052` reproduces it.
 
 It has to be captured with `pg_dump --schema-only`, and **that cannot be done
-from the Claude Code sandbox** — outbound Postgres on 5432 and 6543 is blocked,
-which is also why every migration in this project is applied by pasting into the
-Supabase SQL editor. It needs a machine with direct database access:
+from the Claude Code sandbox** — outbound Postgres on 5432 and 6543 is blocked
+(confirmed: the agent proxy relays HTTP(S) only, and connections to both the
+pooler and the direct host time out). It needs a machine with direct database
+access:
 
 ```bash
-# From a machine that can reach Supabase on 5432.
-# Connection string: Supabase → Project Settings → Database → Connection string
-pg_dump --schema-only --no-owner --no-privileges \
-        --schema=public "$PRODUCTION_DATABASE_URL" \
+pg_dump --schema-only --no-owner --schema=public \
+        "$PRODUCTION_DATABASE_URL" \
         > migrations/000_baseline.sql
+
+npm run inspect:baseline -- migrations/000_baseline.sql
 ```
 
-Then read it before committing it. `--schema-only` emits no rows, but it does
-emit every policy, trigger, index, constraint and grant — which is the point,
-and is also why it should be reviewed rather than pasted in blind.
+Note the absence of `--no-privileges`, which an earlier version of this
+document wrongly recommended: it drops REVOKEs as well as GRANTs, and
+`050_league_layer.sql`'s revoke of `bc_claim_league_seat` from `authenticated`
+is one of them. `docs/BASELINE.md` has the reasoning.
 
 `docs/schema/expected-surface.json` is a partial stand-in recorded in the
 meantime: every table, view, column, type and exposed function, read from
@@ -358,6 +371,8 @@ or that environment breaks.
 **Capture `000_baseline.sql`.** Nothing above produces a real staging
 environment until this exists.
 
-**14 `bwc_*` tables** share this database and belong to something other than
-BenchCoach. They are outside the scope of this work, but they are worth knowing
-about before anyone reasons about "the BenchCoach database" as a single thing.
+**11 `bwc_*` tables** share this database and belong to a different application
+— a build-in-public portfolio tracker, with businesses, experiments, metric
+snapshots and a newsletter list. Nothing in BenchCoach references them and they
+have no foreign keys into it. They stay in production and are excluded from the
+baseline; `docs/BASELINE.md` has the evidence.

@@ -49,7 +49,9 @@
     "db:report": "NODE_USE_ENV_PROXY=1 node scripts/db-schema-report.mjs",
     "verify:env": "node scripts/verify-env.mjs",
     "prebuild": "node scripts/verify-env.mjs",
-    "staging:seed": "NODE_USE_ENV_PROXY=1 node scripts/seed-staging.mjs"
+    "staging:seed": "NODE_USE_ENV_PROXY=1 node scripts/seed-staging.mjs",
+    "verify:bootstrap": "bash scripts/verify-baseline-bootstrap.sh",
+    "inspect:baseline": "node scripts/inspect-baseline.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",
