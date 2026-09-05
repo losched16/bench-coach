@@ -65,6 +65,21 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // League administration. Signing in is only the doorway — whether this person
+  // administers the league they are asking about is decided by
+  // requireLeagueRole() in the API routes, which is the thing that actually
+  // enforces. This just stops a signed-out visitor reaching the shell at all.
+  //
+  // Note /league/invite/* is deliberately NOT protected: an invited coach has
+  // no account yet, and the invitation screen has to render for them.
+  if (request.nextUrl.pathname.startsWith('/league-admin')) {
+    if (!session) {
+      return NextResponse.redirect(
+        new URL(`/auth/login?redirect=${encodeURIComponent(request.nextUrl.pathname)}`, request.url)
+      )
+    }
+  }
+
   // Redirect logged-in users away from auth pages
   if (request.nextUrl.pathname.startsWith('/auth')) {
     if (session) {
@@ -81,5 +96,6 @@ export const config = {
     '/dashboard/:path*',
     '/auth/:path*',
     '/onboarding/:path*',
+    '/league-admin/:path*',
   ],
 }
