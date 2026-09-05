@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Stripe from 'stripe'
+import { getStripe, stripeUnavailable } from '@/lib/stripe'
 import { createClient } from '@supabase/supabase-js'
 
 // Never prerendered. This route reads the session cookie to decide who is
@@ -8,9 +8,6 @@ import { createClient } from '@supabase/supabase-js'
 // throw when touched.
 export const dynamic = 'force-dynamic'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-12-15.clover',
-})
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,6 +15,9 @@ const supabaseAdmin = createClient(
 )
 
 export async function POST(request: NextRequest) {
+  const stripe = getStripe()
+  if (!stripe) return stripeUnavailable()
+
   try {
     const { userId } = await request.json()
 

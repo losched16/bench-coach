@@ -48,7 +48,8 @@
     "enrich:playbooks": "node scripts/update-playbook-templates.mjs",
     "db:report": "NODE_USE_ENV_PROXY=1 node scripts/db-schema-report.mjs",
     "verify:env": "node scripts/verify-env.mjs",
-    "prebuild": "node scripts/verify-env.mjs"
+    "prebuild": "node scripts/verify-env.mjs",
+    "staging:seed": "NODE_USE_ENV_PROXY=1 node scripts/seed-staging.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

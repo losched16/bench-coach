@@ -161,7 +161,7 @@ export const ENV_SPEC: EnvVarSpec[] = [
     ifMissing: 'the admin page hides itself; the API still works off ADMIN_EMAIL' },
   { name: 'NEXT_PUBLIC_APP_URL', required: false, browser: true,
     purpose: 'Absolute URLs in invitations and emails.',
-    ifMissing: 'links fall back to relative paths, which break outside the browser' },
+    ifMissing: 'invitation links fall back to http://localhost:3000, which works for whoever generated them and nobody else' },
   { name: 'ANTHROPIC_API_KEY', required: false, browser: false,
     purpose: 'Chat, practice plans, drill diagnosis.',
     ifMissing: 'AI surfaces fail at request time. League provisioning and invites are unaffected.' },

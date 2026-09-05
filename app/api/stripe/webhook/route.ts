@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
+import { getStripe, stripeUnavailable } from '@/lib/stripe'
 import { createClient } from '@supabase/supabase-js'
 import { tierForPriceId, isTier, Tier } from '@/lib/tiers'
 import {
@@ -15,12 +16,6 @@ import {
 // throw when touched.
 export const dynamic = 'force-dynamic'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  // Matched to checkout and portal. The SDK's types are for this version, so
-  // declaring an older one meant Stripe sending event shapes the code was
-  // typechecked against but not actually receiving.
-  apiVersion: '2025-12-15.clover',
-})
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,7 +23,7 @@ const supabaseAdmin = createClient(
 )
 
 // Helper to get email from Stripe customer
-async function getCustomerEmail(customerId: string): Promise<string | null> {
+async function getCustomerEmail(stripe: Stripe, customerId: string): Promise<string | null> {
   try {
     const customer = await stripe.customers.retrieve(customerId)
     if (customer.deleted) return null
@@ -39,6 +34,12 @@ async function getCustomerEmail(customerId: string): Promise<string | null> {
 }
 
 export async function POST(request: NextRequest) {
+  // Lazily, so an environment with no Stripe key still builds. A webhook that
+  // arrives here without one is Stripe talking to the wrong deployment, and
+  // 503 is the answer that makes it retry rather than mark the event handled.
+  const stripe = getStripe()
+  if (!stripe) return stripeUnavailable()
+
   const body = await request.text()
   const signature = request.headers.get('stripe-signature')!
 
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
           console.log(`✅ User ${userId} subscribed successfully`)
 
           // Track in GoHighLevel
-          const email = session.customer_email || await getCustomerEmail(customerId)
+          const email = session.customer_email || await getCustomerEmail(stripe, customerId)
           if (email) {
             // Check if trial or direct purchase
             const subscription = session.subscription
@@ -145,7 +146,7 @@ export async function POST(request: NextRequest) {
 
           // Track in GoHighLevel when trial converts to active
           if (subscription.status === 'active' && event.type === 'customer.subscription.updated') {
-            const email = await getCustomerEmail(customerId)
+            const email = await getCustomerEmail(stripe, customerId)
             if (email) {
               await trackCustomerCreated(email)
               console.log(`📧 GHL: Subscription active for ${email}`)
@@ -171,7 +172,7 @@ export async function POST(request: NextRequest) {
         console.log(`✅ Subscription cancelled for customer ${customerId}`)
 
         // Track in GoHighLevel
-        const email = await getCustomerEmail(customerId)
+        const email = await getCustomerEmail(stripe, customerId)
         if (email) {
           await trackSubscriptionCancelled(email)
           console.log(`📧 GHL: Subscription cancelled for ${email}`)
@@ -186,7 +187,7 @@ export async function POST(request: NextRequest) {
         console.log(`⚠️ Payment failed for customer ${customerId}`)
 
         // Track in GoHighLevel
-        const email = await getCustomerEmail(customerId)
+        const email = await getCustomerEmail(stripe, customerId)
         if (email) {
           await trackPaymentFailed(email)
           console.log(`📧 GHL: Payment failed for ${email}`)
@@ -200,7 +201,7 @@ export async function POST(request: NextRequest) {
 
         // If this was a retry after failure, remove the payment_failed tag
         if (invoice.billing_reason === 'subscription_cycle') {
-          const email = await getCustomerEmail(customerId)
+          const email = await getCustomerEmail(stripe, customerId)
           if (email) {
             const { trackPaymentRecovered } = await import('@/lib/gohighlevel')
             await trackPaymentRecovered(email)

@@ -244,9 +244,14 @@ export function productionWriteAuthorised(e = resolveEnv(), source = process.env
  * @param {object}  [opts.resolution] A resolution worked out by the caller —
  *                  used when the target is not NEXT_PUBLIC_SUPABASE_URL, e.g.
  *                  a direct Postgres connection string.
+ * @param {boolean} [opts.neverProduction] For scripts where no override should
+ *                  exist at all. Changes the refusal so it does not advertise
+ *                  a way through that the caller will then ignore — a message
+ *                  offering an escape hatch that does not work is worse than
+ *                  no message.
  * @returns the resolution, so the caller can branch on it.
  */
-export function requireTarget({ script, writes, what = '', resolution = null }) {
+export function requireTarget({ script, writes, what = '', resolution = null, neverProduction = false }) {
   loadEnvFiles()
   const e = resolution || resolveEnv()
 
@@ -258,6 +263,19 @@ export function requireTarget({ script, writes, what = '', resolution = null }) 
   console.log('')
 
   if (!writes || !e.isProduction) return e
+
+  if (neverProduction) {
+    console.error('REFUSING TO WRITE.')
+    console.error('')
+    console.error(e.ambiguous
+      ? '  The environment could not be identified, so it is treated as production.'
+      : '  This is the production database.')
+    console.error(`  ${script} is a staging-only operation and has no production override.`)
+    console.error('')
+    console.error('  Point it at staging:  BENCHCOACH_ENV=staging with the staging Supabase URL.')
+    console.error('')
+    process.exit(1)
+  }
 
   if (productionWriteAuthorised(e)) {
     console.log(`  ${PRODUCTION_OVERRIDE_VAR} names ${e.projectRef}. Proceeding against production.`)

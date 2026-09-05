@@ -281,6 +281,50 @@ ok('verify-drill-links guards only its --write path',
   /writes:\s*WRITE/.test(links),
   'the read-only check is useful against production and must stay usable there')
 
+const seed = src('scripts/seed-staging.mjs')
+ok('seeding has no production override at all',
+  /neverProduction:\s*true/.test(seed),
+  'seeding upserts 600 rows over the live drill library; nobody should be one typo from that')
+ok('seeding refuses anything that identifies a person',
+  seed.includes('assertImpersonal'),
+  'the export is regenerated from a live database by whoever runs it next, so "it was clean when I looked" is not a property the seed can rely on')
+ok('seeding does not create coaches, teams, players or games',
+  !/from\(['"](coaches|teams|players|games|entries|observations|player_notes)['"]\)/.test(seed),
+  'those rows are real families’ records, and staging is the environment with looser access and credentials in more places')
+ok('seeding covers exactly the three reference tables',
+  ['problem_taxonomy', 'drill_resources', 'drill_problem_map'].every(t => seed.includes(t)))
+
+// ---------------------------------------------------------------------------
+// 8. An optional integration must not be able to fail the build
+//
+// The three Stripe routes each built their client at module scope with a `!`
+// on an unset variable. `new Stripe(undefined)` throws, module scope runs
+// while `next build` collects page data, and so the ENTIRE build failed —
+// every page — because one optional integration had no key. That made a
+// staging environment need a production billing credential in order to exist.
+// ---------------------------------------------------------------------------
+for (const route of ['checkout', 'portal', 'webhook']) {
+  const s = src(`app/api/stripe/${route}/route.ts`)
+  const code = s.split('\n').filter(l => !l.trim().startsWith('//') && !l.trim().startsWith('*')).join('\n')
+  ok(`stripe/${route} does not construct Stripe at module scope`,
+    !/^const stripe = new Stripe\(/m.test(code),
+    'it throws on load with no key, and module load happens during next build')
+  ok(`stripe/${route} builds the client per request`,
+    code.includes('getStripe()'))
+  ok(`stripe/${route} answers 503 rather than crashing when Stripe is absent`,
+    code.includes('stripeUnavailable()'),
+    'nothing is broken — the capability is absent, and 503 says which')
+}
+ok('the Stripe helper returns null rather than throwing',
+  /return null/.test(src('lib/stripe.ts')),
+  'a caller has to be able to decide what a missing integration means for it')
+
+const guardSrc = src('scripts/lib/env-guard.mjs')
+ok('the neverProduction refusal does not advertise the override',
+  guardSrc.indexOf('has no production override') > 0 &&
+  guardSrc.indexOf('has no production override') < guardSrc.indexOf('If you genuinely mean it'),
+  'a message offering an escape hatch the caller then ignores is worse than no message')
+
 // ---------------------------------------------------------------------------
 console.log(`\nenv safety: ${passed} passed, ${failures.length} failed`)
 if (failures.length) {

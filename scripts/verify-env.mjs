@@ -46,7 +46,7 @@ const REQUIRED = [
 
 const OPTIONAL = [
   ['NEXT_PUBLIC_ADMIN_EMAIL', 'the admin nav hides itself; the API still works off ADMIN_EMAIL'],
-  ['NEXT_PUBLIC_APP_URL', 'invitation links fall back to relative paths, which break in an email'],
+  ['NEXT_PUBLIC_APP_URL', 'invitation links are built against http://localhost:3000 and are dead for the recipient'],
   ['ANTHROPIC_API_KEY', 'chat, practice plans and diagnosis fail at request time'],
   ['STRIPE_SECRET_KEY', 'individual checkout fails; league-sponsored coaches never reach it'],
   ['STRIPE_WEBHOOK_SECRET', 'Stripe webhooks are rejected, so subscriptions never activate'],
