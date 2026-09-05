@@ -65,6 +65,12 @@ export type Database = {
           practice_days: any
           primary_goals: any
           created_at: string
+          // Migration 050. Null on every team that is not part of a league,
+          // which is most of them — an unaffiliated team is not a team with
+          // something missing, it is the ordinary case.
+          league_id: string | null
+          league_season_id: string | null
+          league_division_id: string | null
         }
         Insert: {
           id?: string
@@ -77,6 +83,9 @@ export type Database = {
           practice_days?: any
           primary_goals?: any
           created_at?: string
+          league_id?: string | null
+          league_season_id?: string | null
+          league_division_id?: string | null
         }
         Update: {
           id?: string
@@ -89,6 +98,9 @@ export type Database = {
           practice_days?: any
           primary_goals?: any
           created_at?: string
+          league_id?: string | null
+          league_season_id?: string | null
+          league_division_id?: string | null
         }
       }
       players: {

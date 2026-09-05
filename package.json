@@ -36,7 +36,9 @@
     "pilot:frames": "node scripts/pilot/extract-frames.mjs",
     "pilot:manifest": "node scripts/pilot/build-manifest.mjs",
     "pilot:search": "node scripts/pilot/search-drills.mjs",
-    "pilot:test": "node scripts/pilot/test-pilot.mjs"
+    "pilot:test": "node scripts/pilot/test-pilot.mjs",
+    "test:league-entitlements": "npx --yes tsx --tsconfig tsconfig.json scripts/test-league-entitlements.ts",
+    "test:league-invites": "npx --yes tsx --tsconfig tsconfig.json scripts/test-league-invites.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

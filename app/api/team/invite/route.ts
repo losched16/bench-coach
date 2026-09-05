@@ -117,9 +117,13 @@ export async function POST(request: NextRequest) {
 
     // Assistant coaches are a Coach-plan thing. Checked here rather than only
     // in the menu, because the menu is not a lock.
+    //
+    // teamId is passed so a league-sponsored head coach can invite their own
+    // assistants: their personal tier is 'free', and the licence paying for the
+    // team is what covers this.
     if (team?.coach_id) {
       try {
-        await assertTeamFeatures(team.coach_id)
+        await assertTeamFeatures(team.coach_id, teamId)
       } catch (e) {
         const denied = authzResponse(e)
         if (denied) return NextResponse.json(denied.body, { status: denied.status })

@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { tierOf, tierConfig } from './tiers'
+import { isTeamLeagueSponsored } from './leagueEntitlements'
 
 // Who is asking, and are they allowed.
 //
@@ -91,6 +92,11 @@ export interface Actor {
   // the head coach's team, which is the point.
   ownerCoachId: string
   role: Role
+  // The team this actor was resolved against, when there was one. Carried so
+  // the entitlement check can ask about the TEAM and not just its owner: a
+  // league sponsors a team, and one coach can run a sponsored 10U side and a
+  // private travel team that nobody else is paying for.
+  teamId?: string
 }
 
 export class AuthzError extends Error {
@@ -185,20 +191,32 @@ async function roleFor(userId: string, teamId: string): Promise<{
  * Keyed on the OWNER, not the caller: an assistant coach on somebody's Coach
  * workspace gets those surfaces without paying for their own plan, which is the
  * whole point of inviting them.
+ *
+ * A league licence is the second way to satisfy this, and the reason `teamId`
+ * exists. Sponsorship attaches to the TEAM rather than to the coach, so it can
+ * only be checked when we know which team is being asked about — callers that
+ * have one pass it, and the ones that do not are unchanged. The owner's own
+ * plan is still tried first: a coach who pays keeps their access on the day
+ * their league stops paying.
  */
-export async function assertTeamFeatures(ownerCoachId: string): Promise<void> {
+export async function assertTeamFeatures(
+  ownerCoachId: string,
+  teamId?: string | null
+): Promise<void> {
   const { data: coach } = await supabaseAdmin
     .from('coaches')
     .select('subscription_tier, is_subscribed')
     .eq('id', ownerCoachId)
     .maybeSingle()
 
-  if (!tierConfig(tierOf(coach as any)).teamFeatures) {
-    throw new AuthzError(
-      'That is part of the Coach plan — it covers teams, lineups, practice plans and scouting.',
-      402
-    )
-  }
+  if (tierConfig(tierOf(coach as any)).teamFeatures) return
+
+  if (teamId && await isTeamLeagueSponsored(teamId)) return
+
+  throw new AuthzError(
+    'That is part of the Coach plan — it covers teams, lineups, practice plans and scouting.',
+    402
+  )
 }
 
 /**
@@ -222,7 +240,13 @@ export async function authorizeTeam(
     throw new AuthzError(REFUSALS[capability](found.role), 403)
   }
 
-  return { userId, coachId: found.coachId, ownerCoachId: found.ownerCoachId, role: found.role }
+  return {
+    userId,
+    coachId: found.coachId,
+    ownerCoachId: found.ownerCoachId,
+    role: found.role,
+    teamId,
+  }
 }
 
 /**
@@ -406,7 +430,10 @@ export async function guard(
     else if (ids.coachId) actor = await authorizeCoach(ids.coachId, capability)
     else throw new AuthzError('Missing teamId', 400)
 
-    if (opts?.needs === 'teamFeatures') await assertTeamFeatures(actor.ownerCoachId)
+    // actor.teamId is set by every path that resolved through a team, which is
+    // all of them except authorizeCoach — so a coach-scoped route with no team
+    // in sight falls back to the owner's own plan, exactly as before.
+    if (opts?.needs === 'teamFeatures') await assertTeamFeatures(actor.ownerCoachId, actor.teamId)
     return null
   } catch (error) {
     const authz = authzResponse(error)

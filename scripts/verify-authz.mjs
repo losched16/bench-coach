@@ -30,7 +30,16 @@ const EXEMPT = {
   'app/api/track/seo/route.ts':           'public marketing pages — the visitors it measures have no session',
 }
 
-const GUARDS = ['guard(', 'requireSession(', 'requireAdmin(', 'authorizeTeam(', 'authorizeGame(', 'authorizeCoach(', 'authorizeThread(']
+// The league guards live in lib/leagueAuthz.ts rather than lib/authz.ts, because
+// "may this person administer this league" is a different question about a
+// different principal than "may this person touch this team's data". They are
+// listed here as first-class guards: a league route that calls one has
+// authorized its caller just as thoroughly as a team route that calls guard().
+const GUARDS = [
+  'guard(', 'requireSession(', 'requireAdmin(', 'authorizeTeam(',
+  'authorizeGame(', 'authorizeCoach(', 'authorizeThread(',
+  'guardLeague(', 'requireLeagueRole(',
+]
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 
 function walk(dir, out = []) {
