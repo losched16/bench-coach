@@ -125,6 +125,39 @@ export async function getLeagueMemberships(userId: string): Promise<LeagueMember
     .map(m => ({ leagueId: m.league_id, userId, role: m.role as LeagueRole }))
 }
 
+/**
+ * Find an existing account by email address.
+ *
+ * Supabase's admin API has getUserById but no getUserByEmail and no email
+ * filter on listUsers, so this pages through. That is fine at the scale it is
+ * used — adding a handful of league administrators, never in a request a coach
+ * waits on — and the page budget is bounded rather than unlimited so a large
+ * project cannot turn one mistyped address into a full table scan.
+ *
+ * Returns null for "no account with that address", which callers report as
+ * "they need to sign up first" rather than as a failure. Phase 2 should replace
+ * this with a proper administrator invitation, at which point this goes away.
+ */
+export async function findUserIdByEmail(email: string): Promise<string | null> {
+  const wanted = (email || '').trim().toLowerCase()
+  if (!wanted) return null
+
+  const PER_PAGE = 200
+  const MAX_PAGES = 10
+
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: PER_PAGE })
+    if (error) return null
+
+    const users = (data as any)?.users || []
+    const hit = users.find((u: any) => (u.email || '').toLowerCase() === wanted)
+    if (hit) return hit.id
+
+    if (users.length < PER_PAGE) return null
+  }
+  return null
+}
+
 async function currentUserId(): Promise<string | null> {
   const supabase = await sessionClient()
   const { data: { user } } = await supabase.auth.getUser()

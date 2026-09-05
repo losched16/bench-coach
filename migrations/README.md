@@ -13,6 +13,29 @@ them in numeric order.
 | `002_seed_problem_taxonomy.sql` | Seeds ~35 canonical problems with NL aliases. | No — idempotent upsert |
 | `003_backfill_and_normalize.sql` | Normalizes duplicate `skill_category` values; auto-maps drills→problems from existing flaw/focus tags. | Low — updates 8 category strings; inserts map rows |
 | `010_scouting_reports.sql` | Scouting Reports module: `opponent_teams`, `opponent_players`, `opponent_appearances`, `scouting_entries`, `pitch_count_rules` (seeds Little League / USSSA / Perfect Game defaults), `matchups` + RLS + indexes. | No — additive only, idempotent |
+| `050_league_layer.sql` | League layer phase 1: `leagues`, `league_members`, `league_seasons`, `league_divisions`, `league_licenses`, `league_invitations`, three nullable league FKs on `teams`, `bc_league_*` helpers + RLS. | No — additive only, idempotent; no backfill and no seeded data |
+
+## Migration 050 — the league layer
+
+Nothing works until this is applied, and nothing breaks before it is.
+
+The app degrades quietly while the tables are absent: every league query returns
+an error that supabase-js reports as `data: null` rather than throwing, so
+`getUserEntitlements` sees no league teams, no coach is sponsored, the "Provided
+by" badge and the League Admin nav link never render, and `/league-admin`
+answers "not found". Existing coaches see no change at all. That is the intended
+pre-apply state, not a fallback that needs fixing.
+
+Two things to check after applying, both at the bottom of the file:
+
+- `unaffiliated = teams` and `in_a_league = 0`. Every existing team must still
+  have NULL league columns — the migration backfills nothing.
+- `leagues`, `license` and `invitation` counts are all 0. No sample league is
+  created; a real one is inserted by hand or through the admin flows.
+
+There is no seed. Creating the first league, its licence and its first
+administrator is currently three INSERTs in the SQL editor — see
+"Known gaps" in the Phase 1 closeout.
 
 ## Background
 

@@ -40,8 +40,8 @@ interface Overview {
   coaches: CoachRow[]
 }
 
-type Tab = 'coaches' | 'teams' | 'divisions'
-type Dialog = null | 'invite' | 'season' | 'division' | 'team'
+type Tab = 'coaches' | 'teams' | 'divisions' | 'admins'
+type Dialog = null | 'invite' | 'season' | 'division' | 'team' | 'member'
 
 export default function LeagueAdminPage() {
   // Every hook runs before any early return, without exception. Two useState
@@ -58,6 +58,7 @@ export default function LeagueAdminPage() {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [inviteLink, setInviteLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [members, setMembers] = useState<Array<{ id: string; name: string | null; role: string; isYou: boolean }>>([])
 
   useEffect(() => {
     let cancelled = false
@@ -85,6 +86,14 @@ export default function LeagueAdminPage() {
       if (!res.ok) { setError(d.error || 'We could not load this league.'); return }
       setOverview(d)
       setError(null)
+      // Who else runs this league. A separate call because it is gated on a
+      // stronger capability than the overview and may legitimately be refused
+      // for a coaching director who can still see everything else.
+      try {
+        const mRes = await fetch(`/api/league-admin/members?leagueId=${id}`)
+        const mData = await mRes.json()
+        if (mRes.ok) setMembers(mData.members || [])
+      } catch { /* the tab shows empty; nothing else depends on it */ }
     } catch {
       setError('We could not load this league.')
     } finally {
@@ -164,6 +173,12 @@ export default function LeagueAdminPage() {
       </Shell>
     )
   }
+
+  // Capability, from the role /api/league/me already reported. Presentation
+  // only — the members endpoint enforces 'administer' regardless of what is
+  // shown here.
+  const myRole = leagues.find(l => l.leagueId === leagueId)?.role
+  const canAdminister = myRole === 'owner' || myRole === 'commissioner'
 
   const o = overview
 
@@ -271,6 +286,7 @@ export default function LeagueAdminPage() {
           ['coaches', 'Coaches'],
           ['teams', 'Teams'],
           ['divisions', 'Divisions'],
+          ['admins', 'Administrators'],
         ] as Array<[Tab, string]>).map(([id, label]) => (
           <button
             key={id}
@@ -297,6 +313,39 @@ export default function LeagueAdminPage() {
               <SecondaryButton onClick={() => setDialog('team')}>New team</SecondaryButton>
             </div>
             <TeamTable teams={o.teams} />
+          </>
+        )}
+
+        {tab === 'admins' && o && (
+          <>
+            {canAdminister && (
+              <div className="flex justify-end mb-4">
+                <SecondaryButton onClick={() => setDialog('member')}>Add administrator</SecondaryButton>
+              </div>
+            )}
+            {members.length === 0 ? (
+              <p className="text-center py-10 text-sm text-gray-600">
+                No administrators listed yet.
+              </p>
+            ) : (
+              <ul className="divide-y divide-gray-100">
+                {members.map(m => (
+                  <li key={m.id} className="py-3 flex items-center justify-between gap-3">
+                    <span className="text-sm text-gray-900 font-medium truncate">
+                      {m.name || 'League administrator'}
+                      {m.isYou && <span className="ml-2 text-xs text-gray-400">You</span>}
+                    </span>
+                    <span className="text-sm text-gray-600 capitalize shrink-0">
+                      {m.role.replace(/_/g, ' ')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-4 text-xs text-gray-500">
+              A league administrator sees adoption numbers. They do not get access to any
+              coach&apos;s roster, notes, practice plans or conversations.
+            </p>
           </>
         )}
 
@@ -396,7 +445,8 @@ function CreateDialog({
       const endpoint =
         kind === 'invite' ? 'invitations' :
         kind === 'season' ? 'seasons' :
-        kind === 'division' ? 'divisions' : 'teams'
+        kind === 'division' ? 'divisions' :
+        kind === 'member' ? 'members' : 'teams'
 
       const body: Record<string, any> = { leagueId }
       if (kind === 'invite') {
@@ -404,6 +454,9 @@ function CreateDialog({
         body.teamId = fields.teamId || null
         body.intendedRole = fields.intendedRole
         body.leagueSeasonId = fields.leagueSeasonId || null
+      } else if (kind === 'member') {
+        body.email = fields.email
+        body.role = fields.role || 'admin'
       } else if (kind === 'season') {
         body.name = fields.name
         body.startsAt = fields.startsAt || null
@@ -437,7 +490,8 @@ function CreateDialog({
   const title =
     kind === 'invite' ? 'Invite a coach' :
     kind === 'season' ? 'New season' :
-    kind === 'division' ? 'New division' : 'New team'
+    kind === 'division' ? 'New division' :
+    kind === 'member' ? 'Add administrator' : 'New team'
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
@@ -472,6 +526,33 @@ function CreateDialog({
                   <option value="assistant_coach">Assistant coach</option>
                 </select>
               </Field>
+            </>
+          )}
+
+          {kind === 'member' && (
+            <>
+              <Field label="Their email">
+                <input
+                  type="email"
+                  autoFocus
+                  value={fields.email || ''}
+                  onChange={e => set('email', e.target.value)}
+                  placeholder="commissioner@example.com"
+                  className={inputCls}
+                />
+              </Field>
+              <Field label="Role">
+                <select value={fields.role || 'admin'} onChange={e => set('role', e.target.value)} className={inputCls}>
+                  <option value="commissioner">Commissioner</option>
+                  <option value="admin">Admin</option>
+                  <option value="coaching_director">Coaching director</option>
+                  <option value="owner">Owner</option>
+                </select>
+              </Field>
+              <p className="text-xs text-gray-500">
+                They need a BenchCoach account already. League administrators see adoption
+                numbers — never a coach&apos;s roster, notes or conversations.
+              </p>
             </>
           )}
 

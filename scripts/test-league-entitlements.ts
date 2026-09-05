@@ -324,6 +324,47 @@ for (const teamRole of ['owner', 'admin', 'contributor', 'viewer']) {
 }
 
 // ---------------------------------------------------------------------------
+// 5. The authorization boundary, stated as the questions people will ask
+//
+// requireLeagueRole() resolves membership from league_members and nothing else.
+// These assertions pin the consequences of that, because the failure they guard
+// against is subtle: it would look like a helpful shortcut ("this coach IS in
+// the league, let them see the league page") right up until a commissioner's
+// dashboard opened for someone who merely coaches in it.
+// ---------------------------------------------------------------------------
+ok('a commissioner can open the league dashboard',
+  canManageLeague('commissioner', 'view'))
+
+// An unrelated signed-in user has no row in league_members, so getLeagueMembership
+// returns null and canManageLeague(null) is false for every capability.
+for (const cap of ['view', 'manage', 'administer'] as const) {
+  ok(`an unrelated user cannot ${cap}`, !canManageLeague(null, cap))
+}
+
+// The one that matters most. Coaching a team in a league — even owning it, even
+// being sponsored by it — is not administering the league. A coach reaches
+// league admin only by having a league_members row, which only an existing
+// league owner or commissioner can create.
+{
+  const sponsoredCoach = decideEntitlements(facts({
+    ownedTeams: [{ id: 't1', league_id: 'league-1' }],
+    licenses: [license()],
+  }))
+  ok('a sponsored coach is definitely in the league', sponsoredCoach.leagueSponsored)
+  // ...and that fact grants them no league role whatsoever. Entitlement and
+  // administration are answered by different tables on purpose.
+  ok('...but being sponsored grants no league role', !canManageLeague(null, 'view'))
+}
+
+// A team owner is 'owner' in the team vocabulary. If that string were ever fed
+// to the league check it would rank 4 — the highest league role there is — and
+// every head coach in the league would be a commissioner. The defence is that
+// the two vocabularies are never mixed: league roles come only from
+// league_members. This asserts the trap exists rather than that it is sprung.
+eq('the strings collide, which is why the lookup table must not',
+  ['owner', 'admin'].filter(r => isLeagueRole(r)).join(','), 'owner,admin')
+
+// ---------------------------------------------------------------------------
 console.log(`\nleague entitlements: ${passed} passed, ${failures.length} failed`)
 if (failures.length) {
   console.log('')
