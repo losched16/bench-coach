@@ -173,7 +173,7 @@ concludes the link is broken; at 0:00 they simply scrub.
 
 Fill in the start column while watching, then:
 
-  node scripts/curate-video-segments.mjs ingest segments.csv > migrations/050_video_segments.sql
+  node scripts/curate-video-segments.mjs ingest segments.csv > migrations/052_video_segments.sql
 `)
 }
 
@@ -291,7 +291,7 @@ function ingest(path) {
     .map(a => `  ('${a.id}', ${a.seconds}, '${a.source}')`)
     .join(',\n')
 
-  console.log(`-- 050_video_segments.sql
+  console.log(`-- 052_video_segments.sql
 --
 -- Where each drill actually starts in its video.
 --

@@ -14,26 +14,27 @@
 // (same convention as cowork-expansion/apply-expansion.mjs). Falls back to
 // checking cowork-expansion/new_drills.json if no credentials are available.
 
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { requireTarget } from './lib/env-guard.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const args = process.argv.slice(2)
 const CHECK_ALL = args.includes('--all')
 const WRITE = args.includes('--write')
 
-// ── Env loading (.env.local, same as apply-expansion.mjs) ──
-function loadEnv() {
-  const envPath = resolve(root, '.env.local')
-  if (existsSync(envPath)) {
-    for (const line of readFileSync(envPath, 'utf8').split('\n')) {
-      const m = line.match(/^([A-Z0-9_]+)=(.*)$/)
-      if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '')
-    }
-  }
-}
-loadEnv()
+// Which database, and is this run allowed to stamp it?
+//
+// Without --write this only reads, so it is safe anywhere including
+// production — checking whether live videos still resolve is exactly the sort
+// of thing you want to do against live data. With --write it stamps
+// url_verified_at, and the guard applies.
+requireTarget({
+  script: `verify-drill-links${WRITE ? ' --write' : ''}`,
+  writes: WRITE,
+  what: 'stamps url_verified_at on drill_resources rows that pass',
+})
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY

@@ -42,7 +42,13 @@
     "verify:league-privacy": "node scripts/verify-league-privacy.mjs",
     "test:migration-050": "bash scripts/test-migration-050.sh",
     "test:migration-051": "bash scripts/test-migration-051.sh",
-    "test:league-provisioning": "npx --yes tsx --tsconfig tsconfig.json scripts/test-league-provisioning.ts"
+    "test:league-provisioning": "npx --yes tsx --tsconfig tsconfig.json scripts/test-league-provisioning.ts",
+    "verify:env-safety": "node scripts/verify-env-safety.mjs",
+    "test:env-safety": "npx --yes tsx --tsconfig tsconfig.json scripts/test-env-safety.ts",
+    "enrich:playbooks": "node scripts/update-playbook-templates.mjs",
+    "db:report": "NODE_USE_ENV_PROXY=1 node scripts/db-schema-report.mjs",
+    "verify:env": "node scripts/verify-env.mjs",
+    "prebuild": "node scripts/verify-env.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

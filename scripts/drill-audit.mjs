@@ -32,6 +32,7 @@
 
 import { writeFileSync, readFileSync, mkdirSync, existsSync } from 'fs'
 import { createClient } from '@supabase/supabase-js'
+import { requireTarget } from './lib/env-guard.mjs'
 
 const OUT_DIR = 'docs/audits'
 
@@ -494,6 +495,11 @@ function coverageReport({ drills, map, problems }) {
 // ── main ────────────────────────────────────────────────────────────────────
 
 const command = (process.argv[2] || 'all').replace(/^--.*/, 'all')
+
+// Read-only, so nothing here can be refused — but an audit report is a claim
+// about a specific database, and printing which one turns "206 drills" into a
+// statement someone can check.
+requireTarget({ script: `drill-audit ${command}`, writes: false })
 
 const data = await load().catch(e => die(e.message))
 

@@ -57,6 +57,9 @@ import { join } from 'path'
 import { createClient } from '@supabase/supabase-js'
 import pg from 'pg'
 import Anthropic from '@anthropic-ai/sdk'
+import {
+  loadEnvFiles, requireTarget, resolveEnv, resolveEnvFromConnectionString,
+} from './lib/env-guard.mjs'
 
 const OUT_DIR = 'seo-conversions'
 const MODEL = 'claude-opus-5'
@@ -731,6 +734,27 @@ BenchCoach SEO conversion
 `)
     process.exit(command ? 1 : 0)
   }
+  // Which database, and may this command change it?
+  //
+  // Named rather than inferred: `extract` reads a page and writes a proposal
+  // FILE, `review` and `doctor` read only, and the three that touch seo_pages
+  // are the three listed here. Getting this list wrong in the safe direction
+  // costs a prompt; getting it wrong the other way is the whole problem.
+  //
+  // Resolved against SEO_DATABASE_URL when that is what the run will use,
+  // because a guard that checks a different variable than the one the
+  // connection is made from is theatre.
+  loadEnvFiles()
+  const WRITE_COMMANDS = new Set(['apply', 'restore', 'auto', 'pilot'])
+  requireTarget({
+    script: `seo-convert ${command}`,
+    writes: WRITE_COMMANDS.has(command),
+    what: 'updates the content column of rows in seo_pages',
+    resolution: process.env.SEO_DATABASE_URL
+      ? resolveEnvFromConnectionString(process.env.SEO_DATABASE_URL)
+      : resolveEnv(),
+  })
+
   // `pilot` takes an age group and defaults to 8U; `list` and `doctor` take
   // nothing. Everything else needs a slug.
   const NO_SLUG = [list, doctor]

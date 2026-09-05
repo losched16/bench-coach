@@ -1,0 +1,4631 @@
+{
+  "recordedFrom": {
+    "env": "production",
+    "projectRef": "chdpqsumqospnaztvfqe"
+  },
+  "recordedAt": "2026-09-05",
+  "note": "Shape only — no rows, no policies, no indexes. See the header of scripts/db-schema-report.mjs.",
+  "tables": {
+    "drill_resources": {
+      "age_range": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "ai_coaching_notes": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "channel": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "common_flaws_fixed": {
+        "type": "array",
+        "format": "text[]",
+        "required": false
+      },
+      "competition_level": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "created_by_coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "description": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "difficulty_level": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "drill_name": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "duration": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "equipment_needed": {
+        "type": "array",
+        "format": "text[]",
+        "required": false
+      },
+      "est_duration_minutes": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "frequency_guidance": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "indoor_outdoor": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "max_age": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "mechanic_focus": {
+        "type": "array",
+        "format": "text[]",
+        "required": false
+      },
+      "min_age": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "primary_skill": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "progression_level": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "reps_guidance": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "requires_partner": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": false
+      },
+      "safety_notes": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "secondary_skill": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "skill_category": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "source": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "space_required": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "status": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "success_markers": {
+        "type": "array",
+        "format": "text[]",
+        "required": false
+      },
+      "tags": {
+        "type": "array",
+        "format": "text[]",
+        "required": false
+      },
+      "thumbnail_url": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "url_verified_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "youtube_start_seconds": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "youtube_start_source": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "youtube_url": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "youtube_video_id": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      }
+    },
+    "league_invitations": {
+      "accepted_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "email": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "expires_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "intended_role": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "invite_token": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "invited_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "invited_by": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "league_division_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "league_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "league_season_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "status": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      }
+    },
+    "player_journal_entries": {
+      "coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "duration_minutes": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "focus_areas": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "home_drills": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "instructor_name": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "media": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "needs_work": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "notes": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "session_date": {
+        "type": "string",
+        "format": "date",
+        "required": true
+      },
+      "session_type": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "skills": {
+        "type": "array",
+        "format": "text[]",
+        "required": false
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "went_well": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      }
+    },
+    "seo_pages": {
+      "age_group": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "canonical": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "category": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "content": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "hub_slug": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "is_published": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": false
+      },
+      "meta_description": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "primary_keyword": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "priority": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "related_slugs": {
+        "type": "array",
+        "format": "text[]",
+        "required": false
+      },
+      "schema_faq": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "slug": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "title": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "topic": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "type": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      }
+    },
+    "practice_templates": {
+      "age_group": {
+        "type": "string",
+        "format": "character varying",
+        "required": true
+      },
+      "content": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "description": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "duration_minutes": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "focus_type": {
+        "type": "string",
+        "format": "character varying",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "skill_level": {
+        "type": "string",
+        "format": "character varying",
+        "required": false
+      },
+      "tags": {
+        "type": "array",
+        "format": "text[]",
+        "required": false
+      },
+      "title": {
+        "type": "string",
+        "format": "character varying",
+        "required": true
+      }
+    },
+    "game_participation": {
+      "batting_slot": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "game_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "is_in": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": true
+      },
+      "is_starter": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": true
+      },
+      "reentries": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "team_player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "times_removed": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      }
+    },
+    "pitch_count_sessions": {
+      "appearance_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "counted_on": {
+        "type": "string",
+        "format": "date",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "finished_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "innings": {
+        "type": "number",
+        "format": "numeric",
+        "required": false
+      },
+      "label": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "notes": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "opponent_player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "opponent_team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "pitches": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "rule_set_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "subject_type": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "team_player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      }
+    },
+    "game_lineups": {
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "everyone_bats": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": false
+      },
+      "field_positions": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "game_date": {
+        "type": "string",
+        "format": "date",
+        "required": true
+      },
+      "game_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "innings": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "notes": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "opponent": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "pitching_type": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "status": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      }
+    },
+    "matchups": {
+      "bracket_position": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "opponent_team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "scheduled_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "status": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "tournament_name": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      }
+    },
+    "game_events": {
+      "adjusted": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": true
+      },
+      "balls": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "bases_after": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": true
+      },
+      "bases_before": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": true
+      },
+      "batter_team_player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "game_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "half": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "inning": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "kind": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "note": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "opponent_name": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "opponent_slot": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "outs_after": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "outs_before": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "pitcher_player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "pitches": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "rbi": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "result": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "runs_scored": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": true
+      },
+      "scoring": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "seq": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "strikes": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "we_batting": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": true
+      }
+    },
+    "game_opponent_lineup": {
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "game_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "is_pitcher": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": true
+      },
+      "jersey": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "name": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "position": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "slot": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "source": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      }
+    },
+    "practice_plans": {
+      "content": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "duration_minutes": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "focus": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "focus_areas": {
+        "type": "array",
+        "format": "text[]",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "title": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      }
+    },
+    "bwc_metric_snapshots": {
+      "business_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "day_key": {
+        "type": "string",
+        "format": "date",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "metadata": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "metric_name": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "metric_value": {
+        "type": "number",
+        "format": "numeric",
+        "required": true
+      },
+      "platform": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "recorded_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "source": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "visibility": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      }
+    },
+    "problem_taxonomy": {
+      "age_relevance": {
+        "type": "array",
+        "format": "text[]",
+        "required": false
+      },
+      "aliases": {
+        "type": "array",
+        "format": "text[]",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "description": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "do_not_coach_flag": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": false
+      },
+      "do_not_coach_note": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "label": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "skill_category": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "slug": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      }
+    },
+    "swing_analyses": {
+      "analysis_summary": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "comparison_data": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "comparison_error": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "comparison_status": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "error_message": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "identified_issues": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "metrics": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "overlay_video_url": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "pose_data": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "processed_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "recommended_drills": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "skeleton_overlay_url": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "status": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "video_duration_seconds": {
+        "type": "number",
+        "format": "double precision",
+        "required": false
+      },
+      "video_fps": {
+        "type": "number",
+        "format": "double precision",
+        "required": false
+      },
+      "video_url": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      }
+    },
+    "chat_messages": {
+      "content": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "memory_suggestions": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "meta": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "role": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "thread_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      }
+    },
+    "league_divisions": {
+      "age_group": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "league_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "league_season_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "name": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      }
+    },
+    "saved_drills": {
+      "category": {
+        "type": "string",
+        "format": "character varying",
+        "required": false
+      },
+      "content": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "source_message_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "tags": {
+        "type": "array",
+        "format": "text[]",
+        "required": false
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "title": {
+        "type": "string",
+        "format": "character varying",
+        "required": true
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      }
+    },
+    "user_events": {
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "event_name": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "event_type": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "metadata": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "page_path": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "user_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      }
+    },
+    "admin_feature_usage": {
+      "event_name": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "unique_users": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "usage_count": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      }
+    },
+    "opponent_appearances": {
+      "batting_line": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "batting_order_slot": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "game_date": {
+        "type": "string",
+        "format": "date",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "innings_pitched": {
+        "type": "number",
+        "format": "numeric",
+        "required": false
+      },
+      "opponent_player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "pitches_thrown": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "pitching_line": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "positions_played": {
+        "type": "array",
+        "format": "text[]",
+        "required": false
+      },
+      "raw": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "scouting_entry_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      }
+    },
+    "player_metrics": {
+      "attempts": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "entry_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "measured_on": {
+        "type": "string",
+        "format": "date",
+        "required": true
+      },
+      "metric": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "metric_type_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "note": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "source": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "successes": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "unit": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "value": {
+        "type": "number",
+        "format": "numeric",
+        "required": true
+      }
+    },
+    "bwc_sync_logs": {
+      "collector": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "finished_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "message": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "snapshots_written": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "started_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "status": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      }
+    },
+    "checkins": {
+      "accepted_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "adherence_expected": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "adherence_logged": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "coach_update": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "days_elapsed": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "markdown": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "next_focus": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "outcome_note": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "prescription_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "verdict_status": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      }
+    },
+    "lineup_assignments": {
+      "batting_order": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "inning": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "lineup_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "position": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "team_player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      }
+    },
+    "admin_daily_active_users": {
+      "day": {
+        "type": "string",
+        "format": "date",
+        "required": false
+      },
+      "total_events": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "unique_users": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      }
+    },
+    "player_notes": {
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "note": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      }
+    },
+    "team_memory_summaries": {
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "summary": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      }
+    },
+    "player_season_batting": {
+      "batting_avg": {
+        "type": "number",
+        "format": "numeric",
+        "required": false
+      },
+      "games_played": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "jersey_number": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "obp": {
+        "type": "number",
+        "format": "numeric",
+        "required": false
+      },
+      "player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "player_name": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "slg": {
+        "type": "number",
+        "format": "numeric",
+        "required": false
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "team_player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "total_ab": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "total_assists": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "total_cs": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "total_doubles": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "total_errors": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "total_hbp": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "total_hits": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "total_hr": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "total_putouts": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "total_rbi": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "total_runs": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "total_sac": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "total_sb": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "total_singles": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "total_strikeouts": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "total_triples": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "total_walks": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      }
+    },
+    "game_pitch_counts": {
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "game_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "half": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "inning": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "is_opponent": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": true
+      },
+      "opponent_pitcher_name": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "pitch_count": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      }
+    },
+    "bwc_roadmap_milestones": {
+      "business_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "description": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "phase": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "sort_order": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "status": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "title": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      }
+    },
+    "bwc_businesses": {
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "current_focus": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "is_distribution": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": true
+      },
+      "locked": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": true
+      },
+      "name": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "next_milestone": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "slug": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "sort_order": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "stage": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "status": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "the_bet": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "type": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      }
+    },
+    "opponent_analyses": {
+      "coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "entry_count": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "generated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "headline": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "latest_entry_on": {
+        "type": "string",
+        "format": "date",
+        "required": false
+      },
+      "markdown": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "opponent_team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "player_count": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "total_pa": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "whats_changed": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      }
+    },
+    "coaches": {
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "display_name": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "is_subscribed": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": false
+      },
+      "stripe_customer_id": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "subscription_tier": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "user_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      }
+    },
+    "bwc_experiments": {
+      "baseline": {
+        "type": "number",
+        "format": "numeric",
+        "required": false
+      },
+      "business_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "current_value": {
+        "type": "number",
+        "format": "numeric",
+        "required": false
+      },
+      "end_date": {
+        "type": "string",
+        "format": "date",
+        "required": false
+      },
+      "evidence_url": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "hypothesis": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "lesson": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "metric_unit": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "outcome": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "primary_metric": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "slug": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "start_date": {
+        "type": "string",
+        "format": "date",
+        "required": false
+      },
+      "status": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "target": {
+        "type": "number",
+        "format": "numeric",
+        "required": false
+      },
+      "title": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "visibility": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      }
+    },
+    "entries": {
+      "coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "duration_min": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "entry_type": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "game_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "image_urls": {
+        "type": "array",
+        "format": "text[]",
+        "required": false
+      },
+      "instructor_name": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "occurred_on": {
+        "type": "string",
+        "format": "date",
+        "required": true
+      },
+      "parse_confidence": {
+        "type": "number",
+        "format": "numeric",
+        "required": false
+      },
+      "parse_status": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "prescription_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "quick_log": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": true
+      },
+      "raw_parse": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "title": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      }
+    },
+    "league_seasons": {
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "ends_at": {
+        "type": "string",
+        "format": "date",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "league_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "name": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "starts_at": {
+        "type": "string",
+        "format": "date",
+        "required": false
+      },
+      "status": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      }
+    },
+    "players": {
+      "birth_year": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "jersey_number": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "name": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      }
+    },
+    "drill_problem_map": {
+      "curated": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": false
+      },
+      "drill_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "problem_slug": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "sort_order": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      }
+    },
+    "game_position_log": {
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "game_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "inning": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "position": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "team_player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      }
+    },
+    "chat_threads": {
+      "archived": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "last_message_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "opponent_team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "title": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      }
+    },
+    "prescriptions": {
+      "coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "current_step": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "development_plan": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "drill_ids": {
+        "type": "array",
+        "format": "uuid[]",
+        "required": false
+      },
+      "drill_swaps": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "focus_area": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "issued_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "last_checkin_notified_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "min_hold_until": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "origin": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "outcome_note": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "plan_steps": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "priority": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "problem_id": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "resolved_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "retired_drill_ids": {
+        "type": "array",
+        "format": "uuid[]",
+        "required": true
+      },
+      "review_due_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "scope": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "sessions": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "source_entry_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "status": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "step_advanced_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "success_criteria": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "summary": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "superseded_by": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      }
+    },
+    "bwc_settings": {
+      "key": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "value": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": true
+      }
+    },
+    "bwc_subscribers": {
+      "audience": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "email": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "resend_contact_id": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "signup_source": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "status": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "unsubscribe_token": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      }
+    },
+    "league_members": {
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "league_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "role": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "user_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      }
+    },
+    "pitch_count_rules": {
+      "age_group": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "daily_max": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "sanctioning_body": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "thresholds": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": true
+      }
+    },
+    "teams": {
+      "age_group": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "default_strategy": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "improved_areas": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "league_division_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "league_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "league_placeholder_owner_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "league_season_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "mastered_areas": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "min_innings_all": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "name": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "practice_days": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "practice_duration_minutes": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "primary_goals": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "season_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "skill_level": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "workspace_kind": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      }
+    },
+    "bwc_build_log": {
+      "business_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "category": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "content_potential": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "evidence_url": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "happened_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "is_meaningful": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": true
+      },
+      "lesson": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "results": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "title": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "visibility": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "what_happened": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "why_it_matters": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      }
+    },
+    "bwc_metric_sources": {
+      "account_identifier": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "business_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "connection_status": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "last_synced_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "platform": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      }
+    },
+    "player_playbooks": {
+      "completed_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "completed_sessions": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "notes": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "playbook_template_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "started_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "status": {
+        "type": "string",
+        "format": "character varying",
+        "required": false
+      },
+      "target_completion_date": {
+        "type": "string",
+        "format": "date",
+        "required": false
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "title": {
+        "type": "string",
+        "format": "character varying",
+        "required": true
+      }
+    },
+    "bwc_content_activity": {
+      "business_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "content_type": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "count": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "day_key": {
+        "type": "string",
+        "format": "date",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "platform": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "source": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      }
+    },
+    "league_licenses": {
+      "coach_limit": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "contract_reference": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "ends_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "league_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "league_season_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "plan": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "starts_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "status": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "stripe_customer_id": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      }
+    },
+    "team_notes": {
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "note": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "pinned": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": false
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "title": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      }
+    },
+    "drill_favorites": {
+      "coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "drill_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "note": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      }
+    },
+    "roster_name_mappings": {
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "source_name": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "team_player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      }
+    },
+    "admin_alerts": {
+      "alert_type": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "description": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "is_read": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": false
+      },
+      "severity": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "title": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "user_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      }
+    },
+    "admin_user_activity": {
+      "active_days_last_30d": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "display_name": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "events_last_30d": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "events_last_7d": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "is_subscribed": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": false
+      },
+      "last_active": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "signup_date": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "stripe_customer_id": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "subscription_tier": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "total_analyses": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "total_chats": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "total_games": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "total_lineups": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "total_plans": {
+        "type": "integer",
+        "format": "bigint",
+        "required": false
+      },
+      "user_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      }
+    },
+    "game_notes": {
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "game_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "inning": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "note": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "note_type": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      }
+    },
+    "playbook_templates": {
+      "age_group": {
+        "type": "string",
+        "format": "character varying",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "description": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "difficulty": {
+        "type": "string",
+        "format": "character varying",
+        "required": false
+      },
+      "equipment": {
+        "type": "array",
+        "format": "text[]",
+        "required": false
+      },
+      "goal": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "sessions": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": true
+      },
+      "sessions_per_week": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "skill_category": {
+        "type": "string",
+        "format": "character varying",
+        "required": true
+      },
+      "title": {
+        "type": "string",
+        "format": "character varying",
+        "required": true
+      },
+      "total_sessions": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      }
+    },
+    "bwc_timeline_events": {
+      "business_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "description": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "event_type": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "happened_at": {
+        "type": "string",
+        "format": "date",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "title": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "visibility": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      }
+    },
+    "leagues": {
+      "city": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "governing_body": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "logo_url": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "name": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "slug": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "state": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "status": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "website": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      }
+    },
+    "position_eligibility": {
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "eligible": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "position": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "team_player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      }
+    },
+    "scouting_entries": {
+      "coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "entry_type": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "image_urls": {
+        "type": "array",
+        "format": "text[]",
+        "required": false
+      },
+      "notes": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "occurred_on": {
+        "type": "string",
+        "format": "date",
+        "required": false
+      },
+      "opponent_team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "parse_confidence": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "parse_status": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "raw_parse": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "tournament_name": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      }
+    },
+    "player_milestones": {
+      "achieved_at": {
+        "type": "string",
+        "format": "date",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "description": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "game_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "milestone_type": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "stat_value": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "title": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      }
+    },
+    "opponent_players": {
+      "bats": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "confidence": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "first_seen": {
+        "type": "string",
+        "format": "date",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "jersey_number": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "last_seen": {
+        "type": "string",
+        "format": "date",
+        "required": false
+      },
+      "name": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "needs_review": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": false
+      },
+      "notes": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "opponent_team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "positions": {
+        "type": "array",
+        "format": "text[]",
+        "required": false
+      },
+      "throws": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      }
+    },
+    "team_players": {
+      "baserunning_level": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "coachability_level": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "excluded_positions": {
+        "type": "array",
+        "format": "text[]",
+        "required": true
+      },
+      "fielding_level": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "focus_notes": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "hitting_level": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "locked_position": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "max_innings": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "min_innings": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "pitching_level": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "positions": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "throwing_level": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      }
+    },
+    "observations": {
+      "body": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "entry_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "observed_on": {
+        "type": "string",
+        "format": "date",
+        "required": false
+      },
+      "player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "prompt_key": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "source_game_note_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      }
+    },
+    "games": {
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "current_half": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "current_inning": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "eligibility_reviewed_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "game_date": {
+        "type": "string",
+        "format": "date",
+        "required": true
+      },
+      "game_type": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "home_away": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "house_rules": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "is_home": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": true
+      },
+      "lineup_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "lineup_locked_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "location": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "notes": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "opponent": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "opponent_score": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "result": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "scorebook_started_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "status": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "sub_rules": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "team_score": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "total_innings": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      }
+    },
+    "metric_types": {
+      "archived": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": true
+      },
+      "coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "default_attempts": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "direction": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "hint": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "label": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "shape": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "slug": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "sort_order": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "unit": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      }
+    },
+    "coach_preferences": {
+      "coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "key": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "value": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      }
+    },
+    "player_game_stats": {
+      "assists": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "at_bats": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "caught_stealing": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "doubles": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "earned_runs": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "errors": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "fielding_innings": {
+        "type": "number",
+        "format": "numeric",
+        "required": false
+      },
+      "game_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "game_notes": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "hbp": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "hits": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "home_runs": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "innings_pitched": {
+        "type": "number",
+        "format": "numeric",
+        "required": false
+      },
+      "pitches_thrown": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "pitching_hbp": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "pitching_hits": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "pitching_runs": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "pitching_strikeouts": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "pitching_walks": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "positions_played": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "putouts": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "rbi": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "runs": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "sac": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "singles": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "stolen_bases": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "strikeouts": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "team_player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "triples": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "walks": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      }
+    },
+    "game_position_eligibility": {
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "eligible": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": true
+      },
+      "game_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "position": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "team_player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      }
+    },
+    "player_traits": {
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "note": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      }
+    },
+    "team_invitations": {
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "expires_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "invited_by": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "max_uses": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "role": {
+        "type": "string",
+        "format": "character varying",
+        "required": true
+      },
+      "status": {
+        "type": "string",
+        "format": "character varying",
+        "required": false
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "token": {
+        "type": "string",
+        "format": "character varying",
+        "required": true
+      },
+      "use_count": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      }
+    },
+    "practice_sessions": {
+      "ai_suggestions": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "attendance_count": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "date": {
+        "type": "string",
+        "format": "date",
+        "required": false
+      },
+      "energy_level": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "next_focus": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "player_callouts": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "practice_plan_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "recap_note": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "weather": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "what_didnt_work": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "what_worked": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      }
+    },
+    "opponent_teams": {
+      "age_group": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "analysis_stale": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": true
+      },
+      "coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "first_seen": {
+        "type": "string",
+        "format": "date",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "is_own_team": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": true
+      },
+      "last_seen": {
+        "type": "string",
+        "format": "date",
+        "required": false
+      },
+      "linked_team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "name": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "notes": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "org_name": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "region": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      }
+    },
+    "plan_session_log": {
+      "coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "completed_by": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "completed_on": {
+        "type": "string",
+        "format": "date",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "minutes": {
+        "type": "integer",
+        "format": "integer",
+        "required": false
+      },
+      "note": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "prescription_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "session_key": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "session_title": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      }
+    },
+    "team_members": {
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "invited_by": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "joined_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "role": {
+        "type": "string",
+        "format": "character varying",
+        "required": true
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "user_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      }
+    },
+    "seasons": {
+      "coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "end_date": {
+        "type": "string",
+        "format": "date",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "league_type": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "name": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "start_date": {
+        "type": "string",
+        "format": "date",
+        "required": false
+      }
+    }
+  },
+  "rpcs": [
+    "bc_claim_league_seat",
+    "bc_coach_at_least",
+    "bc_game_at_least",
+    "bc_in_league_team",
+    "bc_league_at_least",
+    "bc_league_rank",
+    "bc_league_role",
+    "bc_opponent_team_at_least",
+    "bc_rank",
+    "bc_release_league_seat",
+    "bc_team_at_least",
+    "bc_team_player_at_least",
+    "bc_team_role",
+    "bc_thread_at_least",
+    "calc_batting_avg",
+    "extract_youtube_id",
+    "get_user_team_role",
+    "is_team_member",
+    "is_team_owner_or_member",
+    "parse_age_range",
+    "user_has_team_permission"
+  ]
+}

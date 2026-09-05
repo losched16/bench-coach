@@ -212,7 +212,7 @@ videos, so this is roughly seven videos watched, not eleven — and `4NOo7JSK6eA
 alone resolves 19 drills in one sitting. Then:
 
 ```
-node scripts/curate-video-segments.mjs ingest segments.csv > migrations/050_video_segments.sql
+node scripts/curate-video-segments.mjs ingest segments.csv > migrations/052_video_segments.sql
 ```
 
 Run 050, re-run `npm run test:drill-video`, and update the table in section 5.
