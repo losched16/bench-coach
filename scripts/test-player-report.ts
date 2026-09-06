@@ -24,6 +24,10 @@ import {
 } from '@/lib/playerReports'
 import { renderReportPdf, pdfSafe, reportFilename } from '@/lib/playerReportPdf'
 import { PDFDocument, PDFName, PDFArray, PDFDict, PDFString } from 'pdf-lib'
+import {
+  seasonWindow, inWindow, humanizeMetric, measurementItems, priorityItem, traitItem,
+  entryItem, itemsToNotes, priorityToFocusArea, sortItems,
+} from '@/lib/playerReportSources'
 import { readFileSync } from 'fs'
 
 let failures = 0
@@ -294,6 +298,76 @@ check('the form and the column key styles are both accepted',
 check('branding is trimmed and capped to one line',
   (cleanBranding({ brandName: '  ' + 'x'.repeat(200) })?.brand_name || '').length === 60)
 check('a non-object is refused', cleanBranding('Springford' as any) === null)
+
+// ── starting from what the coach recorded ───────────────────────────────────
+
+const w = seasonWindow({ start_date: '2026-03-01', end_date: '2026-06-30' }, '2026-01-15T00:00:00Z', { today: new Date(2026, 8, 6) })
+check('the season window uses the season dates', w.from === '2026-03-01' && w.to === '2026-09-06', JSON.stringify(w))
+check('a season with no dates falls back to when the team was created',
+  seasonWindow(null, '2026-01-15T00:00:00Z', { today: new Date(2026, 8, 6) }).from === '2026-01-15')
+check('earlier seasons removes the lower bound',
+  seasonWindow({ start_date: '2026-03-01' }, null, { allSeasons: true, today: new Date(2026, 8, 6) }).from === null)
+check('an undated row is kept — we cannot exclude what we cannot date', inWindow(null, w))
+check('a row before the season is out', !inWindow('2025-11-01', w))
+check('a row in the season is in', inWindow('2026-05-10', w))
+
+check('legacy metric slugs are named for a parent',
+  humanizeMetric('sixty') === '60-yard dash' && humanizeMetric('home_to_first') === 'Home to first')
+check('an unknown slug is still readable', humanizeMetric('pop_time') === 'Pop time')
+
+const readings = [
+  { metric: 'sixty', value: 9.8, unit: 's', measured_on: '2026-04-03' },
+  { metric: 'sixty', value: 9.1, unit: 's', measured_on: '2026-08-20' },
+  { metric: 'exit_velo', value: 41, unit: 'mph', measured_on: '2026-05-01' },
+]
+const mi = measurementItems(readings)
+check('one item per measurement, first reading to latest', mi.length === 2)
+const sixty = mi.find(m => m.id === 'measurement:sixty')!
+check('the line states both readings and which direction is better',
+  sixty.text === '60-yard dash: 9.8 s (April 3, 2026) → 9.1 s (August 20, 2026) — lower is better', sixty.text)
+check('a single reading is stated without an arrow',
+  mi.find(m => m.id === 'measurement:exit_velo')!.text === 'Exit velocity: 41 mph (May 1, 2026) — higher is better')
+check('measurements are never pre-selected', mi.every(m => !m.preselected))
+check('a coach-defined metric type supplies the label and direction',
+  measurementItems([{ metric: null, metric_type_id: 'mt1', value: 2.1, unit: null, measured_on: '2026-06-01' }],
+    [{ id: 'mt1', label: 'Pop time', unit: 's', direction: 'lower' }])[0].text === 'Pop time: 2.1 s (June 1, 2026) — lower is better')
+
+const label = (slug: string) => (slug === 'fielding-flat-footed' ? 'Fields flat-footed / not in front' : null)
+const active = priorityItem({ id: 'p1', priority: 'Get the glove down earlier.', success_criteria: 'Fields out in front on most reps.',
+  problem_id: 'fielding-flat-footed', focus_area: 'fielding', status: 'active', issued_at: '2026-05-02T10:00:00Z' }, label)
+check('an active priority is pre-ticked into Development',
+  active.preselected && active.suggestedTarget === 'development')
+check('a priority carries its taxonomy slug so drills are ready',
+  active.priority?.problemSlug === 'fielding-flat-footed' && active.priority?.label === 'Fields flat-footed / not in front')
+check('the priority text carries what the coach wanted to see',
+  active.text.includes('Get the glove down earlier.') && active.text.includes('What we wanted to see:'))
+const resolved = priorityItem({ id: 'p2', priority: 'Stop drifting forward.', problem_id: 'lunging', status: 'resolved',
+  outcome_note: 'Staying back now.', resolved_at: '2026-07-01T00:00:00Z' }, () => null, ['Big improvement by week three'])
+check('a resolved priority is pre-ticked into Strengths',
+  resolved.preselected && resolved.suggestedTarget === 'strengths')
+check('check-in and outcome notes ride along under the priority',
+  resolved.text.includes('Check-in: Big improvement by week three') && resolved.text.includes('Outcome: Staying back now.') && resolved.text.includes('Marked resolved.'))
+check('an abandoned priority is offered but not ticked and points nowhere',
+  !priorityItem({ id: 'p3', priority: 'x', status: 'abandoned' }, () => null).preselected)
+
+const trait = traitItem({ id: 't1', note: 'Dad shouts from the fence; keep him at second.', created_at: '2026-04-01T00:00:00Z' })
+check('a trait is marked private and never pre-selected', trait.sensitive && !trait.preselected && trait.suggestedTarget === null)
+
+check('an entry with no words is not a source',
+  entryItem({ id: 'e1', entry_type: 'game', occurred_on: '2026-05-05' }) === null)
+check('a lesson names the instructor',
+  entryItem({ id: 'e2', entry_type: 'lesson', occurred_on: '2026-05-05', instructor_name: 'Coach Ray' })?.title === 'Lesson with Coach Ray')
+
+const seed = priorityToFocusArea(active)!
+check('a selected priority becomes a development area seeded with the coach words',
+  seed.problemSlug === 'fielding-flat-footed' && seed.label === 'Fields flat-footed / not in front' && seed.coachNotes === active.text)
+check('a note cannot become a development area', priorityToFocusArea(trait) === null)
+
+const notes = itemsToNotes([active, trait])
+check('items become dated bullet notes', notes.startsWith('• May 2, 2026 — Get the glove down earlier.') && notes.split(String.fromCharCode(10)).length === 2, notes)
+
+const sorted = sortItems([trait, active, resolved, { ...trait, id: 'u', date: null }])
+check('newest first, undated last', sorted[0].id === 'priority:p2' && sorted[sorted.length - 1].id === 'u')
 
 // ── the migration keeps reports with the team's staff, never a league ────────
 // The league layer's privacy rule is that league membership appears in none

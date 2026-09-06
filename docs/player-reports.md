@@ -216,6 +216,37 @@ The snapshot stores the finished URL and the source it was gated on, so a
 report from 2026 keeps the link it was sent with even if the library's
 timestamp for that drill is later changed.
 
+## Starting from what the coach recorded
+
+A report no longer has to start blank. The step after Setup — *What you have
+tracked* — lists everything BenchCoach has on the player for this season:
+priorities the coach set and how they turned out, player notes, observations,
+games/practices/lessons that carry words, measurements (first reading to
+latest, as recorded), and traits. Toggle: include earlier seasons.
+
+- **Everything shown is the coach's own record.** That is what makes it
+  legitimate raw material for a document to a family, and what keeps the model
+  on the right side of *AI assists, the coach approves*: it can only be handed
+  things the coach already wrote.
+- **Nothing is included by silence.** The coach ticks items and chooses a
+  section for each. Priorities are pre-ticked — active into Development,
+  resolved into Strengths — because they are the coach's explicit decisions
+  about this player. Everything else waits to be chosen.
+- **Three ways out, all buttons.** *Add as my notes* drops the items in as
+  dated bullets, untouched. *Add as development areas* turns selected
+  priorities into development areas that already carry their taxonomy slug, so
+  the Drills step suggests immediately. *Draft with BenchCoach* (Strengths and
+  Closing only) asks for a first draft written from the selected items and
+  nothing else, shown with Use / Try again / Not this and a *Sources* list of
+  exactly what the model saw. The draft route writes nothing.
+- **Private stays private.** Traits are marked, collapsed by default and never
+  pre-ticked. Roster skill ratings are shown for context and cannot be
+  included — the report does not rank children.
+- `lib/playerReportSources.ts` holds the gathering and the pure rules
+  (windowing, measurement lines, pre-selection, note formatting), all tested
+  in `scripts/test-player-report.ts`. `GET /api/player-reports/[id]/sources`
+  reads; `POST /api/player-reports/draft` drafts.
+
 ## Branding
 
 The wordmark at the top, the line beside it, and the footer are the coach's to
