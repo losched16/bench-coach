@@ -365,9 +365,13 @@ function PlayerReportContent() {
   }, [report, reportType, reportDate, strengthsContent, developmentIntro,
       closingContent, strengthAreas, focusAreas, drills])
 
+  // The picker needs both ids: the client key (drills attach to it locally)
+  // and the database row (the server looks the priority up by it). The row id
+  // is null until the first save has mapped it back — goTo() saves before
+  // moving to the drills step, so it is normally set by the time this renders.
   const savedFocusAreas = focusAreas
     .filter(f => f.label.trim())
-    .map(f => ({ id: f.key, label: f.label }))
+    .map(f => ({ id: f.key, dbId: f.id, label: f.label }))
 
   // ---- Actions -----------------------------------------------------------
 

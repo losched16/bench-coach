@@ -60,7 +60,13 @@ interface Candidate {
   isCoachDrill: boolean
 }
 
-interface FocusAreaRef { id: string; label: string }
+// Two ids on purpose. `id` is the wizard's client-side key: drills attach to
+// it locally, so a priority can collect drills before it has ever been saved.
+// `dbId` is the player_report_focus_areas row, which is what the server needs
+// to look the priority up — null until the first save has come back. Sending
+// the client key to the server was the bug that produced "pick a development
+// area first" on a screen showing two of them.
+interface FocusAreaRef { id: string; dbId: string | null; label: string }
 
 interface DrillPickerProps {
   reportId: string
@@ -113,12 +119,23 @@ export function DrillPicker({
         body: JSON.stringify({ reportId, ...payload }),
       })
       const data = await res.json()
-      setCandidates(c => ({ ...c, [key]: data.drills || [] }))
+      // A refused or failed request is not a result. Recording it as an empty
+      // list made the button read "Show different drills" as though a search
+      // had happened, which is exactly the wrong thing to tell a coach whose
+      // request was rejected.
+      if (!res.ok || !Array.isArray(data.drills)) {
+        setNotice(n => ({
+          ...n,
+          [key]: data.error || data.message || 'Could not fetch drill suggestions right now.',
+        }))
+        return
+      }
+      setCandidates(c => ({ ...c, [key]: data.drills }))
       setCaveats(c => ({ ...c, [key]: Array.isArray(data.notes) ? data.notes : [] }))
       track('player_report_drill_recommended', {
-        reportId, mode: data.mode || 'recommend', count: (data.drills || []).length,
+        reportId, mode: data.mode || 'recommend', count: data.drills.length,
       })
-      if (!data.drills?.length) {
+      if (data.drills.length === 0) {
         setNotice(n => ({
           ...n,
           [key]: data.message || data.error || 'Nothing in the library matched that.',
@@ -234,8 +251,9 @@ export function DrillPicker({
                 <h3 className="font-semibold text-gray-900 text-sm">{area.label}</h3>
                 <button
                   type="button"
-                  onClick={() => fetchFor(key, { focusAreaId: area.id })}
-                  disabled={disabled || loadingKey === key}
+                  onClick={() => fetchFor(key, { focusAreaId: area.dbId })}
+                  disabled={disabled || loadingKey === key || !area.dbId}
+                  title={!area.dbId ? 'Saving this development area first…' : undefined}
                   className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 >
                   {loadingKey === key
