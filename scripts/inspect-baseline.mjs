@@ -136,7 +136,13 @@ for (const m of sql.matchAll(/CREATE\s+POLICY\s+(?:"([^"]+)"|([a-z_][a-z0-9_]*))
     command: (body.match(/\bFOR\s+(ALL|SELECT|INSERT|UPDATE|DELETE)\b/i) || [, 'ALL'])[1].toUpperCase(),
     roles: (body.match(/\bTO\s+([a-z_, ]+?)(?:\s+USING|\s+WITH|\s*$)/i) || [, 'public'])[1].trim(),
     permissive: !/\bAS\s+RESTRICTIVE\b/i.test(body),
-    usesAuthUid: /auth\.uid\s*\(\s*\)/i.test(body),
+    // Directly, or through a helper that does it internally. Without the
+    // second half this flags all 116 bc_* policies — every one of which calls
+    // bc_game_at_least() or a sibling, and every one of which keys off
+    // auth.uid() one level down. A report that flags 116 policies is as
+    // unreadable as one that flags none, and it trains the reader to skip it.
+    usesAuthUid: /auth\.uid\s*\(\s*\)/i.test(body) ||
+      /\b(bc_[a-z_]+|is_team_member|is_team_owner_or_member|user_has_team_permission|get_user_team_role)\s*\(/i.test(body),
     hasUsing: /\bUSING\s*\(/i.test(body),
     hasWithCheck: /\bWITH\s+CHECK\s*\(/i.test(body),
     // The shape that matters: a policy whose condition is literally true.

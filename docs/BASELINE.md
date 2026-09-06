@@ -179,15 +179,33 @@ non-standard ones, so this is checked rather than remembered.
 
 ## Canonical bootstrap sequence
 
-For a brand-new Supabase staging project, in the SQL editor:
+Captured, proven, and now the actual sequence. `npm run verify:bootstrap` runs
+exactly this against a throwaway cluster: **68 of 68 tables, 5 of 5 migrations,
+0 failures.**
 
-1. `migrations/045_seo_editor_role.sql` — creates `benchcoach_seo`, which the
-   baseline's GRANTs reference. (Only the role-creation part is needed; the
-   rest is idempotent.)
-2. `migrations/000_baseline.sql`
+1. `migrations/000_baseline.sql` — 64 tables, 4 views, 33 functions, 11
+   triggers, 150 indexes, 266 policies, RLS on all 64 tables
+2. `migrations/045_seo_editor_role.sql` — creates `benchcoach_seo` and its
+   grants. It runs *after* the baseline, not before: its grants are on
+   `seo_pages`, which the baseline creates.
 3. `migrations/037_journal_into_entries.sql` — not in production, not in the baseline
 4. `migrations/039_practice_schedule.sql` — same
 5. `migrations/051_provision_league_atomically.sql` — same; **League E2E needs this**
+6. `migrations/053_close_permissive_game_policies.sql` — closes the
+   `USING (true)` policies the capture faithfully reproduced
+
+Two ordering facts that cost a round of debugging each, recorded so they don't
+again:
+
+- The baseline pins `search_path = public, extensions`. Supabase installs
+  extensions into their own schema and puts it on every role's search_path, so
+  the unqualified `uuid_generate_v4()` in a dozen column defaults resolves
+  there and nowhere else.
+- The baseline emits grants **only** for `anon`, `authenticated` and
+  `service_role`. A grant to any other role is a hidden prerequisite, and for
+  `benchcoach_seo` the ordering was unsatisfiable: the role has to exist before
+  the baseline, but 045's grants need tables the baseline creates. Grants for a
+  role belong to the migration that creates it.
 
 Then:
 
@@ -309,14 +327,23 @@ omitted, so the same ownership test governs inserts and updated rows. No action.
 
 ### Review
 
-- **Two authorization models coexist on `teams` and `team_members`, and they
-  OR together.** `supabase-schema.sql` grants the *owner*
-  (`coaches.user_id = auth.uid()`); `034_staff_access.sql` adds `bc_*` policies
-  granting *members at a rank* — and it drops only its own `bc_`-prefixed
-  policies, not the originals. Policies are permissive, so the effective
-  permission is the union. That is additive and correct, but it means reading
-  either set alone understates who has access. Worth consolidating once the
-  full policy list is visible.
+- **Two authorization models coexist on 37 tables, and they OR together.**
+  `supabase-schema.sql` grants the *owner* (`coaches.user_id = auth.uid()`);
+  `034_staff_access.sql` adds `bc_*` policies granting *members at a rank* —
+  and its cleanup block drops only its own `bc_`-prefixed policies, never the
+  ones it superseded.
+
+  I first called this "additive and correct". That holds for 35 of the 37,
+  where the legacy policy is ownership-scoped and the union means "the owner,
+  or a staff member at rank". **It did not hold for the other two.**
+  `game_notes` and `game_pitch_counts` carried a legacy
+  `FOR ALL TO public USING (true)`, and a policy that permits everything makes
+  the four correct policies beside it irrelevant. Confirmed reachable by `anon`
+  in production; closed by `053_close_permissive_game_policies.sql`.
+
+  The lesson generalises: with permissive policies, the effective permission is
+  the *most* permissive one, so auditing a table means reading all of its
+  policies, not the one that looks authoritative.
 - `game_notes_to_observation` is redefined by `026_fix_game_note_mirror.sql`
   after `016` creates it. The baseline captures only the final form, which is
   correct, but means `026`'s explanation lives only in the archive.

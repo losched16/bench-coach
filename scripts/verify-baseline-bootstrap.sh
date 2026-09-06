@@ -73,8 +73,14 @@ echo ""
 #    before any BenchCoach SQL runs.
 # ---------------------------------------------------------------------------
 cat > "$WORK/00_supabase.sql" <<'SQL'
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+-- Supabase puts extensions in their own schema and includes it in every
+-- role's search_path. Reproduced so the baseline's `WITH SCHEMA extensions`
+-- and its unqualified uuid_generate_v4() defaults resolve the same way here.
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
+ALTER DATABASE postgres SET search_path = public, extensions;  -- future connections
+SET search_path = public, extensions;                              -- and this one
 
 DO $$ BEGIN CREATE ROLE anon NOLOGIN;          EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE ROLE authenticated NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -91,6 +97,21 @@ CREATE OR REPLACE FUNCTION auth.uid() RETURNS UUID AS $$
   SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::UUID;
 $$ LANGUAGE sql STABLE;
 
+-- The rest of the auth.* family that production policies call. Missing any one
+-- of them fails the baseline at whichever policy uses it, thousands of lines
+-- in, with an error that looks like a defect in the export.
+CREATE OR REPLACE FUNCTION auth.role() RETURNS TEXT AS $$
+  SELECT NULLIF(current_setting('request.jwt.claim.role', true), '');
+$$ LANGUAGE sql STABLE;
+
+CREATE OR REPLACE FUNCTION auth.email() RETURNS TEXT AS $$
+  SELECT NULLIF(current_setting('request.jwt.claim.email', true), '');
+$$ LANGUAGE sql STABLE;
+
+CREATE OR REPLACE FUNCTION auth.jwt() RETURNS JSONB AS $$
+  SELECT coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb;
+$$ LANGUAGE sql STABLE;
+
 -- Supabase grants these by default on everything created in public afterwards.
 -- Reproduced so the bootstrap sees the same starting privileges production had.
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
@@ -98,7 +119,8 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
   GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
 SQL
-$PSQL -f "$WORK/00_supabase.sql" > "$WORK/supabase.log" 2>&1 || fail "Supabase stand-in did not apply"
+$PSQL -f "$WORK/00_supabase.sql" > "$WORK/supabase.log" 2>&1 \
+  || { tail -5 "$WORK/supabase.log"; fail "Supabase stand-in did not apply"; }
 pass "Supabase stand-in: roles, auth schema, auth.uid(), default privileges"
 
 # ---------------------------------------------------------------------------
@@ -118,26 +140,43 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 3. The numbered migrations, in order, each one reported.
+# 3. The migrations that still run.
+#
+# With a baseline present this is the canonical post-squash sequence, not a
+# replay of all 48: 001-050 are inside the baseline and re-running them would
+# apply three data migrations a second time. Without a baseline it runs
+# everything, which is how the gap gets measured.
 # ---------------------------------------------------------------------------
 echo ""
 echo "  migrations"
 APPLIED=0; FAILED=0; FAILED_LIST=""
-for f in $(ls "$ROOT"/migrations/[0-9][0-9][0-9]_*.sql | sort); do
-  name=$(basename "$f")
-  [ "$name" = "000_baseline.sql" ] && continue
-  # 050_VERIFY.sql is a test harness for 050, not a migration. It sorts before
-  # the migration it verifies, so running it here fails for the wrong reason.
-  case "$name" in *_VERIFY.sql) continue;; esac
+
+apply_one() {
+  local f="$1" name; name=$(basename "$f")
+  if [ ! -f "$f" ]; then echo "    ----  $name (absent)"; return; fi
   if $PSQL -f "$f" > "$WORK/$name.log" 2>&1; then
-    APPLIED=$((APPLIED + 1))
-    echo "    ok    $name"
+    APPLIED=$((APPLIED + 1)); echo "    ok    $name"
   else
     FAILED=$((FAILED + 1)); FAILED_LIST="$FAILED_LIST $name"
-    reason=$(grep -m1 -oE 'ERROR:.*' "$WORK/$name.log" | head -c 120)
-    echo "    FAIL  $name    ${reason:-see log}"
+    echo "    FAIL  $name    $(grep -m1 -oE 'ERROR:.*' "$WORK/$name.log" | head -c 120)"
   fi
-done
+}
+
+if [ "$HAVE_BASELINE" = "1" ]; then
+  # 045 owns the benchcoach_seo role and its grants, and runs after the
+  # baseline because those grants are on seo_pages, which the baseline creates.
+  for n in 045_seo_editor_role 037_journal_into_entries 039_practice_schedule \
+           051_provision_league_atomically 053_close_permissive_game_policies; do
+    apply_one "$ROOT/migrations/$n.sql"
+  done
+else
+  for f in $(ls "$ROOT"/migrations/[0-9][0-9][0-9]_*.sql | sort); do
+    name=$(basename "$f")
+    [ "$name" = "000_baseline.sql" ] && continue
+    case "$name" in *_VERIFY.sql) continue;; esac
+    apply_one "$f"
+  done
+fi
 echo ""
 echo "  $APPLIED applied, $FAILED failed"
 
