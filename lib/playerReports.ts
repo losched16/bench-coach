@@ -50,7 +50,7 @@ export function isReportType(v: unknown): v is ReportType {
 // The stored shapes
 // ---------------------------------------------------------------------------
 
-/** Team/season/coach names as at finalization. See migration 050. */
+/** Team/season/coach names as at finalization. See migration 054. */
 export interface ReportContext {
   player_name: string
   team_name: string | null

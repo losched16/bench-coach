@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 050: Player development reports
+-- Migration 054: Player development reports
 -- ============================================================================
 -- A coach finishes a season knowing exactly what they want to say about a kid,
 -- and has no way to say it. What actually happens today is a text message at
@@ -27,6 +27,22 @@
 -- app quietly disagree, and the app is the one that is wrong. So finalizing
 -- freezes the row — in the API and again in RLS below — and "edit" means
 -- "start a revision", which is a new draft carrying revision_of.
+--
+-- THE LEAGUE LAYER
+--
+-- Every policy below gates on bc_team_at_least(team_id, …) from migration 034
+-- and on nothing else. That is deliberate and it is load-bearing: the league
+-- layer (050_league_layer.sql) keeps commissioners out of a coach's private
+-- work by never letting league membership into that expression, so a report
+-- is exactly as private as a player note. Do not add a league helper to any
+-- policy here. scripts/test-player-report.ts checks this file for it.
+--
+-- NUMBERING
+--
+-- This file was applied to production on 2026-09-06 under the name 046, then
+-- renumbered — 046 and 050 both collided with migrations on other branches
+-- that a stale checkout had not seen. The schema is identical; only the name
+-- changed. If the database already has player_reports, this file is a no-op.
 --
 -- Additive and idempotent. Apply in the Supabase SQL editor.
 -- ============================================================================

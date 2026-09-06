@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     const authz = authzResponse(error)
     if (authz) return NextResponse.json(authz.body, { status: authz.status })
 
-    // Migration 050 may not have been applied. A player profile that 500s
+    // Migration 054 may not have been applied. A player profile that 500s
     // because a new table is missing is worse than one that shows no reports
     // and says why.
     const hint = migrationHintFor(error)

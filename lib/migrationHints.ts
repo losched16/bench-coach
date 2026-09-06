@@ -73,8 +73,8 @@ const OBJECT_TO_MIGRATION: Array<{ match: RegExp; file: string; what: string }> 
   { match: /\bpitching_line\b/, file: '042_pitching_line.sql', what: "hits, walks and strikeouts on a pitching line" },
   // 043 — scouting your own team alongside the ones you are tracking
   { match: /\b(is_own_team|linked_team_id)\b/, file: '043_scout_own_team.sql', what: "logging your own team's games" },
-  // 050 — the development report a coach sends a family
-  { match: /\b(player_reports|player_report_focus_areas|player_report_drills)\b/, file: '050_player_reports.sql', what: 'player development reports' },
+  // 054 — the development report a coach sends a family
+  { match: /\b(player_reports|player_report_focus_areas|player_report_drills)\b/, file: '054_player_reports.sql', what: 'player development reports' },
 ]
 
 export interface MigrationHint {

@@ -1,7 +1,7 @@
 # Player Development Reports
 
 **Date:** 2026-09-06
-**Migration:** `migrations/050_player_reports.sql` — **created, not applied.**
+**Migration:** `migrations/054_player_reports.sql` — **created, not applied.**
 
 A coach writes a development report for one player and shares it with the
 family as a PDF. There is no parent account, no invitation, no link to send,
@@ -119,20 +119,42 @@ coach's name, going to that child's family, is the season's judgement.
 legitimately owns team A must not be able to name any `player_id` and open a
 report on a child from another club.
 
-RLS in migration 050 mirrors all of this for the browser client, using
+RLS in migration 054 mirrors all of this for the browser client, using
 migration 034's `bc_team_at_least()` helpers.
 
-### There is no league layer
+### The league layer, and why reports stay outside it
 
-The brief this was built from assumed a "hardened league layer". There isn't
-one: `seasons.league_type` is a four-value text column and nothing else. No
-league tables, no league admins, no league permissions. So no league
-administrator can read a report today, which is the correct default. **If a
-league layer is added later, reports should stay out of it unless there is an
-explicit product decision** — "league admin" must not silently come to mean
-"may read every coach's private comments about every child".
+An earlier draft of this document said no league layer existed. That was
+wrong: it was audited against a checkout eleven commits behind `main`, and
+the league layer lives on a branch further ahead still —
+`claude/new-feature-dev-hhi5lz` (`050_league_layer.sql`, `lib/leagueAuthz.ts`,
+`app/api/league-admin/*`). **Its tables and `bc_league_*` helpers are already
+applied to the production database**, even though the code is not yet on
+`main`.
 
----
+Reports are unaffected, and not by accident. The league layer's own stated
+rule is that *privacy is enforced by what is absent*: league membership is a
+separate table (`league_members` — administrators, not coaching staff) that
+appears in none of the `bc_team_at_least(team_id, …)` expressions, and none of
+migrations 050–053 redefine `bc_team_role`, `bc_team_at_least` or `bc_rank`.
+Its `lib/authz.ts` change adds league sponsorship as a second *entitlement*
+source and leaves `roleFor()` untouched — a commissioner gets no team role.
+
+Every `player_reports` policy gates on `bc_team_at_least`, and
+`authorizeReport()` delegates to `authorizeTeam()`. So a league administrator
+has no path to a report unless they are also on that team's staff, which is
+the narrow model the brief asked for and the same line the league layer draws
+for `player_notes`. `scripts/test-player-report.ts` asserts this against the
+migration text: eight policies, all on the three report tables, all on
+`bc_team_at_least`, none mentioning a league.
+
+**Merge note — do not skip.** `scripts/verify-league-privacy.mjs` on that
+branch guards a `PRIVATE_TABLES` list mechanically (no league route may read
+them; the league migration may create no policy on them). `player_reports`,
+`player_report_focus_areas` and `player_report_drills` must be added to that
+list when the branches meet. A coach's written assessment of a child, sent to
+the family, is the most sensitive table in this feature, and the guard cannot
+cover a table it has not been told about.
 
 ## Drill recommendations
 
@@ -223,7 +245,7 @@ it, and a coach should not lose an hour's work to a pasted emoji.
 
 | | |
 |---|---|
-| Migration | `migrations/050_player_reports.sql` |
+| Migration | `migrations/054_player_reports.sql` |
 | Domain | `lib/playerReports.ts` |
 | Persistence | `lib/playerReportStore.ts` |
 | Retrieval | `lib/drillRetrieval.ts` *(main's engine, unchanged — used, not extended)* |

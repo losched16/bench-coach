@@ -8,7 +8,7 @@
 //
 // Everything here is a pure function, deliberately. The parts that need a
 // database — cross-team access, the draft-only rules — are enforced by
-// lib/authz.ts and by RLS in migration 050, and are checked statically by
+// lib/authz.ts and by RLS in migration 054, and are checked statically by
 // scripts/verify-authz.mjs. There is no test database in this repo, and
 // running these against production would mean writing rows about real
 // children.
@@ -24,6 +24,7 @@ import {
 } from '@/lib/playerReports'
 import { renderReportPdf, pdfSafe, reportFilename } from '@/lib/playerReportPdf'
 import { PDFDocument, PDFName, PDFArray, PDFDict, PDFString } from 'pdf-lib'
+import { readFileSync } from 'fs'
 
 let failures = 0
 function check(label: string, cond: boolean, detail?: string) {
@@ -273,6 +274,35 @@ check('a category the map does not know falls back to the label',
   focusAreaForProblem(null, 'ground ball fundamentals') === 'fielding')
 check('a priority that names no skill has no area rather than a wrong one',
   focusAreaForProblem(null, 'zzz') === null)
+
+// ── the migration keeps reports with the team's staff, never a league ────────
+// The league layer's privacy rule is that league membership appears in none
+// of the bc_team_at_least(...) expressions. That rule is only worth anything
+// if the report tables gate on exactly that helper and nothing wider. This
+// reads the migration as text and holds it to that, the way
+// scripts/verify-league-privacy.mjs holds the league migration to its own
+// promise — so "widen RLS to make reporting easier" fails a test rather than
+// quietly shipping.
+
+const migrationSql = readFileSync('migrations/054_player_reports.sql', 'utf8')
+const REPORT_TABLES = new Set(['player_reports', 'player_report_focus_areas', 'player_report_drills'])
+const policyChunks = migrationSql.split('CREATE POLICY').slice(1)
+  .map(chunk => chunk.slice(0, chunk.indexOf('$p$;') === -1 ? undefined : chunk.indexOf('$p$;')))
+
+check('the migration declares exactly eight policies', policyChunks.length === 8, `${policyChunks.length}`)
+check('every policy is on one of the three report tables',
+  policyChunks.every(c => REPORT_TABLES.has((c.match(/ ON +([a-z_]+)/) || [])[1] || '')),
+  policyChunks.map(c => (c.match(/ ON +([a-z_]+)/) || [])[1]).join(', '))
+check('every policy gates on bc_team_at_least',
+  policyChunks.every(c => c.includes('bc_team_at_least')))
+check('no policy mentions a league, a league role, or a league helper',
+  policyChunks.every(c => !/league/i.test(c)))
+check('the only write policies require admin (the "decide" line), never contributor or viewer',
+  policyChunks.filter(c => /FOR (INSERT|UPDATE|DELETE|ALL)/.test(c))
+    .every(c => c.includes("'admin'") && !c.includes("'contributor'") && !c.includes("'viewer'")))
+check('a finalized report is frozen in RLS, not only in the API',
+  policyChunks.some(c => /FOR UPDATE/.test(c) && c.includes("status = 'draft'")) &&
+  policyChunks.some(c => /FOR DELETE/.test(c) && c.includes("status = 'draft'")))
 
 // ── the PDF ─────────────────────────────────────────────────────────────────
 
