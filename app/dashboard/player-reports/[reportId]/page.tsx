@@ -42,6 +42,8 @@ import { watchUrl } from '@/lib/drillVideo'
 import { AiAssist } from '@/components/playerReport/AiAssist'
 import { DrillPicker, type PickedDrill } from '@/components/playerReport/DrillPicker'
 import { ReportPreview } from '@/components/playerReport/ReportPreview'
+import { SourcePicker } from '@/components/playerReport/SourcePicker'
+import type { SourceTarget, FocusAreaSeed } from '@/lib/playerReportSources'
 
 // A priority as the wizard holds it. `key` is client-side and stable across
 // saves; `id` is the database row once there is one. Drills reference the key,
@@ -61,6 +63,7 @@ interface TaxonomyProblem { slug: string; label: string; skill_category: string 
 
 const STEPS = [
   { key: 'setup', title: 'Report setup', question: 'What kind of report is this?' },
+  { key: 'sources', title: 'What you have tracked', question: 'Start from what you have already recorded?' },
   { key: 'strengths', title: 'Strengths', question: 'What is this player doing well?' },
   { key: 'development', title: 'Development', question: 'Where would you like them to improve?' },
   { key: 'drills', title: 'Drills', question: 'How can they work on it?' },
@@ -381,6 +384,48 @@ function PlayerReportContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  // Two blank lines between what was there and what the picker adds.
+  const PARA = String.fromCharCode(10).repeat(2)
+
+  // ---- the three ways the picker feeds the report ----------------------
+  // Each is the coach pressing a button; none runs on its own.
+
+  const appendNotes = (target: SourceTarget, notes: string) => {
+    if (!notes.trim()) return
+    dirty.current = true
+    const join = (v: string) => (v.trim() ? v.trimEnd() + PARA + notes : notes)
+    if (target === 'strengths') setStrengthsContent(join)
+    else if (target === 'development') setDevelopmentIntro(join)
+    else setClosingContent(join)
+  }
+
+  const placeDraft = (target: 'strengths' | 'closing', text: string) => {
+    if (!text.trim()) return
+    dirty.current = true
+    if (target === 'strengths') setStrengthsContent(text)
+    else setClosingContent(text)
+  }
+
+  // A selected priority becomes a development area with its taxonomy slug,
+  // so the Drills step can suggest for it immediately. The coach's own
+  // priority sentence seeds the box; Improve wording is one tap away.
+  const addFocusAreasFromSources = (seeds: FocusAreaSeed[]) => {
+    if (!seeds.length) return
+    dirty.current = true
+    setFocusAreas(prev => {
+      const room = Math.max(0, MAX_FOCUS_AREAS - prev.length)
+      const fresh = seeds
+        .filter(sd => !prev.some(f => f.problemSlug && f.problemSlug === sd.problemSlug))
+        .slice(0, room)
+        .map(sd => ({
+          key: nextKey(), id: null,
+          problemSlug: sd.problemSlug, focusArea: sd.focusArea,
+          label: sd.label, coachNotes: sd.coachNotes, approvedContent: sd.coachNotes,
+        }))
+      return [...prev, ...fresh]
+    })
+  }
+
   const addFocusArea = () => {
     if (focusAreas.length >= MAX_FOCUS_AREAS) return
     dirty.current = true
@@ -594,6 +639,19 @@ function PlayerReportContent() {
               </p>
             </div>
           </div>
+        )}
+
+        {/* ---- 1b. What you have tracked ------------------------------ */}
+        {!isFinal && current.key === 'sources' && (
+          <SourcePicker
+            reportId={reportId}
+            playerFirstName={(report.context?.player_name || 'this player').split(' ')[0]}
+            remainingFocusAreas={MAX_FOCUS_AREAS - focusAreas.filter(f => f.label.trim()).length}
+            onAddNotes={appendNotes}
+            onAddFocusAreas={addFocusAreasFromSources}
+            onUseDraft={placeDraft}
+            disabled={!canEdit}
+          />
         )}
 
         {/* ---- 2. Strengths -------------------------------------------- */}
