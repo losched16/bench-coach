@@ -13,7 +13,7 @@ them in numeric order.
 | `002_seed_problem_taxonomy.sql` | Seeds ~35 canonical problems with NL aliases. | No — idempotent upsert |
 | `003_backfill_and_normalize.sql` | Normalizes duplicate `skill_category` values; auto-maps drills→problems from existing flaw/focus tags. | Low — updates 8 category strings; inserts map rows |
 | `010_scouting_reports.sql` | Scouting Reports module: `opponent_teams`, `opponent_players`, `opponent_appearances`, `scouting_entries`, `pitch_count_rules` (seeds Little League / USSSA / Perfect Game defaults), `matchups` + RLS + indexes. | No — additive only, idempotent |
-| `046_player_reports.sql` | Player development reports: `player_reports`, `player_report_focus_areas`, `player_report_drills` + indexes, RLS (needs 034's helpers) and an `updated_at` trigger. Finalized rows are immutable in RLS as well as in the API. | No — additive only, idempotent |
+| `050_player_reports.sql` | Player development reports: `player_reports`, `player_report_focus_areas`, `player_report_drills` + indexes, RLS (needs 034's helpers) and an `updated_at` trigger. Finalized rows are immutable in RLS as well as in the API. | No — additive only, idempotent |
 
 ## Background
 

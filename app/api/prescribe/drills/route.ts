@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { migrationHintFor } from '@/lib/migrationHints'
 import { createClient } from '@supabase/supabase-js'
+import { scoreDrillRelevance } from '@/lib/analysis'
+import { textFrom } from '@/lib/claudeText'
 import { guard } from '@/lib/authz'
 import { resolveSteps, clampStep, PlanStep } from '@/lib/progression'
-import { gatherCandidates, rankByFit } from '@/lib/drillRetrieval'
+import { claude as anthropic } from '@/lib/claudeClient'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -126,12 +128,11 @@ export async function POST(request: NextRequest) {
       if (!searchText) {
         return NextResponse.json({ error: 'searchText required in draft mode' }, { status: 400 })
       }
-      const pool = await gatherCandidates(supabaseAdmin, {
+      const pool = await gatherCandidates({
         problemSlug: problemSlug || null,
         exclude: new Set<string>(excludeIds || []),
         playerAge: draftAge,
         searchText,
-        coachId,
       })
       if (pool.length === 0) {
         return NextResponse.json({
@@ -145,7 +146,7 @@ export async function POST(request: NextRequest) {
       // `count` is how many CHOICES to offer for one slot. Without it this is
       // the old behaviour: a fresh set to replace the whole list.
       const want = Number(count) > 0 ? Math.min(Number(count), 5) : 3
-      const picked = await rankByFit(searchText, reason, pool, want)
+      const picked = await pickReplacements(searchText, reason, pool, want)
       return NextResponse.json({ drills: (picked.length ? picked : pool.slice(0, want)).slice(0, want) })
     }
 
@@ -179,12 +180,11 @@ export async function POST(request: NextRequest) {
 
     const searchText = [pres.priority, pres.summary, pres.focus_area].filter(Boolean).join(' ')
 
-    const eligible = await gatherCandidates(supabaseAdmin, {
+    const eligible = await gatherCandidates({
       problemSlug: pres.problem_id || null,
       exclude,
       playerAge,
       searchText,
-      coachId,
     })
 
     if (eligible.length === 0) {
@@ -201,14 +201,14 @@ export async function POST(request: NextRequest) {
     // yet, and a swap counter that ticks on "let me look" would poison the
     // signal the check-in reads.
     if (wantCount > 0) {
-      const options = await rankByFit(searchText, reason, eligible, wantCount)
+      const options = await pickReplacements(searchText, reason, eligible, wantCount)
       return NextResponse.json({
         options: (options.length ? options : eligible.slice(0, wantCount)).slice(0, wantCount),
         forDrillId: replaceDrillId,
       })
     }
 
-    const picked = await rankByFit(searchText, reason, eligible)
+    const picked = await pickReplacements(searchText, reason, eligible)
     const finalDrills = (picked.length ? picked : eligible.slice(0, 3)).slice(0, 4)
 
     const { error: upErr } = await supabaseAdmin
@@ -240,10 +240,98 @@ export async function POST(request: NextRequest) {
 }
 
 
-// gatherCandidates() and rankByFit() used to live here. They now live in
-// lib/drillRetrieval.ts, because the player development report needs the same
-// retrieval and a second copy of it would have meant two recommenders drifting
-// apart while both claimed to be "the BenchCoach library".
+// Candidate drills for a priority: the problem mapping first, then a direct
+// library search when the taxonomy comes up short. Shared by the committed and
+// the draft path so a refresh returns the same quality of suggestion whether or
+// not the priority has been saved yet.
+async function gatherCandidates(opts: {
+  problemSlug: string | null
+  exclude: Set<string>
+  playerAge?: number
+  searchText: string
+}): Promise<any[]> {
+  const { problemSlug, exclude, playerAge, searchText } = opts
+  const candidates: any[] = []
+
+  if (problemSlug) {
+    const { data: mapRows } = await supabaseAdmin
+      .from('drill_problem_map')
+      .select(`problem_slug, sort_order, curated, drill:drill_resources(${DRILL_FIELDS})`)
+      .eq('problem_slug', problemSlug)
+      .or('status.eq.approved,status.is.null', { foreignTable: 'drill' })
+
+    for (const row of (mapRows || []) as any[]) {
+      const d = Array.isArray(row.drill) ? row.drill[0] : row.drill
+      if (d && !exclude.has(d.id)) candidates.push(d)
+    }
+  }
+
+  if (candidates.length < 3) {
+    const { data: pool } = await supabaseAdmin
+      .from('drill_resources')
+      .select(DRILL_FIELDS)
+      .or('status.eq.approved,status.is.null')
+      .limit(400)
+
+    for (const d of (pool || []) as any[]) {
+      if (!exclude.has(d.id) && !candidates.some(c => c.id === d.id)) candidates.push(d)
+    }
+  }
+
+  // Keyword score only bounds the pool sent to the model — it must not decide
+  // inclusion, or drills it cannot read get dropped before anything judges them.
+  return candidates
+    .filter(d => !(playerAge && d.min_age && d.max_age && (playerAge < d.min_age || playerAge > d.max_age)))
+    .map(d => ({ ...d, _relevance: scoreDrillRelevance(searchText, d) }))
+    .sort((a, b) => b._relevance - a._relevance)
+    .slice(0, 30)
+}
+
+// Which of the remaining drills actually help. Keyword scoring only bounds the
+// pool; it can't tell that "momentum down the mound" trains velocity.
+async function pickReplacements(
+  searchText: string,
+  reason: string | undefined,
+  pool: any[],
+  want = 3
+): Promise<any[]> {
+  if (!process.env.ANTHROPIC_API_KEY || pool.length <= want) return pool.slice(0, want)
+
+  const list = pool.map((d, i) =>
+    `${i}. ${d.drill_name}${d.description ? ` — ${String(d.description).slice(0, 140)}` : ''}`
+  ).join('\n')
+
+  const prompt = `A youth baseball coach is working on this: "${searchText}"
+
+They already tried a different set of drills for it and asked for new ones.${
+  reason ? ` What they said about it: "${String(reason).slice(0, 400)}"` : ''
+}
+
+Pick the ${want} drills below that would genuinely help, best first. Judge what the drill actually trains, not what category it sits in${
+  reason ? ', and take their reason seriously — if the last set needed equipment they do not have or was too advanced, weight for that' : ''
+}.
+
+Return ONLY a JSON array of the numbers, at most ${want}. If none genuinely help, return [].
+
+${list}`
+
+  try {
+    const res = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 200,
+      messages: [{ role: 'user', content: prompt }],
+    })
+    const m = textFrom(res).match(/\[[\s\S]*?\]/)
+    if (!m) return pool.slice(0, want)
+    return (JSON.parse(m[0]) as number[])
+      .filter(i => Number.isInteger(i) && i >= 0 && i < pool.length)
+      .slice(0, want)
+      .map(i => pool[i])
+  } catch (e) {
+    console.warn('Replacement drill gate failed, falling back to keyword order:', (e as any)?.message)
+    return pool.slice(0, want)
+  }
+}
 
 // ---------------------------------------------------------------------------
 // PATCH { prescriptionId, coachId, replaceDrillId, withDrillId }

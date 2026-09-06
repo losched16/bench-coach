@@ -17,6 +17,7 @@
 // come to different conclusions about what a report says.
 
 import { FOCUS_AREAS, isFocusArea, resolveFocusArea, type FocusArea } from './focusAreas'
+import { watchUrl } from './drillVideo'
 
 // ---------------------------------------------------------------------------
 // Report types
@@ -49,7 +50,7 @@ export function isReportType(v: unknown): v is ReportType {
 // The stored shapes
 // ---------------------------------------------------------------------------
 
-/** Team/season/coach names as at finalization. See migration 046. */
+/** Team/season/coach names as at finalization. See migration 050. */
 export interface ReportContext {
   player_name: string
   team_name: string | null
@@ -73,8 +74,10 @@ export interface DrillSnapshot {
   focus: string | null
   channel: string | null
   video_url: string | null
-  /** Seconds into the video, only when the library actually recorded one. */
+  /** Seconds into the video — only when the library recorded one AND said where it came from. */
   video_start_seconds: number | null
+  /** How that start was determined (chapter, description, manual-review, imported). See migration 049. */
+  video_start_source: string | null
   reps_guidance: string | null
   frequency_guidance: string | null
 }
@@ -175,35 +178,16 @@ export function isSafeUrl(url: string | null | undefined): boolean {
 }
 
 /**
- * The link for a drill's video, with the timestamp when — and ONLY when — the
- * library recorded one.
+ * The link the report prints for a drill's video.
  *
- * A good part of the library is anchored to compilation videos ("10 Best
- * Baseball Throwing Drills for Kids"), and `youtube_start_seconds` is where
- * the drill actually begins. Where it is set, the parent lands on the drill.
- * Where it is not, they land at 0:00, which is honest.
- *
- * No timestamp is ever guessed. As of this writing not one row in the library
- * carries one, so this returns plain links today — that is the correct
- * behaviour, and the code is ready for the curation pass that fills them in.
+ * The URL was built by lib/drillVideo's watchUrl() when the drill was
+ * snapshotted, so any timestamp is already in it. All that is left to decide
+ * here is whether it is safe to put in a document — nothing is rebuilt, and
+ * nothing is guessed.
  */
 export function drillVideoLink(snapshot: DrillSnapshot | null | undefined): string | null {
-  if (!snapshot || !isSafeUrl(snapshot.video_url)) return null
-  const url = snapshot.video_url as string
-
-  const start = snapshot.video_start_seconds
-  if (!Number.isFinite(start as number) || (start as number) <= 0) return url
-
-  try {
-    const parsed = new URL(url)
-    // Replace rather than append: a stored URL that already carries a t=
-    // must not end up with two of them, where browsers disagree about which
-    // wins.
-    parsed.searchParams.set('t', `${Math.floor(start as number)}s`)
-    return parsed.toString()
-  } catch {
-    return url
-  }
+  const url = snapshot?.video_url
+  return isSafeUrl(url) ? (url as string) : null
 }
 
 /** "Watch Drill", never a 90-character URL printed across a page. */
@@ -223,12 +207,22 @@ export function videoLinkLabel(snapshot: DrillSnapshot): string {
  * report from September 2026 still the report the coach sent.
  */
 export function drillSnapshot(drill: any): DrillSnapshot {
-  const videoId = drill?.youtube_video_id || null
-  // Canonical watch URL from the id when we have one — same video, predictable
-  // shape, and safe to add a timestamp to. Falls back to the stored URL.
-  const url = videoId
-    ? `https://www.youtube.com/watch?v=${videoId}`
-    : (isSafeUrl(drill?.youtube_url) ? String(drill.youtube_url) : null)
+  // A timestamp counts only when the library also says where it came from.
+  // Migration 049 added youtube_start_source precisely because a wrong
+  // segment start is worse than none — at 0:00 a parent knows where they are;
+  // forty seconds into the wrong drill they decide the report is broken. An
+  // unsourced value is "unknown provenance" and does not reach a family.
+  const source = drill?.youtube_start_source ? String(drill.youtube_start_source) : null
+  const rawStart = Number(drill?.youtube_start_seconds)
+  const start = source && Number.isFinite(rawStart) && rawStart > 0 ? Math.floor(rawStart) : null
+
+  // Built by the one helper every surface uses, so the report's link is the
+  // same link the app would open — timestamp and all. Never assembled here.
+  const url = watchUrl({
+    youtube_video_id: drill?.youtube_video_id || null,
+    youtube_url: drill?.youtube_url || null,
+    youtube_start_seconds: start,
+  })
 
   const focus = Array.isArray(drill?.mechanic_focus) && drill.mechanic_focus.length
     ? drill.mechanic_focus.slice(0, 3).join(', ')
@@ -236,15 +230,14 @@ export function drillSnapshot(drill: any): DrillSnapshot {
         ? drill.common_flaws_fixed.slice(0, 2).join(', ')
         : null)
 
-  const start = Number(drill?.youtube_start_seconds)
-
   return {
     drill_name: String(drill?.drill_name || 'Drill'),
     description: cleanText(drill?.description, 600),
     focus: focus ? String(focus).slice(0, 200) : null,
     channel: drill?.channel ? String(drill.channel).slice(0, 120) : null,
-    video_url: url,
-    video_start_seconds: Number.isFinite(start) && start > 0 ? Math.floor(start) : null,
+    video_url: isSafeUrl(url) ? url : null,
+    video_start_seconds: start,
+    video_start_source: start ? source : null,
     reps_guidance: cleanText(drill?.reps_guidance, 200),
     frequency_guidance: cleanText(drill?.frequency_guidance, 200),
   }

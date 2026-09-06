@@ -38,6 +38,7 @@ import {
   REPORT_TYPES, MAX_FOCUS_AREAS, contextLine, formatReportDate,
   reportTypeLabel, type FullReport,
 } from '@/lib/playerReports'
+import { watchUrl } from '@/lib/drillVideo'
 import { AiAssist } from '@/components/playerReport/AiAssist'
 import { DrillPicker, type PickedDrill } from '@/components/playerReport/DrillPicker'
 import { ReportPreview } from '@/components/playerReport/ReportPreview'
@@ -343,10 +344,15 @@ function PlayerReportContent() {
           description: d.description,
           focus: null,
           channel: d.channel,
-          video_url: d.youtubeVideoId
-            ? `https://www.youtube.com/watch?v=${d.youtubeVideoId}`
-            : d.youtubeUrl,
+          // The same helper every surface uses, so the preview link is the
+          // link the document will carry — timestamp included where one is set.
+          video_url: watchUrl({
+            youtube_video_id: d.youtubeVideoId,
+            youtube_url: d.youtubeUrl,
+            youtube_start_seconds: d.youtubeStartSeconds,
+          }),
           video_start_seconds: d.youtubeStartSeconds,
+          video_start_source: null,
           reps_guidance: null,
           frequency_guidance: null,
         },

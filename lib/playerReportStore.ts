@@ -16,8 +16,13 @@ import {
   cleanText, drillSnapshot, recommendationReason,
   type FullReport, type ReportContext, type DrillSnapshot,
 } from './playerReports'
-import { RETRIEVAL_DRILL_FIELDS } from './drillRetrieval'
-import { visibleDrills } from './drills'
+import { visibleDrills, DRILL_FIELDS } from './drills'
+
+// Everything a snapshot reads, plus the one column DRILL_FIELDS does not carry:
+// where a timestamp came from. Without it the provenance gate in
+// drillSnapshot() would see null for every row and print no timestamps at all,
+// which would look exactly like "none are curated yet" and never be noticed.
+const SNAPSHOT_FIELDS = `${DRILL_FIELDS}, youtube_start_source`
 
 const REPORT_COLUMNS =
   'id, team_id, player_id, coach_id, author_user_id, report_type, status, report_date, ' +
@@ -123,7 +128,7 @@ export async function loadSelectableDrills(
 ): Promise<Map<string, any>> {
   const unique = Array.from(new Set(ids.filter(Boolean)))
   if (unique.length === 0) return new Map()
-  const { data } = await visibleDrills(supabase, coachId, RETRIEVAL_DRILL_FIELDS).in('id', unique)
+  const { data } = await visibleDrills(supabase, coachId, SNAPSHOT_FIELDS).in('id', unique)
   return new Map(((data || []) as any[]).map(d => [d.id, d]))
 }
 
@@ -347,4 +352,31 @@ export async function playerIsOnTeam(
     .eq('player_id', playerId)
     .maybeSingle()
   return Boolean((data as any)?.id)
+}
+
+/**
+ * Find a drill by name.
+ *
+ * For the moment in a report where the coach has decided our suggestions are
+ * wrong and wants the drill they had in mind. Deliberately a server-side
+ * lookup rather than shipping the library to the browser: 206 drills with
+ * coaching notes is not a payload a phone in a car park should download to
+ * filter locally. Goes through visibleDrills, so it finds the curated library
+ * and this coach's own drills, and nobody else's.
+ */
+export async function searchLibraryByName(
+  supabase: any,
+  coachId: string | null,
+  query: string,
+  limit = 20
+): Promise<any[]> {
+  const q = String(query || '').trim()
+  if (!q) return []
+  // ilike patterns are built from typed text, so the wildcards and the escape
+  // character are neutralised — a stray % would return the whole library.
+  const safe = q.replace(/[\%_]/g, ch => `\${ch}`)
+  const { data } = await visibleDrills(supabase, coachId, SNAPSHOT_FIELDS)
+    .or(`drill_name.ilike.%${safe}%,description.ilike.%${safe}%,skill_category.ilike.%${safe}%`)
+    .limit(limit)
+  return (data || []) as any[]
 }

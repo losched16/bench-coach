@@ -32,7 +32,7 @@ export const dynamic = 'force-dynamic'
 // A finalized report has been sent to a family. Editing it would mean the PDF
 // in somebody's inbox and the report in the app disagree, with the app being
 // the one that is wrong. So finalized reports refuse writes here, RLS refuses
-// them again in migration 046, and "edit" is a revision — see ./revise.
+// them again in migration 050, and "edit" is a revision — see ./revise.
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

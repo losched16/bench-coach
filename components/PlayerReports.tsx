@@ -56,7 +56,7 @@ export function PlayerReports({
         const data = await res.json()
         if (cancelled) return
         setReports(data.reports || [])
-        // Migration 046 not applied yet. Say what to do rather than showing an
+        // Migration 050 not applied yet. Say what to do rather than showing an
         // empty list that looks like data loss.
         if (data.needsMigration) setNotice(data.migrationMessage || null)
       } catch {

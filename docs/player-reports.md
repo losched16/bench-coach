@@ -1,7 +1,7 @@
 # Player Development Reports
 
 **Date:** 2026-09-06
-**Migration:** `migrations/046_player_reports.sql` — **created, not applied.**
+**Migration:** `migrations/050_player_reports.sql` — **created, not applied.**
 
 A coach writes a development report for one player and shares it with the
 family as a PDF. There is no parent account, no invitation, no link to send,
@@ -22,7 +22,7 @@ That is enforced structurally, not by prompt:
 | A suggestion | is shown beside the coach's own words with four explicit choices |
 | Drill recommendations | are retrieved from `drill_resources`; the model picks indexes out of a list it was handed and cannot name a drill that does not exist |
 | Video links | come from the stored row only; a model never sees or produces a URL |
-| Timestamps | are used only where `drill_resources.youtube_start_seconds` is set (**currently 0 of 206 rows**, so links are plain today) |
+| Timestamps | are used only where `youtube_start_seconds` **and** `youtube_start_source` are set (**currently 0 of 206 rows**, so links are plain today) |
 | Finalizing | is a separate act, on the last step, after a full preview |
 
 ---
@@ -119,7 +119,7 @@ coach's name, going to that child's family, is the season's judgement.
 legitimately owns team A must not be able to name any `player_id` and open a
 report on a child from another club.
 
-RLS in migration 046 mirrors all of this for the browser client, using
+RLS in migration 050 mirrors all of this for the browser client, using
 migration 034's `bc_team_at_least()` helpers.
 
 ### There is no league layer
@@ -136,29 +136,63 @@ explicit product decision** — "league admin" must not silently come to mean
 
 ## Drill recommendations
 
-`lib/drillRetrieval.ts`, extracted from `app/api/prescribe/drills/route.ts` so
-there is one recommender rather than two drifting copies. The prescribe route
-now imports it.
+`app/api/player-reports/drills/route.ts` calls **`retrieveDrills()` from
+`lib/drillRetrieval.ts` — the engine Chat already uses.** There is no
+report-specific recommender.
+
+The one thing the report does differently is that it never asks a model what
+the problem is, because the coach already said: they picked a
+`problem_taxonomy` slug. That slug is handed to the engine as a ready-made
+`Diagnosis`, so the common path is
 
 ```
-problem_taxonomy slug -> drill_problem_map (curated, sequenced)
-  ↓ top up from the library when the mapping is thin
-  ↓ drop drills outside the player's age band
-  ↓ bound the pool by scoreDrillRelevance()
-  ↓ rankByFit(): a Haiku call that returns INDEXES into that pool
+coach's slug  ──▶  drill_problem_map (curated, sequenced)
+                   ↓ age filter (only when birth_year is known)
+                   ↓ competition filter (rec | travel, from the season)
+                   ↓ text score bounds the pool; taxonomy outranks it
+                   ↓ deterministic ranking, ties broken down to the id
 ```
 
-Steps 1–4 are deterministic and decide quality. Step 5 only reorders, discards
-any index outside the pool, and falls back to keyword order on any failure.
+with **no model call at all** — two coaches choosing "Fields flat-footed" get
+the same drills in the same order. A priority the coach typed themselves has
+no slug, and there the engine's own diagnosis (Haiku, with an alias fallback)
+runs as it does for Chat.
 
-The extraction also fixed something: `gatherCandidates` read `drill_resources`
-directly, so a coach-authored drill mapped to a problem could surface in
-another coach's suggestions. It now goes through `visibleDrills()`.
+Drills already in the report are excluded. Target is 3–5 per priority: twenty
+results is not more choice, it is the same choice made worse, on a phone.
 
-Target is 3–5 candidates per priority. Twenty results is not more choice; it is
-the same choice made worse, on a phone.
+The engine's age caveats (`do_not_coach_note` on the taxonomy — "that is
+normal at seven") are returned with the suggestions and shown to the coach
+before a drill for it can go in front of a family.
 
----
+Manual search by name is `searchLibraryByName()` in `lib/playerReportStore.ts`,
+through `visibleDrills()`, so it finds the curated library and this coach's
+own drills and nobody else's.
+
+> A note for the record: an earlier draft of this feature extracted its own
+> `gatherCandidates()` into a new `lib/drillRetrieval.ts`, because the audit
+> was run against a checkout eleven commits behind `main` and did not see the
+> engine that was already there. That file was dropped in favour of the real
+> one. `app/api/prescribe/drills/route.ts` is untouched by this feature.
+
+## Video links
+
+Every URL the report prints is built by **`watchUrl()` in `lib/drillVideo.ts`**
+— the one helper `scripts/verify-video-links.mjs` requires every surface to
+use. Nothing here assembles a YouTube URL.
+
+A timestamp reaches the document only when **both** `youtube_start_seconds`
+and `youtube_start_source` are set. Migration 049 added the source column
+because a wrong segment start is worse than none: at 0:00 a parent knows where
+they are, forty seconds into the wrong drill they conclude the report is
+broken. An unsourced value is unknown provenance and stays out of a document a
+family keeps. As of writing, 0 of 206 drills carry a timestamp of either kind,
+so every link is plain today; the gate exists for the curation pass
+`docs/audits/video-segment-audit.md` describes.
+
+The snapshot stores the finished URL and the source it was gated on, so a
+report from 2026 keeps the link it was sent with even if the library's
+timestamp for that drill is later changed.
 
 ## PDF
 
@@ -189,10 +223,11 @@ it, and a coach should not lose an hour's work to a pasted emoji.
 
 | | |
 |---|---|
-| Migration | `migrations/046_player_reports.sql` |
+| Migration | `migrations/050_player_reports.sql` |
 | Domain | `lib/playerReports.ts` |
 | Persistence | `lib/playerReportStore.ts` |
-| Retrieval | `lib/drillRetrieval.ts` *(shared with the prescribe route)* |
+| Retrieval | `lib/drillRetrieval.ts` *(main's engine, unchanged — used, not extended)* |
+| Video links | `lib/drillVideo.ts` *(main's helper, unchanged)* |
 | AI | `lib/playerReportAI.ts` |
 | PDF | `lib/playerReportPdf.ts` |
 | Authorization | `lib/authz.ts` → `authorizeReport()` |

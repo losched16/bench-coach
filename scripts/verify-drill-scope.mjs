@@ -31,7 +31,7 @@ const EXEMPT = new Map([
   ['app/api/prescribe/step/route.ts',
    'fetches drills by id from a prescription the caller already passed authz for'],
   ['app/api/prescribe/drills/route.ts',
-   'GET fetches by id off the prescription; the swap pool goes through lib/drillRetrieval, which uses visibleDrills'],
+   'GET fetches by id off the prescription; the swap pool below it uses visibleDrills'],
   ['app/api/admin/verify-links/route.ts',
    'admin link checker, runs across the curated library on purpose'],
   ['lib/checkin.ts',

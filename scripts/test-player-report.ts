@@ -8,7 +8,7 @@
 //
 // Everything here is a pure function, deliberately. The parts that need a
 // database — cross-team access, the draft-only rules — are enforced by
-// lib/authz.ts and by RLS in migration 046, and are checked statically by
+// lib/authz.ts and by RLS in migration 050, and are checked statically by
 // scripts/verify-authz.mjs. There is no test database in this repo, and
 // running these against production would mean writing rows about real
 // children.
@@ -41,6 +41,7 @@ const LIBRARY_DRILL = {
   youtube_url: 'https://youtu.be/abc123XYZ_-',
   channel: 'Youth Baseball Edge',
   youtube_start_seconds: null,
+  youtube_start_source: null,
   mechanic_focus: ['glove down early', 'two hands'],
   common_flaws_fixed: ['fielding flat footed'],
   reps_guidance: '15 ground balls',
@@ -80,19 +81,55 @@ const snap = drillSnapshot(LIBRARY_DRILL)
 
 check('snapshot keeps the drill name as the library had it',
   snap.drill_name === 'Alligator Ground Balls')
-check('snapshot builds a canonical watch URL from the video id',
-  snap.video_url === 'https://www.youtube.com/watch?v=abc123XYZ_-', String(snap.video_url))
+check('snapshot keeps the stored URL the library has, built by watchUrl',
+  snap.video_url === 'https://youtu.be/abc123XYZ_-', String(snap.video_url))
+check('a drill with only a video id gets the canonical link from watchUrl',
+  drillSnapshot({ ...LIBRARY_DRILL, youtube_url: null }).video_url === 'https://www.youtube.com/watch?v=abc123XYZ_-',
+  String(drillSnapshot({ ...LIBRARY_DRILL, youtube_url: null }).video_url))
 check('snapshot summarises what the drill trains from its own metadata',
   snap.focus === 'glove down early, two hands', String(snap.focus))
 check('snapshot carries dosage the report prints',
   snap.reps_guidance === '15 ground balls' && snap.frequency_guidance === '2-3x/week')
 check('snapshot does not copy the whole drill row',
-  Object.keys(snap).length === 8, `got ${Object.keys(snap).length} fields`)
+  Object.keys(snap).length === 9, `got ${Object.keys(snap).length} fields`)
 
 check('a drill with no video snapshots no URL rather than inventing one',
   drillSnapshot({ ...LIBRARY_DRILL, youtube_video_id: null, youtube_url: null }).video_url === null)
 check('a drill with only a stored URL keeps that URL',
   drillSnapshot({ ...LIBRARY_DRILL, youtube_video_id: null }).video_url === 'https://youtu.be/abc123XYZ_-')
+
+// ── timestamps: only with provenance (migration 049) ────────────────────────
+// A wrong segment start is worse than none. youtube_start_source is the
+// library's record of where a timestamp came from; without it the value is
+// "unknown provenance" and must not reach a family.
+
+const unsourced = drillSnapshot({ ...LIBRARY_DRILL, youtube_start_seconds: 123, youtube_start_source: null })
+check('a timestamp with no recorded source is NOT used',
+  unsourced.video_start_seconds === null && !String(unsourced.video_url).includes('t='),
+  String(unsourced.video_url))
+
+const sourced = drillSnapshot({ ...LIBRARY_DRILL, youtube_start_seconds: 123, youtube_start_source: 'manual-review' })
+check('a sourced timestamp becomes t=123s on the link',
+  sourced.video_start_seconds === 123 && String(sourced.video_url).endsWith('t=123s'),
+  String(sourced.video_url))
+check('the snapshot records where the timestamp came from',
+  sourced.video_start_source === 'manual-review')
+
+check('a zero timestamp is not a timestamp, even with a source',
+  drillSnapshot({ ...LIBRARY_DRILL, youtube_start_seconds: 0, youtube_start_source: 'chapter' }).video_start_seconds === null)
+check('a negative timestamp is ignored rather than trusted',
+  drillSnapshot({ ...LIBRARY_DRILL, youtube_start_seconds: -5, youtube_start_source: 'chapter' }).video_start_seconds === null)
+
+const restamped = drillSnapshot({
+  ...LIBRARY_DRILL, youtube_url: 'https://www.youtube.com/watch?v=abc123XYZ_-&t=9s',
+  youtube_start_seconds: 30, youtube_start_source: 'description',
+})
+check('an existing t= in the stored URL is replaced, not duplicated',
+  (String(restamped.video_url).match(/t=/g) || []).length === 1 && String(restamped.video_url).endsWith('t=30s'),
+  String(restamped.video_url))
+check('a stored URL with no sourced timestamp is kept untouched, t= and all',
+  drillSnapshot({ ...LIBRARY_DRILL, youtube_url: 'https://www.youtube.com/watch?v=abc123XYZ_-&t=9s' }).video_url
+    === 'https://www.youtube.com/watch?v=abc123XYZ_-&t=9s')
 
 // A report finalized in 2026 must not change when the library changes in 2027.
 const finalized = report({ drills: [reportDrill()] })
@@ -111,25 +148,8 @@ check('a data: URL is refused', !isSafeUrl('data:text/html,<script>'))
 check('a relative path is refused', !isSafeUrl('/drills/1'))
 check('an empty URL is refused', !isSafeUrl(null))
 
-const noStart: DrillSnapshot = { ...snap, video_start_seconds: null }
-check('with no verified timestamp the plain video link is used',
-  drillVideoLink(noStart) === 'https://www.youtube.com/watch?v=abc123XYZ_-',
-  String(drillVideoLink(noStart)))
-
-const withStart: DrillSnapshot = { ...snap, video_start_seconds: 123 }
-check('a recorded timestamp becomes t=123s on the link',
-  drillVideoLink(withStart) === 'https://www.youtube.com/watch?v=abc123XYZ_-&t=123s',
-  String(drillVideoLink(withStart)))
-
-check('a zero timestamp is not a timestamp',
-  drillVideoLink({ ...snap, video_start_seconds: 0 }) === 'https://www.youtube.com/watch?v=abc123XYZ_-')
-check('a negative timestamp is ignored rather than trusted',
-  drillVideoLink({ ...snap, video_start_seconds: -5 }) === 'https://www.youtube.com/watch?v=abc123XYZ_-')
-check('an existing t= is replaced, not duplicated',
-  (drillVideoLink({
-    ...snap, video_url: 'https://www.youtube.com/watch?v=x&t=9s', video_start_seconds: 30,
-  }) || '').match(/t=/g)?.length === 1,
-  String(drillVideoLink({ ...snap, video_url: 'https://www.youtube.com/watch?v=x&t=9s', video_start_seconds: 30 })))
+check('the report link is the snapshot link, unchanged',
+  drillVideoLink(snap) === 'https://youtu.be/abc123XYZ_-', String(drillVideoLink(snap)))
 check('an unsafe stored URL produces no link at all',
   drillVideoLink({ ...snap, video_url: 'javascript:alert(1)' }) === null)
 check('a drill with no video produces no link',
@@ -309,7 +329,7 @@ async function pdfChecks() {
   check('every included video becomes a clickable link annotation',
     links.length === 2, `${links.length} links: ${links.join(', ')}`)
   check('the link points at the stored video, not at anything invented',
-    links.every(u => u === 'https://www.youtube.com/watch?v=abc123XYZ_-'), links.join(', '))
+    links.every(u => u === 'https://youtu.be/abc123XYZ_-'), links.join(', '))
 
   const titled = await PDFDocument.load(bytes)
   check('the PDF is titled for the player',

@@ -93,6 +93,10 @@ export function DrillPicker({
   const [candidates, setCandidates] = useState<Record<string, Candidate[]>>({})
   const [loadingKey, setLoadingKey] = useState<string | null>(null)
   const [notice, setNotice] = useState<Record<string, string | null>>({})
+  // "That is developmentally normal at this age" — from problem_taxonomy, via
+  // the retrieval engine. Worth a coach seeing before a drill for it goes in
+  // front of a family.
+  const [caveats, setCaveats] = useState<Record<string, Array<{ label: string; note: string }>>>({})
   const [query, setQuery] = useState('')
   const [preview, setPreview] = useState<string | null>(null)
   const track = useTracker()
@@ -110,6 +114,7 @@ export function DrillPicker({
       })
       const data = await res.json()
       setCandidates(c => ({ ...c, [key]: data.drills || [] }))
+      setCaveats(c => ({ ...c, [key]: Array.isArray(data.notes) ? data.notes : [] }))
       track('player_report_drill_recommended', {
         reportId, mode: data.mode || 'recommend', count: (data.drills || []).length,
       })
@@ -241,6 +246,12 @@ export function DrillPicker({
               </div>
 
               {notice[key] && <p className="mt-2 text-sm text-gray-600">{notice[key]}</p>}
+
+              {caveats[key]?.map(c => (
+                <p key={c.label} className="mt-2 text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <span className="font-semibold">Worth knowing:</span> {c.note}
+                </p>
+              ))}
 
               {list && list.length > 0 && (
                 <ul className="mt-3 space-y-2">
