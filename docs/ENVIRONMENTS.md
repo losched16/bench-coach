@@ -143,13 +143,22 @@ Supabase → New project. Same region as production. Note the project ref.
 
 ### 2. Build the schema
 
-Until `000_baseline.sql` exists (above), this is the manual step. In the
-Supabase SQL editor, in order:
+In the Supabase SQL editor, in this order. It is short because the baseline is
+a squash — `001`–`050` are already inside it and are **not** re-run. See
+`docs/BASELINE.md` for why.
 
-1. `migrations/000_baseline.sql` — **does not exist yet; see the blocker**
-2. `001` … `049` in numeric order
-3. `050_league_layer.sql`
-4. `051_provision_league_atomically.sql`
+1. `migrations/045_seo_editor_role.sql` — creates the `benchcoach_seo` role
+   that the baseline's GRANT statements reference. A GRANT to a role that does
+   not exist aborts the statement.
+2. `migrations/000_baseline.sql` — **does not exist yet; see the blocker**
+3. `migrations/037_journal_into_entries.sql` — unapplied in production, so not
+   in the baseline
+4. `migrations/039_practice_schedule.sql` — same
+5. `migrations/051_provision_league_atomically.sql` — same; League E2E needs it
+
+Steps 3–5 make staging deliberately *ahead* of production. That is what staging
+is for. It also means `--compare` will show staging with columns production
+lacks; extra columns are informational, missing ones fail.
 
 Then check the shape:
 
@@ -343,6 +352,29 @@ reason at some point.
 3. `npm run db:report` against production and confirm the migration you applied
    now reads as applied.
 4. Smoke-test the flow you changed, signed in as a real account.
+
+**051 is not to be applied to production yet.** It is unapplied there, and the
+temptation is to fix that so League E2E has the atomic provisioning path. The
+order is deliberately the other way round: make staging reconstructable, prove
+the baseline and the RLS story against it, then promote. Applying a migration to
+production to unblock a test is how the thing being tested becomes the thing
+nobody checked.
+
+**Two security actions come before League E2E**, because they are live exposure
+rather than pending work:
+
+1. **Rotate the production `service_role` key.** In git history, still valid to
+   2036. `docs/audits/security-secret-followup.md` has the ordered steps; the
+   Claude Code cloud environment uses the leaked key, so it has to be updated in
+   the same pass or that environment breaks.
+2. **Check the Vercel Preview variable scopes.** A variable added without
+   choosing scopes defaults to all three environments, so preview deployments
+   are likely running against production with a service-role key — including
+   previews of this branch, which carries the league provisioning UI. Vercel →
+   Project → Settings → Environment Variables; the target layout is above.
+
+Neither can be done from the Claude Code sandbox: rotation needs the Supabase
+dashboard, and there is no Vercel token or CLI here.
 
 **Currently unapplied in production** (from `db:report`, September 2026):
 
