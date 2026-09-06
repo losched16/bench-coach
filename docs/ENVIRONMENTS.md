@@ -376,13 +376,20 @@ rather than pending work:
 Neither can be done from the Claude Code sandbox: rotation needs the Supabase
 dashboard, and there is no Vercel token or CLI here.
 
-**Currently unapplied in production** (from `db:report`, September 2026):
+**Applied to production on 6 September 2026**, when League mode went live:
+
+| Migration | State |
+|---|---|
+| `051_provision_league_atomically` | **applied** — `bc_provision_league` present, SECURITY DEFINER with `search_path=public, auth`, revoked from `anon` and `authenticated`, granted to `service_role` only |
+| `052_fix_security_definer_views` | **applied** — closed an anon-readable exposure |
+| `053_close_permissive_game_policies` | **applied** — closed a second one |
+
+**Still unapplied in production:**
 
 | Migration | State |
 |---|---|
 | `037_journal_into_entries` | not applied — `entries.legacy_journal_id` absent |
 | `039_practice_schedule` | not applied — `practice_plans.scheduled_for` absent |
-| `051_provision_league_atomically` | not applied — `bc_provision_league` absent |
 
 `046`, `047` and `048` change rows rather than schema, so `db:report` cannot see
 them; their row counts (49 problems, 206 drills, 348 mappings) match the
