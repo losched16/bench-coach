@@ -3,7 +3,7 @@
     "env": "production",
     "projectRef": "chdpqsumqospnaztvfqe"
   },
-  "recordedAt": "2026-09-05",
+  "recordedAt": "2026-09-06",
   "note": "Shape only — no rows, no policies, no indexes. See the header of scripts/db-schema-report.mjs.",
   "tables": {
     "drill_resources": {
@@ -2825,6 +2825,53 @@
         "required": true
       }
     },
+    "player_report_focus_areas": {
+      "approved_content": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "coach_notes": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "focus_area": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "label": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "problem_slug": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "report_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "sort_order": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      }
+    },
     "bwc_build_log": {
       "business_id": {
         "type": "string",
@@ -3803,6 +3850,98 @@
         "required": false
       }
     },
+    "player_reports": {
+      "author_user_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "closing_content": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "coach_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "context": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": false
+      },
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "development_intro": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "finalized_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "player_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "report_date": {
+        "type": "string",
+        "format": "date",
+        "required": true
+      },
+      "report_type": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "revision": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "revision_of": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "status": {
+        "type": "string",
+        "format": "text",
+        "required": true
+      },
+      "strength_areas": {
+        "type": "array",
+        "format": "text[]",
+        "required": true
+      },
+      "strengths_content": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "team_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      }
+    },
     "observations": {
       "body": {
         "type": "string",
@@ -3853,6 +3992,58 @@
         "type": "string",
         "format": "uuid",
         "required": false
+      }
+    },
+    "player_report_drills": {
+      "created_at": {
+        "type": "string",
+        "format": "timestamp with time zone",
+        "required": true
+      },
+      "drill_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "focus_area_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": false
+      },
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "include_video": {
+        "type": "boolean",
+        "format": "boolean",
+        "required": true
+      },
+      "recommendation_reason": {
+        "type": "string",
+        "format": "text",
+        "required": false
+      },
+      "report_id": {
+        "type": "string",
+        "format": "uuid",
+        "required": true
+      },
+      "snapshot": {
+        "type": "unknown",
+        "format": "jsonb",
+        "required": true
+      },
+      "sort_order": {
+        "type": "integer",
+        "format": "integer",
+        "required": true
+      },
+      "source": {
+        "type": "string",
+        "format": "text",
+        "required": true
       }
     },
     "games": {

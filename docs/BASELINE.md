@@ -191,8 +191,10 @@ exactly this against a throwaway cluster: **68 of 68 tables, 5 of 5 migrations,
 3. `migrations/037_journal_into_entries.sql` — not in production, not in the baseline
 4. `migrations/039_practice_schedule.sql` — same
 5. `migrations/051_provision_league_atomically.sql` — same; **League E2E needs this**
-6. `migrations/053_close_permissive_game_policies.sql` — closes the
-   `USING (true)` policies the capture faithfully reproduced
+`052` and `053` are **not** in the list. Both are applied to production, so
+the capture already contains their effects; replaying `053` would fail on a
+policy that already exists. They remain in `migrations/` as the record of what
+changed and why.
 
 Two ordering facts that cost a round of debugging each, recorded so they don't
 again:

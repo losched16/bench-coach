@@ -64,6 +64,22 @@
 -- reach and nothing else.
 --
 -- Idempotent. Safe to run twice.
+--
+-- APPLIED TO PRODUCTION 2026-09-06 via the Supabase SQL editor. Verified:
+--
+--   1. catalog — both tables now carry 5 policies and 0 with USING (true):
+--      "Coaches manage own game notes" / "Coaches manage own pitch counts"
+--      alongside the four bc_* ones
+--   2. outside — the public anon key now gets HTTP 200 with [] and a count of
+--      0 on both, where it had returned 2 and 13 rows. 200-with-nothing rather
+--      than 401 is the expected shape here: the table grant remains and RLS
+--      does the filtering, which is the opposite of 052 where the grant itself
+--      was revoked
+--   3. app path — the service role still reads 2 and 13 rows, so the game page
+--      and the routes behind it are unaffected
+--
+-- Because it is applied, its effect is inside migrations/000_baseline.sql and
+-- it is NOT replayed by the bootstrap sequence. This file is the record.
 -- ============================================================================
 
 BEGIN;
