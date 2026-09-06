@@ -53,6 +53,18 @@
 --
 -- Requires PostgreSQL 15 or newer for security_invoker. Production is 17.6.
 -- Additive and idempotent; safe to run twice.
+--
+-- APPLIED TO PRODUCTION 2026-09-06, authorised explicitly. Verified three ways:
+--
+--   1. catalog — all four now report anon_select=false, auth_select=false,
+--      service_select=true, reloptions {security_invoker=on}
+--   2. outside — the same unauthenticated request with the public anon key now
+--      returns 401 "permission denied for view" on all four, where it had
+--      returned 10, 58, 17 and 9 rows
+--   3. app path — the service role still reads admin_user_activity (10) and
+--      player_season_batting (58), so nothing that depends on them broke
+--
+-- Supabase's security advisor went from 4 ERROR-level findings to 0.
 -- ============================================================================
 
 -- ---------------------------------------------------------------------------
