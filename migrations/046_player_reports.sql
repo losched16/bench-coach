@@ -222,8 +222,15 @@ CREATE INDEX IF NOT EXISTS idx_player_report_drills_drill
 -- ----------------------------------------------------------------------------
 -- 4. updated_at
 -- ----------------------------------------------------------------------------
+-- search_path is pinned empty. A trigger function that inherits the caller's
+-- search_path can be made to resolve a different NOW() by anyone who can set
+-- one, and Supabase's own linter flags it. Nothing here needs a schema —
+-- pg_catalog is always implicitly first — so the safe setting is also the
+-- simplest one.
 CREATE OR REPLACE FUNCTION bc_touch_player_report()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+SET search_path = ''
+AS $$
 BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
