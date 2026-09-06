@@ -13,7 +13,7 @@
 // be called before something else has.
 
 import {
-  cleanText, drillSnapshot, recommendationReason,
+  cleanText, cleanBranding, drillSnapshot, recommendationReason,
   type FullReport, type ReportContext, type DrillSnapshot,
 } from './playerReports'
 import { visibleDrills, DRILL_FIELDS } from './drills'
@@ -79,11 +79,21 @@ export async function buildContext(
   supabase: any,
   opts: { teamId: string; playerId: string; authorUserId?: string | null; coachId: string }
 ): Promise<ReportContext> {
-  const [{ data: player }, { data: team }, { data: coach }] = await Promise.all([
+  const [{ data: player }, { data: team }, coachRes] = await Promise.all([
     supabase.from('players').select('name').eq('id', opts.playerId).maybeSingle(),
     supabase.from('teams').select('name, age_group, season_id').eq('id', opts.teamId).maybeSingle(),
-    supabase.from('coaches').select('display_name').eq('id', opts.coachId).maybeSingle(),
+    supabase.from('coaches').select('display_name, report_branding').eq('id', opts.coachId).maybeSingle(),
   ])
+
+  // Migration 055 may not be applied. A missing branding column must cost a
+  // coach their letterhead, never their name on the report — so the failed
+  // select is retried without it rather than read as "no coach".
+  let coach: any = coachRes.data
+  if (coachRes.error) {
+    const again = await supabase
+      .from('coaches').select('display_name').eq('id', opts.coachId).maybeSingle()
+    coach = again.data
+  }
 
   let seasonName: string | null = null
   if ((team as any)?.season_id) {
@@ -100,6 +110,9 @@ export async function buildContext(
     // would print on a report to themselves.
     season_name: seasonName && seasonName !== 'Personal' ? seasonName : null,
     coach_name: (coach as any)?.display_name || null,
+    // Copied here so finalization freezes it with everything else. A coach
+    // who rebrands later does not alter a report a family already has.
+    brand: cleanBranding((coach as any)?.report_branding),
   }
 }
 

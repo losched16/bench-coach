@@ -30,7 +30,7 @@
 
 import { PDFDocument, StandardFonts, rgb, PDFString, PDFName, PDFArray } from 'pdf-lib'
 import {
-  renderSections, contextLine, formatReportDate, reportTypeLabel,
+  renderSections, contextLine, formatReportDate, reportTypeLabel, brandingFor,
   type FullReport,
 } from './playerReports'
 
@@ -275,16 +275,33 @@ export async function renderReportPdf(report: FullReport): Promise<Uint8Array> {
   // ---- Masthead ----------------------------------------------------------
   // Wordmark rather than a logo image: an embedded PNG is another thing that
   // can be missing at runtime, and this is a coach's letterhead, not an advert.
-  w.page.drawText('BENCHCOACH', {
+  // The coach's letterhead, or ours when they have not set one. Both slots
+  // are the coach's text, so both go through pdfSafe like everything else.
+  const brand = brandingFor(ctx)
+  const wordmark = pdfSafe(brand.brand_name).toUpperCase()
+  const kicker = pdfSafe(brand.header_line).toUpperCase()
+  const wordmarkW = fonts.bold.widthOfTextAtSize(wordmark, 9)
+  const kickerW = fonts.regular.widthOfTextAtSize(kicker, 8)
+
+  w.page.drawText(wordmark, {
     x: MARGIN, y: PAGE_H - MARGIN + 2, size: 9,
     font: fonts.bold, color: BRAND,
   })
-  const kicker = 'PLAYER DEVELOPMENT REPORT'
-  w.page.drawText(kicker, {
-    x: PAGE_W - MARGIN - fonts.regular.widthOfTextAtSize(kicker, 8), y: PAGE_H - MARGIN + 2,
-    size: 8, font: fonts.regular, color: MUTED,
-  })
-  w.space(14)
+  if (wordmarkW + kickerW + 16 <= CONTENT_W) {
+    w.page.drawText(kicker, {
+      x: PAGE_W - MARGIN - kickerW, y: PAGE_H - MARGIN + 2,
+      size: 8, font: fonts.regular, color: MUTED,
+    })
+    w.space(14)
+  } else {
+    // A long league name and the kicker will not share a line. The kicker
+    // drops underneath rather than colliding with it.
+    w.page.drawText(kicker, {
+      x: MARGIN, y: PAGE_H - MARGIN + 2 - 12,
+      size: 8, font: fonts.regular, color: MUTED,
+    })
+    w.space(26)
+  }
   w.rule(BRAND)
   w.space(10)
 
@@ -383,12 +400,17 @@ export async function renderReportPdf(report: FullReport): Promise<Uint8Array> {
     page.drawText(left, {
       x: MARGIN, y: BOTTOM - 27, size: 7.5, font: fonts.regular, color: MUTED,
     })
-    const right = total > 1
-      ? `Player Development Report powered by BenchCoach  ·  ${i + 1} of ${total}`
-      : 'Player Development Report powered by BenchCoach'
+    const footer = pdfSafe(brand.footer_text)
+    const right = total > 1 ? `${footer}  ·  ${i + 1} of ${total}` : footer
+    const rightW = fonts.regular.widthOfTextAtSize(right, 7.5)
+    const leftW = fonts.regular.widthOfTextAtSize(left, 7.5)
+    // A long footer goes on its own line under the left text rather than
+    // running into it. The bottom margin has room for two lines.
+    const shareLine = leftW + rightW + 12 <= CONTENT_W
     page.drawText(right, {
-      x: PAGE_W - MARGIN - fonts.regular.widthOfTextAtSize(right, 7.5),
-      y: BOTTOM - 27, size: 7.5, font: fonts.regular, color: MUTED,
+      x: shareLine ? PAGE_W - MARGIN - rightW : MARGIN,
+      y: shareLine ? BOTTOM - 27 : BOTTOM - 38,
+      size: 7.5, font: fonts.regular, color: MUTED,
     })
   })
 

@@ -13,8 +13,9 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import {
-  FileText, Plus, Loader2, Download, ChevronRight, AlertCircle,
+  FileText, Plus, Loader2, Download, ChevronRight, AlertCircle, Settings,
 } from 'lucide-react'
 import { reportTypeLabel, formatReportDate } from '@/lib/playerReports'
 import { useTracker } from '@/lib/tracking'
@@ -104,6 +105,14 @@ export function PlayerReports({
           </p>
         </div>
         {canCreate && (
+          <div className="flex items-center gap-2 flex-wrap">
+          <Link
+            href={`/dashboard/settings?teamId=${teamId}#report-branding`}
+            className="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
+            <Settings size={16} aria-hidden />
+            Report branding
+          </Link>
           <button
             type="button"
             onClick={create}
@@ -115,6 +124,7 @@ export function PlayerReports({
               : <Plus size={16} aria-hidden />}
             {openDraft ? 'Continue draft' : 'Create Player Report'}
           </button>
+          </div>
         )}
       </div>
 

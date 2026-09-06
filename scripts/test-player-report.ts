@@ -19,7 +19,7 @@ import {
   drillSnapshot, drillVideoLink, isSafeUrl, recommendationReason,
   renderSections, isReportSendable, cleanStrengthAreas, cleanText,
   contextLine, formatReportDate, reportTypeLabel, isReportType,
-  videoLinkLabel, focusAreaForProblem,
+  videoLinkLabel, focusAreaForProblem, brandingFor, cleanBranding, DEFAULT_BRANDING,
   type FullReport, type DrillSnapshot,
 } from '@/lib/playerReports'
 import { renderReportPdf, pdfSafe, reportFilename } from '@/lib/playerReportPdf'
@@ -275,6 +275,26 @@ check('a category the map does not know falls back to the label',
 check('a priority that names no skill has no area rather than a wrong one',
   focusAreaForProblem(null, 'zzz') === null)
 
+// ── branding: the coach's letterhead, defaults otherwise ────────────────────
+
+check('no branding prints the BenchCoach defaults',
+  JSON.stringify(brandingFor(null)) === JSON.stringify(DEFAULT_BRANDING))
+check('a context from before migration 055 (no brand key) prints the defaults',
+  brandingFor(report().context).brand_name === 'BenchCoach')
+check('a saved brand replaces the wordmark and keeps the other defaults',
+  brandingFor({ ...report().context!, brand: { brand_name: 'Springford Little League', header_line: null, footer_text: null } })
+    .brand_name === 'Springford Little League' &&
+  brandingFor({ ...report().context!, brand: { brand_name: 'Springford Little League', header_line: null, footer_text: null } })
+    .footer_text === DEFAULT_BRANDING.footer_text)
+
+check('nothing set is stored as null, not as three empty strings',
+  cleanBranding({ brandName: '  ', headerLine: '', footerText: null }) === null)
+check('the form and the column key styles are both accepted',
+  cleanBranding({ brandName: 'A' })?.brand_name === 'A' && cleanBranding({ brand_name: 'B' })?.brand_name === 'B')
+check('branding is trimmed and capped to one line',
+  (cleanBranding({ brandName: '  ' + 'x'.repeat(200) })?.brand_name || '').length === 60)
+check('a non-object is refused', cleanBranding('Springford' as any) === null)
+
 // ── the migration keeps reports with the team's staff, never a league ────────
 // The league layer's privacy rule is that league membership appears in none
 // of the bc_team_at_least(...) expressions. That rule is only worth anything
@@ -386,6 +406,23 @@ async function pdfChecks() {
   }))
   check('an unsafe stored URL produces no annotation in the PDF',
     (await linkTargets(unsafe)).length === 0)
+
+  // A league letterhead, including one too long to share the top line with
+  // the kicker and a footer too long to share the bottom line — both must
+  // render rather than collide, and an emoji in the name must not throw.
+  const branded = await renderReportPdf(report({
+    context: {
+      ...(report().context as any),
+      brand: {
+        brand_name: 'Springford Youth Baseball & Softball Association 🥎 — Spring Season Program',
+        header_line: 'Player Development Report',
+        footer_text: 'Springford Youth Baseball & Softball Association · Player Development Program · Questions? Ask your coach at the next practice.',
+      },
+    },
+  }))
+  check('a long league letterhead renders without throwing', branded.length > 1000)
+  check('the branded PDF is still titled for the player',
+    ((await PDFDocument.load(branded)).getTitle() || '').includes('Charlie Losch'))
 
   // The failure that would otherwise arrive at the last step of an hour's work.
   const emoji = await renderReportPdf(report({

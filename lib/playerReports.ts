@@ -57,6 +57,19 @@ export interface ReportContext {
   age_group: string | null
   season_name: string | null
   coach_name: string | null
+  /** The coach's letterhead as at finalization. Absent on reports from before migration 055. */
+  brand?: ReportBranding | null
+}
+
+/**
+ * What the top and bottom of the report say. Every slot optional; an empty
+ * one prints the BenchCoach default, so a coach who never opens the setting
+ * gets exactly the report they got before it existed.
+ */
+export interface ReportBranding {
+  brand_name: string | null
+  header_line: string | null
+  footer_text: string | null
 }
 
 /**
@@ -153,6 +166,52 @@ export function cleanStrengthAreas(value: unknown): string[] {
   const seen = new Set<string>()
   for (const v of value) if (isFocusArea(v)) seen.add(v)
   return (Object.keys(FOCUS_AREAS) as FocusArea[]).filter(k => seen.has(k))
+}
+
+// ---------------------------------------------------------------------------
+// Branding
+// ---------------------------------------------------------------------------
+
+export const DEFAULT_BRANDING = {
+  brand_name: 'BenchCoach',
+  header_line: 'Player Development Report',
+  footer_text: 'Player Development Report powered by BenchCoach',
+} as const
+
+// A letterhead is one line. These stop a pasted paragraph becoming a masthead
+// that wraps across the top of every page.
+export const BRANDING_LIMITS = { brand_name: 60, header_line: 60, footer_text: 140 } as const
+
+/**
+ * Whatever the coach saved, reduced to the three slots and their limits.
+ * Accepts both the column's snake_case and the form's camelCase, so the API
+ * and the settings page cannot disagree about a key. Null when nothing is
+ * set, which is how "never touched" is stored.
+ */
+export function cleanBranding(input: any): ReportBranding | null {
+  if (!input || typeof input !== 'object') return null
+  const b: ReportBranding = {
+    brand_name: cleanText(input.brand_name ?? input.brandName, BRANDING_LIMITS.brand_name),
+    header_line: cleanText(input.header_line ?? input.headerLine, BRANDING_LIMITS.header_line),
+    footer_text: cleanText(input.footer_text ?? input.footerText, BRANDING_LIMITS.footer_text),
+  }
+  return b.brand_name || b.header_line || b.footer_text ? b : null
+}
+
+/**
+ * The strings the document actually prints, defaults filled in. One function
+ * for the preview and the PDF, so a coach cannot approve one letterhead on
+ * screen and send another.
+ */
+export function brandingFor(context: ReportContext | null | undefined): {
+  brand_name: string; header_line: string; footer_text: string
+} {
+  const b = context?.brand
+  return {
+    brand_name: b?.brand_name || DEFAULT_BRANDING.brand_name,
+    header_line: b?.header_line || DEFAULT_BRANDING.header_line,
+    footer_text: b?.footer_text || DEFAULT_BRANDING.footer_text,
+  }
 }
 
 // ---------------------------------------------------------------------------

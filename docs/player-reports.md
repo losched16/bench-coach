@@ -216,6 +216,24 @@ The snapshot stores the finished URL and the source it was gated on, so a
 report from 2026 keeps the link it was sent with even if the library's
 timestamp for that drill is later changed.
 
+## Branding
+
+The wordmark at the top, the line beside it, and the footer are the coach's to
+set. Settings → **Player Report Branding**.
+
+- **Per coach, on `coaches.report_branding`** (migration 055, one nullable
+  JSONB column). A letterhead belongs to the person signing, not to one team,
+  so it applies to every report they write. Owner-only: `guard(request, 'own')`.
+- **Not in `coach_preferences`.** That table is CoachAI's memory — the chat
+  route writes to it and prompts read from it. A letterhead there would show
+  up as something the app "learned" and be fed to a model as coaching context.
+- **Snapshotted at finalization.** `buildContext()` copies the branding into
+  `player_reports.context` beside the team and season names, so rebranding in
+  March does not alter a PDF a family received in September. Drafts read it live.
+- **Defaults are the old output.** Any empty slot prints the BenchCoach default;
+  `brandingFor()` in `lib/playerReports.ts` is the single source of those
+  defaults for the preview and the PDF alike.
+
 ## PDF
 
 **`pdf-lib`, server-rendered, never stored.**

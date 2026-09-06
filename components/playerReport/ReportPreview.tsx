@@ -13,18 +13,22 @@
 
 import { ExternalLink } from 'lucide-react'
 import {
-  renderSections, contextLine, formatReportDate, reportTypeLabel,
+  renderSections, contextLine, formatReportDate, reportTypeLabel, brandingFor,
   type FullReport,
 } from '@/lib/playerReports'
 
 export function ReportPreview({ report }: { report: FullReport }) {
   const sections = renderSections(report)
   const ctx = report.context
+  const brand = brandingFor(ctx)
 
   return (
     <article className="bg-white rounded-lg border border-gray-200 overflow-hidden">
       <header className="px-5 sm:px-8 pt-6 pb-5 border-b-2 border-red-600">
-        <p className="text-[11px] font-bold tracking-widest text-red-600">BENCHCOACH</p>
+        <div className="flex items-baseline justify-between gap-3 flex-wrap">
+          <p className="text-[11px] font-bold tracking-widest text-red-600 uppercase">{brand.brand_name}</p>
+          <p className="text-[10px] tracking-wider text-gray-400 uppercase">{brand.header_line}</p>
+        </div>
         <h1 className="mt-3 text-2xl sm:text-3xl font-bold text-gray-900">
           {ctx?.player_name || 'Player'}
         </h1>
@@ -121,7 +125,7 @@ export function ReportPreview({ report }: { report: FullReport }) {
       )}
 
       <footer className="px-5 sm:px-8 py-3 border-t border-gray-200 text-xs text-gray-400">
-        Player Development Report powered by BenchCoach
+        {brand.footer_text}
       </footer>
     </article>
   )
