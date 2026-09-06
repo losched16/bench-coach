@@ -64,7 +64,8 @@ CREATE TABLE IF NOT EXISTS public.coaches (
   created_at timestamp with time zone DEFAULT now(),
   is_subscribed boolean DEFAULT false,
   subscription_tier text DEFAULT 'free'::text,
-  stripe_customer_id text
+  stripe_customer_id text,
+  report_branding jsonb
 );
 CREATE TABLE IF NOT EXISTS public.drill_favorites (
   id uuid DEFAULT uuid_generate_v4() NOT NULL,
@@ -1725,6 +1726,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.bc_touch_player_report()
  RETURNS trigger
  LANGUAGE plpgsql
+ SET search_path TO ''
 AS $function$
 BEGIN
   NEW.updated_at = NOW();
