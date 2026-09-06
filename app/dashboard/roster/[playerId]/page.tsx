@@ -6,13 +6,15 @@ import { createSupabaseComponentClient } from '@/lib/supabase'
 import { 
   ArrowLeft, User, Plus, Trash2, Pencil, StickyNote, 
   Target, TrendingUp, Calendar, BookOpen, 
-  Clock, CheckCircle, AlertCircle, Home, Upload, X, Play, Image as ImageIcon, Video, Gauge
+  Clock, CheckCircle, AlertCircle, Home, Upload, X, Play, Image as ImageIcon, Video, Gauge, FileText
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import SwingAnalysisUpload from '@/components/SwingAnalysisUpload'
 import { usePageView } from '@/lib/tracking'
 import { PlayerMetrics } from '@/components/PlayerMetrics'
 import { PlayerHistory } from '@/components/PlayerHistory'
+import { PlayerReports } from '@/components/PlayerReports'
+import { useRole } from '@/lib/useRole'
 
 interface PlayerData {
   id: string
@@ -122,7 +124,12 @@ function PlayerDetailContent() {
   const teamId = searchParams.get('teamId')
   const supabase = createSupabaseComponentClient()
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'measurements' | 'journal' | 'swing-analysis'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'measurements' | 'journal' | 'reports' | 'swing-analysis'>('overview')
+
+  // Writing a development report is a 'decide' action — see the comment in
+  // app/api/player-reports/route.ts. A contributor keeping the book may read
+  // one; they do not author the document that goes to the family.
+  const { can: allowed } = useRole(teamId)
   const [player, setPlayer] = useState<PlayerData | null>(null)
   const [notes, setNotes] = useState<PlayerNote[]>([])
   const [playbooks, setPlaybooks] = useState<ActivePlaybook[]>([])
@@ -283,7 +290,7 @@ function PlayerDetailContent() {
       </div>
 
       <div className="border-b border-gray-200">
-        <nav className="flex space-x-8">
+        <nav className="flex space-x-6 sm:space-x-8 overflow-x-auto -mb-px">
           <button onClick={() => setActiveTab('overview')} className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'overview' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
             <div className="flex items-center space-x-2"><User size={18} /><span>Overview</span></div>
           </button>
@@ -292,6 +299,9 @@ function PlayerDetailContent() {
           </button>
           <button onClick={() => setActiveTab('journal')} className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'journal' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
             <div className="flex items-center space-x-2"><BookOpen size={18} /><span>History</span></div>
+          </button>
+          <button onClick={() => setActiveTab('reports')} className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'reports' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            <div className="flex items-center space-x-2"><FileText size={18} /><span>Reports</span></div>
           </button>
           <button onClick={() => setActiveTab('swing-analysis')} className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'swing-analysis' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
             <div className="flex items-center space-x-2"><Video size={18} /><span>Swing Analysis</span>{swingAnalyses.length > 0 && <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">{swingAnalyses.length}</span>}</div>
@@ -380,6 +390,15 @@ function PlayerDetailContent() {
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === 'reports' && (
+        <PlayerReports
+          playerId={playerId as string}
+          teamId={teamId}
+          playerName={player?.name || 'this player'}
+          canCreate={allowed('decide')}
+        />
       )}
 
       {activeTab === 'journal' && (

@@ -341,13 +341,44 @@ export async function authorizeThread(
   return { ...actor, teamId }
 }
 
+/**
+ * Some routes name a player development report and nothing else — the report
+ * id is in the path, not in a body or a query string.
+ *
+ * The report knows its team, and the team is the whole of the answer: a report
+ * is exactly as reachable as the team it belongs to. There is no separate
+ * "reports" permission and no author-only rule — an assistant coach with admin
+ * rights is meant to be able to pick up a draft the head coach started.
+ *
+ * 404 rather than 403 for a report on another team, like everything else here:
+ * confirming that a guessed id names a real report about a real child is
+ * exactly the thing not to do.
+ */
+export async function authorizeReport(
+  reportId: string | null | undefined,
+  capability: Capability
+): Promise<Actor & { teamId: string; report: { id: string; team_id: string; player_id: string; status: string } }> {
+  if (!reportId) throw new AuthzError('Missing reportId', 400)
+
+  const { data: report } = await supabaseAdmin
+    .from('player_reports')
+    .select('id, team_id, player_id, status')
+    .eq('id', reportId)
+    .maybeSingle()
+  if (!report) throw new AuthzError('Report not found', 404)
+
+  const teamId = (report as any).team_id as string
+  const actor = await authorizeTeam(teamId, capability)
+  return { ...actor, teamId, report: report as any }
+}
+
 // ── The one-line guard ─────────────────────────────────
 
 async function idsFrom(request: Request): Promise<Record<string, string | null>> {
   const out: Record<string, string | null> = {}
   try {
     const url = new URL(request.url)
-    for (const k of ['teamId', 'gameId', 'coachId', 'threadId']) {
+    for (const k of ['teamId', 'gameId', 'coachId', 'threadId', 'reportId']) {
       out[k] = url.searchParams.get(k)
     }
   } catch { /* not a URL we can parse */ }
@@ -368,7 +399,7 @@ async function idsFrom(request: Request): Promise<Record<string, string | null>>
     try {
       const body = await request.clone().json()
       if (body && typeof body === 'object') {
-        for (const k of ['teamId', 'gameId', 'coachId', 'threadId']) {
+        for (const k of ['teamId', 'gameId', 'coachId', 'threadId', 'reportId']) {
           if (!out[k] && typeof body[k] === 'string') out[k] = body[k]
         }
       }
@@ -403,6 +434,7 @@ export async function guard(
     if (ids.gameId) actor = await authorizeGame(ids.gameId, capability)
     else if (ids.teamId) actor = await authorizeTeam(ids.teamId, capability)
     else if (ids.threadId) actor = await authorizeThread(ids.threadId, capability)
+    else if (ids.reportId) actor = await authorizeReport(ids.reportId, capability)
     else if (ids.coachId) actor = await authorizeCoach(ids.coachId, capability)
     else throw new AuthzError('Missing teamId', 400)
 
