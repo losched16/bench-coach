@@ -156,21 +156,50 @@ if (policyKeywordCount !== policies.length) {
 }
 
 // SECURITY DEFINER functions, and whether each pins its search_path.
+//
+// Finding where a function ENDS is the whole difficulty. An earlier version
+// searched for the next "$$;", which is right for hand-written migrations and
+// wrong for a catalog export: pg_get_functiondef emits $function$ delimiters,
+// so the search missed, the slice ran on for 4000 characters into the NEXT
+// function, and any function preceding a SECURITY DEFINER one was reported as
+// SECURITY DEFINER itself. It named bc_rank and leagues_touch as unpinned
+// security risks. They are neither.
+//
+// So: read the function's own dollar-quote tag and find its matching close.
 const secdef = []
-for (const m of sql.matchAll(/CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+((?:public\.)?"?[a-z_][a-z0-9_]*"?)\s*\(([\s\S]*?)\)\s*RETURNS([\s\S]*?)(?:\$\$|\$_\$|\bAS\b)/gi)) {
+for (const m of sql.matchAll(/CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+((?:public\.)?"?[a-z_][a-z0-9_]*"?)/gi)) {
   const start = m.index
-  const end = sql.indexOf('$$;', start) > 0 ? sql.indexOf('$$;', start) + 3 : start + 4000
-  const whole = sql.slice(start, end)
+  const after = sql.slice(start)
+  // The body opener: $$ or $tag$. Everything before it is the signature.
+  const open = after.match(/\$([a-zA-Z_][a-zA-Z0-9_]*)?\$/)
+  let whole
+  if (open) {
+    const tag = open[0]
+    const bodyStart = open.index + tag.length
+    const close = after.indexOf(tag, bodyStart)
+    whole = close < 0 ? after.slice(0, bodyStart) : after.slice(0, close + tag.length + 40)
+  } else {
+    // A function with no dollar-quoted body (a quoted string literal). Stop at
+    // the statement terminator.
+    const semi = after.indexOf(';')
+    whole = semi < 0 ? after.slice(0, 2000) : after.slice(0, semi + 1)
+  }
   if (!/SECURITY\s+DEFINER/i.test(whole)) continue
   secdef.push({
     name: m[1].toLowerCase().replace(/^public\./, '').replace(/"/g, ''),
-    args: m[2].replace(/\s+/g, ' ').trim().slice(0, 120),
-    // The Supabase linter calls this function_search_path_mutable. A
-    // SECURITY DEFINER function without it resolves every unqualified name
-    // against the CALLER's search_path.
     pinsSearchPath: /SET\s+search_path\s*(?:=|TO)/i.test(whole),
     line: sql.slice(0, start).split('\n').length,
   })
+}
+
+// Same guard as the policies: an independent count, so a slicing bug shows up
+// as a refusal rather than as a confident wrong list.
+const secdefKeywordCount = (sql.match(/SECURITY\s+DEFINER/gi) || []).length
+if (secdefKeywordCount !== secdef.length) {
+  console.error(`\ninspect-baseline: matched ${secdef.length} SECURITY DEFINER functions but the ` +
+    `file contains ${secdefKeywordCount} SECURITY DEFINER clauses.`)
+  console.error('The function parser is wrong. Fix it rather than trusting the list.\n')
+  process.exit(2)
 }
 
 const grants = []

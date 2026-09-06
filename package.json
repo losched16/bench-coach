@@ -51,7 +51,9 @@
     "prebuild": "node scripts/verify-env.mjs",
     "staging:seed": "NODE_USE_ENV_PROXY=1 node scripts/seed-staging.mjs",
     "verify:bootstrap": "bash scripts/verify-baseline-bootstrap.sh",
-    "inspect:baseline": "node scripts/inspect-baseline.mjs"
+    "inspect:baseline": "node scripts/inspect-baseline.mjs",
+    "test:export-schema": "bash scripts/test-export-schema.sh",
+    "csv:baseline": "node scripts/csv-to-baseline.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",
