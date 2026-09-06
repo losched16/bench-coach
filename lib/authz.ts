@@ -360,6 +360,14 @@ export async function authorizeReport(
 ): Promise<Actor & { teamId: string; report: { id: string; team_id: string; player_id: string; status: string } }> {
   if (!reportId) throw new AuthzError('Missing reportId', 400)
 
+  // Who is asking, BEFORE what they are asking about. Looking the report up
+  // first would answer an anonymous caller "not found" for a bad id and
+  // "sign in" for a real one — an existence check on report ids that needs
+  // no account. The ids are unguessable, so this is a small leak, but a
+  // document about a child should not confirm it exists to someone with no
+  // session at all. authorizeTeam() checks again; the second read is cheap.
+  if (!(await currentUserId())) throw new AuthzError('You need to be signed in', 401)
+
   const { data: report } = await supabaseAdmin
     .from('player_reports')
     .select('id, team_id, player_id, status')
