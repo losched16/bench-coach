@@ -6,6 +6,7 @@ import { createSupabaseComponentClient } from '@/lib/supabase'
 import { ArrowLeft, Save, Check, Star, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
 import { usePageView } from '@/lib/tracking'
+import { useRole } from '@/lib/useRole'
 
 const PRIMARY_GOALS = [
   { id: 'throwing', label: 'Throwing', icon: '🎯' },
@@ -59,17 +60,54 @@ export default function SettingsPage() {
   const [goals, setGoals] = useState<string[]>([])
   const [improvedAreas, setImprovedAreas] = useState<string[]>([])
   const [masteredAreas, setMasteredAreas] = useState<string[]>([])
+
   
   const searchParams = useSearchParams()
   const router = useRouter()
   const teamId = searchParams.get('teamId')
   const supabase = createSupabaseComponentClient()
 
+  // Player report branding. Per COACH, not per team — it is the letterhead on
+  // every report this person sends — and owner-only, so the card only renders
+  // for the owner and the route refuses everyone else regardless.
+  const { role } = useRole(teamId)
+  const [coachId, setCoachId] = useState<string | null>(null)
+  const [brandName, setBrandName] = useState('')
+  const [headerLine, setHeaderLine] = useState('')
+  const [footerText, setFooterText] = useState('')
+  const [brandingSaving, setBrandingSaving] = useState(false)
+  const [brandingSaved, setBrandingSaved] = useState(false)
+  const [brandingNotice, setBrandingNotice] = useState<string | null>(null)
+
   useEffect(() => {
     if (teamId) {
       loadTeam()
     }
   }, [teamId])
+
+  // The caller's own coach row, then whatever letterhead they have saved.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || cancelled) return
+      const { data: coach } = await supabase
+        .from('coaches').select('id').eq('user_id', user.id).maybeSingle()
+      const id = (coach as any)?.id as string | undefined
+      if (cancelled || !id) return
+      setCoachId(id)
+      try {
+        const res = await fetch(`/api/player-reports/branding?coachId=${id}`)
+        const data = await res.json()
+        if (cancelled) return
+        setBrandName(data?.branding?.brand_name || '')
+        setHeaderLine(data?.branding?.header_line || '')
+        setFooterText(data?.branding?.footer_text || '')
+        if (data?.needsMigration) setBrandingNotice(data.migrationMessage || null)
+      } catch { /* the defaults stand */ }
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   const loadTeam = async () => {
     try {
@@ -168,6 +206,27 @@ export default function SettingsPage() {
     return <div className="text-gray-600">Team not found</div>
   }
 
+  const saveBranding = async () => {
+    if (!coachId) return
+    setBrandingSaving(true)
+    setBrandingNotice(null)
+    try {
+      const res = await fetch('/api/player-reports/branding', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coachId, brandName, headerLine, footerText }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setBrandingNotice(data?.error || 'Could not save the branding.'); return }
+      setBrandingSaved(true)
+      setTimeout(() => setBrandingSaved(false), 2000)
+    } catch {
+      setBrandingNotice('Could not save the branding — check your connection.')
+    } finally {
+      setBrandingSaving(false)
+    }
+  }
+
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       <div className="flex items-center justify-between">
@@ -221,6 +280,113 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Player report branding — the coach's letterhead, not the team's */}
+      {role === 'owner' && (
+        <div id="report-branding" className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Player Report Branding</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                What the top and bottom of every report you send say. Applies to all your
+                teams. Reports you have already finalized keep the branding they went out with.
+              </p>
+            </div>
+            <button
+              onClick={saveBranding}
+              disabled={brandingSaving || !coachId}
+              className={`flex items-center space-x-2 px-5 py-2.5 rounded-lg transition-colors ${
+                brandingSaved ? 'bg-green-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'
+              } disabled:opacity-50`}
+            >
+              {brandingSaved ? <Check size={18} /> : <Save size={18} />}
+              <span>{brandingSaving ? 'Saving...' : brandingSaved ? 'Saved!' : 'Save Branding'}</span>
+            </button>
+          </div>
+
+          {brandingNotice && (
+            <p className="mt-3 text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              {brandingNotice}
+            </p>
+          )}
+
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="brand-name" className="block text-sm font-medium text-gray-700 mb-2">
+                Name at the top
+              </label>
+              <input
+                id="brand-name"
+                type="text"
+                value={brandName}
+                onChange={(e) => setBrandName(e.target.value)}
+                maxLength={60}
+                placeholder="BenchCoach"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <p className="mt-1 text-xs text-gray-500">Your league or team name, for example. Leave blank for BenchCoach.</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {teamName && (
+                  <button
+                    type="button"
+                    onClick={() => setBrandName(teamName)}
+                    className="text-xs px-2.5 py-1 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50"
+                  >
+                    Use team name
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setBrandName('')}
+                  className="text-xs px-2.5 py-1 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  Use BenchCoach
+                </button>
+              </div>
+            </div>
+            <div>
+              <label htmlFor="brand-header" className="block text-sm font-medium text-gray-700 mb-2">
+                Line beside it
+              </label>
+              <input
+                id="brand-header"
+                type="text"
+                value={headerLine}
+                onChange={(e) => setHeaderLine(e.target.value)}
+                maxLength={60}
+                placeholder="Player Development Report"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label htmlFor="brand-footer" className="block text-sm font-medium text-gray-700 mb-2">
+                Footer
+              </label>
+              <input
+                id="brand-footer"
+                type="text"
+                value={footerText}
+                onChange={(e) => setFooterText(e.target.value)}
+                maxLength={140}
+                placeholder="Player Development Report powered by BenchCoach"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          {/* The same header and footer the report renders, live. */}
+          <div className="mt-5 rounded-lg border border-gray-200 overflow-hidden" aria-label="Preview of the report letterhead">
+            <div className="px-4 pt-3 pb-2 border-b-2 border-red-600 flex items-baseline justify-between gap-3 flex-wrap">
+              <span className="text-[11px] font-bold tracking-widest text-red-600 uppercase">{brandName || 'BenchCoach'}</span>
+              <span className="text-[10px] tracking-wider text-gray-400 uppercase">{headerLine || 'Player Development Report'}</span>
+            </div>
+            <div className="px-4 py-4 text-xs text-gray-300 italic">The report goes here.</div>
+            <div className="px-4 py-2 border-t border-gray-200 text-[11px] text-gray-400">
+              {footerText || 'Player Development Report powered by BenchCoach'}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Practice Settings */}
       <div className="bg-white rounded-lg shadow p-6">

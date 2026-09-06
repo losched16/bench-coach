@@ -165,9 +165,12 @@ apply_one() {
 if [ "$HAVE_BASELINE" = "1" ]; then
   # 045 owns the benchcoach_seo role and its grants, and runs after the
   # baseline because those grants are on seo_pages, which the baseline creates.
-  # 052 and 053 are applied to production, so they are inside the capture and
-  # are not replayed — re-running 053 would fail on a policy that already
-  # exists. They stay in migrations/ as the record of what changed and why.
+  # 052, 053, 054 and 055 are all applied to production, so their effects are
+  # inside the capture and they are not replayed — re-running 053 would fail on
+  # a policy that already exists. They stay in migrations/ as the record.
+  #
+  # The rule is simply: applied to production => inside the baseline => not in
+  # this list. Only the migrations production has NOT seen belong here.
   for n in 045_seo_editor_role 037_journal_into_entries 039_practice_schedule \
            051_provision_league_atomically; do
     apply_one "$ROOT/migrations/$n.sql"

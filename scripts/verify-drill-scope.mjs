@@ -14,7 +14,7 @@
 //   npm run verify:drills
 
 import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { join, relative, sep } from 'node:path'
 
 const ROOT = process.cwd()
 const SCAN = ['app', 'lib', 'components']
@@ -60,7 +60,8 @@ let viaHelper = 0
 let exemptSeen = 0
 
 for (const file of files) {
-  const rel = relative(ROOT, file)
+  // Forward slashes, so the EXEMPT keys match on Windows as well as CI.
+  const rel = relative(ROOT, file).split(sep).join('/')
   const src = readFileSync(file, 'utf8')
 
   // Files that go through visibleDrills are safe by construction. Counting

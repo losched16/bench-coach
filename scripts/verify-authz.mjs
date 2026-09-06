@@ -11,7 +11,7 @@
 //   npm run verify:authz
 
 import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, sep } from 'node:path'
 
 // Routes that authenticate by some other means, each with the reason.
 const EXEMPT = {
@@ -42,9 +42,14 @@ const EXEMPT = {
 // different principal than "may this person touch this team's data". They are
 // listed here as first-class guards: a league route that calls one has
 // authorized its caller just as thoroughly as a team route that calls guard().
+//
+// authorizeReport() is the player-reports equivalent, added on main. All three
+// families belong in this list — a route is authorized if it calls any guard,
+// and which guard is right depends on what it is guarding.
 const GUARDS = [
   'guard(', 'requireSession(', 'requireAdmin(', 'authorizeTeam(',
   'authorizeGame(', 'authorizeCoach(', 'authorizeThread(',
+  'authorizeReport(',
   'guardLeague(', 'requireLeagueRole(',
 ]
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
@@ -62,9 +67,13 @@ const problems = []
 let checked = 0
 let exempted = 0
 
-for (const file of walk('app/api').sort()) {
+for (const found of walk('app/api').sort()) {
+  // path.join gives backslashes on Windows and the EXEMPT keys are written
+  // with forward slashes, so every exemption silently missed and the check
+  // failed on a developer machine while passing in CI. One normalisation.
+  const file = found.split(sep).join('/')
   if (EXEMPT[file]) { exempted++; continue }
-  const src = readFileSync(file, 'utf8')
+  const src = readFileSync(found, 'utf8')
   checked++
 
   // A guarded route MUST be dynamic. Without it, Next tries to prerender the
