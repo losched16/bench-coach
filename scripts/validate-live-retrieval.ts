@@ -193,13 +193,13 @@ async function main() {
     console.log(`  expect   : ${s.expect}`)
     console.log(`  filters  : applied [${debug.filtersApplied.join(', ') || '—'}]`)
     console.log(`  pool     : ${debug.candidateCountBeforeFilters} -> ${debug.candidateCountAfterFilters} eligible`)
-    for (const [i, sc] of scored.slice(0, 5).entries()) {
+    scored.slice(0, 5).forEach((sc, i) => {
       const d = sc.drill
       console.log(
         `   ${i + 1}. ${String(sc.reason.score.toFixed(1)).padStart(6)}  ${d.drill_name.slice(0, 44).padEnd(46)}` +
         `${(d.difficulty_level || '?').padEnd(13)}${d.min_age ?? '-'}-${d.max_age ?? '-'}  via ${sc.reason.primary}`
       )
-    }
+    })
     // Age is a hard gate and this is the assertion that matters most.
     const leaks = scored.filter(sc =>
       s.constraints.playerAge != null &&
@@ -232,13 +232,13 @@ async function main() {
     console.log(`\n${p.name}`)
     console.log(`  pool     : ${debug.candidateCountBeforeFilters} -> ${debug.candidateCountAfterFilters} eligible`)
     console.log(`  budget   : ${budget.drillBudget} min of drills · scheduled ${sched.scheduledMinutes} · slack ${sched.slack}`)
-    for (const [i, it] of sched.items.entries()) {
+    sched.items.forEach((it, i) => {
       const d = it.drill
       console.log(
         `   ${i + 1}. ${String(it.minutes).padStart(2)}min  ${d.drill_name.slice(0, 44).padEnd(46)}` +
         `throw=${(d.throwing_load ?? '?').padEnd(7)}engage=${(d.engagement_level ?? '?').padEnd(7)}coaches=${d.min_coaches ?? '?'}`
       )
-    }
+    })
     if (sched.stations) {
       console.log('  STATIONS:')
       console.log('  ' + describeStationGroup(sched.stations).split('\n').join('\n  '))
