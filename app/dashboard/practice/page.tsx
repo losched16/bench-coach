@@ -67,6 +67,10 @@ function PracticeContent() {
   // constraint, which is the point: a plan that stations four kids at a tee
   // this team does not own fails in front of everybody.
   const [equipmentAvailable, setEquipmentAvailable] = useState<Set<string>>(new Set())
+  // How many adults will be on the field. null is "didn't say", NOT zero, and
+  // it is the default on purpose — a solo coach gets a different practice, and
+  // guessing which one they are is worse than planning for the usual case.
+  const [coachCount, setCoachCount] = useState<number | null>(null)
   // The plan before it is committed. Generating straight into the database
   // meant the first version was the only version — a coach who wanted one
   // thing changed had to delete it and start over.
@@ -357,6 +361,10 @@ function PracticeContent() {
           mustIncludeDrillIds: Array.from(pickedDrills),
           objective: objective.trim() || undefined,
           equipmentAvailable: Array.from(equipmentAvailable),
+          // How many adults. Left out entirely when unset, because the route
+          // treats a missing count as "unknown" and an unknown count as no
+          // constraint — sending 0 or a guess would be a claim we cannot make.
+          coachCount: coachCount ?? undefined,
           // On a rebuild, what they already read. Blocks that survive the
           // change keep the exact wording rather than being written again.
           previousBlocks: constraintsOverride ? (draft?.blocks || []) : undefined,
@@ -516,6 +524,7 @@ function PracticeContent() {
       setObjective('')
       setStartTime('')
       setEquipmentAvailable(new Set())
+      setCoachCount(null)
       loadPlans()
     } catch (error: any) {
       setGenError(error?.message || 'Could not save the plan.')
@@ -1122,7 +1131,46 @@ function PracticeContent() {
                   <option value={120}>120 minutes</option>
                 </select>
               </div>
-              
+
+              {/*
+                How many adults. The single question that decides whether a
+                three-station plan is achievable or a fiction — one coach cannot
+                stand at three stations, and every plan this product wrote
+                before today assumed they could.
+
+                "Not sure" is the default and sends nothing, because a guess
+                here is worse than silence: unknown leaves every drill eligible,
+                while a wrong 1 would strip the plan of everything needing a
+                coach.
+              */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  How many coaches will be there?
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[null, 1, 2, 3, 4].map((n) => (
+                    <button
+                      key={n === null ? 'unknown' : n}
+                      type="button"
+                      onClick={() => setCoachCount(n)}
+                      className={`px-3 py-2 rounded-lg border-2 transition-colors text-sm ${
+                        coachCount === n
+                          ? 'border-blue-600 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      {n === null ? 'Not sure' : n === 1 ? 'Just me' : n === 4 ? '4+' : String(n)}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {coachCount === 1
+                    ? 'Solo practice — every station but one will be built to run itself.'
+                    : 'Decides how many stations can run at once.'}
+                </p>
+              </div>
+
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   What are we working on? (up to 5)

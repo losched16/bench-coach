@@ -42,10 +42,20 @@
 // to an assumed roster and must not be. A twelve-player team running one tee
 // needs a multiplier on reps, which is a different input with different data
 // behind it; guessing at it here would make the stored number mean two things.
+//
+// WHAT CHANGED (056)
+//
+// The headcount and the coach count are now inputs, and they buy exactly one
+// new thing: a note saying which of the already-chosen drills could run side by
+// side. They do NOT change the budget arithmetic, because est_duration_minutes
+// is still a base estimate and rescaling it by roster size would be inventing
+// the multiplier this header just said we do not have. The stations note keeps
+// the same clock and changes how many kids are moving inside it.
 
 import { DrillRecord } from './drills'
 import { ScoredDrill } from './drillRetrieval'
 import { stageOf } from './progression'
+import { planStationGroup, StationGroup, describeStationGroup, MIN_STATION_GROUP } from './stationPlanner'
 
 // ---------------------------------------------------------------------------
 // The time contract
@@ -166,8 +176,35 @@ const norm = (s: any) =>
  * one name contains the other (the long-form and short-form entries of a
  * single drill, "High Tee Drill — Hitting Up in the Zone" and "High Tee"), or
  * when the names are the same once punctuation is stripped.
+ *
+ * FAMILIES (migration 056)
+ *
+ * Names are a proxy for sameness and a bad one in both directions. A family is
+ * the direct answer, but only half of it: sharing a family is emphatically NOT
+ * redundancy, because the whole reason families exist is to hold a progression
+ * together. "Protect the Castle" and "Protect the Castle + Throw" are one
+ * family and two different practices' worth of work, and suppressing the second
+ * because of the first would delete exactly the thing this migration was added
+ * to represent.
+ *
+ * What a family DOES catch is two rows sitting at the SAME point in it — two
+ * `base` entries of one activity, differently worded, which the name check
+ * misses whenever the wordings do not overlap. That, and only that, is the new
+ * rule: same family AND same variation_type, both known.
  */
 export function isRedundant(a: DrillRecord, b: DrillRecord): boolean {
+  // Same family, same rung of it. Checked before names because it is the more
+  // reliable signal where it exists — and it is null for the whole library
+  // until calibration data lands, at which point this quietly starts working.
+  if (
+    a.activity_family_id && b.activity_family_id &&
+    a.activity_family_id === b.activity_family_id &&
+    a.variation_type && b.variation_type &&
+    a.variation_type === b.variation_type
+  ) {
+    return true
+  }
+
   const na = norm(a.drill_name)
   const nb = norm(b.drill_name)
   if (!na || !nb) return false
@@ -214,6 +251,12 @@ export interface Schedule {
   slack: number
   /** Drills whose duration came from the weakest evidence tier. */
   lowConfidenceDrillIds: string[]
+  /**
+   * Which of the scheduled drills could run in parallel instead of in sequence,
+   * or null when the people present cannot support stations. A SUGGESTION: it
+   * never removes an item from `items` and never changes `scheduledMinutes`.
+   */
+  stations: StationGroup | null
 }
 
 export interface ScheduleInput {
@@ -221,6 +264,15 @@ export interface ScheduleInput {
   budget: Budget
   /** Cap on drill blocks. Absent means the budget is the only limit. */
   maxItems?: number
+  /**
+   * How many kids. Used only to size stations — never to scale a duration.
+   * Absent means unknown, and unknown means no stations are proposed, because
+   * "three groups of four" said to a coach with seven players is worse than
+   * saying nothing.
+   */
+  expectedPlayers?: number | null
+  /** How many adults. Absent is unknown, which is not a constraint. */
+  coachCount?: number | null
   /**
    * Ids whose duration estimate is LOW confidence. Passed in rather than
    * derived, because confidence lives with the estimator and this module has
@@ -313,7 +365,68 @@ export function schedulePractice(input: ScheduleInput): Schedule {
     scheduledMinutes: spent,
     slack: budget.drillBudget - spent,
     lowConfidenceDrillIds: ordered.filter(i => low.has(String(i.drill.id))).map(i => String(i.drill.id)),
+    stations: proposeStations(ordered, input.expectedPlayers, input.coachCount),
   }
+}
+
+/**
+ * Which of the chosen drills could run at the same time.
+ *
+ * Built from drills ALREADY in the plan, never from fresh candidates, for two
+ * reasons. Relevance was decided upstream and a station note is not a licence
+ * to smuggle a worse drill back in. And the time window is then real: the
+ * minutes are ones the plan had already committed to these drills, so the
+ * suggestion cannot push the practice over its budget however it is used.
+ *
+ * Two passes because the window depends on which drills are chosen and the
+ * choice depends on the coach budget, which lives in planStationGroup. Passing
+ * one, reading the answer, and re-sizing the window to exactly the chosen
+ * drills is simpler and more honest than predicting its choice here.
+ */
+function proposeStations(
+  items: ScheduleItem[],
+  expectedPlayers: number | null | undefined,
+  coachCount: number | null | undefined
+): StationGroup | null {
+  if (expectedPlayers == null || expectedPlayers < MIN_STATION_GROUP * 2) return null
+
+  // Only drills at the same point in the practice. Running a warm-up and a
+  // game-speed drill as parallel stations is not a rotation, it is two
+  // different practices happening at once.
+  const byStage = new Map<number, ScheduleItem[]>()
+  for (const i of items) {
+    if (i.drill.station_friendly === false) continue
+    if (!byStage.has(i.stage)) byStage.set(i.stage, [])
+    byStage.get(i.stage)!.push(i)
+  }
+
+  // The fullest stage, ties broken by the earlier one so the answer is stable.
+  const stages = Array.from(byStage.entries())
+    .filter(([, v]) => v.length >= 2)
+    .sort((a, b) => b[1].length - a[1].length || a[0] - b[0])
+  if (stages.length === 0) return null
+
+  const pool = stages[0][1]
+  const asScored = (list: ScheduleItem[]): ScoredDrill[] =>
+    list.map(i => ({ drill: i.drill, reason: { score: i.score } })) as ScoredDrill[]
+
+  const firstPass = planStationGroup({
+    candidates: asScored(pool),
+    expectedPlayers,
+    coachCount,
+    availableMinutes: pool.reduce((n, i) => n + i.minutes, 0),
+  })
+  if (!firstPass) return null
+
+  // Re-size the window to the drills it actually picked.
+  const chosenIds = new Set(firstPass.stations.map(s => String(s.drill.id)))
+  const chosen = pool.filter(i => chosenIds.has(String(i.drill.id)))
+  return planStationGroup({
+    candidates: asScored(chosen),
+    expectedPlayers,
+    coachCount,
+    availableMinutes: chosen.reduce((n, i) => n + i.minutes, 0),
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -447,6 +560,23 @@ export function describeSchedule(s: Schedule): string {
       `\nBuild the drill blocks from these unless you have a specific reason not to. ` +
       `The minutes are estimates of how long each drill takes to run once; use them ` +
       `as block lengths unless the coach's situation says otherwise.`
+    )
+  }
+
+  // Said as an option rather than an instruction. The model knows things this
+  // module does not — that the coach asked for a scrimmage, that two of these
+  // want the same net — and a station rotation the coach cannot actually set up
+  // is worse than three ordinary blocks.
+  if (s.stations) {
+    lines.push(
+      `\nTHESE COULD RUN AS STATIONS INSTEAD OF ONE AFTER THE OTHER:\n` +
+      describeStationGroup(s.stations) +
+      `\nSame ${s.stations.totalMinutes} minutes of practice either way — the ` +
+      `difference is that every kid is doing something for all of it instead of ` +
+      `waiting their turn in a line of ${s.stations.stations.reduce((n, x) => n + x.groupSize, 0)}. ` +
+      `If you use this, write it as ONE block with the rotation spelled out ` +
+      `(groups, minutes per rotation, who goes where), not as three blocks — ` +
+      `three blocks would triple the time on the clock and the practice would not fit.`
     )
   }
 

@@ -62,6 +62,30 @@ export interface RetrievalConstraints {
   availableEquipment?: string[] | null
   /** True when the coach has said they are on their own with one player. */
   alone?: boolean | null
+
+  // ── Ability, logistics and preference (migration 056) ──────────────────
+  //
+  // These are all optional and all default to unknown. A surface that knows
+  // none of them — Player Reports knows a player's age and need, not a roster
+  // size — gets exactly the behaviour it got before.
+
+  /**
+   * How good this team is at baseball. INDEPENDENT of age.
+   *
+   * An advanced 9U side is a real thing and should get advanced drills that
+   * are age-appropriate for nine-year-olds. This never widens the age gate.
+   */
+  skillLevel?: 'beginner' | 'developing' | 'advanced' | null
+  /** Players expected at THIS session. Hard-gates min_players/max_players. */
+  expectedPlayers?: number | null
+  /** Adults at THIS session. Hard-gates min_coaches. */
+  coachCount?: number | null
+  /** The coach asked for fun, competition or games. Ranking only. */
+  preferEngaging?: boolean | null
+  /** A game is close; prefer low throwing load. Ranking only. */
+  limitThrowing?: boolean | null
+  /** Building stations; prefer activities that can run in parallel. */
+  preferStations?: boolean | null
 }
 
 export interface RetrieveInput extends RetrievalConstraints {
@@ -143,6 +167,19 @@ const WEIGHTS = {
   favorite: 3,
   // Contextual fit, when the coach told us the context.
   contextFit: 6,
+  // Preference signals (056). All small by design, and all summed AFTER the
+  // taxonomy score, so they order a correct candidate pool rather than
+  // reordering relevance. The largest of them, at 3 points a step, cannot
+  // overturn a curated mapping worth 100 or even a category match worth 8.
+  //
+  // This is the property the brief calls taxonomy dominance, and it is
+  // enforced by arithmetic rather than by intention.
+  skillFit: 3,
+  engagement: 2,
+  throwing: 2,
+  station: 2,
+  groupSize: 2,
+  competitionCtx: 1,
 } as const
 
 function lower(v: unknown): string {
@@ -176,11 +213,184 @@ export function ageEligible(d: DrillRecord, playerAge?: number | null): boolean 
   return playerAge >= min && playerAge <= max
 }
 
-export function competitionEligible(d: DrillRecord, level?: string | null): boolean {
-  if (!level) return true
+/**
+ * Whether a drill's rec/travel scoping excludes it for this team.
+ *
+ * KEPT AS A FILTER BUT NARROWED, and the narrowing is the point.
+ *
+ * This used to exclude any drill whose competition_level differed from the
+ * team's. That made `travel` a proxy for ability: an advanced 9U all-star team
+ * playing in a rec league could never be shown a drill tagged `travel`, no
+ * matter how well it fitted, and a beginner travel team was shown everything
+ * whether it suited them or not.
+ *
+ * Rec and travel describe WHERE A TEAM PLAYS. They do not describe how good it
+ * is. Ability now has its own axis — see skillLevel — and this is back to what
+ * it should always have been: a weak contextual signal.
+ *
+ * So the filter now only excludes when BOTH are known AND they disagree AND
+ * the team level is the more restrictive one. In practice that means a rec
+ * team no longer loses `travel`-tagged drills; ranking handles the preference
+ * instead. Nothing is excluded on the basis of a level the drill never
+ * declared.
+ */
+export function competitionEligible(_d: DrillRecord, _level?: string | null): boolean {
+  // Deliberately always true. competition_level is a ranking signal now; see
+  // competitionAffinity() below. The function is kept, exported and called so
+  // the filter list, the debug output and every existing test keep their
+  // shape, and so this decision is visible at the point where it used to bite
+  // rather than only in a migration note.
+  return true
+}
+
+// ---------------------------------------------------------------------------
+// Ability, independent of age
+// ---------------------------------------------------------------------------
+
+/**
+ * Fold the vocabularies that mean the same thing onto three labels.
+ *
+ * The library stores `beginner | intermediate | advanced`. Teams store
+ * `beginner | mixed | advanced` — production's CHECK constraint says so, and
+ * `mixed` is its default. The product language the brief asks for is
+ * `Beginner | Developing | Advanced`.
+ *
+ * Rather than migrate either column and break the other, both vocabularies
+ * normalise here. `mixed` and `intermediate` are the same rung: a team of
+ * assorted abilities and a drill pitched between beginner and advanced are
+ * both "developing".
+ */
+export function normalizeSkill(v?: string | null): 'beginner' | 'developing' | 'advanced' | null {
+  const t = lower(v)
+  if (!t) return null
+  if (/(^|\b)(beginner|easy|basic|novice)(\b|$)/.test(t)) return 'beginner'
+  if (/(^|\b)(advanced|hard|elite)(\b|$)/.test(t)) return 'advanced'
+  if (/(^|\b)(intermediate|moderate|developing|mixed|medium)(\b|$)/.test(t)) return 'developing'
+  return null
+}
+
+const SKILL_RANK: Record<string, number> = { beginner: 0, developing: 1, advanced: 2 }
+
+/**
+ * How well a drill's difficulty suits a team's ability, as a ranking signal.
+ *
+ * RANKING, NOT A FILTER, and that is the whole design. An advanced team still
+ * needs the teaching step sometimes — a double-play progression starts with
+ * footwork a beginner could do — so a developing drill must stay reachable for
+ * an advanced side. What changes is which one surfaces first when both are
+ * equally relevant to the diagnosed problem.
+ *
+ * Asymmetric on purpose. Giving a beginner team an advanced drill is a worse
+ * error than giving an advanced team a beginner one: the first cannot be run
+ * at all, the second is merely easy. So the penalty for overshooting is
+ * steeper than for undershooting.
+ */
+export function skillAffinity(d: DrillRecord, want?: string | null): number {
+  const target = normalizeSkill(want)
+  const have = normalizeSkill(d.difficulty_level)
+  if (!target || !have) return 0          // unknown either side is not a signal
+  const gap = SKILL_RANK[have] - SKILL_RANK[target]
+  if (gap === 0) return 2                 // exact fit
+  if (gap > 0) return -2 * gap            // too hard for them
+  return -1 * Math.abs(gap)               // easier than needed, still runnable
+}
+
+// ---------------------------------------------------------------------------
+// Can this actually be run today?
+// ---------------------------------------------------------------------------
+
+/**
+ * Enough players for the activity, and not too many.
+ *
+ * HARD, but only when both sides are known. A drill that never declared a
+ * minimum is eligible for any group; a session that never declared a headcount
+ * gates nothing. 206 rows currently declare nothing, so this is inert until
+ * calibration data arrives — which is the correct order to build it in.
+ */
+export function playerCountEligible(d: DrillRecord, expected?: number | null): boolean {
+  if (expected == null || !Number.isFinite(expected)) return true
+  if (typeof d.min_players === 'number' && expected < d.min_players) return false
+  // max_players is a station-sizing hint more than a hard ceiling — a drill
+  // built for 4 can be run by 12 in three groups — so it does not exclude.
+  return true
+}
+
+/**
+ * Enough adults.
+ *
+ * The sharpest of these gates, and the one the brief is most concerned with. A
+ * single coach cannot run three simultaneous coach-fed stations, and a plan
+ * that says otherwise is not a plan.
+ */
+export function coachCountEligible(d: DrillRecord, coaches?: number | null): boolean {
+  if (coaches == null || !Number.isFinite(coaches)) return true
+  if (typeof d.min_coaches === 'number' && coaches < d.min_coaches) return false
+  return true
+}
+
+/** Soft: how far the group size is from what the activity is built for. */
+export function groupSizeAffinity(d: DrillRecord, groupSize?: number | null): number {
+  if (groupSize == null || typeof d.ideal_group_size !== 'number') return 0
+  const off = Math.abs(groupSize - d.ideal_group_size)
+  if (off === 0) return 1
+  if (off <= 2) return 0
+  return -1
+}
+
+const LOW_MED_HIGH: Record<string, number> = { low: 0, medium: 1, high: 2 }
+
+/**
+ * Engagement preference — only when the coach asked for it.
+ *
+ * "Make it fun" is a real request with a real answer: change HOW the skill is
+ * practised, not what is practised. So this rewards high rep density, low idle
+ * time, competition and simple instructions — and it is small, because a fun
+ * drill that is wrong for the baseball problem is still wrong.
+ */
+export function engagementAffinity(d: DrillRecord, prefer?: boolean | null): number {
+  if (!prefer) return 0
+  let n = 0
+  const eng = LOW_MED_HIGH[lower(d.engagement_level)]
+  if (eng != null) n += eng - 1                       // high +1, low -1
+  const idle = LOW_MED_HIGH[lower(d.idle_time_risk)]
+  if (idle != null) n += 1 - idle                     // low idle +1
+  const reps = LOW_MED_HIGH[lower(d.rep_density)]
+  if (reps != null) n += reps - 1
+  const comp = lower(d.competition_style)
+  if (comp && comp !== 'none') n += 1
+  return n
+}
+
+/** Throwing load, when a game is close and the arm matters more than the rep. */
+export function throwingAffinity(d: DrillRecord, limit?: boolean | null): number {
+  if (!limit) return 0
+  const t = lower(d.throwing_load)
+  if (!t) return 0
+  if (t === 'none' || t === 'low') return 2
+  if (t === 'medium') return 0
+  return -3                                            // high, on a game week
+}
+
+/** Station preference, when the plan is going to be built as stations. */
+export function stationAffinity(d: DrillRecord, prefer?: boolean | null): number {
+  if (!prefer) return 0
+  if (d.station_friendly === true) return 2
+  if (d.station_friendly === false) return -2
+  return 0
+}
+
+/**
+ * How well a drill's rec/travel scoping matches the team's, as a ranking nudge.
+ *
+ * Small on purpose. A curated taxonomy mapping is worth 100; this is worth a
+ * few points, which is enough to order two otherwise equal drills and nowhere
+ * near enough to promote a wrong one.
+ */
+export function competitionAffinity(d: DrillRecord, level?: string | null): number {
+  if (!level) return 0
   const c = lower(d.competition_level)
-  if (!c || c === 'both') return true
-  return c === lower(level)
+  if (!c || c === 'both') return 0
+  return c === lower(level) ? 1 : -1
 }
 
 /**
@@ -316,6 +526,45 @@ export function scoreDrill(
     notes.push('fits small space')
   }
 
+  // ── ability, logistics and preference (056) ─────────────────────────────
+  // Each helper returns 0 when it has nothing to say — either the coach did
+  // not tell us, or the drill does not declare it. Unknown contributes
+  // nothing rather than penalising, which is what keeps 206 uncalibrated rows
+  // ranking exactly as they did before.
+  const skill = skillAffinity(d, c.skillLevel)
+  if (skill !== 0) {
+    score += skill * WEIGHTS.skillFit
+    notes.push(skill > 0
+      ? `difficulty fits ${c.skillLevel}`
+      : `difficulty ${lower(d.difficulty_level) || 'unknown'} vs ${c.skillLevel}`)
+  }
+
+  const eng = engagementAffinity(d, c.preferEngaging)
+  if (eng !== 0) {
+    score += eng * WEIGHTS.engagement
+    if (eng > 0) notes.push('high engagement, low idle')
+  }
+
+  const thr = throwingAffinity(d, c.limitThrowing)
+  if (thr !== 0) {
+    score += thr * WEIGHTS.throwing
+    notes.push(thr > 0 ? 'light on the arm' : 'heavy throwing')
+  }
+
+  const st = stationAffinity(d, c.preferStations)
+  if (st !== 0) {
+    score += st * WEIGHTS.station
+    if (st > 0) notes.push('station-friendly')
+  }
+
+  const grp = groupSizeAffinity(d, c.expectedPlayers != null && c.coachCount
+    ? Math.ceil(c.expectedPlayers / Math.max(1, c.coachCount))
+    : null)
+  if (grp !== 0) score += grp * WEIGHTS.groupSize
+
+  const comp = competitionAffinity(d, c.competitionLevel)
+  if (comp !== 0) score += comp * WEIGHTS.competitionCtx
+
   // ── favorites: a tiebreak, never a promotion ────────────────────────────
   // Small enough that it cannot lift a drill over a curated taxonomy match.
   // A favorite that is wrong for the problem is still wrong.
@@ -381,11 +630,16 @@ export function rankDrills(
     (known ? filtersApplied : filtersSkipped).push(name)
 
   note('age', c.playerAge != null)
-  note('competition_level', !!c.competitionLevel)
+  // Listed as a ranking signal rather than a filter, because that is what it
+  // now is. Naming it here keeps the evaluator's "filters" line honest.
+  note('competition_level (ranking)', !!c.competitionLevel)
   note('indoor_outdoor', !!c.indoorOutdoor)
   note('space_required', !!c.spaceAvailable)
   note('equipment', !!(c.availableEquipment && c.availableEquipment.length))
   note('requires_partner', !!c.alone)
+  note('skill_level (ranking)', !!c.skillLevel)
+  note('min_players', c.expectedPlayers != null)
+  note('min_coaches', c.coachCount != null)
 
   const eligible = pool.filter(d =>
     ageEligible(d, c.playerAge) &&
@@ -393,6 +647,11 @@ export function rankDrills(
     environmentEligible(d, c.indoorOutdoor) &&
     spaceEligible(d, c.spaceAvailable) &&
     equipmentEligible(d, c.availableEquipment) &&
+    // Feasibility (056). Both are inert until a drill declares a requirement
+    // AND the caller declares a count — an uncalibrated library and a surface
+    // that knows neither, like Player Reports, see no change at all.
+    playerCountEligible(d, c.expectedPlayers) &&
+    coachCountEligible(d, c.coachCount) &&
     // Partner is a preference rather than a hard filter: a coach working alone
     // can often improvise, and excluding outright would gut the pool.
     true

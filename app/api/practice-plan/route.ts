@@ -12,6 +12,7 @@ import { reusableBlock } from '@/lib/practicePlan'
 import { describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
 import { retrieveDrills } from '@/lib/drillRetrieval'
 import { constraintsFromText, ageFromText } from '@/lib/drillConstraints'
+import { MIN_STATION_GROUP } from '@/lib/stationPlanner'
 import {
   computeBudget, schedulePractice, describeSchedule, fitBlocks, estimateBlockCount,
 } from '@/lib/practiceScheduler'
@@ -48,11 +49,25 @@ export async function POST(request: NextRequest) {
       // one back, and an empty equipment list means "assume the usual kit"
       // rather than "they have nothing".
       objective, equipmentAvailable,
+      // How many adults will be there. Optional, and absence is not a
+      // constraint: a blank field means "unknown", which leaves every
+      // coach-dependent drill eligible. It is only when a coach tells us
+      // they are on their own that a three-station plan becomes a lie.
+      coachCount,
       // On a rebuild, the plan they just read. Blocks they did not ask to
       // change keep the detail that was already written for them instead of
       // being generated again.
       previousBlocks,
     } = await request.json()
+
+    // One adult is the floor for a practice that is happening at all; above
+    // about six the number stops changing any decision. Anything outside that,
+    // or not a number, is treated as unknown rather than clamped into a claim.
+    const coachesPresent =
+      typeof coachCount === 'number' && Number.isFinite(coachCount) &&
+      coachCount >= 1 && coachCount <= 6
+        ? Math.round(coachCount)
+        : null
 
     if (!teamId || !duration || !focus) {
       return NextResponse.json(
@@ -88,6 +103,37 @@ export async function POST(request: NextRequest) {
         console.warn('Practice plan: loop context unavailable:', e?.message)
         return ''
       })
+
+    // Who is actually going to be standing there.
+    //
+    // players was hardcoded to [] since this route was written, so every plan
+    // ever generated was written for an unknown number of kids. "Split into
+    // stations" is useless advice; "three groups of four" is a plan. This is
+    // the difference, and it costs one query.
+    //
+    // Started here rather than where it is read, because the headcount is now
+    // an INPUT to drill retrieval — a drill that needs ten players cannot run
+    // with seven — and retrieval happens well before the plan prose is built.
+    const rosterPromise = supabaseAdmin
+      .from('team_players')
+      .select('player_id, player:players(id, name)')
+      .eq('team_id', teamId)
+      .then(({ data }) =>
+        (data || [])
+          .map((r: any) => {
+            const p = Array.isArray(r.player) ? r.player[0] : r.player
+            return p ? { id: p.id as string, name: p.name as string } : null
+          })
+          .filter(Boolean) as Array<{ id: string; name: string }>
+      )
+      .then(
+        rows => rows,
+        (e: any) => {
+          // A practice is still worth planning for an unknown number of kids.
+          console.warn('Practice plan: roster unavailable:', e?.message)
+          return [] as Array<{ id: string; name: string }>
+        }
+      )
 
     // Load team notes
     const { data: teamNotes } = await supabaseAdmin
@@ -220,6 +266,17 @@ export async function POST(request: NextRequest) {
     // handed exactly as many as will fit.
     const RETRIEVAL_LIMIT = 30
 
+    const roster = await rosterPromise
+
+    // How many kids to plan for. Recent attendance beats the roster, because a
+    // roster of fourteen where nine turn up is a nine-player practice. With
+    // neither, this stays null and every feasibility filter stays off — the
+    // same "absence is not a constraint" rule the rest of retrieval runs on.
+    const typicalAttendance = attendanceHistory.length > 0
+      ? Math.round(attendanceHistory.reduce((a, b) => a + b, 0) / attendanceHistory.length)
+      : null
+    const expectedPlayers = typicalAttendance ?? (roster.length > 0 ? roster.length : null)
+
     let drillsDegraded = false
     let retrieval: Awaited<ReturnType<typeof retrieveDrills>> | null = null
     try {
@@ -235,6 +292,21 @@ export async function POST(request: NextRequest) {
         spaceAvailable: textConstraints.spaceAvailable,
         availableEquipment: Array.isArray(equipmentAvailable) && equipmentAvailable.length
           ? equipmentAvailable : null,
+        // The team's ability, which is NOT its age. A 12U team of first-year
+        // players and a 12U travel team are the same age gate and a different
+        // practice. This ranks; the age band above still gates.
+        skillLevel: team.skill_level ?? null,
+        // Feasibility. Both are hard filters only where the drill states a
+        // requirement AND we know the count — a drill that never declared a
+        // minimum stays eligible at any headcount.
+        expectedPlayers,
+        coachCount: coachesPresent,
+        // Rec teams are why this product exists: a plan full of drills that
+        // leave nine kids in a line is a plan the coach does not run twice.
+        preferEngaging: true,
+        // Stations are only worth preferring when there are enough bodies to
+        // form two groups; below that it is noise in the ranking.
+        preferStations: expectedPlayers != null && expectedPlayers >= MIN_STATION_GROUP * 2,
         favorites,
         limit: RETRIEVAL_LIMIT,
       })
@@ -297,29 +369,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Who is actually going to be standing there.
-    //
-    // players was hardcoded to [] since this route was written, so every plan
-    // ever generated was written for an unknown number of kids. "Split into
-    // stations" is useless advice; "three groups of four" is a plan. This is
-    // the difference, and it costs one query.
-    let roster: Array<{ id: string; name: string }> = []
-    try {
-      const { data: rosterRows } = await supabaseAdmin
-        .from('team_players')
-        .select('player_id, player:players(id, name)')
-        .eq('team_id', teamId)
-
-      roster = (rosterRows || [])
-        .map((r: any) => {
-          const p = Array.isArray(r.player) ? r.player[0] : r.player
-          return p ? { id: p.id, name: p.name } : null
-        })
-        .filter(Boolean) as Array<{ id: string; name: string }>
-    } catch (e: any) {
-      console.warn('Practice plan: roster unavailable:', e?.message)
-    }
-
     // Deliberately names and a count, not full player profiles. Sending every
     // kid's six skill ratings would repeat the mistake the drill library
     // already had to be cured of — the model is doing station maths and
@@ -327,18 +376,28 @@ export async function POST(request: NextRequest) {
     // report on each one.
     let rosterSection = ''
     if (roster.length > 0) {
-      const typical = attendanceHistory.length > 0
-        ? Math.round(attendanceHistory.reduce((a, b) => a + b, 0) / attendanceHistory.length)
-        : null
-
       rosterSection =
         `HOW MANY KIDS\n\n` +
         `Roster: ${roster.length} players — ${roster.map(p => p.name).join(', ')}.\n` +
-        (typical
-          ? `Recent attendance: ${attendanceHistory.join(', ')}. Plan for about ${typical}.\n`
+        (typicalAttendance
+          ? `Recent attendance: ${attendanceHistory.join(', ')}. Plan for about ${typicalAttendance}.\n`
           : `No attendance recorded yet, so plan for the full ${roster.length} and say what to cut if fewer show up.\n`) +
+        // How many adults, which decides whether stations are even possible.
+        // Silence here means unknown, and the model is told to assume the
+        // normal case rather than plan a one-adult practice on a guess.
+        (coachesPresent
+          ? `Coaches present: ${coachesPresent}. ` +
+            (coachesPresent === 1
+              ? `ONE adult. Every station beyond the one they are standing at must run ` +
+                `itself — partner work, a tee, a wall, a station with a rule the kids ` +
+                `can enforce. Do not write a plan that needs the coach in two places.\n`
+              : `At most ${coachesPresent} activities can need an adult at the same time.\n`)
+          : '') +
         `\nDo the station maths against that number and put it in the plan. ` +
         `"Three groups of four, rotating every four minutes" — never "split into stations". ` +
+        `Three stations running at once cost the time of ONE rotation per station, ` +
+        `not the sum of the three: four groups of four rotating every six minutes is ` +
+        `twenty-four minutes of practice, not seventy-two. ` +
         `No kid should stand in a line waiting more than about thirty seconds; ` +
         `if a block would leave players idle at this headcount, change the block.`
     }
@@ -404,7 +463,14 @@ export async function POST(request: NextRequest) {
     const blockCount = estimateBlockCount(duration)
     const budget = computeBudget(duration, { blockCount })
     const schedule = retrieval
-      ? schedulePractice({ candidates: retrieval.scored, budget })
+      ? schedulePractice({
+          candidates: retrieval.scored,
+          budget,
+          // Only to size a stations suggestion. Neither number changes a
+          // duration or the budget — see the header of practiceScheduler.
+          expectedPlayers,
+          coachCount: coachesPresent,
+        })
       : null
 
     // Observational only — a weak duration estimate never disqualifies a

@@ -172,7 +172,8 @@ if [ "$HAVE_BASELINE" = "1" ]; then
   # The rule is simply: applied to production => inside the baseline => not in
   # this list. Only the migrations production has NOT seen belong here.
   for n in 045_seo_editor_role 037_journal_into_entries 039_practice_schedule \
-           051_provision_league_atomically; do
+           051_provision_league_atomically 056_drill_station_intelligence \
+           058_drill_calibration; do
     apply_one "$ROOT/migrations/$n.sql"
   done
 else

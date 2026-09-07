@@ -16,6 +16,8 @@ them in numeric order.
 | `050_league_layer.sql` | League layer phase 1: `leagues`, `league_members`, `league_seasons`, `league_divisions`, `league_licenses`, `league_invitations`, three nullable league FKs on `teams`, `bc_league_*` helpers + RLS. | No — additive only, idempotent; no backfill and no seeded data |
 | `054_player_reports.sql` | Player development reports: `player_reports`, `player_report_focus_areas`, `player_report_drills` + indexes, RLS (needs 034's helpers) and an `updated_at` trigger. Finalized rows are immutable in RLS as well as in the API. | No — additive only, idempotent |
 | `055_report_branding.sql` | One nullable JSONB column on `coaches` — the letterhead a coach's player reports print (name, header line, footer). No RLS change. | No — additive only, idempotent |
+| `056_drill_station_intelligence.sql` | Drill & station intelligence phase 1: `drill_activity_families` + 20 nullable columns on `drill_resources` (family, format, player/coach minimums, station fit, engagement, load, progression notes), CHECK vocabularies and two partial indexes. Every column is nullable so all 206 existing rows stay fully eligible. | No — additive only, idempotent; no data written |
+| `058_drill_calibration.sql` | Calibration data for 056: 9 activity families, 42 existing drills given real values, and two original BenchCoach activities (`Protect the Castle`, `Protect the Castle + Throw`) inserted with `source = 'benchcoach_original'`. 164 drills are deliberately left uncalibrated. | Low — UPDATEs 42 rows' new columns only and INSERTs 2 drills; no existing value is overwritten |
 
 ## Migration 050 — the league layer
 

@@ -33,8 +33,11 @@ import { categoriesForPracticeFocus } from '@/lib/focusAreas'
 import {
   computeBudget, schedulePractice, estimateBlockCount, Schedule,
 } from '@/lib/practiceScheduler'
+import { describeStationGroup, assessStations } from '@/lib/stationPlanner'
 // @ts-ignore -- plain ESM, no types
 import { estimateAll } from './estimate-drill-durations.mjs'
+// @ts-ignore -- plain ESM, no types
+import { parseCalibration, parseNewDrills } from './parse-calibration.mjs'
 
 const FIX = JSON.parse(readFileSync('scripts/fixtures/drill-library.json', 'utf8'))
 const PROBLEMS: TaxonomyRow[] = FIX.problems
@@ -47,7 +50,42 @@ const EVIDENCE = new Map<string, string>(rows.map((r: any) => [r.drill.id, r.est
 const LOW_IDS = new Set<string>(
   rows.filter((r: any) => r.est.confidence === 'LOW').map((r: any) => String(r.drill.id))
 )
-const DRILLS = FIX.drills.map((d: any) => ({ ...d, est_duration_minutes: MINUTES.get(d.id) }))
+// Migration 058, applied to the fixture in memory.
+//
+// The fixture was captured before 058, so without this the whole calibration
+// half of the phase is invisible here — the evaluator would rank a library in
+// which no drill knows how many players it needs. Read straight out of the
+// migration rather than copied, so there is exactly one place the values live.
+// Nothing is written anywhere: this is an in-memory overlay of a migration that
+// has NOT been applied to production.
+const CALIBRATION = new Map<string, any>(
+  parseCalibration().map((r: any) => [r.drill_name, r])
+)
+const FAMILY_IDS = new Map<string, string>()
+const familyId = (slug: string | null) => {
+  if (!slug) return null
+  if (!FAMILY_IDS.has(slug)) FAMILY_IDS.set(slug, `fam-${slug}`)
+  return FAMILY_IDS.get(slug)!
+}
+const applyCalibration = (d: any) => {
+  const c = CALIBRATION.get(d.drill_name)
+  if (!c) return d
+  const { drill_name, family_slug, ...rest } = c
+  return { ...d, ...rest, activity_family_id: familyId(family_slug) }
+}
+
+// The two originals 058 creates. Given the same duration treatment as the rest
+// so they compete on the same terms rather than arriving with a free number.
+const CREATED = parseNewDrills().map((r: any, i: number) => {
+  const { family_slug, ...rest } = r
+  return { ...rest, id: `new-${i}`, activity_family_id: familyId(family_slug) }
+})
+
+const DRILLS = [...FIX.drills, ...CREATED]
+  .map((d: any) => ({
+    ...applyCalibration(d),
+    est_duration_minutes: MINUTES.get(d.id) ?? d.est_duration_minutes,
+  }))
 
 const argv = process.argv.slice(2)
 const VERBOSE = argv.includes('--verbose')
@@ -66,6 +104,10 @@ interface Scenario {
   focus: string[]
   minutes: number
   constraints?: Partial<RetrievalConstraints>
+  /** How many kids. Absent means unknown, and unknown is not a constraint. */
+  players?: number
+  /** How many adults. Absent means unknown. */
+  coaches?: number
   why: string
 }
 
@@ -106,6 +148,113 @@ const SCENARIOS: Scenario[] = [
     focus: ['hitting', 'infield', 'throwing'], minutes: 90,
     why: 'no flaw at all — needs candidate depth across categories',
   },
+
+  // ---- Added in phase 1: the questions the library could not previously be
+  // asked. Every one of these produced the SAME plan before 056/058, because
+  // headcount, coach count and ability were not inputs to anything.
+
+  {
+    name: 'Solo coach, full team', query: 'I am the only coach at practice with 12 kids, 10U team',
+    focus: ['infield', 'throwing'], minutes: 60, players: 12, coaches: 1,
+    why: 'the hardest real case in youth baseball. Stations must still be possible, ' +
+         'and they must be built out of activities that run themselves',
+  },
+  {
+    name: 'Three coaches, full team', query: 'we have three coaches and 12 players, 10U',
+    focus: ['infield', 'hitting', 'throwing'], minutes: 90, players: 12, coaches: 3,
+    why: 'the same team with the adults to staff it — should get a wider station group',
+  },
+  {
+    name: 'Tiny turnout', query: 'only 5 kids showed up tonight',
+    focus: ['hitting', 'throwing'], minutes: 60, players: 5, coaches: 2,
+    why: 'below two groups of three, so stations must be refused rather than faked',
+  },
+  {
+    name: 'Two kids in the driveway', query: 'just my two kids in the driveway, no field',
+    focus: ['hitting'], minutes: 30, players: 2, coaches: 1,
+    constraints: { spaceAvailable: 'small' },
+    why: 'a drill needing six players must not be offered to two',
+  },
+  {
+    name: 'Big roster', query: 'we have 18 kids at practice and not much space',
+    focus: ['hitting', 'infield'], minutes: 75, players: 18, coaches: 2,
+    constraints: { spaceAvailable: 'medium' },
+    why: 'the idle-time case — 18 kids in one line is the practice parents stop coming to',
+  },
+  {
+    name: 'Beginner 8U team', query: 'first practice of the season for our 8U team, most have never played',
+    focus: ['throwing', 'hitting'], minutes: 60, players: 10, coaches: 2,
+    constraints: { skillLevel: 'beginner', playerAge: 8 },
+    why: 'ability is beginner AND the age is young — both filters agree, the easy case',
+  },
+  {
+    name: 'Advanced 8U team', query: 'our 8U travel team is well ahead, they need more of a challenge',
+    focus: ['infield', 'hitting'], minutes: 60, players: 11, coaches: 2,
+    constraints: { skillLevel: 'advanced', playerAge: 8, competitionLevel: 'travel' },
+    why: 'THE case this phase exists for. Advanced ability at eight years old must ' +
+         'get harder drills WITHOUT being handed 12-and-up material',
+  },
+  {
+    name: 'Beginner 12U team', query: 'our 12U rec team has several first-year players',
+    focus: ['throwing', 'infield'], minutes: 75, players: 12, coaches: 2,
+    constraints: { skillLevel: 'beginner', playerAge: 12, competitionLevel: 'rec' },
+    why: 'the mirror image — old enough for anything, not ready for it',
+  },
+  {
+    name: 'Advanced 12U travel', query: '12U travel team, tournament this weekend',
+    focus: ['infield', 'hitting'], minutes: 90, players: 12, coaches: 3,
+    constraints: { skillLevel: 'advanced', playerAge: 12, competitionLevel: 'travel' },
+    why: 'the top-right corner, and the one the old system was accidentally tuned for',
+  },
+  {
+    name: 'Developing 9U', query: '9 year olds, second season, coming along fine',
+    focus: ['hitting', 'outfield'], minutes: 60, players: 10, coaches: 2,
+    constraints: { skillLevel: 'developing', playerAge: 9 },
+    why: 'the middle rung, which three different tables spell three different ways',
+  },
+  {
+    name: 'Game tomorrow', query: 'we have a game tomorrow, do not want to wear their arms out',
+    focus: ['hitting', 'infield'], minutes: 60, players: 12, coaches: 2,
+    constraints: { limitThrowing: true },
+    why: 'throwing load as a composition signal — it should shape the plan, not empty it',
+  },
+  {
+    name: 'Bored team', query: 'practice has been a slog lately, they are bored and standing around',
+    focus: ['infield', 'throwing'], minutes: 60, players: 12, coaches: 2,
+    constraints: { preferEngaging: true },
+    why: 'the retention case. High engagement and low idle time should rise, ' +
+         'without the coaching match being overtaken by fun',
+  },
+  {
+    name: 'Explicit stations', query: 'I want to run stations tonight',
+    focus: ['hitting', 'infield', 'throwing'], minutes: 75, players: 12, coaches: 3,
+    constraints: { preferStations: true },
+    why: 'asked for directly — station-friendly activities should lead',
+  },
+  {
+    name: 'Young rec, ground balls', query: 'my 7 year olds turn their heads on ground balls',
+    focus: ['infield'], minutes: 45, players: 9, coaches: 1,
+    constraints: { skillLevel: 'beginner', competitionLevel: 'rec' },
+    why: 'the Protect the Castle case — a young beginner fielding problem with one coach',
+  },
+  {
+    name: 'Mixed ability rec team', query: 'huge range on this rec team, two kids way ahead and four who are brand new',
+    focus: ['hitting', 'throwing'], minutes: 60, players: 13, coaches: 2,
+    constraints: { skillLevel: 'developing' },
+    why: 'mixed_skill_friendly is the whole answer here, and a wrong answer splits the team',
+  },
+  {
+    name: 'Indoor winter, big group', query: 'indoor winter practice in a gym, 16 kids, cannot throw far',
+    focus: ['hitting', 'throwing'], minutes: 60, players: 16, coaches: 3,
+    constraints: { indoorOutdoor: 'indoor', spaceAvailable: 'small' },
+    why: 'space, headcount and coach count all binding at once',
+  },
+  {
+    name: 'Unknown everything', query: 'help me plan a practice',
+    focus: ['hitting', 'infield'], minutes: 60,
+    why: 'the control. With nothing known, NOTHING may be filtered — this is the ' +
+         'scenario that catches a preference that has quietly become a gate',
+  },
 ]
 
 // categoriesForPracticeFocus() returns [] for a focus it does not recognise,
@@ -130,7 +279,12 @@ function retrieveFor(s: Scenario) {
   const constraints: RetrievalConstraints = {
     ...constraintsFromText(s.query),
     playerAge: ageFromText(s.query),
+    // Spread AFTER the text reading so an explicit scenario value wins, and
+    // BEFORE the counts so the counts are never accidentally overwritten by a
+    // scenario's own constraints block.
     ...s.constraints,
+    expectedPlayers: s.players ?? null,
+    coachCount: s.coaches ?? null,
   }
   const cats = categoriesForPracticeFocus(s.focus)
   const mapRows = MAPPINGS.filter(m => dx.slugs.includes(m.problem_slug))
@@ -163,7 +317,11 @@ function schedule(s: Scenario): { sched: Schedule; ret: ReturnType<typeof retrie
   const ret = retrieveFor(s)
   const budget = computeBudget(s.minutes, { blockCount: estimateBlockCount(s.minutes) })
   return {
-    sched: schedulePractice({ candidates: ret.scored, budget, lowConfidenceIds: LOW_IDS }),
+    sched: schedulePractice({
+      candidates: ret.scored, budget, lowConfidenceIds: LOW_IDS,
+      expectedPlayers: s.players ?? null,
+      coachCount: s.coaches ?? null,
+    }),
     ret,
   }
 }
@@ -197,6 +355,10 @@ function render(s: Scenario) {
   console.log(`scheduled drills   ${String(sched.scheduledMinutes).padStart(4)} min   (${sched.items.length} drills)`)
   console.log(`total scheduled    ${String(sched.scheduledMinutes + b.nonDrill + b.transitions).padStart(4)} min`)
   console.log(`slack              ${String(sched.slack).padStart(4)} min`)
+  console.log(
+    `people             ${s.players != null ? `${s.players} players` : 'headcount unknown'}` +
+    `, ${s.coaches != null ? `${s.coaches} coach${s.coaches === 1 ? '' : 'es'}` : 'coach count unknown'}`
+  )
 
   if (sched.items.length === 0) {
     console.log('\n  (nothing scheduled — no candidate fit the budget)')
@@ -235,6 +397,21 @@ function render(s: Scenario) {
     if (startsAtZero) selectedVideoStats.atZero++
     if (videoUses > 1 && startsAtZero) selectedVideoStats.sharedAtZero++
   })
+
+  // The stations answer, printed whether it is yes or no. A refusal is as much
+  // of a result as a rotation — "five players cannot make two groups of three"
+  // is the sentence that stops a plan lying to a coach.
+  if (sched.stations) {
+    console.log('\n  COULD RUN AS STATIONS:')
+    console.log('  ' + describeStationGroup(sched.stations).split('\n').join('\n  '))
+  } else if (s.players != null) {
+    const why = assessStations({
+      candidates: sched.items.map(i => i.drill),
+      expectedPlayers: s.players, coachCount: s.coaches ?? null,
+      availableMinutes: sched.scheduledMinutes,
+    })
+    console.log(`\n  NO STATION GROUP: ${why.reason || 'not applicable'}`)
+  }
 
   const notable = sched.rejected
     .filter(r => r.score > 0)

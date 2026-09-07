@@ -12,7 +12,7 @@
 //   npm run test:drill-retrieval
 
 import { readFileSync } from 'fs'
-import { rankDrills, ageEligible, environmentEligible, spaceEligible, equipmentEligible, competitionEligible } from '@/lib/drillRetrieval'
+import { rankDrills, ageEligible, environmentEligible, spaceEligible, equipmentEligible, competitionEligible, competitionAffinity } from '@/lib/drillRetrieval'
 import { diagnoseByAlias, TaxonomyRow } from '@/lib/drillDiagnosis'
 import { constraintsFromText, ageFromText } from '@/lib/drillConstraints'
 import { checkGrounding, stripUngroundedVideos } from '@/lib/drillGrounding'
@@ -354,11 +354,24 @@ check('a small-space drill passes a large space',
   spaceEligible({ id: 'x', drill_name: 'd', space_required: 'Small' }, 'large'))
 check('unknown space passes', spaceEligible({ id: 'x', drill_name: 'd', space_required: 'Large' }, null))
 
-console.log('\n=== competition level ===')
+console.log('\n=== competition level is context, not ability ===')
+// This block asserted the opposite until migration 056. It used to require
+// that a travel-only drill was EXCLUDED for a rec team, which made rec/travel
+// a proxy for how good a team is: an advanced 9U all-star side playing in a
+// rec league could never be shown a drill tagged `travel`, however well it
+// fitted, and a beginner travel team was shown everything regardless.
+//
+// Rec and travel say where a team plays. Ability is now its own axis
+// (skillLevel), so this is a ranking nudge and excludes nothing.
 check('a both-level drill always passes',
   competitionEligible({ id: 'x', drill_name: 'd', competition_level: 'both' }, 'rec'))
-check('a travel-only drill fails a rec team',
-  !competitionEligible({ id: 'x', drill_name: 'd', competition_level: 'travel' }, 'rec'))
+check('a travel-only drill is NO LONGER excluded for a rec team',
+  competitionEligible({ id: 'x', drill_name: 'd', competition_level: 'travel' }, 'rec'))
+check('...but it does rank slightly lower than a matching one',
+  competitionAffinity({ id: 'x', drill_name: 'd', competition_level: 'travel' }, 'rec') <
+  competitionAffinity({ id: 'y', drill_name: 'd', competition_level: 'rec' }, 'rec'))
+check('an unscoped drill is neutral, not penalised',
+  competitionAffinity({ id: 'z', drill_name: 'd', competition_level: null }, 'rec') === 0)
 
 console.log('\n=== grounding ===')
 {

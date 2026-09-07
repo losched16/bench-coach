@@ -78,6 +78,31 @@ export interface DrillRecord {
   thumbnail_url?: string | null
   channel?: string | null
 
+  // Practice intelligence (migration 056). Every one of these is nullable and
+  // unpopulated on the 206 curated rows until calibration lands, so every
+  // reader must treat null as "unknown" rather than as a value. Absence is not
+  // a constraint.
+  activity_family_id?: string | null
+  variation_type?: string | null
+  activity_format?: string | null
+  practice_roles?: string[] | null
+  min_players?: number | null
+  max_players?: number | null
+  ideal_group_size?: number | null
+  min_coaches?: number | null
+  station_friendly?: boolean | null
+  rep_density?: string | null
+  idle_time_risk?: string | null
+  engagement_level?: string | null
+  competition_style?: string | null
+  instruction_complexity?: string | null
+  throwing_load?: string | null
+  physical_intensity?: string | null
+  mixed_skill_friendly?: boolean | null
+  regression_notes?: string | null
+  progression_notes?: string | null
+  advanced_progression_notes?: string | null
+
   // Provenance and scoping
   status?: string | null
   source?: string | null
@@ -105,7 +130,17 @@ export const DRILL_FIELDS =
   'safety_notes, min_age, max_age, age_range, competition_level, mechanic_focus, ' +
   'common_flaws_fixed, indoor_outdoor, space_required, requires_partner, ' +
   'reps_guidance, frequency_guidance, success_markers, est_duration_minutes, ' +
-  'status, source, created_by_coach_id'
+  'status, source, created_by_coach_id, ' +
+  // Practice intelligence (056). Selected in the same round trip rather than a
+  // second query: retrieval already pulls the whole library once and ranks it
+  // in memory, and a per-drill lookup for these would be the N+1 the brief
+  // warns against.
+  'activity_family_id, variation_type, activity_format, practice_roles, ' +
+  'min_players, max_players, ideal_group_size, min_coaches, station_friendly, ' +
+  'rep_density, idle_time_risk, engagement_level, competition_style, ' +
+  'instruction_complexity, throwing_load, physical_intensity, ' +
+  'mixed_skill_friendly, regression_notes, progression_notes, ' +
+  'advanced_progression_notes'
 
 /**
  * A drill_resources query scoped to what this coach may see: the curated
