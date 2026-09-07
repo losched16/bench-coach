@@ -245,3 +245,77 @@ Yes, and this is the important property. The columns are nullable and unread by
 older code; `drill_activity_families` is a table nothing older queries. A code
 rollback needs no schema rollback, so the two can be reverted independently and
 in either order.
+
+## What is live (7 September 2026)
+
+The distinction that matters: **migrations applied is not the same as feature
+live.**
+
+| Layer | State |
+|---|---|
+| Migration `056` | **applied to production** |
+| Migration `058` | **applied to production** |
+| The two original drills | **live** — visible to coaches now |
+| Difficulty-aware ranking | **not live** — the code is not deployed |
+| Player / coach feasibility | **not live** |
+| Station suggestions | **not live** |
+| "How many coaches?" in the UI | **not live** |
+
+`main` is `0bf9296`, which predates Phase 1, and that is what the production
+build is running. The schema and the calibration data are in place underneath
+it, doing nothing, which is exactly the safe order: the columns are nullable and
+unread by the deployed build, so the database moved first and the code can
+follow whenever it is merged.
+
+The one user-visible change today is that the library has 208 drills instead of
+206. Protect the Castle and Protect the Castle + Throw are approved, retrievable
+and have no video — a state the library already contained one example of, so it
+is not a new case for the renderer.
+
+### Verified live, with the deployed-code caveat
+
+`npm run validate:live-retrieval` runs the real `rankDrills()` over the real
+production library, read with the public anon key. It proves the ENGINE against
+LIVE DATA; it does not prove the deployed application, because the deployed
+application does not contain the engine yet.
+
+```
+library: 208 drills · 45 calibrated · 163 untouched · 9 families in use
+
+8U beginner eligible pool : 147
+8U advanced eligible pool : 147
+identical                 : YES — the age gate is the same, only ranking differs
+```
+
+Age leaks across all nine retrieval scenarios: **none**.
+
+## Two honest negative results from live validation
+
+### The coach count changed nothing in the live practices
+
+Scenarios 1 and 2 — the same 8U practice with three coaches and then with one —
+produced an identical plan and an identical station group. That is a correct
+answer and a weak demonstration, and the reason is in the data, not the code:
+
+**No drill in the production library requires more than one coach.** All 208
+pass `min_coaches <= 1`, so the hard coach gate cannot fire against today's
+library, and the station group that was chosen needed only one coach-led station
+either way.
+
+The mechanism itself is right and is asserted in `test:drill-intelligence`:
+twelve players and one coach cannot staff three coach-dependent stations, and
+the same twelve with self-running activities can. What is missing is library
+data that exercises it. Calibrating a batch of genuinely coach-hungry activities
+— live BP, machine work, anything with a fungo — is what would make the coach
+count matter to a real coach.
+
+### The light-throwing practice was right for the wrong reason
+
+Scenario 4 ("game tomorrow, keep throwing light") produced zero high-throwing
+blocks, which is the desired outcome. But all four selected drills have
+`throwing_load` NULL: they are hitting drills chosen by category, and the
+throwing-load signal did not demonstrably cause the result. The outcome is
+correct and under-determined.
+
+Both findings point the same way, and it is not "calibrate all 206": it is
+"calibrate the drills where the new signals would actually change a decision."

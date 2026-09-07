@@ -384,6 +384,23 @@ dashboard, and there is no Vercel token or CLI here.
 | `052_fix_security_definer_views` | **applied** — closed an anon-readable exposure |
 | `053_close_permissive_game_policies` | **applied** — closed a second one |
 
+**Applied to production on 7 September 2026**, drill & station intelligence:
+
+| Migration | State |
+|---|---|
+| `056_drill_station_intelligence` | **applied** — `drill_activity_families` present with RLS and 2 policies; 20 new columns on `drill_resources`, **none NOT NULL**; 11 CHECK constraints; 2 partial indexes. 206 rows untouched, every new column NULL |
+| `058_drill_calibration` | **applied** — 9 families; 45 drills calibrated (43 matched rows for 42 names, plus the 2 originals); 163 left uncalibrated on purpose; library 206 → 208 |
+
+Verified after applying, against production rather than exit codes: all 208
+drills remain eligible for a 10-player team, for a 1-coach practice, and when
+nothing at all is known. Supabase security advisors: 83 total, **0 ERROR** —
+unchanged, and `drill_activity_families` appears in none of them.
+
+The code that USES those columns is not deployed. `main` is `0bf9296` and the
+production build predates Phase 1, so today the migrations' only visible effect
+is the two new drills in the library. See "What is live" in
+`docs/drill-station-intelligence.md`.
+
 **Still unapplied in production:**
 
 | Migration | State |
