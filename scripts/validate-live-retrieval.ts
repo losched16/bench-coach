@@ -249,8 +249,18 @@ async function main() {
     } else {
       console.log('  STATIONS: none proposed')
     }
+    // §17 asks the question that separates "right answer" from "right answer
+    // for the right reason": a plan with no high-throwing blocks proves nothing
+    // if the drills in it never declared a throwing load at all.
     const heavy = sched.items.filter(i => i.drill.throwing_load === 'high').length
-    console.log(`  throwing : ${heavy} high-throwing blocks of ${sched.items.length}`)
+    const unknownThrow = sched.items.filter(i => i.drill.throwing_load == null)
+    console.log(
+      `  throwing : ${heavy} high of ${sched.items.length} blocks · ` +
+      `${unknownThrow.length} have NO throwing_load at all` +
+      (unknownThrow.length === sched.items.length
+        ? '   *** the signal did not participate — this outcome is under-determined'
+        : '')
+    )
   }
 
   console.log('\nRead only. Nothing in this file writes.\n')

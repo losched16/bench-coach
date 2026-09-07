@@ -246,7 +246,20 @@ older code; `drill_activity_families` is a table nothing older queries. A code
 rollback needs no schema rollback, so the two can be reverted independently and
 in either order.
 
-## What is live (7 September 2026)
+## What is live (7 September 2026, after the merge)
+
+`main` is `4a51b4d`. Vercel deployment `dpl_9qHNaC5bNAUidp7CWy6hrok625P3` is
+READY on target production, serving `mybenchcoach.com`. Everything below is now
+deployed — the table further down describing the code as "not live" was written
+before the merge and is kept only as the record of the intermediate state.
+
+All 53 columns the deployed `DRILL_FIELDS` selects exist in production (checked
+against `information_schema` after the deploy — none missing). Production
+runtime after the deploy: 40×200, 2×304, 2×307, zero errors.
+
+### The state this superseded
+
+## What was live before the merge
 
 The distinction that matters: **migrations applied is not the same as feature
 live.**
