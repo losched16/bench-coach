@@ -153,10 +153,9 @@ a squash — `001`–`050` are already inside it and are **not** re-run. See
 2. `migrations/000_baseline.sql` — **does not exist yet; see the blocker**
 3. `migrations/037_journal_into_entries.sql` — unapplied in production, so not
    in the baseline
-4. `migrations/039_practice_schedule.sql` — same
-5. `migrations/051_provision_league_atomically.sql` — same; League E2E needs it
+4. `migrations/051_provision_league_atomically.sql` — same; League E2E needs it
 
-Steps 3–5 make staging deliberately *ahead* of production. That is what staging
+Steps 3–4 make staging deliberately *ahead* of production. That is what staging
 is for. It also means `--compare` will show staging with columns production
 lacks; extra columns are informational, missing ones fail.
 
@@ -401,12 +400,22 @@ production build predates Phase 1, so today the migrations' only visible effect
 is the two new drills in the library. See "What is live" in
 `docs/drill-station-intelligence.md`.
 
+**Applied to production on 7 September 2026**, repairing the Practice Plan save:
+
+| Migration | State |
+|---|---|
+| `039_practice_schedule` | **applied** — `practice_plans.scheduled_for` (date, nullable) and `recap_dismissed_at` (timestamptz, nullable), plus `idx_practice_plans_team_scheduled` and `idx_practice_sessions_plan` |
+
+Saving a plan had been failing in production with *"Could not find the
+'scheduled_for' column of 'practice_plans' in the schema cache"*. The save path
+writes `scheduled_for`; production did not have the column. All 16 existing
+plans were left undated — no date was invented for a practice nobody scheduled.
+
 **Still unapplied in production:**
 
 | Migration | State |
 |---|---|
 | `037_journal_into_entries` | not applied — `entries.legacy_journal_id` absent |
-| `039_practice_schedule` | not applied — `practice_plans.scheduled_for` absent |
 
 `046`, `047` and `048` change rows rather than schema, so `db:report` cannot see
 them; their row counts (49 problems, 206 drills, 348 mappings) match the

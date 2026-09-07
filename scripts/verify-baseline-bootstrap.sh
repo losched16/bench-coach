@@ -171,6 +171,12 @@ if [ "$HAVE_BASELINE" = "1" ]; then
   #
   # The rule is simply: applied to production => inside the baseline => not in
   # this list. Only the migrations production has NOT seen belong here.
+  #
+  # ONE EXCEPTION, and it is a timing artefact rather than a change of rule.
+  # 039 was applied to production on 7 Sep 2026 to repair the Practice Plan
+  # save, AFTER this baseline was captured — so it is applied but not inside the
+  # baseline, and it has to stay in this list until the baseline is re-captured.
+  # It replays harmlessly either way: ADD COLUMN IF NOT EXISTS.
   for n in 045_seo_editor_role 037_journal_into_entries 039_practice_schedule \
            051_provision_league_atomically 056_drill_station_intelligence \
            058_drill_calibration; do
