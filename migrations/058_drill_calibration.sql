@@ -324,6 +324,48 @@ LEFT JOIN public.drill_activity_families f ON f.slug = c.family_slug
 WHERE d.drill_name = c.drill_name;
 
 -- ---------------------------------------------------------------------------
+-- 4. Refuse to succeed silently
+--
+-- The UPDATE above matches on drill_name. If the library is ever renamed,
+-- re-seeded, or this migration is run against a database whose drill_resources
+-- came from somewhere else, every one of those matches becomes zero rows — and
+-- an UPDATE that matches nothing is not an error in Postgres. The migration
+-- would report success, the columns would stay NULL, and retrieval would go on
+-- behaving exactly as it did before while every report said calibration had
+-- landed. That is the worst available outcome, so it is made loud here.
+--
+-- Guarded on the library actually being present: the bootstrap verifier applies
+-- this to a schema-only cluster with no drill rows at all, and that is a
+-- legitimate zero rather than a broken match.
+-- ---------------------------------------------------------------------------
+DO $$
+DECLARE
+  library_size INT;
+  calibrated   INT;
+  families     INT;
+BEGIN
+  SELECT count(*) INTO library_size FROM public.drill_resources;
+  SELECT count(*) INTO calibrated   FROM public.drill_resources WHERE station_friendly IS NOT NULL;
+  SELECT count(*) INTO families     FROM public.drill_activity_families;
+
+  IF families < 9 THEN
+    RAISE EXCEPTION '058: expected at least 9 activity families, found %', families;
+  END IF;
+
+  -- 50 is well below the 206-row library and well above the 2 rows this
+  -- migration inserts into an empty one, so it separates the two cases cleanly.
+  IF library_size > 50 AND calibrated < 40 THEN
+    RAISE EXCEPTION
+      '058: the drill library has % rows but only % were calibrated. The '
+      'drill_name matches did not land — do NOT treat this migration as applied.',
+      library_size, calibrated;
+  END IF;
+
+  RAISE NOTICE '058: % drills in the library, % calibrated, % families',
+    library_size, calibrated, families;
+END $$;
+
+-- ---------------------------------------------------------------------------
 -- Verification
 -- ---------------------------------------------------------------------------
 -- Expect roughly 44 calibrated rows (42 names, one of which has two rows in

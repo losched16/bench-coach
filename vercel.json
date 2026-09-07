@@ -5,5 +5,11 @@
       "path": "/api/cron/checkin-digest",
       "schedule": "0 1 * * 1"
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "claude/*": false,
+      "player-development-reports": false
+    }
+  }
 }

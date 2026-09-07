@@ -437,7 +437,9 @@ ok('four minutes cannot hold three rotations',
     byFamily.get(r.family_slug)!.push(r)
   }
   ok('families were actually used', byFamily.size >= 5, `${byFamily.size} families`)
-  for (const [slug, members] of byFamily) {
+  // Array.from rather than iterating the Map directly: tsconfig targets ES5 for
+  // the app, and a bare for..of over a Map needs downlevelIteration.
+  for (const [slug, members] of Array.from(byFamily.entries())) {
     ok(`family "${slug}" has more than one member`, members.length >= 2,
       'a family of one groups nothing')
   }

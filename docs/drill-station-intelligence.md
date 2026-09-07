@@ -172,3 +172,76 @@ phase has written to the production database.
 the migration stays the only place they are written; `test:drill-intelligence`
 runs the parser and fails loudly if an edit breaks the shape, rather than
 silently handing the evaluator an empty overlay.
+
+## Rollback
+
+Both migrations are additive, and the code tolerates every column being NULL —
+which is what makes rollback cheap. Nothing below requires a restore.
+
+### If 056 breaks reads
+
+It cannot break reads by construction: it adds a table and twenty nullable
+columns and touches no existing value. If something downstream nonetheless
+misbehaves, roll back the CODE, not the schema. New columns nobody selects are
+inert, and the previous build's `DRILL_FIELDS` does not name them.
+
+Only if the schema itself must go:
+
+```sql
+ALTER TABLE public.drill_resources
+  DROP COLUMN IF EXISTS activity_family_id,
+  DROP COLUMN IF EXISTS variation_type;
+  -- …and the other eighteen
+DROP TABLE IF EXISTS public.drill_activity_families;
+```
+
+Do this last. It destroys 058's data with it.
+
+### If 058's data is wrong
+
+Clear the calibration without touching the drills:
+
+```sql
+UPDATE public.drill_resources SET
+  activity_family_id = NULL, variation_type = NULL, activity_format = NULL,
+  practice_roles = NULL, min_players = NULL, max_players = NULL,
+  ideal_group_size = NULL, min_coaches = NULL, station_friendly = NULL,
+  rep_density = NULL, idle_time_risk = NULL, engagement_level = NULL,
+  competition_style = NULL, instruction_complexity = NULL,
+  throwing_load = NULL, physical_intensity = NULL, mixed_skill_friendly = NULL
+WHERE station_friendly IS NOT NULL OR activity_family_id IS NOT NULL;
+```
+
+The library is then exactly where it was before 058: 206 drills, all metadata
+NULL, everything eligible. "Absence is not a constraint" makes the rollback and
+the pre-migration state the same state.
+
+### The two original drills
+
+Retire, never delete:
+
+```sql
+UPDATE public.drill_resources SET status = 'rejected'
+WHERE source = 'benchcoach_original';
+```
+
+`status` allows `approved`, `pending_review`, `rejected` — there is no
+`retired` value, so `rejected` is the one that takes them out of the visible
+library. Deleting them would break any practice plan that already references
+them by id.
+
+### Family links only
+
+```sql
+UPDATE public.drill_resources SET activity_family_id = NULL, variation_type = NULL;
+```
+
+Redundancy detection falls back to names and video ids, which is where it was
+before this phase.
+
+### Is the schema safe to leave while code is rolled back?
+
+Yes, and this is the important property. The columns are nullable and unread by
+older code; `drill_activity_families` is a table nothing older queries. A code
+rollback needs no schema rollback, so the two can be reverted independently and
+in either order.
