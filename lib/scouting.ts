@@ -446,6 +446,16 @@ export interface PitchingTotals {
   /** Of those pitches, how many were strikes. 0 when no source printed it. */
   strikes: number
   /**
+   * The pitches strikePct is actually a percentage OF.
+   *
+   * Not the same as `pitches`, and that difference is the whole point. Only
+   * some outings come with a strike count; those outings' pitches are the only
+   * honest denominator. Exposed rather than kept private so a caller can say
+   * "62% across 34 of his 147 pitches" instead of implying the rate was
+   * measured over all of them.
+   */
+  strikePitches: number
+  /**
    * Strikes as a percentage of pitches, or null when we do not know.
    *
    * The most useful single number about a youth pitcher and the one a coach
@@ -493,7 +503,7 @@ export function outsToInnings(outs: number): number {
 export function aggregatePitchingLines(
   appearances: Array<{ pitching_line?: any; innings_pitched?: any; pitches_thrown?: any }>
 ): PitchingTotals {
-  const t: PitchingTotals = { outings: 0, ip: 0, h: 0, r: 0, er: 0, bb: 0, k: 0, hr: 0, bf: 0, pitches: 0, strikes: 0, strikePct: null }
+  const t: PitchingTotals = { outings: 0, ip: 0, h: 0, r: 0, er: 0, bb: 0, k: 0, hr: 0, bf: 0, pitches: 0, strikes: 0, strikePitches: 0, strikePct: null }
   let outs = 0
   for (const a of appearances || []) {
     const pitched = Number(a?.pitches_thrown) > 0 || a?.pitching_line || Number(a?.innings_pitched) > 0
@@ -508,15 +518,25 @@ export function aggregatePitchingLines(
     t.k += num(line, 'k', 'so', 'strikeouts')
     t.hr += num(line, 'hr', 'home_runs')
     t.bf += num(line, 'bf', 'batters_faced')
-    t.pitches += Number(a?.pitches_thrown) || num(line, 'pitches')
-    t.strikes += num(line, 'strikes', 's')
+    const outingPitches = Number(a?.pitches_thrown) || num(line, 'pitches')
+    const outingStrikes = num(line, 'strikes', 's')
+    t.pitches += outingPitches
+    // The denominator is built HERE, one outing at a time, from the outings
+    // that actually reported strikes. Summing strikes globally and dividing by
+    // every pitch is the bug this exists to prevent: a pitcher with one
+    // measured outing of 21 strikes in 34 pitches, plus three unmeasured
+    // outings, came out at 21/147 = 14% instead of 62% — and 14% reads as a kid
+    // who cannot find the plate when he is in fact worth attacking early.
+    if (outingStrikes > 0) {
+      t.strikes += outingStrikes
+      t.strikePitches += outingPitches
+    }
   }
   t.ip = outsToInnings(outs)
-  // Only meaningful against the pitches we have strike counts for. Dividing by
-  // every pitch would drag the percentage down for any outing logged before
-  // strikes were captured, and quietly report a strike-thrower as wild.
-  t.strikePct = t.strikes > 0 && t.pitches > 0
-    ? Math.round((t.strikes / t.pitches) * 100)
+  // Only meaningful against the pitches we have strike counts for — which is
+  // strikePitches, not pitches.
+  t.strikePct = t.strikes > 0 && t.strikePitches > 0
+    ? Math.round((t.strikes / t.strikePitches) * 100)
     : null
   return t
 }

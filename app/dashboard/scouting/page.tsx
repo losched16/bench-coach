@@ -993,7 +993,17 @@ function OpponentDetail({
                               return (pl.h || pl.bb || pl.k || pl.r) ? (
                                 <span className="block text-xs text-gray-500">
                                   {pl.ip} IP · {pl.h} H · {pl.r} R ({pl.er} ER) · {pl.bb} BB · {pl.k} K
-                                  {pl.strikePct !== null && ` · ${pl.strikePct}% strikes`}
+                                  {/* Say what the rate was measured across when
+                                      it is not every pitch. "62% strikes" over
+                                      34 of 147 pitches is a real number about a
+                                      third of his work, and reading it as his
+                                      season rate is a different claim. */}
+                                  {pl.strikePct !== null && (
+                                    ` · ${pl.strikePct}% strikes` +
+                                    (pl.strikePitches < pl.pitches
+                                      ? ` (of ${pl.strikePitches} pitches counted)`
+                                      : '')
+                                  )}
                                 </span>
                               ) : null
                             })()}

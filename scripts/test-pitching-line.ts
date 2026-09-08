@@ -117,6 +117,40 @@ check('no strike data means null, not zero',
   aggregatePitchingLines([{ pitches_thrown: 40, innings_pitched: 2 }]).strikePct === null,
   '0% would read as "throws nothing but balls" rather than "not captured"')
 
+// ── the mixed case, which is the NORMAL case ────────────────────────────────
+//
+// GameChanger prints the pitches-strikes line for some outings and not others,
+// so a real pitcher's record is nearly always partly measured. Every test above
+// this point had strikes on EVERY outing, which is exactly why the bug below
+// survived: it cannot appear until one outing lacks them.
+//
+// These are L Ruiz's five real logged outings. One carries a strike count.
+
+const ruiz = aggregatePitchingLines([
+  { pitches_thrown: null, pitching_line: { ip: 2, h: 1, k: 5 } },
+  { pitches_thrown: 34, pitching_line: { ip: 3, h: 1, k: 5, strikes: 21 } },
+  { pitches_thrown: 25, pitching_line: { ip: 1.1, h: 4, k: 1 } },
+  { pitches_thrown: 40, pitching_line: { ip: 1.1, h: 1, k: 4 } },
+  { pitches_thrown: 48, pitching_line: { ip: 2.1, h: 3, k: 1 } },
+])
+
+check('every pitch still counts toward the total', ruiz.pitches === 147)
+check('only the measured outing counts toward the strike rate', ruiz.strikePitches === 34)
+check('the rate is over the pitches it was measured across',
+  ruiz.strikePct === 62, `got ${ruiz.strikePct}`)
+check('...and NOT over every pitch he threw',
+  ruiz.strikePct !== 14,
+  '21/147 = 14% reported a 62% strike-thrower as a kid who cannot find the plate')
+
+// The same shape, opposite direction: an unmeasured outing must not be able to
+// flatter a pitcher either.
+const wild = aggregatePitchingLines([
+  { pitches_thrown: 20, pitching_line: { ip: 1, strikes: 4 } },
+  { pitches_thrown: 60, pitching_line: { ip: 3 } },
+])
+check('an unmeasured outing cannot inflate the rate either',
+  wild.strikePct === 20, `got ${wild.strikePct}`)
+
 console.log('')
 if (failures > 0) { console.log(`${failures} FAILED`); process.exit(1) }
 console.log('ALL PASS')
