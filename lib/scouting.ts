@@ -304,6 +304,62 @@ export function matchOpponentTeam(
   return best && best.similarity >= 0.7 ? best : null
 }
 
+/**
+ * Who did the tracked team PLAY in this entry?
+ *
+ * The row in a logged-games list has to answer "which game was this", and the
+ * subject team cannot answer it: you are already looking at that team's page,
+ * so labelling every row "Springford Blue" says nothing. What identifies a game
+ * is the other side.
+ *
+ * scouting_entries has no column for it — only opponent_team_id, which is the
+ * SUBJECT of the entry, whether that subject is a team being scouted or the
+ * coach's own. But a parsed box score has both line-ups, so the other name is
+ * sitting in raw_parse and just was not being read.
+ *
+ * Matched by similarity rather than equality on purpose. The tracked record
+ * says "Springford Blue" and GameChanger writes "SpringFord 8U Blue"; an
+ * equality check would decide neither side is the subject and then confidently
+ * name the coach's own team as their opponent.
+ *
+ * Returns null rather than guessing whenever the answer is not clear — a single
+ * line-up in the parse, no parse at all, or two names that both look like the
+ * subject. A blank is honest; a wrong opponent on a scouting report is not.
+ */
+export function opponentNameFromParse(
+  rawParse: any,
+  subjectTeamName: string
+): string | null {
+  const teams = rawParse?.teams
+  if (!Array.isArray(teams) || teams.length < 2) return null
+
+  const named = teams
+    .map((t: any) => (typeof t?.team_name === 'string' ? t.team_name.trim() : ''))
+    .filter((n: string) => n.length > 0)
+  if (named.length < 2) return null
+
+  // Score every line-up against the subject and take the WORST match as the
+  // opponent. Picking "the one that is not the best match" rather than "the one
+  // below a threshold" is what makes this work when the box score spells the
+  // subject differently from the tracked record.
+  const scored = named.map(n => ({ name: n, sim: nameSimilarity(n, subjectTeamName) }))
+  scored.sort((a, b) => b.sim - a.sim)
+
+  const subject = scored[0]
+  const other = scored[scored.length - 1]
+
+  // Both sides equally resemble the subject, so there is no basis for calling
+  // either one the opponent.
+  if (subject.sim === other.sim) return null
+
+  // Nothing in the parse resembles the subject at all. The entry may be filed
+  // against the wrong team, and naming a side here would launder that mistake
+  // into a confident label.
+  if (subject.sim < 0.5) return null
+
+  return other.name
+}
+
 // ── Staleness ──────────────────────────────────────────
 // Youth players change faster than any other population — decay anything over
 // ~4 months and treat data older than a season as historical, not current.

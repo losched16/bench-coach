@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { usePageView, useTracker } from '@/lib/tracking'
-import { nameSimilarity, stalenessLabel, stalenessOf, aggregateBattingLines, MIN_PA_FOR_TENDENCY , aggregatePitchingLines} from '@/lib/scouting'
+import { nameSimilarity, stalenessLabel, stalenessOf, aggregateBattingLines, MIN_PA_FOR_TENDENCY , aggregatePitchingLines, opponentNameFromParse } from '@/lib/scouting'
 import { OpponentChat } from '@/components/OpponentChat'
 import { prepareImages, imagesFromClipboard } from '@/lib/imagePrep'
 import { OpponentAnalysis } from '@/components/OpponentAnalysis'
@@ -62,6 +62,9 @@ interface Appearance {
 
 interface ScoutingEntry {
   image_urls?: string[]
+  // Both line-ups from the box score. The only place the OTHER team's name is
+  // recorded — scouting_entries has no column for it.
+  raw_parse?: any
   id: string
   entry_type: string
   occurred_on: string | null
@@ -1024,6 +1027,7 @@ function EntryRow({
   onDelete: () => void
   onSave: (updates: { notes?: string | null; occurred_on?: string | null; tournament_name?: string | null }) => Promise<boolean | void>
 }) {
+  const opponent = opponentNameFromParse(entry.raw_parse, teamName)
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [notes, setNotes] = useState(entry.notes || '')
@@ -1115,10 +1119,16 @@ function EntryRow({
           <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
             {entry.entry_type.replace('_', ' ')}
           </span>
-          <span className="text-sm font-medium text-gray-900">{teamName}</span>
+          {/* WHO THEY PLAYED, not whose page this is. Labelling every row with
+              the team you are already looking at identifies nothing; the other
+              side is what tells one game from another. Blank when the parse
+              cannot say — a wrong opponent is worse than no opponent. */}
+          {opponent
+            ? <span className="text-sm font-medium text-gray-900">vs {opponent}</span>
+            : <span className="text-sm text-gray-400">opponent not recorded</span>}
           {isOwnTeam && (
             <span className="text-[10px] font-semibold uppercase tracking-wide bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
-              Your team
+              Our game
             </span>
           )}
           <span className="text-sm text-gray-700">{entry.occurred_on || 'No date'}</span>

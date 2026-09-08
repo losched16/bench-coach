@@ -14,6 +14,7 @@ import {
   chooseTrackedSide, teamNameSimilarity, teamNamesMatch, samePlayer, rosterOverlap,
   normalizeName, ownPlayersIn, ParsedSide,
 } from '@/lib/scoutingSides'
+import { opponentNameFromParse } from '@/lib/scouting'
 
 let failures = 0
 function check(label: string, cond: boolean, detail?: string) {
@@ -185,6 +186,39 @@ check('no roster means no false alarms', ownPlayersIn([{ name: 'C. Losch' }], []
 
 check('overlap is a fraction of the side, not a count',
   Math.abs(rosterOverlap(side(null, ['C. Losch', 'A. Nguyen']), OURS) - 0.5) < 0.001)
+
+// ── which side is the OPPONENT, for the logged-games list ───────────────────
+//
+// The row has to say which game it was, and the subject team cannot say it —
+// you are already on that team's page. The other line-up is the answer, and it
+// is sitting in raw_parse.
+
+const parse = (...names: string[]) => ({ teams: names.map(n => ({ team_name: n })) })
+
+check('the other line-up is the opponent',
+  opponentNameFromParse(parse('Springford Blue', 'Lowell 8U'), 'Springford Blue') === 'Lowell 8U')
+check('...whichever order the parser listed them in',
+  opponentNameFromParse(parse('Lowell 8U', 'Springford Blue'), 'Springford Blue') === 'Lowell 8U')
+
+// The case that would otherwise name the coach's own team as their opponent.
+check('GameChanger spelling the subject differently still resolves',
+  opponentNameFromParse(parse('SpringFord 8U Blue', 'Lowell 8U'), 'Springford Blue') === 'Lowell 8U')
+check('and an opponent that resembles nothing is still returned',
+  opponentNameFromParse(parse('Springford Blue', 'Warrington Wolverines 8U~Blue'), 'Springford Blue')
+    === 'Warrington Wolverines 8U~Blue')
+
+// Refusals. A blank is honest; a wrong opponent on a scouting report is not.
+check('one line-up names no opponent',
+  opponentNameFromParse(parse('Springford Blue'), 'Springford Blue') === null)
+check('no parse names no opponent', opponentNameFromParse(null, 'Springford Blue') === null)
+check('an empty parse names no opponent', opponentNameFromParse({}, 'Springford Blue') === null)
+check('two identical names name no opponent',
+  opponentNameFromParse(parse('Springford Blue', 'Springford Blue'), 'Springford Blue') === null)
+check('a parse matching neither side names no opponent',
+  opponentNameFromParse(parse('Aces 10U', 'Bandits 10U'), 'Springford Blue') === null,
+  'the entry may be filed against the wrong team — do not launder that into a label')
+check('blank team names are ignored rather than shown',
+  opponentNameFromParse({ teams: [{ team_name: 'Springford Blue' }, { team_name: '  ' }] }, 'Springford Blue') === null)
 
 console.log('')
 if (failures > 0) { console.log(`${failures} FAILED`); process.exit(1) }
