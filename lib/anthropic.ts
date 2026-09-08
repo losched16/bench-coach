@@ -870,6 +870,12 @@ The block minutes must add to ${i.duration} or less — never more. A practice t
 
 Every block must be a REAL, NAMED drill — "Alligator Ground Balls", "Four Corners Rundown". Never a category like "Fielding Practice" or "Throwing Assessment".
 
+EVERY FOCUS AREA THE COACH SELECTED GETS REAL REPS. ${i.focus.length > 1
+  ? `They selected ${i.focus.length}: ${i.focus.join(', ')}. Each one needs at least one real drill block or station of its own — not a mention in a warm-up, not a coaching point, not a fungo drill counted as hitting. One area may lead if the coach's goal says so, but no selected area gets a token ten minutes while another gets forty. If there are enough players and adults, a station rotation with one station per focus area is usually the best answer: every kid works every area, and the clock is spent once.`
+  : `They selected one, so it can dominate the practice.`}
+
+STATION ROTATIONS ARE ONE BLOCK. When you run activities in parallel, write ONE block with "type": "station", "minutes" equal to the ELAPSED time of the whole rotation (rotation length × number of stations, plus a minute per changeover), "groups" and "rotation_minutes" stated, and a "stations" array with one entry per station — each a named drill with its own drill_name and youtube_video_id from the library where one exists. Never write three parallel stations as three sequential blocks: that triples the clock and the practice will not fit.
+
 Return ONLY this JSON:
 {
   "title": "Specific to this team and this practice, not 'Youth Baseball Practice'",
@@ -885,7 +891,10 @@ Return ONLY this JSON:
       "description": "One sentence: what happens and why it is in this practice.",
       "drill_name": "exact name from the library, or omit",
       "youtube_video_id": "exact id from the library, or omit",
-      "youtube_channel": "channel from the library, or omit"
+      "youtube_channel": "channel from the library, or omit",
+      "groups": "station blocks only: how many groups rotate",
+      "rotation_minutes": "station blocks only: minutes each group spends at each station",
+      "stations": [{ "title": "station blocks only: the named drill at this station", "description": "one sentence", "drill_name": "exact library name, or omit", "youtube_video_id": "exact id, or omit" }]
     }
   ]
 }` }],

@@ -22,7 +22,7 @@ import { Printer, ArrowLeft, Loader2 } from 'lucide-react'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import {
   readPlan, equipmentChecklist, scheduleRows, plannedMinutes,
-  fallbackCoachingPoints,
+  fallbackCoachingPoints, isStationGroup,
 } from '@/lib/practicePlan'
 
 export default function PracticeSheetPage() {
@@ -227,6 +227,17 @@ export default function PracticeSheetPage() {
                             {r.description}
                           </p>
                         )}
+                        {/* A rotation is one row on the clock; its stations
+                            are listed under it so the sheet shows where each
+                            group is without pretending the stations run in
+                            sequence. */}
+                        {r.stations.length > 0 && (
+                          <ul className="mt-1 space-y-0.5">
+                            {r.stations.map((s) => (
+                              <li key={s} className="text-[11.5px] text-gray-800 leading-snug pl-2">{s}</li>
+                            ))}
+                          </ul>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -263,18 +274,18 @@ export default function PracticeSheetPage() {
         {/* Block detail. One page per practice is the goal, so this starts on a
             new sheet — a coach who wants the step-by-step wants all of it, and
             a coach who does not can print page 1 alone. */}
-        {content.blocks.some(hasDetail) && (
+        {detailBlocks(content.blocks).some(d => hasDetail(d.block)) && (
           <section className="mt-6 print:break-before-page">
             <h2 className="text-[10px] font-black uppercase tracking-[0.15em] border-b-2 border-black pb-1">
               Drill detail
             </h2>
             <div className="divide-y divide-gray-300">
-              {content.blocks.map((b, i) =>
+              {detailBlocks(content.blocks).map(({ block: b, label }, i) =>
                 hasDetail(b) ? (
                   <div key={i} className="py-3 break-inside-avoid">
                     <div className="flex items-baseline justify-between gap-3">
                       <h3 className="font-bold text-[14px]">
-                        {i + 1}. {b.title}
+                        {label} {b.title}
                       </h3>
                       <span className="text-[11px] text-gray-600 shrink-0">{b.minutes} min</span>
                     </div>
@@ -333,6 +344,23 @@ function hasDetail(b: any): boolean {
     b?.setup || b?.detailed_instructions || b?.watch_for ||
     b?.coaching_cues?.length || b?.common_mistakes?.length
   )
+}
+
+// The blocks that get a detail entry, in running order, with a station
+// rotation's activities listed under it as 3A, 3B, 3C. The printed sheet
+// keeps every field the app has — the change to the on-screen review is a
+// change to the default, not to what a coach can read.
+function detailBlocks(blocks: any[]): Array<{ block: any; label: string }> {
+  const out: Array<{ block: any; label: string }> = []
+  blocks.forEach((b, i) => {
+    out.push({ block: b, label: `${i + 1}.` })
+    if (isStationGroup(b)) {
+      ;(b.stations as any[]).forEach((s, k) => {
+        out.push({ block: s, label: `${i + 1}${String.fromCharCode(65 + k)}.` })
+      })
+    }
+  })
+  return out
 }
 
 function Box({ title, children, tight }: {

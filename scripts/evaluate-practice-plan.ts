@@ -34,6 +34,7 @@ import {
   computeBudget, schedulePractice, estimateBlockCount, Schedule,
 } from '@/lib/practiceScheduler'
 import { describeStationGroup, assessStations } from '@/lib/stationPlanner'
+import { evaluatePriorityCoverage, describeCoverage } from '@/lib/priorityCoverage'
 // @ts-ignore -- plain ESM, no types
 import { estimateAll } from './estimate-drill-durations.mjs'
 // @ts-ignore -- plain ESM, no types
@@ -321,6 +322,9 @@ function schedule(s: Scenario): { sched: Schedule; ret: ReturnType<typeof retrie
       candidates: ret.scored, budget, lowConfidenceIds: LOW_IDS,
       expectedPlayers: s.players ?? null,
       coachCount: s.coaches ?? null,
+      // The coach's selected focus areas, so the proposal reserves each one
+      // its minimum share before relevance fills the rest.
+      priorities: s.focus,
     }),
     ret,
   }
@@ -411,6 +415,18 @@ function render(s: Scenario) {
       availableMinutes: sched.scheduledMinutes,
     })
     console.log(`\n  NO STATION GROUP: ${why.reason || 'not applicable'}`)
+  }
+
+  // What each selected focus area would get if the model ran the proposal
+  // as written. Sequential blocks only here — the station suggestion above
+  // is an option the model may take, and its exposure is shown separately.
+  if (s.focus.length > 1) {
+    const proposal = sched.items.map(i => ({
+      type: 'drill', title: i.drill.drill_name, minutes: i.minutes, drill_name: i.drill.drill_name,
+    }))
+    const cov = evaluatePriorityCoverage(proposal, s.focus, { drills: sched.items.map(i => i.drill) })
+    console.log('\n  PRIORITY COVERAGE OF THE PROPOSAL (drill blocks only):')
+    console.log('  ' + describeCoverage(cov).split('\n').join('\n  '))
   }
 
   const notable = sched.rejected
