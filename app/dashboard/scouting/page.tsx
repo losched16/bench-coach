@@ -6,6 +6,7 @@ import { Suspense } from 'react'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { usePageView, useTracker } from '@/lib/tracking'
 import { nameSimilarity, stalenessLabel, stalenessOf, aggregateBattingLines, MIN_PA_FOR_TENDENCY , aggregatePitchingLines, opponentNameFromParse } from '@/lib/scouting'
+import { crossCheckHits } from '@/lib/recapCrossCheck'
 import { OpponentChat } from '@/components/OpponentChat'
 import { prepareImages, imagesFromClipboard } from '@/lib/imagePrep'
 import { OpponentAnalysis } from '@/components/OpponentAnalysis'
@@ -2022,6 +2023,41 @@ function CaptureForm({
           {/* Parsed box score review table */}
           {entryType === 'box_score' && parsedPlayers.length > 0 && (
             <div className="mt-3">
+              {/* THE WRITE-UP DISAGREES WITH THE TABLE.
+                  A GameChanger upload carries two accounts of the same game and
+                  the parser only ever read one. On 18 August the recap named six
+                  Springford players with a hit, the table credited four, and one
+                  of the two it dropped read 0-for-8 for the season before anyone
+                  noticed. The sentence proving it was in the same payload.
+                  Shown before saving, because after saving nobody looks. */}
+              {(() => {
+                const recap = String(parsed?.pasted_text || pastedText || '')
+                const gaps = crossCheckHits(recap, parsedPlayers.map(p => ({
+                  name: p.name, batting_line: p.batting_line,
+                })))
+                if (gaps.length === 0) return null
+                return (
+                  <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-300">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-amber-900 mb-1">
+                      <AlertTriangle size={16} />
+                      The write-up says {gaps.length === 1 ? 'a hit is' : `${gaps.length} hits are`} missing
+                    </div>
+                    <p className="text-xs text-amber-800 mb-2">
+                      The recap and the box score disagree. Neither is automatically right —
+                      check these before saving and correct the H column if the recap is.
+                    </p>
+                    <ul className="space-y-1.5">
+                      {gaps.map((g, i) => (
+                        <li key={i} className="text-xs text-amber-900">
+                          <strong>{g.playerName}</strong> — recap says {g.recapSays}{' '}
+                          hit{g.recapSays === 1 ? '' : 's'}, the table has {g.parsedHas}
+                          <span className="block text-amber-700 italic mt-0.5">“{g.because}”</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )
+              })()}
               <div className="flex items-center gap-2 text-sm text-gray-700 mb-2">
                 <CheckCircle2 size={16} className="text-green-600" />
                 Parsed {parsedPlayers.length} players
