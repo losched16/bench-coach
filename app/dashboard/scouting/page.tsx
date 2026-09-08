@@ -353,6 +353,33 @@ function ScoutingContent() {
     }
   }
 
+  // Correct one player's line for one game.
+  //
+  // Per game rather than per season on purpose: the season line is a sum of
+  // these, so editing the total would leave it disagreeing with the games it
+  // claims to add up, and no re-parse could reconcile them.
+  const saveAppearance = async (
+    appearanceId: string,
+    payload: { batting?: any; pitching?: any; pitchesThrown?: any }
+  ) => {
+    if (!coachId) return false
+    setDataNotice(null)
+    try {
+      const res = await fetch('/api/scouting/appearances', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coachId, appearanceId, ...payload }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'That line could not be saved.')
+      if (selectedOpponentId) await loadDetail(selectedOpponentId)
+      return true
+    } catch (e: any) {
+      setDataNotice(e?.message || 'That line could not be saved.')
+      return false
+    }
+  }
+
   // Remove one tracked player. For the ones a coach can see are wrong — a
   // stray row from the other side of a box score, a duplicate the merge tool
   // did not catch.
@@ -520,6 +547,7 @@ function ScoutingContent() {
           onClearReview={clearReviewFlag}
           onDeleteEntry={deleteEntry}
           onSaveEntry={saveEntry}
+          onSaveAppearance={saveAppearance}
           onReparseEntry={reparseEntry}
           reparsingId={reparsing}
           onDeletePlayer={deletePlayer}
@@ -679,7 +707,7 @@ function OpponentList({
 function OpponentDetail({
   detail, loading, coachId, teamId, mergeMode, mergeSelection, merging,
   onBack, onToggleMergeMode, onToggleMergeSelect, onMerge, onClearReview, onDeleteEntry,
-  onSaveEntry, onReparseEntry, reparsingId, onDeletePlayer, onPrunePlayers, onDeleteTeam, onViewBoard,
+  onSaveEntry, onSaveAppearance, onReparseEntry, reparsingId, onDeletePlayer, onPrunePlayers, onDeleteTeam, onViewBoard,
 }: {
   detail: { team: OpponentTeam; players: OpponentPlayer[]; entries: ScoutingEntry[]; matchups: Matchup[] } | null
   loading: boolean
@@ -698,6 +726,10 @@ function OpponentDetail({
     id: string,
     updates: { notes?: string | null; occurred_on?: string | null; tournament_name?: string | null }
   ) => Promise<boolean | void>
+  onSaveAppearance: (
+    appearanceId: string,
+    payload: { batting?: any; pitching?: any; pitchesThrown?: any }
+  ) => Promise<boolean | void>
   onReparseEntry: (id: string) => void
   reparsingId: string | null
   onDeletePlayer: (id: string, name: string) => void
@@ -706,6 +738,7 @@ function OpponentDetail({
   onViewBoard: () => void
 }) {
   const today = todayStr()
+  const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null)
 
   if (loading || !detail) {
     return (
@@ -921,15 +954,31 @@ function OpponentDetail({
                         )}
                       </td>
                       <td className="py-2 pr-3 text-gray-600">{p.appearances?.length || 0}</td>
+                      {/* The season line is a SUM of the games below it, so it
+                          is not editable here — a total that disagreed with its
+                          own games could never be reconciled by a re-parse.
+                          Clicking opens the games, where the wrong one lives. */}
                       <td className="py-2 pr-3 text-gray-600">
-                        {totals.pa > 0 ? (
-                          <>
-                            {totals.h}/{totals.ab}{totals.bb > 0 ? `, ${totals.bb}BB` : ''}{totals.k > 0 ? `, ${totals.k}K` : ''}
-                            {smallSample && (
-                              <span className="block text-xs text-amber-600">small sample ({totals.pa} PA)</span>
-                            )}
-                          </>
-                        ) : '—'}
+                        <button
+                          onClick={() => setEditingPlayerId(editingPlayerId === p.id ? null : p.id)}
+                          disabled={(p.appearances?.length || 0) === 0}
+                          title="Open the game-by-game lines to correct one"
+                          className="text-left hover:text-blue-700 disabled:hover:text-gray-600 disabled:cursor-default"
+                        >
+                          {totals.pa > 0 ? (
+                            <>
+                              {totals.h}/{totals.ab}{totals.bb > 0 ? `, ${totals.bb}BB` : ''}{totals.k > 0 ? `, ${totals.k}K` : ''}
+                              {smallSample && (
+                                <span className="block text-xs text-amber-600">small sample ({totals.pa} PA)</span>
+                              )}
+                            </>
+                          ) : '—'}
+                          {(p.appearances?.length || 0) > 0 && (
+                            <span className="block text-xs text-blue-600">
+                              {editingPlayerId === p.id ? 'hide games' : 'fix a game'}
+                            </span>
+                          )}
+                        </button>
                       </td>
                       <td className="py-2 pr-3 text-gray-600">
                         {pitchApps.length > 0 ? (
@@ -968,6 +1017,19 @@ function OpponentDetail({
                     </tr>
                   )
                 })}
+                {/* The expanded player's games, spanning the whole table so the
+                    inputs have room on a phone. */}
+                {players.filter(p => p.id === editingPlayerId).map(p => (
+                  <tr key={`${p.id}-games`}>
+                    <td colSpan={mergeMode ? 9 : 8} className="p-0">
+                      <PlayerGameLines
+                        player={p}
+                        onSave={(appearanceId, payload) => onSaveAppearance(appearanceId, payload)}
+                        onClose={() => setEditingPlayerId(null)}
+                      />
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -1166,6 +1228,159 @@ function EntryRow({
           <Trash2 size={16} />
         </button>
       </div>
+    </div>
+  )
+}
+
+/**
+ * One player's line, game by game, editable.
+ *
+ * WHY THIS IS PER GAME
+ *
+ * The season line above is a SUM of these rows. Making the total editable would
+ * let it disagree with the games it claims to add up, and nothing — not a
+ * re-parse, not a recount — could ever reconcile the two. Fixing the game that
+ * is actually wrong keeps the arithmetic honest and survives a re-parse of any
+ * other entry.
+ *
+ * WHY IT NEEDS TO EXIST AT ALL
+ *
+ * The parser reads screenshots, and screenshots get scrolled and cropped. In a
+ * real logged game the recap stored beside the parse named six players with a
+ * hit and the parsed lines credited four; one of the two it dropped then read
+ * 0-for-8 for the season on the page his coach plans line-ups from. The repairs
+ * available before this were re-parse — same screenshots, same misreading — and
+ * delete, which throws away twenty other players' lines to fix one.
+ */
+function PlayerGameLines({
+  player, onSave, onClose,
+}: {
+  player: OpponentPlayer
+  onSave: (appearanceId: string, payload: { batting?: any; pitching?: any; pitchesThrown?: any }) => Promise<boolean | void>
+  onClose: () => void
+}) {
+  const games = [...(player.appearances || [])].sort((a, b) =>
+    String(b.game_date || '').localeCompare(String(a.game_date || ''))
+  )
+
+  return (
+    <div className="bg-blue-50/60 border-y border-blue-200 px-4 py-3">
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-sm font-semibold text-gray-900">
+          {player.name} — game by game
+        </h4>
+        <button onClick={onClose} className="text-xs text-gray-500 hover:text-gray-800 underline">
+          close
+        </button>
+      </div>
+      <p className="text-xs text-gray-600 mb-3">
+        The season line is the sum of these, so correct the game that is wrong rather than the
+        total. Saving marks the scouting report out of date; you choose when to rewrite it.
+      </p>
+      <div className="space-y-2">
+        {games.map(g => <GameLineEditor key={g.id} appearance={g} onSave={onSave} />)}
+      </div>
+    </div>
+  )
+}
+
+/** One game's batting and pitching line. */
+function GameLineEditor({
+  appearance, onSave,
+}: {
+  appearance: Appearance
+  onSave: (appearanceId: string, payload: { batting?: any; pitching?: any; pitchesThrown?: any }) => Promise<boolean | void>
+}) {
+  const b = appearance.batting_line || {}
+  const pl = appearance.pitching_line || {}
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  // Strings, not numbers: an emptied box has to stay empty while it is being
+  // retyped rather than snapping back to 0 under the coach's fingers.
+  const [bat, setBat] = useState<Record<string, string>>({
+    ab: b.ab ?? '', h: b.h ?? '', bb: b.bb ?? '', k: b.k ?? '', rbi: b.rbi ?? '', r: b.r ?? '',
+  })
+  const [pitch, setPitch] = useState<Record<string, string>>({
+    ip: pl.ip ?? '', h: pl.h ?? '', r: pl.r ?? '', er: pl.er ?? '', bb: pl.bb ?? '', k: pl.k ?? '',
+  })
+  const [pitches, setPitches] = useState<string>(String(appearance.pitches_thrown ?? ''))
+
+  // Only offer the pitching half where there is already a pitching record.
+  // Every position player would otherwise get six boxes inviting them to
+  // invent an outing that never happened.
+  const pitched = (appearance.pitches_thrown || 0) > 0 || Object.keys(pl).length > 0
+
+  const save = async () => {
+    setSaving(true)
+    setSaved(false)
+    const payload: any = { batting: bat }
+    if (pitched) {
+      payload.pitching = pitch
+      payload.pitchesThrown = pitches === '' ? null : pitches
+    }
+    const ok = await onSave(appearance.id, payload)
+    setSaving(false)
+    if (ok !== false) {
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    }
+  }
+
+  const box = (
+    label: string,
+    value: string,
+    set: (v: string) => void,
+  ) => (
+    <label key={label} className="text-[11px] text-gray-600 uppercase tracking-wide">
+      {label}
+      <input
+        type="text"
+        inputMode="decimal"
+        value={value}
+        onChange={ev => set(ev.target.value)}
+        className="mt-0.5 w-14 px-2 py-1.5 border border-gray-300 rounded text-sm text-gray-900 text-center"
+      />
+    </label>
+  )
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-3">
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <span className="text-sm font-medium text-gray-900">{appearance.game_date || 'No date'}</span>
+        <div className="flex items-center gap-2">
+          {saved && <span className="text-xs text-green-700">Saved</span>}
+          <button
+            onClick={save}
+            disabled={saving}
+            className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs hover:bg-slate-800 disabled:opacity-50"
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 items-end">
+        <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-14">Batting</span>
+        {box('AB', bat.ab, v => setBat({ ...bat, ab: v }))}
+        {box('H', bat.h, v => setBat({ ...bat, h: v }))}
+        {box('BB', bat.bb, v => setBat({ ...bat, bb: v }))}
+        {box('K', bat.k, v => setBat({ ...bat, k: v }))}
+        {box('RBI', bat.rbi, v => setBat({ ...bat, rbi: v }))}
+        {box('R', bat.r, v => setBat({ ...bat, r: v }))}
+      </div>
+
+      {pitched && (
+        <div className="flex flex-wrap gap-2 items-end mt-2 pt-2 border-t border-gray-100">
+          <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-14">Pitching</span>
+          {box('IP', pitch.ip, v => setPitch({ ...pitch, ip: v }))}
+          {box('H', pitch.h, v => setPitch({ ...pitch, h: v }))}
+          {box('R', pitch.r, v => setPitch({ ...pitch, r: v }))}
+          {box('ER', pitch.er, v => setPitch({ ...pitch, er: v }))}
+          {box('BB', pitch.bb, v => setPitch({ ...pitch, bb: v }))}
+          {box('K', pitch.k, v => setPitch({ ...pitch, k: v }))}
+          {box('PITCHES', pitches, setPitches)}
+        </div>
+      )}
     </div>
   )
 }
