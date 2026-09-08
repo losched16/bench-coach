@@ -14,7 +14,7 @@
 //   npm run test:recap-crosscheck
 
 import {
-  hitClaimsFromRecap, crossCheckHits, matchRecapName, initialsOf,
+  hitClaimsFromRecap, crossCheckHits, matchRecapName, initialsOf, teamCreditedBy,
 } from '@/lib/recapCrossCheck'
 
 let failures = 0
@@ -163,6 +163,44 @@ check('a player with no batting line is not this check\'s business',
   crossCheckHits(EACH, [{ name: 'C Losch' }]).length === 0)
 check('no recap text means no warnings', crossCheckHits('', PARSED_AS_STORED).length === 0)
 check('no players means no warnings', crossCheckHits(EACH, []).length === 0)
+
+// ── the other dugout ────────────────────────────────────────────────────────
+//
+// Found by running this check over the 18 stored entries, not by writing a
+// test. One entry flagged, and it was wrong: the Springford Blue page showed
+// "Luciano and Khaleb each collected three hits for Latin America 8U" against
+// Lucas Ruiz, who is the only L on the Springford sheet. A recap narrates BOTH
+// line-ups. The sentence says whose hits they are and nothing was reading it.
+
+const OTHER_SIDE = `Latin America 8U piled up 11 hits in the game. Luciano and Khaleb each collected three hits for Latin America 8U. Jose Fernando O collected two hits for Latin America 8U in two at bats.`
+
+check('a sentence naming a team is read as crediting that team',
+  teamCreditedBy('Luciano and Khaleb each collected three hits for Latin America 8U.') === 'Latin America 8U')
+check('the trailing clause is not swallowed into the team name',
+  teamCreditedBy('Jose Fernando O collected two hits for Latin America 8U in two at bats.') === 'Latin America 8U',
+  '"in two at bats" must stop the match')
+check('a sentence crediting nobody names no team',
+  teamCreditedBy('Teddy H collected three hits in three at bats, as SpringFord 8U Blue defeated Lowell 8U 11-1.') === null,
+  'no "for X" clause — falls back to matching by name')
+
+check('the other dugout\'s hits do not land on our roster',
+  crossCheckHits(OTHER_SIDE, [{ name: 'L Ruiz', batting_line: { ab: 2, h: 0 } }], 'Springford Blue').length === 0,
+  'the real false positive: Luciano is not Lucas Ruiz')
+
+// The guard must not eat the sentence it was built for. GameChanger spells the
+// team differently from the tracked record — "SpringFord 8U Blue" against
+// "Springford Blue" — so this has to match on similarity, not equality.
+check('our own dugout\'s hits still count against our roster',
+  crossCheckHits(EACH, PARSED_AS_STORED, 'Springford Blue').length === 2,
+  'the 18 August detection must survive the team guard')
+check('...and still names both players',
+  crossCheckHits(EACH, PARSED_AS_STORED, 'Springford Blue')
+    .map(f => f.playerName).sort().join(',') === 'C Losch,W Bergmaier')
+
+// Without a subject team there is nothing to compare against, so behaviour is
+// unchanged — the caller that knows the team passes it.
+check('no subject team means the guard cannot fire',
+  crossCheckHits(EACH, PARSED_AS_STORED).length === 2)
 
 console.log('')
 if (failures > 0) { console.log(`${failures} FAILED`); process.exit(1) }

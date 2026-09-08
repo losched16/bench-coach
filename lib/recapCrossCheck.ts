@@ -30,6 +30,8 @@
 // an unmatched name, a sentence it cannot parse — all produce silence rather
 // than a guess.
 
+import { nameSimilarity } from '@/lib/scouting'
+
 /** A claim the recap makes about one player's hits. */
 export interface HitClaim {
   /** The name as the recap wrote it — "Charlie L", "Greyson". */
@@ -38,6 +40,8 @@ export interface HitClaim {
   atLeast: number
   /** The sentence it came from, so a person can check the claim. */
   because: string
+  /** The team the sentence credits, when it names one. */
+  forTeam?: string | null
 }
 
 export interface Discrepancy {
@@ -110,6 +114,25 @@ export function matchRecapName(who: string, parsedNames: string[]): string | nul
 }
 
 /**
+ * The team a sentence credits its hits to, when it names one.
+ *
+ * A recap narrates BOTH line-ups, and a hit sentence usually says whose it is:
+ * "Luciano and Khaleb each collected three hits for Latin America 8U". Without
+ * reading that clause, a claim about the other dugout gets matched against the
+ * roster in front of us — which is how a real scan put a Latin America player's
+ * three hits on Lucas Ruiz of Springford, the only L on the sheet.
+ *
+ * Stops at the first lowercase word, so "for Latin America 8U in two at bats"
+ * yields the team and not the rest of the sentence.
+ */
+export function teamCreditedBy(sentence: string): string | null {
+  const m = /\bfor\s+([A-Z][\w'\u2019.-]*(?:\s+[A-Z0-9][\w'\u2019.-]*){0,4})/.exec(String(sentence || ''))
+  if (!m) return null
+  const name = m[1].replace(/[.,;:]+$/, '').trim()
+  return name || null
+}
+
+/**
  * Every hit the recap prose can be read as claiming.
  *
  * Four sentence shapes, all taken from real GameChanger output, and all read as
@@ -124,7 +147,11 @@ export function hitClaimsFromRecap(text: string): HitClaim[] {
   const claims: HitClaim[] = []
   const add = (who: string, atLeast: number, because: string) => {
     const name = who.trim().replace(/\s+/g, ' ')
-    if (name && atLeast > 0) claims.push({ who: name, atLeast, because: because.trim() })
+    if (name && atLeast > 0) {
+      claims.push({
+        who: name, atLeast, because: because.trim(), forTeam: teamCreditedBy(because),
+      })
+    }
   }
 
   // "A, B, and C each collected one hit" — the sentence that started this.
@@ -168,23 +195,48 @@ export function hitClaimsFromRecap(text: string): HitClaim[] {
 }
 
 /**
+ * How close two team names must be to be the same team.
+ *
+ * Low, because the two sources spell it differently on purpose: the tracked
+ * record says "Springford Blue" and GameChanger writes "SpringFord 8U Blue".
+ * The job here is only to tell one dugout from the other, and the names it
+ * must separate — "Springford Blue" from "Latin America 8U" — are nothing
+ * alike. Set tighter and the real Springford sentence stops being read.
+ */
+const SAME_TEAM = 0.6
+
+/**
  * Where the table and the write-up disagree about hits.
  *
  * Only under-reporting is flagged. A table crediting MORE hits than the prose
  * mentions is the normal case — a recap names the highlights and skips the
  * rest — so treating that as an error would flag almost every upload.
+ *
+ * Pass `subjectTeam` — the team whose players these are. A recap narrates both
+ * line-ups, so without it a sentence about the other dugout gets matched
+ * against the roster in front of us. That is not hypothetical: run over the
+ * stored entries, the check credited a Latin America player's three hits to
+ * Lucas Ruiz of Springford, because he was the only L on the sheet. A sentence
+ * that names a team is only about that team.
  */
 export function crossCheckHits(
   recapText: string,
-  players: Array<{ name: string; batting_line?: any }>
+  players: Array<{ name: string; batting_line?: any }>,
+  subjectTeam?: string | null
 ): Discrepancy[] {
   const claims = hitClaimsFromRecap(recapText)
   if (claims.length === 0) return []
 
   const names = players.map(p => p.name).filter(Boolean)
+  const subject = String(subjectTeam || '').trim()
   const out: Discrepancy[] = []
 
   for (const claim of claims) {
+    // A sentence crediting a team that is not this one is about the other
+    // dugout. Skipped rather than guessed at: these rosters are children, and
+    // a warning on the wrong one costs the coach the work of disproving it.
+    if (subject && claim.forTeam && nameSimilarity(claim.forTeam, subject) < SAME_TEAM) continue
+
     const matched = matchRecapName(claim.who, names)
     if (!matched) continue
     const player = players.find(p => p.name === matched)

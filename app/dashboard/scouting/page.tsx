@@ -2032,9 +2032,15 @@ function CaptureForm({
                   Shown before saving, because after saving nobody looks. */}
               {(() => {
                 const recap = String(parsed?.pasted_text || pastedText || '')
+                // Whose players these are. A recap narrates both dugouts, so
+                // without this a sentence about the other team gets matched
+                // against the roster on screen.
+                const subjectTeam = logOwnTeam
+                  ? ownTeamName
+                  : (opponents.find(o => o.id === opponentTeamId)?.name || newTeamName.trim())
                 const gaps = crossCheckHits(recap, parsedPlayers.map(p => ({
                   name: p.name, batting_line: p.batting_line,
-                })))
+                })), subjectTeam)
                 if (gaps.length === 0) return null
                 return (
                   <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-300">
