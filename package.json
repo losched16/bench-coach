@@ -25,6 +25,7 @@
     "test:drill-retrieval": "npx --yes tsx --tsconfig tsconfig.json scripts/test-drill-retrieval.ts",
     "test:drill-durations": "npx --yes tsx --tsconfig tsconfig.json scripts/test-drill-durations.ts",
     "test:practice-scheduler": "npx --yes tsx --tsconfig tsconfig.json scripts/test-practice-scheduler.ts",
+    "test:priority-coverage": "npx --yes tsx --tsconfig tsconfig.json scripts/test-priority-coverage.ts",
     "test:drill-video": "npx --yes tsx --tsconfig tsconfig.json scripts/test-drill-video.ts",
     "test:drill-intelligence": "npx --yes tsx --tsconfig tsconfig.json scripts/test-drill-intelligence.ts",
     "validate:live-retrieval": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/validate-live-retrieval.ts",

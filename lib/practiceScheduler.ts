@@ -56,6 +56,9 @@ import { DrillRecord } from './drills'
 import { ScoredDrill } from './drillRetrieval'
 import { stageOf } from './progression'
 import { planStationGroup, StationGroup, describeStationGroup, MIN_STATION_GROUP } from './stationPlanner'
+import {
+  drillPriorities, normalizePriority, defaultLabel, UNDER_COVERED_SHARE, MIN_ABSOLUTE_MINUTES,
+} from './priorityMap'
 
 // ---------------------------------------------------------------------------
 // The time contract
@@ -239,7 +242,7 @@ export interface ScheduleItem {
 export interface RejectedItem {
   drill: DrillRecord
   score: number
-  reason: 'redundant' | 'no-duration' | 'over-budget'
+  reason: 'redundant' | 'no-duration' | 'over-budget' | 'balance'
   detail: string
 }
 
@@ -257,6 +260,8 @@ export interface Schedule {
    * never removes an item from `items` and never changes `scheduledMinutes`.
    */
   stations: StationGroup | null
+  /** Drill minutes the proposal gives each selected priority, when given any. */
+  priorityMinutes: Record<string, number> | null
 }
 
 export interface ScheduleInput {
@@ -264,6 +269,19 @@ export interface ScheduleInput {
   budget: Budget
   /** Cap on drill blocks. Absent means the budget is the only limit. */
   maxItems?: number
+  /**
+   * The focus areas the coach selected, as they ticked them. When given, the
+   * proposal reserves a minimum meaningful share of the drill budget for each
+   * of them BEFORE filling the rest by relevance — see the reservation pass in
+   * schedulePractice(). Absent means the proposal is by relevance alone, which
+   * is how single-focus practices still work.
+   */
+  priorities?: string[]
+  /**
+   * Extra candidates per priority, for a focus area the combined retrieval
+   * starved. Only consulted while reserving that priority's share.
+   */
+  candidatesByPriority?: Record<string, ScoredDrill[]>
   /**
    * How many kids. Used only to size stations — never to scale a duration.
    * Absent means unknown, and unknown means no stations are proposed, because
@@ -303,8 +321,78 @@ export function schedulePractice(input: ScheduleInput): Schedule {
   const rejected: RejectedItem[] = []
   let spent = 0
 
+  // Pass 0 — every selected priority gets its minimum share first.
+  //
+  // A combined query ranks the whole pool by relevance to one sentence, so a
+  // practice with three focus areas can fill its clock with the two whose
+  // drills happen to score higher and leave the third with nothing. This is
+  // the layer that let a coach's "Hitting" become one ten-minute block. So
+  // before relevance decides anything, each priority is given its best drills
+  // until it holds the minimum meaningful share, in the order the coach
+  // listed them. Relevance still orders everything after that.
+  const priorities = (input.priorities || []).map(normalizePriority).filter(Boolean)
+  const reservedIds = new Set<string>()
+  const held: Record<string, number> = Object.fromEntries(priorities.map(p => [p, 0]))
+  const creditHeld = (d: DrillRecord, minutes: number) => {
+    for (const p of drillPriorities(d, priorities)) held[p] += minutes
+  }
+  if (priorities.length > 1) {
+    const fair = budget.drillBudget / priorities.length
+    // Never above the fair share itself: a 15-minute drill budget split two
+    // ways cannot owe each priority eight minutes.
+    const minimum = Math.min(Math.round(fair), Math.max(MIN_ABSOLUTE_MINUTES, Math.round(fair * UNDER_COVERED_SHARE)))
+    const pools: Record<string, ScoredDrill[]> = Object.fromEntries(priorities.map(p => [p, [
+      ...candidates.filter(c => drillPriorities(c.drill, [p]).length),
+      ...(input.candidatesByPriority?.[p] || []),
+    ]]))
+    // The best-ranked eligible drill for the priority; with a cap, the
+    // best-ranked one that does not blow past the share it is filling, so a
+    // 15-minute drill does not eat the minutes two other priorities needed.
+    const takeFor = (p: string, cap?: number): boolean => {
+      const eligible = (c: ScoredDrill) => {
+        const minutes = c.drill.est_duration_minutes
+        return !reservedIds.has(String(c.drill.id)) &&
+          typeof minutes === 'number' && minutes > 0 &&
+          !items.find(i => isRedundant(i.drill, c.drill)) &&
+          spent + minutes <= budget.drillBudget
+      }
+      const pick = (cap != null && pools[p].find(c => eligible(c) && (c.drill.est_duration_minutes as number) <= cap))
+        || pools[p].find(eligible)
+      if (pick) {
+        const c = pick
+        const minutes = c.drill.est_duration_minutes as number
+        items.push({
+          drill: c.drill, minutes, stage: stageOf(c.drill as any), score: c.reason.score,
+          reason: `${c.reason.primary}${c.reason.curated ? ' (curated)' : ''} · reserved for ${p}`,
+        })
+        reservedIds.add(String(c.drill.id))
+        spent += minutes
+        creditHeld(c.drill, minutes)
+        return true
+      }
+      return false
+    }
+    // 0a. Each priority to its minimum, in the coach's order.
+    for (const p of priorities) {
+      while (held[p] < minimum && items.length < maxItems && takeFor(p, Math.round(fair) - held[p] + 4)) { /* keep taking */ }
+    }
+    // 0b. Then round-robin, lowest-covered first, up to a fair share each.
+    //     Co-primary means roughly even until relevance takes over — never
+    //     an exact split, and never past what the budget holds.
+    const exhausted = new Set<string>()
+    while (items.length < maxItems) {
+      const open = priorities.filter(p => held[p] < fair && !exhausted.has(p))
+      if (open.length === 0) break
+      const p = open.sort((a, b) => held[a] - held[b])[0]
+      if (!takeFor(p, Math.round(fair) - held[p] + 4)) exhausted.add(p)
+    }
+  }
+
+  const minHeld = () => priorities.length > 1 ? Math.min(...priorities.map(p => held[p])) : 0
+
   for (const c of candidates) {
     if (items.length >= maxItems) break
+    if (reservedIds.has(String(c.drill.id))) continue
 
     const minutes = c.drill.est_duration_minutes
     // A drill with no duration cannot be scheduled against a clock. It is not
@@ -335,6 +423,19 @@ export function schedulePractice(input: ScheduleInput): Schedule {
       continue
     }
 
+    // Relevance fills the rest, but not to the point where one selected
+    // priority holds more than twice what another does. The remaining minutes
+    // go unspent instead — a practice may finish short; it may not quietly
+    // become a one-skill practice the coach did not ask for.
+    const ps = drillPriorities(c.drill, priorities)
+    if (priorities.length > 1 && ps.length && ps.some(p => held[p] + minutes > 2 * Math.max(MIN_ABSOLUTE_MINUTES, minHeld()))) {
+      rejected.push({
+        drill: c.drill, score: c.reason.score, reason: 'balance',
+        detail: `${ps.join('/')} already holds ${ps.map(p => held[p]).join('/')} min against ${minHeld()} for the least-covered priority`,
+      })
+      continue
+    }
+
     items.push({
       drill: c.drill,
       minutes,
@@ -343,6 +444,7 @@ export function schedulePractice(input: ScheduleInput): Schedule {
       reason: c.reason.primary + (c.reason.curated ? ' (curated)' : ''),
     })
     spent += minutes
+    creditHeld(c.drill, minutes)
   }
 
   // Order for coaching, not for score.
@@ -366,6 +468,11 @@ export function schedulePractice(input: ScheduleInput): Schedule {
     slack: budget.drillBudget - spent,
     lowConfidenceDrillIds: ordered.filter(i => low.has(String(i.drill.id))).map(i => String(i.drill.id)),
     stations: proposeStations(ordered, input.expectedPlayers, input.coachCount),
+    priorityMinutes: priorities.length
+      ? Object.fromEntries(priorities.map(p => [
+          p, ordered.filter(i => drillPriorities(i.drill, [p]).length).reduce((n, i) => n + i.minutes, 0),
+        ]))
+      : null,
   }
 }
 
@@ -560,6 +667,22 @@ export function describeSchedule(s: Schedule): string {
       `\nBuild the drill blocks from these unless you have a specific reason not to. ` +
       `The minutes are estimates of how long each drill takes to run once; use them ` +
       `as block lengths unless the coach's situation says otherwise.`
+    )
+  }
+
+  // What each selected focus area gets out of the shortlist, so the model can
+  // see the balance it is being asked to keep rather than infer it.
+  if (s.priorityMinutes && Object.keys(s.priorityMinutes).length > 1) {
+    const rows = Object.entries(s.priorityMinutes)
+      .map(([p, m]) => `${defaultLabel(p)}: ${m} min`)
+      .join(', ')
+    lines.push(
+      `\nEVERY SELECTED FOCUS AREA MUST GET REAL REPS. Drill minutes above by focus area — ${rows}. ` +
+      `A selected area that ends up with one short block while another gets three is a plan ` +
+      `the coach did not ask for. A warm-up that mentions swings is not hitting work; a fungo ` +
+      `drill is fielding, not hitting. If the people and the drills allow it, a station ` +
+      `rotation with one station per focus area is often the best way to give all of them ` +
+      `real time inside one clock.`
     )
   }
 

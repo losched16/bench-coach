@@ -13,9 +13,46 @@ import { TemplateGallery } from '@/components/TemplateGallery'
 import { TeamOnly } from '@/components/TeamOnly'
 import { todayStr } from '@/lib/entries'
 import { PracticeBlock } from '@/components/PracticeBlock'
-import { EQUIPMENT_OPTIONS } from '@/lib/practicePlan'
+import { EQUIPMENT_OPTIONS, readPlan, scheduleRows } from '@/lib/practicePlan'
 import type { PracticeTemplate } from '@/lib/practiceTemplates'
 import { PlanHeader } from '@/components/PlanHeader'
+import { PriorityCoverageSummary } from '@/components/PriorityCoverageSummary'
+import { evaluatePriorityCoverage } from '@/lib/priorityCoverage'
+
+// A plan's coverage summary: the one measured at generation time when the
+// plan carries it, otherwise derived from the blocks on the spot. Every plan
+// saved before this existed takes the second path, so nothing historical
+// loses its summary — and a plan with one focus area, or none, shows nothing.
+function coverageFor(content: any, focus: string[], drills: any[]) {
+  const selected = (focus || []).filter(Boolean)
+  if (selected.length === 0) return null
+  const stored = content && !Array.isArray(content) ? content.priority_coverage : null
+  if (stored && Array.isArray(stored.priorities) && stored.priorities.length) return stored
+  const blocks = Array.isArray(content) ? content : (content?.blocks || [])
+  if (!blocks.length) return null
+  return evaluatePriorityCoverage(blocks, selected, { drills })
+}
+
+// The rows of a plan with the clock against them, for the collapsed view.
+function timeLabelsFor(content: any, startTime?: string | null): string[] {
+  const blocks = Array.isArray(content) ? content : (content?.blocks || [])
+  return scheduleRows(blocks, startTime).map(r => `${r.from}–${r.to}`)
+}
+
+function ExpandCollapse({ total, open, onExpandAll, onCollapseAll }: {
+  total: number; open: number; onExpandAll: () => void; onCollapseAll: () => void
+}) {
+  if (total === 0) return null
+  return (
+    <div className="flex items-center justify-end gap-3 text-xs">
+      <button type="button" onClick={onExpandAll} disabled={open === total}
+              className="text-blue-600 hover:text-blue-800 disabled:text-gray-400">Expand all</button>
+      <span className="text-gray-300">·</span>
+      <button type="button" onClick={onCollapseAll} disabled={open === 0}
+              className="text-blue-600 hover:text-blue-800 disabled:text-gray-400">Collapse all</button>
+    </div>
+  )
+}
 
 
 interface PracticePlan {
@@ -42,6 +79,11 @@ function PracticeContent() {
   const [showCustomModal, setShowCustomModal] = useState(false)
   const [showNewMenu, setShowNewMenu] = useState(false)
   const [expandedPlan, setExpandedPlan] = useState<string | null>(null)
+  // Which blocks are open, per surface. The overview is the default: every
+  // block collapsed, the whole practice visible at a glance, detail on tap.
+  // Never persisted — it is a reading position, not part of the plan.
+  const [openDraftBlocks, setOpenDraftBlocks] = useState<Set<number>>(new Set())
+  const [openSavedBlocks, setOpenSavedBlocks] = useState<Set<number>>(new Set())
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [planToDelete, setPlanToDelete] = useState<PracticePlan | null>(null)
   const [duration, setDuration] = useState(90)
@@ -510,6 +552,10 @@ function PracticeContent() {
             coaching_points: draft.coaching_points || [],
             start_time: startTime || null,
             equipment_available: Array.from(equipmentAvailable),
+            // What the plan gave each selected focus area, as measured when
+            // it was generated. Plan content, not UI state: which blocks the
+            // coach had open is deliberately not saved.
+            priority_coverage: draft.priority_coverage || null,
           },
           ...(scheduleReady ? { scheduled_for: scheduledFor } : {}),
         })
@@ -917,33 +963,49 @@ function PracticeContent() {
               </div>
               
               {/* Expanded Content */}
-              {expandedPlan === plan.id && plan.content && (
-                <div className="border-t border-gray-100 p-6 bg-gray-50">
-                  {/* Handle both old format (blocks array) and new format (content.blocks) */}
-                  {!Array.isArray(plan.content) && (
-                    <div className="mb-5">
+              {expandedPlan === plan.id && plan.content && (() => {
+                const blocks: any[] = Array.isArray(plan.content) ? plan.content : (plan.content.blocks || [])
+                const labels = timeLabelsFor(plan.content, Array.isArray(plan.content) ? null : plan.content.start_time)
+                const coverage = coverageFor(plan.content, plan.focus || plan.focus_areas || [], drillResources)
+                return (
+                  <div className="border-t border-gray-100 p-4 sm:p-6 bg-gray-50 space-y-3">
+                    {/* Handle both old format (blocks array) and new format (content.blocks) */}
+                    {!Array.isArray(plan.content) && (
                       <PlanHeader
                         coachNotes={plan.content.coach_notes}
                         flags={plan.content.flags}
                         objective={plan.content.objective}
                         coachingPoints={plan.content.coaching_points}
                       />
-                    </div>
-                  )}
-                  {(Array.isArray(plan.content) ? plan.content : plan.content.blocks)?.map((block: any, idx: number) => (
-                    <PracticeBlock
-                      key={idx}
-                      block={block}
-                      idx={idx}
-                      onSwap={() => openSwapModal(plan.id, idx, block)}
-                      drillResources={drillResources}
-                      coachId={coachId}
-                      favorites={favorites}
-                      onFavoritesChanged={() => refreshFavorites()}
+                    )}
+                    <PriorityCoverageSummary report={coverage} compact />
+                    <ExpandCollapse
+                      total={blocks.length} open={openSavedBlocks.size}
+                      onExpandAll={() => setOpenSavedBlocks(new Set(blocks.map((_, i) => i)))}
+                      onCollapseAll={() => setOpenSavedBlocks(new Set())}
                     />
-                  ))}
-                </div>
-              )}
+                    <div>
+                      {blocks.map((block: any, idx: number) => (
+                        <PracticeBlock
+                          key={idx}
+                          block={block}
+                          idx={idx}
+                          timeLabel={labels[idx]}
+                          open={openSavedBlocks.has(idx)}
+                          onToggle={(o) => setOpenSavedBlocks(prev => {
+                            const next = new Set(prev); if (o) next.add(idx); else next.delete(idx); return next
+                          })}
+                          onSwap={() => openSwapModal(plan.id, idx, block)}
+                          drillResources={drillResources}
+                          coachId={coachId}
+                          favorites={favorites}
+                          onFavoritesChanged={() => refreshFavorites()}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
           ))}
         </div>
@@ -979,20 +1041,41 @@ function PracticeContent() {
               <PlanHeader coachNotes={draft.coach_notes} flags={draft.flags}
                           objective={draft.objective} coachingPoints={draft.coaching_points} />
 
+              {/* Did it honour the priorities? Measured from the blocks, not
+                  from the model's own opinion of the plan. */}
+              <PriorityCoverageSummary
+                report={coverageFor({ ...draft, blocks: draft.blocks || [] }, focusAreas, drillResources)}
+              />
+
+              <ExpandCollapse
+                total={(draft.blocks || []).length} open={openDraftBlocks.size}
+                onExpandAll={() => setOpenDraftBlocks(new Set((draft.blocks || []).map((_: any, i: number) => i)))}
+                onCollapseAll={() => setOpenDraftBlocks(new Set())}
+              />
+
               {/* The same renderer the saved plan uses. Showing a summary here
                   and the full thing after saving is how a coach reviews a
-                  detailed plan, sees three fields, and concludes it is thin. */}
-              {(draft.blocks || []).map((b: any, i: number) => (
-                <PracticeBlock
-                  key={i}
-                  block={b}
-                  idx={i}
-                  drillResources={drillResources}
-                  coachId={coachId}
-                  favorites={favorites}
-                  onFavoritesChanged={() => refreshFavorites()}
-                />
-              ))}
+                  detailed plan, sees three fields, and concludes it is thin.
+                  Every block starts collapsed: the overview is the review, and
+                  the full detail is one tap away. */}
+              <div>
+                {(draft.blocks || []).map((b: any, i: number) => (
+                  <PracticeBlock
+                    key={i}
+                    block={b}
+                    idx={i}
+                    timeLabel={timeLabelsFor({ blocks: draft.blocks || [] }, startTime || null)[i]}
+                    open={openDraftBlocks.has(i)}
+                    onToggle={(o) => setOpenDraftBlocks(prev => {
+                      const next = new Set(prev); if (o) next.add(i); else next.delete(i); return next
+                    })}
+                    drillResources={drillResources}
+                    coachId={coachId}
+                    favorites={favorites}
+                    onFavoritesChanged={() => refreshFavorites()}
+                  />
+                ))}
+              </div>
             </div>
 
             <div className="p-6 border-t border-gray-100 space-y-3">

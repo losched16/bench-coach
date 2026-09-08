@@ -16,6 +16,11 @@ import { MIN_STATION_GROUP } from '@/lib/stationPlanner'
 import {
   computeBudget, schedulePractice, describeSchedule, fitBlocks, estimateBlockCount,
 } from '@/lib/practiceScheduler'
+import {
+  evaluatePriorityCoverage, indexDrills, blockPriorities,
+  normalizePriority, drillPriorities, isStationBlock, describeCoverage,
+} from '@/lib/priorityCoverage'
+import { repairPriorityCoverage } from '@/lib/priorityRepair'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -462,6 +467,57 @@ export async function POST(request: NextRequest) {
     // 5-minute drill should never beat a better 15-minute one on relevance.
     const blockCount = estimateBlockCount(duration)
     const budget = computeBudget(duration, { blockCount })
+
+    // The selected priorities, as the coach ticked them. Every one of them is
+    // a commitment the practice has to honour, and the combined retrieval
+    // above ranks by relevance to ONE sentence — so a focus area whose drills
+    // score lower can arrive with two candidates or none. Each starved
+    // priority gets its own category-only top-up: the same filters, the same
+    // pool, no second diagnosis call, and the results are only ever used to
+    // reserve that priority's share and to repair it afterwards.
+    const priorities: string[] = (Array.isArray(focus) ? focus : []).map(normalizePriority).filter(Boolean)
+    const candidatesByPriority: Record<string, any[]> = {}
+    if (retrieval && priorities.length > 1) {
+      const MIN_CANDIDATES = 4
+      for (const p of priorities) {
+        const have = retrieval.scored.filter(c => drillPriorities(c.drill, [p]).length)
+        candidatesByPriority[p] = have
+        if (have.length >= MIN_CANDIDATES) continue
+        const cats = categoriesForPracticeFocus([p]).filter(c => c !== 'warmup' && c !== 'athletic development')
+        if (cats.length === 0) continue
+        try {
+          const extra = await retrieveDrills({
+            supabase: supabaseAdmin,
+            coachId: team.coach_id,
+            // No sentence to diagnose: category ranking only, no model call.
+            query: '',
+            categories: cats,
+            playerAge: ageFromText(String(team.age_group || '')),
+            indoorOutdoor: textConstraints.indoorOutdoor,
+            spaceAvailable: textConstraints.spaceAvailable,
+            availableEquipment: Array.isArray(equipmentAvailable) && equipmentAvailable.length
+              ? equipmentAvailable : null,
+            skillLevel: team.skill_level ?? null,
+            expectedPlayers,
+            coachCount: coachesPresent,
+            preferEngaging: true,
+            favorites,
+            limit: 10,
+          })
+          const seen = new Set(have.map(c => String(c.drill.id)))
+          candidatesByPriority[p] = [...have, ...extra.scored.filter(c => !seen.has(String(c.drill.id)))]
+          // The model sees the top-up too, by name, so a repair block it did
+          // not write is still a drill it was offered.
+          const menuIds = new Set((drillResources || []).map((d: any) => d.id))
+          for (const c of extra.scored) {
+            if (!menuIds.has(c.drill.id)) { drillResources = [...(drillResources || []), c.drill]; menuIds.add(c.drill.id) }
+          }
+        } catch (e: any) {
+          console.warn(`Practice plan: top-up retrieval for ${p} failed:`, e?.message)
+        }
+      }
+    }
+
     const schedule = retrieval
       ? schedulePractice({
           candidates: retrieval.scored,
@@ -470,6 +526,8 @@ export async function POST(request: NextRequest) {
           // duration or the budget — see the header of practiceScheduler.
           expectedPlayers,
           coachCount: coachesPresent,
+          priorities,
+          candidatesByPriority,
         })
       : null
 
@@ -550,9 +608,70 @@ export async function POST(request: NextRequest) {
               `Practice plan: schedule corrected for team ${teamId} — ${fitted.adjustments.join('; ')}`
             )
           }
-          const blocks = fitted.blocks
+          let blocks: any[] = fitted.blocks
 
-          send({ type: 'skeleton', plan: { ...skeleton, blocks } })
+          // Make the priorities true.
+          //
+          // The model was told every selected focus area needs real reps.
+          // Told is not measured. This measures player exposure per priority
+          // from the blocks it actually returned, and when one is under-
+          // covered, repairs the plan — replace a redundant block, move
+          // minutes, fold blocks into a station rotation — inside the same
+          // clock and the same feasibility gates, BEFORE the coach sees it.
+          // The old behaviour was to notice and write a flag.
+          const drillIndex = indexDrills(drillResources || [])
+          const envelope = {
+            playerAge: ageFromText(String(team.age_group || '')),
+            expectedPlayers,
+            coachCount: coachesPresent,
+            equipmentAvailable: Array.isArray(equipmentAvailable) && equipmentAvailable.length
+              ? equipmentAvailable : null,
+            limitThrowing: (textConstraints as any).limitThrowing ?? null,
+          }
+          let coverage = evaluatePriorityCoverage(blocks, priorities, { drills: drillIndex })
+          let coverageRepairs: any[] = []
+          if (priorities.length > 1 && !coverage.balanced) {
+            const before = describeCoverage(coverage)
+            const repaired = repairPriorityCoverage(blocks, priorities, candidatesByPriority as any, {
+              drills: drillIndex, envelope,
+            })
+            // The repair never adds minutes; the fit is re-run anyway so the
+            // clock contract holds by construction, not by trust.
+            const refit = fitBlocks(repaired.blocks, duration)
+            blocks = refit.blocks
+            coverage = evaluatePriorityCoverage(blocks, priorities, { drills: drillIndex })
+            coverageRepairs = repaired.steps
+            console.warn(
+              `Practice plan: priority coverage repaired for team ${teamId} — ` +
+              `${repaired.steps.map(s => `${s.strategy}: ${s.detail} (${s.before}→${s.after} min)`).join('; ') || 'no strategy applied'}` +
+              `\n  before:\n${before}\n  after:\n${describeCoverage(coverage)}`
+            )
+          }
+          // Every block learns which selected priorities it serves, so the
+          // review screen and the printed sheet can show it, and a plan saved
+          // today still reads the same way after the library changes.
+          blocks = blocks.map(b => ({
+            ...b,
+            skills: blockPriorities(b, priorities, drillIndex),
+            ...(isStationBlock(b) ? {
+              stations: b.stations.map((s: any) => ({ ...s, skills: blockPriorities({ ...s, type: s.type || 'drill' }, priorities, drillIndex) })),
+            } : {}),
+          }))
+          const priorityCoverage = priorities.length
+            ? {
+                priorities: coverage.priorities.map(p => ({
+                  priority: p.priority, label: p.label, exposure_minutes: p.exposure_minutes,
+                  meaningful_blocks: p.meaningful_blocks, station_exposure_minutes: p.station_exposure_minutes,
+                  coverage_ratio: p.coverage_ratio, status: p.status, minimum_minutes: p.minimum_minutes,
+                })),
+                meaningful_minutes: coverage.meaningful_minutes, total_minutes: coverage.total_minutes,
+                fair_share_minutes: coverage.fair_share_minutes, balanced: coverage.balanced,
+                under_covered: coverage.under_covered, approximate: coverage.approximate,
+                repairs: coverageRepairs.map(s => ({ strategy: s.strategy, priority: s.priority, detail: s.detail, before: s.before, after: s.after })),
+              }
+            : null
+
+          send({ type: 'skeleton', plan: { ...skeleton, blocks, priority_coverage: priorityCoverage } })
 
           // On a rebuild, a block that came back with the same name and the
           // same length is the one the coach already read and did not complain
@@ -570,6 +689,41 @@ export async function POST(request: NextRequest) {
               if (kept) {
                 send({ type: 'block', index: idx, block: kept })
                 return Promise.resolve(kept)
+              }
+              // A station rotation is one row on the clock and several
+              // activities inside it. Each station is written out like any
+              // other block; the parent gets the rotation logistics, which
+              // are arithmetic and do not need a model.
+              if (isStationBlock(b)) {
+                const kids: any[] = b.stations
+                const rotation = Number(b.rotation_minutes) || Math.max(1, Math.floor(((Number(b.minutes) || 0) - (kids.length - 1)) / kids.length))
+                const groups = Number(b.groups) || kids.length
+                const perGroup = expectedPlayers ? Math.max(1, Math.round(expectedPlayers / groups)) : null
+                return Promise.all(kids.map((s, si) => {
+                  const child = { ...s, type: s.type || 'drill', minutes: rotation }
+                  const keptChild = prior.length ? reusableBlock(child, prior.flatMap((p: any) => Array.isArray(p?.stations) ? p.stations : [p])) : null
+                  if (keptChild) return Promise.resolve(keptChild)
+                  return expandPracticeBlock(inputs, child, si, kids)
+                    .then(detail => ({ ...child, ...detail }))
+                    .catch((e: any) => {
+                      console.error(`Practice plan: station ${si} of block ${idx} expansion failed:`, e?.message)
+                      return child
+                    })
+                })).then(written => {
+                  const full = {
+                    ...b,
+                    stations: written,
+                    setup: b.setup || (
+                      `${groups} groups${perGroup ? ` of about ${perGroup}` : ''}, one at each station. ` +
+                      `Every group spends ${rotation} minutes at a station, then rotates on the whistle ` +
+                      `${written.map((_: any, i: number) => String.fromCharCode(65 + i)).join(' → ')}. ` +
+                      `Elapsed time for the whole rotation: ${b.minutes} minutes.`
+                    ),
+                    equipment: Array.from(new Set(written.flatMap((w: any) => w.equipment || []))),
+                  }
+                  send({ type: 'block', index: idx, block: full })
+                  return full
+                })
               }
               return expandPracticeBlock(inputs, b, idx, blocks)
                 .then(detail => {
@@ -590,7 +744,7 @@ export async function POST(request: NextRequest) {
             })
           )
 
-          send({ type: 'plan', plan: { ...skeleton, blocks: expanded } })
+          send({ type: 'plan', plan: { ...skeleton, blocks: expanded, priority_coverage: priorityCoverage } })
         } catch (e: any) {
           console.error('Practice plan generation error:', e)
           logClaudeFailure('practice-plan', e)

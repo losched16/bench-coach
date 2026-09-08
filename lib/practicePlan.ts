@@ -14,12 +14,27 @@
 export interface PlanBlock {
   type?: string
   title?: string
+  /**
+   * Elapsed practice minutes. For a station block this is the whole
+   * rotation — groups × rotation_minutes plus the seams — never the sum of
+   * the stations.
+   */
   minutes?: number
   description?: string
   equipment?: string[]
   coaching_cues?: string[]
   setup?: string
   watch_for?: string
+  /** Which selected focus areas this block gives real reps for. */
+  skills?: string[]
+  /**
+   * A station block carries its parallel activities here. Each child is a
+   * block in its own right (title, drill, detail) with `minutes` equal to one
+   * rotation, and the parent is one row on the clock.
+   */
+  stations?: PlanBlock[]
+  groups?: number
+  rotation_minutes?: number
   [k: string]: any
 }
 
@@ -34,6 +49,27 @@ export interface PlanContent {
   coaching_points: string[]
   start_time: string | null
   equipment_available: string[]
+  /**
+   * What the plan gave each selected priority, measured at generation time.
+   * Plans written before this existed have none, and a reader derives it from
+   * the blocks instead — see lib/priorityCoverage.
+   */
+  priority_coverage: any | null
+}
+
+/** Is this block a station rotation with its activities stored structurally? */
+export function isStationGroup(b: PlanBlock | null | undefined): boolean {
+  return Boolean(b && Array.isArray(b.stations) && b.stations.length >= 2)
+}
+
+/** Every block that carries coaching content: top-level blocks and station children. */
+export function flattenBlocks(blocks: PlanBlock[]): PlanBlock[] {
+  const out: PlanBlock[] = []
+  for (const b of blocks || []) {
+    out.push(b)
+    if (isStationGroup(b)) for (const s of b.stations as PlanBlock[]) out.push(s)
+  }
+  return out
 }
 
 /**
@@ -54,6 +90,7 @@ export function readPlan(content: any): PlanContent {
     coaching_points: Array.isArray(c.coaching_points) ? c.coaching_points : [],
     start_time: c.start_time || null,
     equipment_available: Array.isArray(c.equipment_available) ? c.equipment_available : [],
+    priority_coverage: c.priority_coverage && typeof c.priority_coverage === 'object' ? c.priority_coverage : null,
   }
 }
 
@@ -131,7 +168,7 @@ export function equipmentKey(raw: string): string {
  */
 export function equipmentChecklist(blocks: PlanBlock[]): string[] {
   const best = new Map<string, string>()
-  for (const b of blocks || []) {
+  for (const b of flattenBlocks(blocks)) {
     for (const raw of b?.equipment || []) {
       const item = String(raw || '').trim()
       if (!item) continue
@@ -171,6 +208,13 @@ export interface ScheduleRow {
   title: string
   description: string
   type: string
+  /** Which selected focus areas the block serves, when the plan stamped them. */
+  skills: string[]
+  /**
+   * A station rotation's activities, one line each ("A. High Tee — 8 min"),
+   * so the sheet lists the stations under the one row the rotation occupies.
+   */
+  stations: string[]
 }
 
 /**
@@ -192,12 +236,19 @@ export function scheduleRows(blocks: PlanBlock[], startTime?: string | null): Sc
     const from = start === null ? elapsedLabel(elapsed) : clockLabel(start + elapsed)
     elapsed += minutes
     const to = start === null ? elapsedLabel(elapsed) : clockLabel(start + elapsed)
+    const station = isStationGroup(b)
+    const rotation = station ? (Number(b.rotation_minutes) || Math.max(0, Math.floor((minutes - ((b.stations as PlanBlock[]).length - 1)) / (b.stations as PlanBlock[]).length))) : 0
     return {
       index,
       from, to, minutes,
       title: b?.title || 'Untitled block',
       description: b?.description || '',
-      type: b?.type || 'drill',
+      type: station ? 'station' : (b?.type || 'drill'),
+      skills: Array.isArray(b?.skills) ? b.skills.map(String) : [],
+      stations: station
+        ? (b.stations as PlanBlock[]).map((s, i) =>
+            `${String.fromCharCode(65 + i)}. ${s?.title || s?.drill_name || 'Station'} — ${s?.minutes || rotation} min`)
+        : [],
     }
   })
 }
@@ -297,7 +348,7 @@ export function reusableBlock(
  */
 export function fallbackCoachingPoints(blocks: PlanBlock[], limit = 3): string[] {
   const out: string[] = []
-  for (const b of blocks || []) {
+  for (const b of flattenBlocks(blocks)) {
     const cue = b?.coaching_cues?.[0]
     if (cue) out.push(String(cue))
     if (out.length >= limit) break
