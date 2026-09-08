@@ -12,7 +12,7 @@ import { OpponentAnalysis } from '@/components/OpponentAnalysis'
 import {
   Search, Plus, Camera, Loader2, ChevronLeft, Trash2, Calendar,
   AlertTriangle, Check, CheckCircle2, XCircle, HelpCircle, Merge, RefreshCw,
-  ClipboardList, Users, X, Eye, Info,
+  ClipboardList, Users, X, Eye, Info, Pencil,
 } from 'lucide-react'
 import { TeamOnly } from '@/components/TeamOnly'
 import Link from 'next/link'
@@ -318,6 +318,38 @@ function ScoutingContent() {
     await loadOpponents(coachId)
   }
 
+  // Edit what the coach WROTE about a logged game — the note, the date, the
+  // tournament. Not the parsed stat lines: those have re-parse and delete, and
+  // hand-editing them would make the numbers untraceable to the screenshot
+  // they claim to come from.
+  //
+  // The report is not regenerated here. Updating the entry fires
+  // trg_scouting_entry_marks_stale in the database, which flips the scouting
+  // report to "New evidence since this" with a live Update button — so the
+  // coach can add three notes and pay for one model call, rather than one call
+  // per note.
+  const saveEntry = async (
+    entryId: string,
+    updates: { notes?: string | null; occurred_on?: string | null; tournament_name?: string | null }
+  ) => {
+    if (!coachId) return false
+    setDataNotice(null)
+    try {
+      const res = await fetch('/api/scouting/entries', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coachId, entryId, updates }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'That entry could not be saved.')
+      if (selectedOpponentId) await loadDetail(selectedOpponentId)
+      return true
+    } catch (e: any) {
+      setDataNotice(e?.message || 'That entry could not be saved.')
+      return false
+    }
+  }
+
   // Remove one tracked player. For the ones a coach can see are wrong — a
   // stray row from the other side of a box score, a duplicate the merge tool
   // did not catch.
@@ -484,6 +516,7 @@ function ScoutingContent() {
           onMerge={handleMerge}
           onClearReview={clearReviewFlag}
           onDeleteEntry={deleteEntry}
+          onSaveEntry={saveEntry}
           onReparseEntry={reparseEntry}
           reparsingId={reparsing}
           onDeletePlayer={deletePlayer}
@@ -643,7 +676,7 @@ function OpponentList({
 function OpponentDetail({
   detail, loading, coachId, teamId, mergeMode, mergeSelection, merging,
   onBack, onToggleMergeMode, onToggleMergeSelect, onMerge, onClearReview, onDeleteEntry,
-  onReparseEntry, reparsingId, onDeletePlayer, onPrunePlayers, onDeleteTeam, onViewBoard,
+  onSaveEntry, onReparseEntry, reparsingId, onDeletePlayer, onPrunePlayers, onDeleteTeam, onViewBoard,
 }: {
   detail: { team: OpponentTeam; players: OpponentPlayer[]; entries: ScoutingEntry[]; matchups: Matchup[] } | null
   loading: boolean
@@ -658,6 +691,10 @@ function OpponentDetail({
   onMerge: (keepId: string) => void
   onClearReview: (id: string) => void
   onDeleteEntry: (id: string) => void
+  onSaveEntry: (
+    id: string,
+    updates: { notes?: string | null; occurred_on?: string | null; tournament_name?: string | null }
+  ) => Promise<boolean | void>
   onReparseEntry: (id: string) => void
   reparsingId: string | null
   onDeletePlayer: (id: string, name: string) => void
@@ -942,40 +979,182 @@ function OpponentDetail({
         ) : (
           <div className="space-y-2">
             {entries.map(e => (
-              <div key={e.id} className="flex items-start justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
-                      {e.entry_type.replace('_', ' ')}
-                    </span>
-                    <span className="text-sm text-gray-700">{e.occurred_on || 'No date'}</span>
-                    {e.tournament_name && <span className="text-xs text-gray-500">{e.tournament_name}</span>}
-                    {e.parse_confidence && e.parse_confidence !== 'high' && (
-                      <span className="text-xs text-amber-600">parse confidence: {e.parse_confidence}</span>
-                    )}
-                  </div>
-                  {e.notes && <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">{e.notes}</p>}
-                </div>
-                {(e.image_urls?.length || 0) > 0 && (
-                  <button
-                    onClick={() => onReparseEntry(e.id)}
-                    disabled={reparsingId === e.id}
-                    title="Read these screenshots again with the current parser"
-                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-50"
-                  >
-                    <RefreshCw size={15} className={reparsingId === e.id ? 'animate-spin' : ''} />
-                  </button>
-                )}
-                <button
-                  onClick={() => onDeleteEntry(e.id)}
-                  className="p-1.5 text-gray-400 hover:text-red-600 flex-shrink-0"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
+              <EntryRow
+                key={e.id}
+                entry={e}
+                teamName={team.name}
+                isOwnTeam={!!team.is_own_team}
+                reparsing={reparsingId === e.id}
+                onReparse={() => onReparseEntry(e.id)}
+                onDelete={() => onDeleteEntry(e.id)}
+                onSave={updates => onSaveEntry(e.id, updates)}
+              />
             ))}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * One logged game.
+ *
+ * Two things this row exists to fix.
+ *
+ * It never said WHOSE game it was. The list lives inside a team's detail view,
+ * so the name is technically redundant — but the header scrolls away on a
+ * phone and what is left is a column of bare dates. When one of those teams is
+ * your own, "is this us or them" is the first question and the row could not
+ * answer it.
+ *
+ * And the note was read-only. The scouting report treats notes as the
+ * qualitative half of its evidence, but they could only be written in the
+ * second it took to confirm an upload. The note worth having — they sat their
+ * best pitcher, the field was a swamp — is the one you think of afterwards.
+ */
+function EntryRow({
+  entry, teamName, isOwnTeam, reparsing, onReparse, onDelete, onSave,
+}: {
+  entry: ScoutingEntry
+  teamName: string
+  isOwnTeam: boolean
+  reparsing: boolean
+  onReparse: () => void
+  onDelete: () => void
+  onSave: (updates: { notes?: string | null; occurred_on?: string | null; tournament_name?: string | null }) => Promise<boolean | void>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [notes, setNotes] = useState(entry.notes || '')
+  const [occurredOn, setOccurredOn] = useState(entry.occurred_on || '')
+  const [tournament, setTournament] = useState(entry.tournament_name || '')
+
+  // Reopening the editor must show what is stored, not what was typed and
+  // abandoned last time.
+  const open = () => {
+    setNotes(entry.notes || '')
+    setOccurredOn(entry.occurred_on || '')
+    setTournament(entry.tournament_name || '')
+    setEditing(true)
+  }
+
+  const save = async () => {
+    setSaving(true)
+    const ok = await onSave({
+      notes,
+      occurred_on: occurredOn || null,
+      tournament_name: tournament,
+    })
+    setSaving(false)
+    if (ok !== false) setEditing(false)
+  }
+
+  if (editing) {
+    return (
+      <div className="p-3 bg-white border border-blue-300 rounded-lg space-y-3">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <label className="text-xs text-gray-600 flex-1">
+            Date
+            <input
+              type="date"
+              value={occurredOn}
+              onChange={ev => setOccurredOn(ev.target.value)}
+              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
+            />
+          </label>
+          <label className="text-xs text-gray-600 flex-1">
+            Tournament or event
+            <input
+              type="text"
+              value={tournament}
+              onChange={ev => setTournament(ev.target.value)}
+              placeholder="Optional"
+              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
+            />
+          </label>
+        </div>
+        <label className="text-xs text-gray-600 block">
+          What the box score does not say
+          <textarea
+            value={notes}
+            onChange={ev => setNotes(ev.target.value)}
+            rows={4}
+            placeholder="They sat their #22 the whole game. Field was a swamp. We never saw their real lineup."
+            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
+          />
+          <span className="text-gray-500">
+            This goes into the scouting report — it is the half the numbers cannot cover.
+            Saving marks the report out of date; you choose when to rewrite it.
+          </span>
+        </label>
+        <div className="flex gap-2">
+          <button
+            onClick={save}
+            disabled={saving}
+            className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-sm hover:bg-slate-800 disabled:opacity-50"
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+          <button
+            onClick={() => setEditing(false)}
+            disabled={saving}
+            className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 text-sm hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-start justify-between p-3 bg-gray-50 rounded-lg">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+            {entry.entry_type.replace('_', ' ')}
+          </span>
+          <span className="text-sm font-medium text-gray-900">{teamName}</span>
+          {isOwnTeam && (
+            <span className="text-[10px] font-semibold uppercase tracking-wide bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
+              Your team
+            </span>
+          )}
+          <span className="text-sm text-gray-700">{entry.occurred_on || 'No date'}</span>
+          {entry.tournament_name && <span className="text-xs text-gray-500">{entry.tournament_name}</span>}
+          {entry.parse_confidence && entry.parse_confidence !== 'high' && (
+            <span className="text-xs text-amber-600">parse confidence: {entry.parse_confidence}</span>
+          )}
+        </div>
+        {entry.notes
+          ? <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">{entry.notes}</p>
+          : <p className="text-xs text-gray-400 mt-1 italic">No notes yet</p>}
+      </div>
+      <div className="flex items-start flex-shrink-0">
+        <button
+          onClick={open}
+          title="Edit the date, event and notes for this game"
+          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+        >
+          <Pencil size={15} />
+        </button>
+        {(entry.image_urls?.length || 0) > 0 && (
+          <button
+            onClick={onReparse}
+            disabled={reparsing}
+            title="Read these screenshots again with the current parser"
+            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-50"
+          >
+            <RefreshCw size={15} className={reparsing ? 'animate-spin' : ''} />
+          </button>
+        )}
+        <button
+          onClick={onDelete}
+          className="p-1.5 text-gray-400 hover:text-red-600"
+        >
+          <Trash2 size={16} />
+        </button>
       </div>
     </div>
   )
