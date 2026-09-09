@@ -18,6 +18,7 @@ import type { PracticeTemplate } from '@/lib/practiceTemplates'
 import { PlanHeader } from '@/components/PlanHeader'
 import { PriorityCoverageSummary } from '@/components/PriorityCoverageSummary'
 import { parsePastedVideo, formatTimestamp } from '@/lib/drillVideo'
+import { PlanReview } from '@/components/PlanReview'
 import { evaluatePriorityCoverage } from '@/lib/priorityCoverage'
 
 // A plan's coverage summary: the one measured at generation time when the
@@ -83,7 +84,6 @@ function PracticeContent() {
   // Which blocks are open, per surface. The overview is the default: every
   // block collapsed, the whole practice visible at a glance, detail on tap.
   // Never persisted — it is a reading position, not part of the plan.
-  const [openDraftBlocks, setOpenDraftBlocks] = useState<Set<number>>(new Set())
   const [openSavedBlocks, setOpenSavedBlocks] = useState<Set<number>>(new Set())
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [planToDelete, setPlanToDelete] = useState<PracticePlan | null>(null)
@@ -1041,111 +1041,61 @@ function PracticeContent() {
           it and start over. Now they read it, say what to change in their own
           words, and it comes back rebuilt. Nothing is saved until they say so. */}
       {showPlanModal && draft && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[92vh] flex flex-col">
-            <div className="p-6 border-b border-gray-100">
-              <h3 className="text-xl font-bold text-gray-900">{draft.title}</h3>
-              <p className="text-sm text-gray-600 mt-1">
-                {duration} minutes · {(draft.blocks || []).length} blocks ·{' '}
-                {expanding
-                  ? `writing the detail (${blocksWritten}/${(draft.blocks || []).length})`
-                  : 'nothing saved yet'}
-              </p>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-3">
-              {genError && (
-                <div className="flex gap-2 text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg p-3">
-                  <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                  <span>{genError}</span>
-                </div>
-              )}
-
-              <PlanHeader coachNotes={draft.coach_notes} flags={draft.flags}
-                          objective={draft.objective} coachingPoints={draft.coaching_points} />
-
-              {/* Did it honour the priorities? Measured from the blocks, not
-                  from the model's own opinion of the plan. */}
-              <PriorityCoverageSummary
-                report={coverageFor({ ...draft, blocks: draft.blocks || [] }, focusAreas, drillResources)}
-              />
-
-              <ExpandCollapse
-                total={(draft.blocks || []).length} open={openDraftBlocks.size}
-                onExpandAll={() => setOpenDraftBlocks(new Set((draft.blocks || []).map((_: any, i: number) => i)))}
-                onCollapseAll={() => setOpenDraftBlocks(new Set())}
-              />
-
-              {/* The same renderer the saved plan uses. Showing a summary here
-                  and the full thing after saving is how a coach reviews a
-                  detailed plan, sees three fields, and concludes it is thin.
-                  Every block starts collapsed: the overview is the review, and
-                  the full detail is one tap away. */}
-              <div>
-                {(draft.blocks || []).map((b: any, i: number) => (
-                  <PracticeBlock
-                    key={i}
-                    block={b}
-                    idx={i}
-                    timeLabel={timeLabelsFor({ blocks: draft.blocks || [] }, startTime || null)[i]}
-                    open={openDraftBlocks.has(i)}
-                    onToggle={(o) => setOpenDraftBlocks(prev => {
-                      const next = new Set(prev); if (o) next.add(i); else next.delete(i); return next
-                    })}
-                    drillResources={drillResources}
-                    coachId={coachId}
-                    favorites={favorites}
-                    onFavoritesChanged={() => refreshFavorites()}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="p-6 border-t border-gray-100 space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Want anything changed?
+        <PlanReview
+          draft={draft}
+          onBlocksChange={(blocks) => setDraft((prev: any) => ({ ...prev, blocks }))}
+          onClose={() => { setShowPlanModal(false); setDraft(null); setGenError(null) }}
+          duration={duration}
+          timeLabels={timeLabelsFor({ blocks: draft.blocks || [] }, startTime || null)}
+          coverage={coverageFor({ ...draft, blocks: draft.blocks || [] }, focusAreas, drillResources)}
+          status={expanding
+            ? `writing the detail (${blocksWritten}/${(draft.blocks || []).length})`
+            : 'nothing saved yet'}
+          genError={genError}
+          drillResources={drillResources}
+          coachId={coachId}
+          favorites={favorites}
+          onFavoritesChanged={() => refreshFavorites()}
+          footer={
+            <div className="flex flex-col lg:flex-row gap-3 lg:items-end">
+              <div className="flex-1 min-w-0">
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Want the whole thing rethought? Say what to change.
                 </label>
-                <textarea
+                <input
                   value={adjustment}
                   onChange={(e) => setAdjustment(e.target.value)}
-                  rows={2}
                   placeholder="e.g. Drop the bunting station, more baserunning. And the warm-up is too long."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   disabled={generating}
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Blocks you don&apos;t mention stay as they are.
-                </p>
               </div>
-
-              <div className="flex gap-3">
+              <div className="flex gap-2 shrink-0">
                 <button
                   onClick={refinePlan}
                   disabled={generating || expanding || !adjustment.trim()}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50"
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
                 >
-                  {generating || expanding ? 'Rebuilding…' : 'Rebuild with these changes'}
+                  {generating || expanding ? 'Rebuilding…' : 'Rebuild'}
+                </button>
+                <button
+                  onClick={() => { setShowPlanModal(false); setDraft(null); setGenError(null) }}
+                  disabled={generating || savingDraft}
+                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-50"
+                >
+                  Discard
                 </button>
                 <button
                   onClick={saveDraft}
                   disabled={generating || expanding || savingDraft}
-                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
+                  className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
                 >
                   {savingDraft ? 'Saving…' : expanding ? 'Almost there…' : 'Use this plan'}
                 </button>
               </div>
-
-              <button
-                onClick={() => { setShowPlanModal(false); setDraft(null); setGenError(null) }}
-                disabled={generating || savingDraft}
-                className="w-full py-2 text-sm text-gray-600 disabled:opacity-50"
-              >
-                Throw it away
-              </button>
             </div>
-          </div>
-        </div>
+          }
+        />
       )}
 
       {showPlanModal && !draft && (
