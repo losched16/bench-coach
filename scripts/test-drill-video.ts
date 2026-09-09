@@ -22,7 +22,7 @@ import { readFileSync } from 'fs'
 import {
   videoIdFor, parseVideoId, startSecondsFor, hasSegment, hasVideo,
   watchUrl, embedUrl, thumbnailUrl, formatTimestamp, parseTimestamp,
-  parseStartFromUrl, parsePastedVideo,
+  parseStartFromUrl, parsePastedVideo, blockVideoMode, videoFieldsFromPaste,
 } from '@/lib/drillVideo'
 import { rankDrills, RetrievalConstraints } from '@/lib/drillRetrieval'
 import { diagnoseByAlias, TaxonomyRow } from '@/lib/drillDiagnosis'
@@ -348,6 +348,48 @@ ok('whitespace only is not an error', parsePastedVideo('   ') === null)
 ok('prose is refused rather than saved as a dead link',
   parsePastedVideo('the one Coach Dave showed us')?.kind === 'unusable',
   'saving it would look like a video and do nothing at practice')
+
+// ── removing a video from a block ───────────────────────────────────────────
+//
+// Reported from production: a coach edited an AI block, replaced the YouTube
+// link with an Instagram one, saved — and the YouTube video was still there.
+//
+// Clearing youtube_video_id was never enough. A block without one falls back to
+// matching its TITLE against the drill library, which handed the same video
+// straight back by name. "Nobody said anything about video" and "the coach
+// deleted the video" are the same shape in the data — an absent id — so
+// removal has to be stored as a decision, not as an absence.
+
+eq('an explicit id plays inline', blockVideoMode({ youtube_video_id: 'abc12345678' }), 'youtube')
+eq('a pasted non-YouTube link is a tap-through', blockVideoMode({ video_url: 'https://instagram.com/reel/x' }), 'link')
+eq('an untouched block may still be guessed from the library', blockVideoMode({}), 'lookup')
+eq('a coach who removed the video gets no video', blockVideoMode({ video_cleared: true }), 'none')
+
+// The exact report: Instagram over the top of an AI YouTube link.
+const swapped: any = { youtube_video_id: 'abc12345678', ...videoFieldsFromPaste('https://www.instagram.com/reel/XYZ/') }
+eq('replacing YouTube with Instagram drops the YouTube id', swapped.youtube_video_id, undefined)
+eq('...and shows the pasted link instead', blockVideoMode(swapped), 'link')
+ok('...and does NOT fall back to a library lookup',
+  blockVideoMode(swapped) !== 'lookup',
+  'the fallback is what handed the deleted video back')
+
+// Emptying the box.
+const emptied: any = { youtube_video_id: 'abc12345678', ...videoFieldsFromPaste('') }
+eq('clearing the box removes the id', emptied.youtube_video_id, undefined)
+eq('...and records that it was deliberate', emptied.video_cleared, true)
+eq('...so nothing is looked up by name', blockVideoMode(emptied), 'none')
+
+// And it has to be reversible: pasting again must re-enable everything.
+const restored: any = { ...emptied, ...videoFieldsFromPaste('https://youtu.be/dQw4w9WgXcQ?t=90') }
+eq('pasting again clears the removal flag', restored.video_cleared, undefined)
+eq('...and takes the new id', restored.youtube_video_id, 'dQw4w9WgXcQ')
+eq('...with its timestamp', restored.youtube_start_seconds, 90)
+eq('...and plays inline again', blockVideoMode(restored), 'youtube')
+
+// Swapping the other way round leaves no stale link behind either.
+const backToYouTube: any = { video_url: 'https://instagram.com/reel/x', ...videoFieldsFromPaste('https://youtu.be/dQw4w9WgXcQ') }
+eq('a YouTube paste clears a previous non-YouTube link', backToYouTube.video_url, undefined)
+eq('...and plays inline', blockVideoMode(backToYouTube), 'youtube')
 
 // ---------------------------------------------------------------------------
 console.log(`\ndrill video: ${passed} passed, ${failures.length} failed`)

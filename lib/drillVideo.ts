@@ -286,3 +286,58 @@ export function parsePastedVideo(input: string | null | undefined): PastedVideo 
 
   return { kind: 'unusable' }
 }
+
+/**
+ * Which video a practice block should show, if any.
+ *
+ * The order matters and the last two rungs are the ones that bit. A block with
+ * no explicit video falls back to matching its TITLE against the drill library,
+ * which is a good default for a plan nobody has edited and a trap the moment
+ * somebody has: a coach who deleted the AI's video got the same one handed back
+ * by name, and a coach who replaced it with an Instagram link saw both.
+ *
+ *   youtube  an id on the block — plays inline
+ *   link     a non-YouTube URL the coach pasted — a tap-through
+ *   none     the coach removed the video and meant it
+ *   lookup   nobody has said anything; guess from the library
+ *
+ * "Nobody said" and "the coach said no" are the same shape in the data — an
+ * absent id — which is why removing a video has to be recorded as a decision
+ * (`video_cleared`) rather than as an absence.
+ */
+export function blockVideoMode(
+  block: { youtube_video_id?: string | null; video_url?: string | null; video_cleared?: boolean | null } | null | undefined
+): 'youtube' | 'link' | 'lookup' | 'none' {
+  if (block?.youtube_video_id) return 'youtube'
+  if (block?.video_url) return 'link'
+  if (block?.video_cleared) return 'none'
+  return 'lookup'
+}
+
+/**
+ * The block fields a pasted video box becomes.
+ *
+ * Every field is rewritten every time, so swapping a YouTube link for an
+ * Instagram one cannot leave the old id behind it. Spread this over the block:
+ * the `undefined`s are deliberate, and JSON.stringify drops them on save.
+ */
+export function videoFieldsFromPaste(pasted: string | null | undefined): Record<string, any> {
+  const cleared = {
+    youtube_video_id: undefined as string | undefined,
+    youtube_url: undefined as string | undefined,
+    youtube_start_seconds: undefined as number | undefined,
+    video_url: undefined as string | undefined,
+    video_cleared: undefined as boolean | undefined,
+  }
+  const v = parsePastedVideo(pasted)
+  if (!v || v.kind === 'unusable') return { ...cleared, video_cleared: true }
+  if (v.kind === 'youtube') {
+    return {
+      ...cleared,
+      youtube_video_id: v.youtube_video_id,
+      youtube_url: v.youtube_url,
+      youtube_start_seconds: v.youtube_start_seconds ?? undefined,
+    }
+  }
+  return { ...cleared, video_url: v.video_url }
+}

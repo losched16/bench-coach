@@ -35,7 +35,7 @@ import {
 import { PracticeBlock } from './PracticeBlock'
 import { PriorityCoverageSummary } from './PriorityCoverageSummary'
 import { isStationGroup } from '@/lib/practicePlan'
-import { parsePastedVideo, formatTimestamp } from '@/lib/drillVideo'
+import { parsePastedVideo, formatTimestamp, videoFieldsFromPaste } from '@/lib/drillVideo'
 
 const TYPES = ['warmup', 'drill', 'station', 'game', 'cooldown'] as const
 
@@ -63,31 +63,6 @@ function videoValueOf(block: any): string {
     return `https://www.youtube.com/watch?v=${block.youtube_video_id}${t > 0 ? `&t=${t}s` : ''}`
   }
   return String(block?.video_url || '')
-}
-
-/**
- * The video fields a pasted link becomes, including the clearing case.
- *
- * Returned as an object to spread over the block, so emptying the box removes
- * the old video instead of leaving a stale id behind it — which would show the
- * coach a video they had just deleted.
- */
-function videoFieldsFrom(pasted: string): Record<string, any> {
-  const v = parsePastedVideo(pasted)
-  const cleared = {
-    youtube_video_id: undefined, youtube_url: undefined,
-    youtube_start_seconds: undefined, video_url: undefined,
-  }
-  if (!v || v.kind === 'unusable') return cleared
-  if (v.kind === 'youtube') {
-    return {
-      ...cleared,
-      youtube_video_id: v.youtube_video_id,
-      youtube_url: v.youtube_url,
-      youtube_start_seconds: v.youtube_start_seconds ?? undefined,
-    }
-  }
-  return { ...cleared, video_url: v.video_url }
 }
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
@@ -154,24 +129,46 @@ function BlockEditor({ block, onChange }: { block: any; onChange: (patch: any) =
                   onChange={e => onChange({ watch_for: e.target.value })} />
       </Field>
 
-      <Field label="Video link">
-        <input
-          className={inputClass}
-          value={video}
-          placeholder="https://youtube.com/watch?v=… — or any video link"
-          onChange={e => { setVideo(e.target.value); onChange(videoFieldsFrom(e.target.value)) }}
-        />
+      <Field label="Video">
+        <div className="flex gap-2">
+          <input
+            className={inputClass}
+            value={video}
+            placeholder="https://youtube.com/watch?v=… — or any video link"
+            onChange={e => { setVideo(e.target.value); onChange(videoFieldsFromPaste(e.target.value)) }}
+          />
+          {/* Clearing the box does this too, but only if you think to try it.
+              Removing the drill's video is a thing coaches want and it should
+              not be a discovery. */}
+          {video.trim() !== '' && (
+            <button
+              type="button"
+              onClick={() => { setVideo(''); onChange(videoFieldsFromPaste('')) }}
+              className="shrink-0 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-red-700"
+            >
+              Remove
+            </button>
+          )}
+        </div>
         {video.trim() === '' ? (
-          <p className="text-xs text-gray-400 mt-1">
-            Paste with the time in it and it opens there instead of at the beginning.
-          </p>
+          block.video_cleared ? (
+            <p className="text-xs text-gray-600 mt-1">
+              No video on this block — and it won&apos;t go looking for one.
+            </p>
+          ) : (
+            <p className="text-xs text-gray-400 mt-1">
+              Paste with the time in it and it opens there instead of at the beginning.
+            </p>
+          )
         ) : parsed?.kind === 'youtube' ? (
           <p className="text-xs text-green-700 mt-1">
             ✓ Plays inside the block{parsed.youtube_start_seconds
               ? `, starting at ${formatTimestamp(parsed.youtube_start_seconds)}` : ', from the beginning'}
           </p>
         ) : parsed?.kind === 'link' ? (
-          <p className="text-xs text-blue-700 mt-1">✓ Saved as a tap-through link</p>
+          <p className="text-xs text-blue-700 mt-1">
+            ✓ Saved as a tap-through link — only YouTube plays inline
+          </p>
         ) : (
           <p className="text-xs text-red-600 mt-1">That doesn&apos;t look like a link.</p>
         )}

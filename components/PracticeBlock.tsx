@@ -5,6 +5,7 @@ import { RefreshCw, ChevronDown, ChevronRight, Video } from 'lucide-react'
 import { DrillVideo, DrillVideoLookup } from './DrillVideo'
 import { SaveDrillButton } from './SaveDrillButton'
 import { isStationGroup } from '@/lib/practicePlan'
+import { blockVideoMode } from '@/lib/drillVideo'
 
 // One block of a practice plan.
 //
@@ -301,45 +302,56 @@ export function PracticeBlock({
             </div>
           )}
 
-          {/* Embedded Drill Video — prefer AI-provided youtube_video_id, fallback to fuzzy match.
-              A station parent has no video of its own; its stations do. */}
-          {/* A link the coach pasted that is not YouTube — their own game
-              film, a Hudl clip, a Drive upload. Not embedded on purpose: an
-              iframe to an arbitrary host is a privacy and mixed-content
-              problem and most of these hosts refuse framing anyway. A
-              tap-through beats refusing the link. */}
-          {!station && !block.youtube_video_id && block.video_url && (
-            <a
-              href={block.video_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 hover:underline"
-            >
-              <Video className="w-4 h-4" />
-              Watch the video for this block
-            </a>
-          )}
+          {/* THE VIDEO, IN PRECEDENCE ORDER.
+              A station parent has no video of its own; its stations do.
 
-          {!station && (block.youtube_video_id ? (
-            <DrillVideo
-              drillName={block.drill_name || block.title}
-              youtubeVideoId={block.youtube_video_id}
-              channel={block.youtube_channel}
-              // Where the coach said this drill starts. Dropped before this,
-              // so a block curated to 4:12 still opened on the compilation's
-              // introduction — the exact failure the timestamp exists to stop.
-              startSeconds={block.youtube_start_seconds ?? undefined}
-              compact={true}
-              autoExpand={false}
-            />
-          ) : (
-            <DrillVideoLookup
-              drillName={block.title}
-              drillResources={drillResources}
-              compact={true}
-              autoExpand={false}
-            />
-          ))}
+              The last branch is a fuzzy match on the block's TITLE against the
+              drill library, and it used to run whenever youtube_video_id was
+              absent. That made a video impossible to remove: a coach who
+              cleared the AI's link got the same video straight back, found by
+              name, and a coach who replaced it with an Instagram link saw both.
+
+              So the fallback is exactly that — a fallback for a block where
+              nobody has said anything about video. Once the coach HAS said
+              something (a different link, or deliberately nothing) their answer
+              stands and the library does not get a vote. */}
+          {!station && (
+            blockVideoMode(block) === 'youtube' ? (
+              <DrillVideo
+                drillName={block.drill_name || block.title}
+                youtubeVideoId={block.youtube_video_id}
+                channel={block.youtube_channel}
+                // Where the coach said this drill starts. Dropped before this,
+                // so a block curated to 4:12 still opened on the compilation's
+                // introduction — the exact failure the timestamp exists to stop.
+                startSeconds={block.youtube_start_seconds ?? undefined}
+                compact={true}
+                autoExpand={false}
+              />
+            ) : blockVideoMode(block) === 'link' ? (
+              /* A link the coach pasted that is not YouTube — an Instagram
+                 reel, their own game film, a Hudl clip, a Drive upload. Not
+                 embedded on purpose: an iframe to an arbitrary host is a
+                 privacy and mixed-content problem and most of these hosts
+                 refuse framing anyway. A tap-through beats refusing the link. */
+              <a
+                href={block.video_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+              >
+                <Video className="w-4 h-4" />
+                Watch the video for this block
+              </a>
+            ) : blockVideoMode(block) === 'none' ? null : (
+              <DrillVideoLookup
+                drillName={block.title}
+                drillResources={drillResources}
+                compact={true}
+                autoExpand={false}
+              />
+            )
+          )}
 
           {/* Last in the block on purpose: they decide whether they like a
               drill after reading how it runs, not before. */}
