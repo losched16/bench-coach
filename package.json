@@ -58,7 +58,8 @@
     "verify:bootstrap": "bash scripts/verify-baseline-bootstrap.sh",
     "inspect:baseline": "node scripts/inspect-baseline.mjs",
     "test:export-schema": "bash scripts/test-export-schema.sh",
-    "csv:baseline": "node scripts/csv-to-baseline.mjs"
+    "csv:baseline": "node scripts/csv-to-baseline.mjs",
+    "audit:drills": "tsx scripts/audit-drill-library.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",
