@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
-import { Send, Loader2, Menu, X, Target, Users, ExternalLink, Play, PanelRight } from 'lucide-react'
+import { Send, Loader2, Menu, X, Target, Users, ExternalLink, Play, PanelRight, ClipboardList } from 'lucide-react'
 import Link from 'next/link'
 import { ChatMessageContent } from '@/components/ChatMessageContent'
 import { PrescriptionSections } from '@/components/PrescriptionSections'
@@ -13,6 +13,7 @@ import { SupersedeConfirm, Superseding } from '@/components/SupersedeConfirm'
 import { DrillReview, ReviewDrill, DrillVerdict } from '@/components/DrillReview'
 import { META_SENTINEL, splitSections } from '@/lib/analysis'
 import { usePageView, useTracker } from '@/lib/tracking'
+import { isUsablePracticePrompt } from '@/lib/practicePrompt'
 
 interface Message {
   id: string
@@ -831,6 +832,37 @@ export default function ChatPage() {
                           Full read on {selectedPlayer?.name || 'the team'} with drills. You decide
                           afterwards whether it becomes a tracked priority — nothing is saved yet.
                         </p>
+
+                        {/* The other thing a coach wants out of an answer like
+                            this. A conversation can describe a practice well —
+                            length, coaches, the order to work in — and until
+                            now that description died in the thread and had to
+                            be retyped into a form.
+
+                            It hands the question to the practice generator
+                            rather than trying to turn the prose above into
+                            blocks: that pipeline knows the drill library, the
+                            clock, station staffing and priority coverage, and
+                            an answer parsed out of chat knows none of it. The
+                            coach lands on the review screen and edits from
+                            there like any other plan. */}
+                        {isUsablePracticePrompt(sourceQuestion) && (
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                            <button
+                              onClick={() => router.push(
+                                `/dashboard/practice?teamId=${teamId}&prompt=${encodeURIComponent(sourceQuestion!)}`
+                              )}
+                              className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-sm rounded-lg hover:bg-gray-50"
+                            >
+                              <ClipboardList size={15} />
+                              Build a team practice from this
+                            </button>
+                            <p className="text-xs text-gray-500 mt-2">
+                              Opens the practice builder with what you asked for already filled in —
+                              length, coaches and skills. You review and edit it before anything is saved.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
 

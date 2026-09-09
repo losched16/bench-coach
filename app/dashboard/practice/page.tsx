@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { Plus, Clock, ChevronDown, ChevronUp, Trash2, Pencil, Sparkles, ClipboardCheck, RefreshCw, Search, X, FileText, AlertCircle, Check, Printer } from 'lucide-react'
@@ -19,6 +19,7 @@ import { PlanHeader } from '@/components/PlanHeader'
 import { PriorityCoverageSummary } from '@/components/PriorityCoverageSummary'
 import { parsePastedVideo, formatTimestamp } from '@/lib/drillVideo'
 import { PlanReview } from '@/components/PlanReview'
+import { practiceInputsFromPrompt, practiceFocusFromPrompt } from '@/lib/practicePrompt'
 import { evaluatePriorityCoverage } from '@/lib/priorityCoverage'
 
 // A plan's coverage summary: the one measured at generation time when the
@@ -185,6 +186,22 @@ function PracticeContent() {
     if (searchParams.get('start') === 'template') setShowTemplateModal(true)
   }, [searchParams])
 
+  // Arriving from CoachAI with a practice already described.
+  //
+  // The conversation is where a coach actually says what they want — "4
+  // coaches, 2 hours, throwing progressions then hitting stations then ground
+  // balls" — and that sentence used to die in the thread. Now it lands in the
+  // specifics box, which reads the length, the coaches and the skills out of
+  // it, and the builder opens with all of it filled in. Nothing generates
+  // until the coach presses the button: they see what was understood first.
+  useEffect(() => {
+    const prompt = searchParams.get('prompt')
+    if (!prompt) return
+    setSpecifics(prompt)
+    setShowPlanModal(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
   // Arriving from a team priority: preselect what it's about so the coach
   // isn't re-picking a focus area the app already decided on.
   useEffect(() => {
@@ -195,6 +212,49 @@ function PracticeContent() {
     if (matched.length) setFocusAreas(matched.slice(0, 5))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
+
+  // WHAT THE COACH ALREADY WROTE
+  //
+  // "Anything specific?" has always been sent to the model. The numbers beside
+  // it were not: a coach who wrote "4 coaches, 2 hours, starting with throwing
+  // progressions, then hitting stations, then ground balls" still had to
+  // restate all of it in a dropdown and three checkboxes, and if they didn't,
+  // the plan came out 90 minutes long because that is the default.
+  //
+  // So the box now sets them. Applied rather than merely suggested — the coach
+  // wrote "2 hours" and honouring it is the expected behaviour, not a
+  // surprise — but announced, with one click to put back what was there.
+  // Applied once per distinct reading, so editing a duration by hand after
+  // typing is not overwritten on the next keystroke.
+  const [promptRead, setPromptRead] = useState<
+    { duration?: number; coaches?: number; focus?: string[]; prev: { duration: number; coaches: number | null; focus: string[] } } | null
+  >(null)
+  const lastPromptSig = useRef('')
+
+  useEffect(() => {
+    const read = practiceInputsFromPrompt(specifics)
+    const mapped = practiceFocusFromPrompt(specifics).filter(f => FOCUS_OPTIONS.includes(f)).slice(0, 5)
+    const sig = JSON.stringify([read.duration, read.coachCount, mapped])
+    if (sig === lastPromptSig.current) return
+    lastPromptSig.current = sig
+
+    const prev = { duration, coaches: coachCount, focus: focusAreas }
+    const applied: any = { prev }
+    if (read.duration != null && read.duration !== duration) { setDuration(read.duration); applied.duration = read.duration }
+    if (read.coachCount != null && read.coachCount !== coachCount) { setCoachCount(read.coachCount); applied.coaches = read.coachCount }
+    if (mapped.length && JSON.stringify(mapped) !== JSON.stringify(focusAreas)) { setFocusAreas(mapped); applied.focus = mapped }
+
+    setPromptRead(applied.duration || applied.coaches || applied.focus ? applied : null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [specifics])
+
+  const undoPromptRead = () => {
+    if (!promptRead) return
+    setDuration(promptRead.prev.duration)
+    setCoachCount(promptRead.prev.coaches)
+    setFocusAreas(promptRead.prev.focus)
+    setPromptRead(null)
+  }
 
   useEffect(() => {
     if (teamId) {
@@ -1369,9 +1429,32 @@ function PracticeContent() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Optional. Kit you have, space you're in, what you saw last game,
-                  a kid to work around — anything the buttons above can't say.
+                  Optional. Kit you have, space you&apos;re in, what you saw last game,
+                  a kid to work around — anything the buttons above can&apos;t say.
+                  Say the length, the coaches and the skills here and the settings
+                  above follow.
                 </p>
+
+                {promptRead && (
+                  <div className="mt-2 flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2">
+                    <Check size={14} className="text-blue-700 shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1 text-xs text-blue-900">
+                      Set from what you wrote:{' '}
+                      {[
+                        promptRead.duration ? `${promptRead.duration} minutes` : null,
+                        promptRead.coaches ? `${promptRead.coaches} coach${promptRead.coaches === 1 ? '' : 'es'}` : null,
+                        promptRead.focus?.length ? promptRead.focus.join(', ') : null,
+                      ].filter(Boolean).join(' \u00b7 ')}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={undoPromptRead}
+                      className="shrink-0 text-xs text-blue-700 hover:text-blue-900 underline"
+                    >
+                      Undo
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="flex space-x-3 pt-4">
