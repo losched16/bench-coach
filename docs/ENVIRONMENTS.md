@@ -390,6 +390,25 @@ dashboard, and there is no Vercel token or CLI here.
 | `056_drill_station_intelligence` | **applied** — `drill_activity_families` present with RLS and 2 policies; 20 new columns on `drill_resources`, **none NOT NULL**; 11 CHECK constraints; 2 partial indexes. 206 rows untouched, every new column NULL |
 | `058_drill_calibration` | **applied** — 9 families; 45 drills calibrated (43 matched rows for 42 names, plus the 2 originals); 163 left uncalibrated on purpose; library 206 → 208 |
 
+**Applied to production on 9 September 2026**, targeted coach-count and
+throwing-load calibration:
+
+| Migration | State |
+|---|---|
+| `059_coach_count_throwing_load_calibration` | **applied** — 22 drills, `min_coaches` + `throwing_load` only. First drill in the library with `min_coaches > 1`. Closed neither live finding; see `060` |
+| `060_calibrate_the_drills_that_get_selected` | **applied** — the 11 drills `validate-live-retrieval` reported selecting while still printing `throw=?`. Closed both findings |
+
+Calibrated coverage after both: **67 of 208** drills carry `min_coaches` and
+`throwing_load` (was 45). Distribution: `none` 20, `low` 21, `medium` 15,
+`high` 11; `min_coaches` 0 on 31, 1 on 35, 2 on 1. The remaining 141 are NULL on
+purpose and stay fully eligible — NULL is read as "self-running, unknown load"
+and gates nothing.
+
+Verified against production, not exit codes: all five live retrieval scenarios
+report `0 have NO throwing_load at all`, and the "under-determined" warning on
+the game-tomorrow scenario is gone. `cutoffs-relays` retains 3 solo-coach
+alternatives after the one `min_coaches = 2`, checked before writing it.
+
 Verified after applying, against production rather than exit codes: all 208
 drills remain eligible for a 10-player team, for a 1-coach practice, and when
 nothing at all is known. Supabase security advisors: 83 total, **0 ERROR** —

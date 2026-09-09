@@ -332,3 +332,51 @@ correct and under-determined.
 
 Both findings point the same way, and it is not "calibrate all 206": it is
 "calibrate the drills where the new signals would actually change a decision."
+
+### Both findings are now closed — and the first attempt missed
+
+Migrations `059` and `060` closed them, in two batches, because the first batch
+was wrong and the validator said so.
+
+`059` calibrated 22 drills chosen by category: Throwing, Arm Care, Infield —
+the set that looked like it would decide a "keep throwing light" practice.
+Re-running `validate-live-retrieval` afterwards produced *the same sentence*:
+
+```text
+throwing : 0 high of 4 blocks · 4 have NO throwing_load at all
+           *** the signal did not participate — this outcome is under-determined
+```
+
+The reasoning was backwards. A practice told to keep throwing light does not
+schedule throwing drills — that is what the constraint is for. It schedules tee
+work. The drills whose load decides that scenario are HITTING drills, and
+calibrating the throwing library left every one of them NULL.
+
+`060` calibrated the eleven drills the validator reported selecting while still
+printing `throw=?`. Asking the validator which drills mattered took one command;
+reasoning about which categories mattered produced a batch that changed nothing.
+
+After both, across all five live scenarios:
+
+```text
+1. 8U · 3 coaches   staffing: needs 1 coach-led stations, 3 present   0 have NO throwing_load
+2. same, 1 coach    staffing: needs 1 coach-led stations, 1 present   0 have NO throwing_load
+3. 9U double play   staffing: needs 2 coach-led stations, 2 present   0 have NO throwing_load
+4. game tomorrow    0 high of 4 blocks                                0 have NO throwing_load
+5. 10U indoor       staffing: needs 1 coach-led stations, 2 present   0 have NO throwing_load
+```
+
+The under-determined warning is gone from scenario 4: every block it chose now
+carries `throwing_load = 'none'`, so the plan can be *shown* to honour the
+constraint rather than having happened to. Scenario 3 went from needing one
+coach-led station to needing two, which is the first time the coach count
+constrains a real plan rather than only a unit test.
+
+Scenarios 1 and 2 still produce identical plans. That is now a determined
+negative rather than an unmeasured one: the practice genuinely needs only one
+coach-led station, so a third coach has nothing to do that one could not.
+
+`min_coaches > 1` is also no longer empty — `Machine-Fed Relay Sequences at Game
+Speed` needs a machine operator and a relay coach. It is the first drill a solo
+coach cannot be given, so it was checked against the standing rule before being
+written: its only mapping, `cutoffs-relays`, retains 3 solo-coach alternatives.
