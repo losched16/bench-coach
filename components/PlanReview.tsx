@@ -282,7 +282,14 @@ export function PlanReview({
       {/* Header */}
       <div className="flex items-start justify-between gap-4 px-5 py-3 border-b border-gray-200 shrink-0">
         <div className="min-w-0">
-          <h2 className="text-lg font-bold text-gray-900 truncate">{draft?.title || 'Practice plan'}</h2>
+          {/* Two lines, not one. A real generated title is
+              "Springford Blue (8U) — Throwing Progressions, Infield Footwork &
+              Hitting Load" — truncating that leaves the team name and cuts off
+              what the practice is actually about, which is the half worth
+              reading. */}
+          <h2 className="text-lg font-bold text-gray-900 leading-snug line-clamp-2">
+            {draft?.title || 'Practice plan'}
+          </h2>
           <p className="text-xs text-gray-500 mt-0.5">
             {blocks.length} blocks · {total} of {duration} min
             {total > duration && <span className="text-red-600 font-medium"> · over by {total - duration}</span>}
@@ -329,20 +336,18 @@ export function PlanReview({
                     on ? 'bg-blue-600 text-white' : 'hover:bg-gray-200'
                   }`}
                 >
-                  <div className="flex items-center gap-2">
+                  {/* Title first and up to two lines — a real block is called
+                      "Throwing Progression — Knee, Hip, Full", and one
+                      truncated line of that is not identifiable. The clock and
+                      the badges share the second row so a nine-block practice
+                      still fits a laptop without the rail scrolling. */}
+                  <div className={`text-sm font-medium leading-snug line-clamp-2 ${on ? 'text-white' : 'text-gray-900'}`}>
+                    {b.title || `Block ${i + 1}`}
+                  </div>
+                  <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mt-1">
                     <span className={`text-[11px] font-mono ${on ? 'text-blue-100' : 'text-gray-400'}`}>
                       {timeLabels[i] || `${i + 1}`}
                     </span>
-                    {edited.has(i) && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                        on ? 'bg-blue-500 text-white' : 'bg-amber-100 text-amber-800'
-                      }`}>edited</span>
-                    )}
-                  </div>
-                  <div className={`text-sm font-medium truncate max-w-[16rem] ${on ? 'text-white' : 'text-gray-900'}`}>
-                    {b.title || `Block ${i + 1}`}
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-0.5">
                     <span className={`text-[11px] px-1.5 py-0.5 rounded ${
                       on ? 'bg-blue-500 text-blue-50' : typeBadge(b.type || 'drill')
                     }`}>
@@ -353,6 +358,11 @@ export function PlanReview({
                     </span>
                     {(b.youtube_video_id || b.video_url) && (
                       <VideoIcon size={11} className={on ? 'text-blue-100' : 'text-gray-400'} />
+                    )}
+                    {edited.has(i) && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                        on ? 'bg-blue-500 text-white' : 'bg-amber-100 text-amber-800'
+                      }`}>edited</span>
                     )}
                   </div>
                 </button>
