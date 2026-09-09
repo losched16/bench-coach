@@ -223,3 +223,66 @@ export function parseTimestamp(input: string | number | null | undefined): numbe
   if (sec > 59 || (m[1] && min > 59)) return null
   return h * 3600 + min * 60 + sec
 }
+
+/**
+ * What a coach pasted into the video box, turned into block fields.
+ *
+ * A coach building a practice by hand has a link. It might be the YouTube one
+ * they always use, it might be a Hudl clip of their own team, it might be a
+ * Drive file a parent filmed. All three are legitimate; only the first can be
+ * embedded, so this sorts them rather than demanding one shape.
+ *
+ * YouTube links keep their timestamp. That matters more here than anywhere
+ * else in the product: a coach who bothered to scrub to 4:12 and copy the link
+ * WITH the time in it has done the curation work by hand, and dropping it puts
+ * them back at the top of a twelve-minute compilation — which is the single
+ * most common complaint the drill library has (103 of 208 rows currently open
+ * at 0:00).
+ *
+ * Returns null for empty input, and `{ kind: 'unusable' }` for something that
+ * is not a link at all, so the caller can say so instead of silently saving a
+ * block with a dead video on it.
+ */
+export type PastedVideo =
+  | { kind: 'youtube'; youtube_video_id: string; youtube_start_seconds: number | null; youtube_url: string }
+  | { kind: 'link'; video_url: string }
+  | { kind: 'unusable' }
+
+export function parsePastedVideo(input: string | null | undefined): PastedVideo | null {
+  const raw = String(input || '').trim()
+  if (!raw) return null
+
+  // A bare id, which is what someone copies out of the library or out of our
+  // own drill rows. Exactly 11 of YouTube's alphabet and nothing else.
+  if (/^[A-Za-z0-9_-]{11}$/.test(raw)) {
+    return {
+      kind: 'youtube',
+      youtube_video_id: raw,
+      youtube_start_seconds: null,
+      youtube_url: `https://www.youtube.com/watch?v=${raw}`,
+    }
+  }
+
+  const id = parseVideoId(raw)
+  if (id) {
+    const start = parseStartFromUrl(raw)
+    return {
+      kind: 'youtube',
+      youtube_video_id: id,
+      youtube_start_seconds: start > 0 ? start : null,
+      youtube_url: raw,
+    }
+  }
+
+  // Anything else that is really a URL is kept as a link. Not embedded — an
+  // iframe to an arbitrary host is both a mixed-content and a privacy problem,
+  // and half of these hosts refuse framing anyway — but a tap-through beats
+  // telling a coach their own game film is not allowed.
+  if (/^https?:\/\/[^\s]+\.[^\s]+/i.test(raw)) return { kind: 'link', video_url: raw }
+
+  // Bare domain, no scheme. Common enough to be worth accepting rather than
+  // rejecting a coach's correct link over a missing "https://".
+  if (/^[\w-]+(\.[\w-]+)+\/[^\s]*$/.test(raw)) return { kind: 'link', video_url: `https://${raw}` }
+
+  return { kind: 'unusable' }
+}

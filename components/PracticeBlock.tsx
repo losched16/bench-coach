@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { RefreshCw, ChevronDown, ChevronRight } from 'lucide-react'
+import { RefreshCw, ChevronDown, ChevronRight, Video } from 'lucide-react'
 import { DrillVideo, DrillVideoLookup } from './DrillVideo'
 import { SaveDrillButton } from './SaveDrillButton'
 import { isStationGroup } from '@/lib/practicePlan'
@@ -303,11 +303,32 @@ export function PracticeBlock({
 
           {/* Embedded Drill Video — prefer AI-provided youtube_video_id, fallback to fuzzy match.
               A station parent has no video of its own; its stations do. */}
+          {/* A link the coach pasted that is not YouTube — their own game
+              film, a Hudl clip, a Drive upload. Not embedded on purpose: an
+              iframe to an arbitrary host is a privacy and mixed-content
+              problem and most of these hosts refuse framing anyway. A
+              tap-through beats refusing the link. */}
+          {!station && !block.youtube_video_id && block.video_url && (
+            <a
+              href={block.video_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+            >
+              <Video className="w-4 h-4" />
+              Watch the video for this block
+            </a>
+          )}
+
           {!station && (block.youtube_video_id ? (
             <DrillVideo
               drillName={block.drill_name || block.title}
               youtubeVideoId={block.youtube_video_id}
               channel={block.youtube_channel}
+              // Where the coach said this drill starts. Dropped before this,
+              // so a block curated to 4:12 still opened on the compilation's
+              // introduction — the exact failure the timestamp exists to stop.
+              startSeconds={block.youtube_start_seconds ?? undefined}
               compact={true}
               autoExpand={false}
             />

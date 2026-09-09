@@ -22,7 +22,7 @@ import { readFileSync } from 'fs'
 import {
   videoIdFor, parseVideoId, startSecondsFor, hasSegment, hasVideo,
   watchUrl, embedUrl, thumbnailUrl, formatTimestamp, parseTimestamp,
-  parseStartFromUrl,
+  parseStartFromUrl, parsePastedVideo,
 } from '@/lib/drillVideo'
 import { rankDrills, RetrievalConstraints } from '@/lib/drillRetrieval'
 import { diagnoseByAlias, TaxonomyRow } from '@/lib/drillDiagnosis'
@@ -313,6 +313,41 @@ eq('videos backing more than one drill', Array.from(videoUse.values()).filter(n 
 eq('drills sharing a video', Array.from(videoUse.values()).filter(n => n > 1).reduce((s, n) => s + n, 0), 103)
 eq('MEASURED: drills with a curated segment start', DRILLS.filter((d: any) => hasSegment(d)).length, 0)
 eq('MEASURED: shared-video drills still opening at 0:00', sharedAtZero.length, 103)
+
+// ── what a coach pastes into a hand-built block ─────────────────────────────
+//
+// The manual practice builder had no video field at all, so a coach writing
+// their own plan could not attach the clip they were going to show. Anything
+// that is a link is accepted; only YouTube can be embedded.
+
+const yt = (u: string) => { const v = parsePastedVideo(u); return v && v.kind === 'youtube' ? v : null }
+
+eq('a watch URL yields its id', yt('https://www.youtube.com/watch?v=dQw4w9WgXcQ')?.youtube_video_id, 'dQw4w9WgXcQ')
+eq('a youtu.be link yields its id', yt('https://youtu.be/dQw4w9WgXcQ')?.youtube_video_id, 'dQw4w9WgXcQ')
+eq('a Shorts link yields its id', yt('https://youtube.com/shorts/dQw4w9WgXcQ')?.youtube_video_id, 'dQw4w9WgXcQ')
+eq('a bare 11-character id is accepted', yt('dQw4w9WgXcQ')?.youtube_video_id, 'dQw4w9WgXcQ')
+
+// The reason this matters: a coach who scrubbed to the segment and copied the
+// link WITH the time has done by hand exactly what 103 library rows still need.
+eq('a pasted timestamp survives (t=252s)',
+  yt('https://youtu.be/dQw4w9WgXcQ?t=252s')?.youtube_start_seconds, 252)
+eq('...in h/m/s form too',
+  yt('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=1m30s')?.youtube_start_seconds, 90)
+eq('no timestamp means the beginning, not zero-as-a-claim',
+  yt('https://youtu.be/dQw4w9WgXcQ')?.youtube_start_seconds, null)
+
+const link = (u: string) => { const v = parsePastedVideo(u); return v && v.kind === 'link' ? v : null }
+ok('a non-YouTube video link is kept as a link',
+  link('https://vimeo.com/123456789')?.video_url === 'https://vimeo.com/123456789',
+  'a coach\'s own game film is as legitimate a reference as a channel\'s')
+eq('a scheme-less link gets one rather than being rejected',
+  link('hudl.com/video/abc')?.video_url, 'https://hudl.com/video/abc')
+
+ok('an empty box is not an error', parsePastedVideo('') === null)
+ok('whitespace only is not an error', parsePastedVideo('   ') === null)
+ok('prose is refused rather than saved as a dead link',
+  parsePastedVideo('the one Coach Dave showed us')?.kind === 'unusable',
+  'saving it would look like a video and do nothing at practice')
 
 // ---------------------------------------------------------------------------
 console.log(`\ndrill video: ${passed} passed, ${failures.length} failed`)

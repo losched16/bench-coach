@@ -17,6 +17,7 @@ import { EQUIPMENT_OPTIONS, readPlan, scheduleRows } from '@/lib/practicePlan'
 import type { PracticeTemplate } from '@/lib/practiceTemplates'
 import { PlanHeader } from '@/components/PlanHeader'
 import { PriorityCoverageSummary } from '@/components/PriorityCoverageSummary'
+import { parsePastedVideo, formatTimestamp } from '@/lib/drillVideo'
 import { evaluatePriorityCoverage } from '@/lib/priorityCoverage'
 
 // A plan's coverage summary: the one measured at generation time when the
@@ -142,7 +143,8 @@ function PracticeContent() {
     minutes: number
     description: string
     coaching_cues: string
-  }>>([{ title: '', minutes: 10, description: '', coaching_cues: '' }])
+    video_url: string
+  }>>([{ title: '', minutes: 10, description: '', coaching_cues: '', video_url: '' }])
   const [savingCustom, setSavingCustom] = useState(false)
   const [showTemplateModal, setShowTemplateModal] = useState(false)
 
@@ -603,7 +605,7 @@ function PracticeContent() {
   }
 
   const addBlock = () => {
-    setCustomBlocks([...customBlocks, { title: '', minutes: 10, description: '', coaching_cues: '' }])
+    setCustomBlocks([...customBlocks, { title: '', minutes: 10, description: '', coaching_cues: '', video_url: '' }])
   }
 
   const removeBlock = (index: number) => {
@@ -628,15 +630,36 @@ function PracticeContent() {
       return
     }
 
+    // A link that is not a link is worth stopping for. Saving it would give
+    // the coach a block that looks like it has a video and does nothing when
+    // tapped — and they would find that out at practice, not here.
+    const badVideo = validBlocks.find(b => parsePastedVideo(b.video_url)?.kind === 'unusable')
+    if (badVideo) {
+      alert(`"${badVideo.title}" has something in the video box that isn't a link:\n\n${badVideo.video_url}\n\nPaste a YouTube link (or any video URL), or clear the box.`)
+      return
+    }
+
     setSavingCustom(true)
     try {
       const content = {
-        blocks: validBlocks.map(b => ({
-          title: b.title,
-          minutes: b.minutes,
-          description: b.description,
-          coaching_cues: b.coaching_cues.split('\n').filter(c => c.trim()),
-        }))
+        blocks: validBlocks.map(b => {
+          const video = parsePastedVideo(b.video_url)
+          return {
+            title: b.title,
+            minutes: b.minutes,
+            description: b.description,
+            coaching_cues: b.coaching_cues.split('\n').filter(c => c.trim()),
+            // Same field names the AI path writes, so a hand-built block and a
+            // generated one render through exactly the same code — including
+            // the timestamp, which is the part a coach curated by hand.
+            ...(video?.kind === 'youtube' ? {
+              youtube_video_id: video.youtube_video_id,
+              youtube_url: video.youtube_url,
+              ...(video.youtube_start_seconds ? { youtube_start_seconds: video.youtube_start_seconds } : {}),
+            } : {}),
+            ...(video?.kind === 'link' ? { video_url: video.video_url } : {}),
+          }
+        })
       }
 
       const { error } = await supabase
@@ -652,7 +675,7 @@ function PracticeContent() {
 
       setShowCustomModal(false)
       setCustomTitle('')
-      setCustomBlocks([{ title: '', minutes: 10, description: '', coaching_cues: '' }])
+      setCustomBlocks([{ title: '', minutes: 10, description: '', coaching_cues: '', video_url: '' }])
       loadPlans()
     } catch (error) {
       console.error('Error saving custom plan:', error)
@@ -1801,7 +1824,7 @@ function PracticeContent() {
                         />
                       </div>
                       
-                      <div>
+                      <div className="mb-3">
                         <label className="block text-xs text-gray-500 mb-1">
                           Coaching Cues (one per line, optional)
                         </label>
@@ -1812,6 +1835,49 @@ function PracticeContent() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder={`"Keep your elbow up"\n"Watch the ball into your glove"`}
                         />
+                      </div>
+
+                      {/* Video (optional). Any link is accepted; a YouTube one
+                          plays inline and anything else becomes a tap-through,
+                          because a coach's own game film is as legitimate a
+                          reference as a channel's. */}
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          Video link (optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={block.video_url}
+                          onChange={(e) => updateBlock(idx, 'video_url', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="https://youtube.com/watch?v=… — or any video link"
+                        />
+                        {(() => {
+                          const v = parsePastedVideo(block.video_url)
+                          if (!v) return (
+                            <p className="text-xs text-gray-400 mt-1">
+                              Paste with the time in it (YouTube&apos;s Share &rarr; &ldquo;Start at&rdquo;) and the video opens there instead of at the beginning.
+                            </p>
+                          )
+                          if (v.kind === 'youtube') return (
+                            <p className="text-xs text-green-700 mt-1">
+                              ✓ Plays inside the block
+                              {v.youtube_start_seconds
+                                ? `, starting at ${formatTimestamp(v.youtube_start_seconds)}`
+                                : ', from the beginning'}
+                            </p>
+                          )
+                          if (v.kind === 'link') return (
+                            <p className="text-xs text-blue-700 mt-1">
+                              ✓ Saved as a link the coach can tap — only YouTube plays inline
+                            </p>
+                          )
+                          return (
+                            <p className="text-xs text-red-600 mt-1">
+                              That doesn&apos;t look like a link. Paste the whole URL, or clear the box.
+                            </p>
+                          )
+                        })()}
                       </div>
                     </div>
                   ))}
@@ -1824,7 +1890,7 @@ function PracticeContent() {
                   onClick={() => {
                     setShowCustomModal(false)
                     setCustomTitle('')
-                    setCustomBlocks([{ title: '', minutes: 10, description: '', coaching_cues: '' }])
+                    setCustomBlocks([{ title: '', minutes: 10, description: '', coaching_cues: '', video_url: '' }])
                   }}
                   disabled={savingCustom}
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
