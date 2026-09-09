@@ -26,6 +26,9 @@ interface Team {
   }
 }
 
+// Routes that are a workspace rather than a document, and get the screen.
+const WIDE_ROUTES = new Set(['/dashboard/chat'])
+
 // A personal workspace is one player, not a roster. Coaching surfaces — the
 // lineup builder, scouting, practice plans, staff — are hidden while you are
 // standing in one, which is correct and completely baffling if the picker
@@ -578,8 +581,19 @@ function DashboardContent({
         </>
       )}
 
-      {/* Main Content Area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 print:max-w-none print:px-0 print:py-0">
+      {/* Main Content Area.
+
+          max-w-7xl is right for a page you read — a column of text at 1280px
+          is already at the edge of comfortable. It is wrong for a page you
+          WORK in. Chat is three panes inside that 1280, minus 288 for the nav,
+          minus a 256 conversation rail, minus a 320 context panel: the
+          conversation itself was left with about 300px on a 1450px screen, so
+          a paragraph wrapped every five words while a third of the display sat
+          empty on either side.
+
+          Only the workspace routes opt out. Everything else keeps the
+          measure. */}
+      <div className={`${WIDE_ROUTES.has(pathname) ? 'max-w-screen-2xl' : 'max-w-7xl'} mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 print:max-w-none print:px-0 print:py-0`}>
         <div className="flex">
           {/* Desktop Sidebar Navigation */}
           <aside className="hidden lg:block w-64 flex-shrink-0 pr-8 print:hidden">

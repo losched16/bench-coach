@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
-import { Send, Loader2, Menu, X, Target, Users, ExternalLink, Play } from 'lucide-react'
+import { Send, Loader2, Menu, X, Target, Users, ExternalLink, Play, PanelRight } from 'lucide-react'
 import Link from 'next/link'
 import { ChatMessageContent } from '@/components/ChatMessageContent'
 import { PrescriptionSections } from '@/components/PrescriptionSections'
@@ -62,6 +62,19 @@ export default function ChatPage() {
   const [threadId, setThreadId] = useState<string | null>(null)
   const [threads, setThreads] = useState<ChatThread[]>([])
   const [threadsPanelOpen, setThreadsPanelOpen] = useState(false)
+  // Whether the reference panel is taking room from the conversation.
+  // Remembered per browser: a coach who closed it once meant it.
+  const [showContext, setShowContext] = useState(true)
+  useEffect(() => {
+    try { setShowContext(localStorage.getItem('bc.chat.context') !== 'hidden') } catch {}
+  }, [])
+  const toggleContext = () => {
+    setShowContext(v => {
+      const next = !v
+      try { localStorage.setItem('bc.chat.context', next ? 'shown' : 'hidden') } catch {}
+      return next
+    })
+  }
   const [startingThread, setStartingThread] = useState(false)
   // Set when migration 020 hasn't been applied — the rail is useless without
   // it, so say why rather than showing an empty list.
@@ -605,7 +618,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-12rem)]">
+    <div className="flex flex-col lg:flex-row gap-4 xl:gap-6 h-[calc(100vh-11rem)]">
       {/* Conversations — a rail on desktop, a sheet on phones */}
       {!threadsUnavailable && (
         <aside className="hidden lg:flex w-64 shrink-0 bg-white rounded-lg shadow flex-col overflow-hidden">
@@ -677,6 +690,16 @@ export default function ChatPage() {
               New
             </button>
           )}
+          {/* The way back to a panel you closed. Only on the widths that can
+              afford to show it at all. */}
+          {teamContext && !showContext && (
+            <button
+              onClick={toggleContext}
+              className="hidden xl:inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 shrink-0"
+            >
+              <PanelRight size={16} /> Context
+            </button>
+          )}
         </div>
 
         {threadsUnavailable && (
@@ -685,8 +708,12 @@ export default function ChatPage() {
           </div>
         )}
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
+        {/* Messages.
+            The pane is now wide; the conversation inside it is not. Text set
+            the full width of a 1500px display is as hard to read as text set
+            300px wide — the eye loses the line on the way back. So the pane
+            takes the space and the column keeps a measure, centred. */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 max-w-4xl w-full mx-auto">
           {messages.length === 0 ? (
             <div className="text-center text-gray-500 mt-12">
               <div className="text-4xl mb-4">⚾</div>
@@ -913,7 +940,10 @@ export default function ChatPage() {
 
         {/* Input */}
         <div className="border-t border-gray-200 p-4">
-          <div className="flex gap-3">
+          {/* Same measure as the messages, so the box a coach types into lines
+              up with the conversation it joins instead of running the width of
+              the pane. */}
+          <div className="flex gap-3 max-w-4xl w-full mx-auto">
             <input
               type="text"
               value={input}
@@ -934,12 +964,25 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Context Sidebar */}
-      {teamContext && (
-        <aside className="hidden xl:block w-80 shrink-0 bg-white rounded-lg shadow p-6 overflow-y-auto">
-          <h3 className="font-semibold text-gray-900 mb-4">Team Context</h3>
+      {/* Context sidebar.
+          Collapsible, and narrower than it was. It held 320px of fixed width
+          to show a team name, an age group and five player names — on the
+          screen this was reported from, that was as much room as the
+          conversation itself got. It is reference material, not the work. */}
+      {teamContext && showContext && (
+        <aside className="hidden xl:flex w-64 shrink-0 bg-white rounded-lg shadow flex-col overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 shrink-0">
+            <h3 className="font-semibold text-gray-900 text-sm">Team Context</h3>
+            <button
+              onClick={toggleContext}
+              className="text-gray-400 hover:text-gray-700"
+              aria-label="Hide team context"
+            >
+              <X size={16} />
+            </button>
+          </div>
 
-          <div className="space-y-4 text-sm">
+          <div className="space-y-4 text-sm overflow-y-auto p-4">
             <div>
               <div className="text-xs text-gray-500 mb-1">Team</div>
               <div className="font-medium">{teamContext.team?.name}</div>
