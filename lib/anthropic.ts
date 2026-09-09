@@ -1,5 +1,6 @@
 import { COACH_VOICE, CHAT_ADDENDUM } from './coachVoice'
 import { textFrom, requireText, requireJson } from './claudeText'
+import { splitMemorySuggestions } from './analysis'
 import { drillMenuLine } from './drills'
 import { claude as anthropic } from '@/lib/claudeClient'
 import { watchUrl } from '@/lib/drillVideo'
@@ -729,23 +730,19 @@ export async function generateChatResponse(
     // save a blank message to the conversation.
     const fullContent = requireText(response, 'chat reply')
 
-    // Extract memory suggestions from the response
-    const memorySuggestionsMatch = fullContent.match(/MEMORY_SUGGESTIONS:\s*(\{[\s\S]*?\})\s*$/m)
-    let memorySuggestions: MemorySuggestion = {}
-    let cleanMessage = fullContent
-
-    if (memorySuggestionsMatch) {
-      try {
-        memorySuggestions = JSON.parse(memorySuggestionsMatch[1])
-        cleanMessage = fullContent.replace(/MEMORY_SUGGESTIONS:[\s\S]*$/m, '').trim()
-      } catch (e) {
-        console.error('Failed to parse memory suggestions:', e)
-      }
+    // The marker and everything after it comes off the message whether or not
+    // it parses. It used to be stripped only on a successful parse, inside the
+    // try — and the extraction regex could not survive a nested object, so the
+    // raw JSON was shown to the coach every time the model had a suggestion to
+    // make. See lib/analysis.splitMemorySuggestions.
+    const { message, suggestions } = splitMemorySuggestions(fullContent)
+    if (/^[ \t]*MEMORY_SUGGESTIONS:/m.test(fullContent) && !suggestions) {
+      console.warn('Chat: memory suggestions block present but unreadable; message was still cleaned.')
     }
 
     return {
-      message: cleanMessage,
-      memory_suggestions: memorySuggestions,
+      message,
+      memory_suggestions: (suggestions || {}) as MemorySuggestion,
     }
   } catch (error: any) {
     console.error('Claude API error:', error)

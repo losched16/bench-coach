@@ -279,3 +279,97 @@ export function reportToPlainText(markdown: string, meta: ReportMeta): string {
   }
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
 }
+
+// ── Machine content in a chat reply ────────────────────────────────────────
+//
+// The chat prompt asks for prose and then a JSON block introduced by
+// MEMORY_SUGGESTIONS:. The block is for the app — suggested coach preferences,
+// team issues, player notes — and must never reach a coach's screen.
+//
+// It reached a coach's screen. Two compounding defects, both here:
+//
+//   const m = full.match(/MEMORY_SUGGESTIONS:\s*(\{[\s\S]*?\})\s*$/m)
+//   if (m) {
+//     try {
+//       suggestions = JSON.parse(m[1])
+//       clean = full.replace(/MEMORY_SUGGESTIONS:[\s\S]*$/m, '').trim()
+//     } catch (e) { console.error(...) }      // clean is still the full text
+//   }
+//
+// `\{[\s\S]*?\}` is non-greedy, so it stops at the FIRST closing brace — which
+// in this format is the one closing the first entry inside the first array, not
+// the object. The captured fragment ends mid-array and JSON.parse throws. And
+// because the strip is inside the try AFTER the parse, throwing leaves the raw
+// block in the message.
+//
+// The block only closes on its first brace when every array is empty, so the
+// leak happened precisely when the model had something to suggest: the feature
+// worked only while it had nothing to say.
+//
+// The rule this encodes: the marker and everything after it is machine content
+// and comes off the message whether or not it parses. Losing a memory
+// suggestion costs the app a guess. Showing one to a coach costs their trust in
+// everything else on the screen.
+
+const MEMORY_MARKER = /^[ \t]*MEMORY_SUGGESTIONS:/m
+
+/**
+ * The first complete `{...}` at or after `from`, honouring nesting.
+ *
+ * Braces inside strings do not count, and an escaped quote does not end a
+ * string — "he said \"go\"" would otherwise flip the parser into thinking it
+ * was outside a string and end the object at the next `}` in prose.
+ * Returns null if the object never closes (a truncated reply).
+ */
+function balancedObjectAt(text: string, from: number): string | null {
+  const start = text.indexOf('{', from)
+  if (start < 0) return null
+
+  let depth = 0
+  let inString = false
+  let escaped = false
+
+  for (let i = start; i < text.length; i++) {
+    const c = text[i]
+    if (escaped) { escaped = false; continue }
+    if (c === '\\') { escaped = true; continue }
+    if (c === '"') { inString = !inString; continue }
+    if (inString) continue
+    if (c === '{') depth++
+    else if (c === '}') {
+      depth--
+      if (depth === 0) return text.slice(start, i + 1)
+    }
+  }
+  return null
+}
+
+export interface SplitReply {
+  /** What the coach reads. Never contains the marker or anything after it. */
+  message: string
+  /** The parsed block, or null when there wasn't one or it didn't parse. */
+  suggestions: any | null
+}
+
+/**
+ * Separate a chat reply into what the coach reads and what the app keeps.
+ *
+ * Stripping is unconditional; parsing is best-effort. Those are deliberately
+ * independent — see above.
+ */
+export function splitMemorySuggestions(reply: string | null | undefined): SplitReply {
+  const full = String(reply || '')
+  const at = full.search(MEMORY_MARKER)
+  if (at < 0) return { message: full.trim(), suggestions: null }
+
+  const message = full.slice(0, at).trim()
+  const raw = balancedObjectAt(full, at)
+  if (!raw) return { message, suggestions: null }
+
+  try {
+    const parsed = JSON.parse(raw)
+    return { message, suggestions: parsed && typeof parsed === 'object' ? parsed : null }
+  } catch {
+    return { message, suggestions: null }
+  }
+}

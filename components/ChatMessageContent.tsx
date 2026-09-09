@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { Play, ChevronDown, ChevronUp } from 'lucide-react'
 import { embedUrl, parseStartFromUrl } from '@/lib/drillVideo'
+import { splitMemorySuggestions } from '@/lib/analysis'
 
 interface ChatMessageContentProps {
   content: string
@@ -25,8 +26,23 @@ interface VideoEmbed {
   endIndex: number
 }
 
-export function ChatMessageContent({ content, role }: ChatMessageContentProps) {
+export function ChatMessageContent({ content: raw, role }: ChatMessageContentProps) {
   const [expandedVideos, setExpandedVideos] = useState<Set<string>>(new Set())
+
+  // A last line of defence, and the only fix available to messages already in
+  // the database.
+  //
+  // The generator strips the MEMORY_SUGGESTIONS block before saving, and for a
+  // while it did not: a non-greedy regex could not survive a nested object, and
+  // the strip only ran on a successful parse, so the raw JSON was written into
+  // chat_messages.content and is still there. Fixing the generator does nothing
+  // for those rows. Stripping again at render costs one regex on text that
+  // almost never contains the marker, and means no coach sees the block
+  // whichever build wrote their message.
+  const content = useMemo(() => {
+    const s = String(raw || '')
+    return /^[ \t]*MEMORY_SUGGESTIONS:/m.test(s) ? splitMemorySuggestions(s).message : s
+  }, [raw])
 
   // Parse content to find YouTube links
   const { textParts, videos } = useMemo(() => {

@@ -61,7 +61,8 @@
     "csv:baseline": "node scripts/csv-to-baseline.mjs",
     "audit:drills": "npx --yes tsx --tsconfig tsconfig.json scripts/audit-drill-library.ts",
     "test:claude-text": "npx --yes tsx --tsconfig tsconfig.json scripts/test-claude-text.ts",
-    "test:practice-prompt": "npx --yes tsx --tsconfig tsconfig.json scripts/test-practice-prompt.ts"
+    "test:practice-prompt": "npx --yes tsx --tsconfig tsconfig.json scripts/test-practice-prompt.ts",
+    "test:memory-split": "npx --yes tsx --tsconfig tsconfig.json scripts/test-memory-split.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",
