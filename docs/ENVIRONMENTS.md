@@ -398,11 +398,15 @@ throwing-load calibration:
 | `059_coach_count_throwing_load_calibration` | **applied** — 22 drills, `min_coaches` + `throwing_load` only. First drill in the library with `min_coaches > 1`. Closed neither live finding; see `060` |
 | `060_calibrate_the_drills_that_get_selected` | **applied** — the 11 drills `validate-live-retrieval` reported selecting while still printing `throw=?`. Closed both findings |
 
-Calibrated coverage after both: **67 of 208** drills carry `min_coaches` and
-`throwing_load` (was 45). Distribution: `none` 20, `low` 21, `medium` 15,
-`high` 11; `min_coaches` 0 on 31, 1 on 35, 2 on 1. The remaining 141 are NULL on
+Calibrated coverage after both: **78 of 208** drills carry `min_coaches` and
+`throwing_load` (was 45). Distribution: `none` 27, `low` 24, `medium` 16,
+`high` 11; `min_coaches` 0 on 38, 1 on 39, 2 on 1. The remaining 130 are NULL on
 purpose and stay fully eligible — NULL is read as "self-running, unknown load"
 and gates nothing.
+
+(Counted against production after `060`. The figures in `d7c7b63`'s commit
+message — 67 calibrated, 141 NULL — were read after `059` and never re-counted;
+they undercount by the eleven rows `060` wrote.)
 
 Verified against production, not exit codes: all five live retrieval scenarios
 report `0 have NO throwing_load at all`, and the "under-determined" warning on
