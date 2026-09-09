@@ -1,5 +1,5 @@
 import { COACH_VOICE, CHAT_ADDENDUM } from './coachVoice'
-import { textFrom, requireText } from './claudeText'
+import { textFrom, requireText, requireJson } from './claudeText'
 import { drillMenuLine } from './drills'
 import { claude as anthropic } from '@/lib/claudeClient'
 import { watchUrl } from '@/lib/drillVideo'
@@ -855,7 +855,17 @@ function drillMenu(i: PracticeInputs): string {
 export async function generatePracticeSkeleton(i: PracticeInputs): Promise<any> {
   const stream = anthropic.messages.stream({
     model: 'claude-sonnet-5',
-    max_tokens: 4000,
+    // Thinking AND the JSON, out of one budget. This model thinks by default,
+    // and the effort below is `medium` — the highest of any call in this file —
+    // so the reasoning arrives BEFORE the first character of the object. At
+    // 4000 the budget could be gone before the JSON started, and the coach got
+    // "The plan outline came back unreadable. Try again." for a request that
+    // was never going to fit however many times they pressed it.
+    //
+    // The chat surface hit this same trap and was fixed; this call was not, and
+    // it is the one that needed it most. The output itself is ~2k tokens, so
+    // this is headroom for deliberation rather than for a longer plan.
+    max_tokens: 16000,
     system: `${COACH_VOICE}
 
 ${PRACTICE_SURFACE}
@@ -903,10 +913,17 @@ Return ONLY this JSON:
     output_config: { effort: 'medium' },
   })
 
-  const content = textFrom(await stream.finalMessage())
-  const match = content.match(/\{[\s\S]*\}/)
-  if (!match) throw new Error('The plan outline came back unreadable. Try again.')
-  return JSON.parse(match[0])
+  const message = await stream.finalMessage()
+  if (message.stop_reason === 'max_tokens') {
+    // Log the shape before the error reaches the coach, the way the chat
+    // surface does. "Try again" with no detail is what let this live.
+    console.error('Practice skeleton hit its token limit.', {
+      stop_reason: message.stop_reason,
+      blocks: message.content.map((b: any) => b.type),
+      usage: message.usage,
+    })
+  }
+  return requireJson(message, 'plan outline')
 }
 
 /**
@@ -928,7 +945,10 @@ export async function expandPracticeBlock(
 
   const stream = anthropic.messages.stream({
     model: 'claude-sonnet-5',
-    max_tokens: 3000,
+    // Thinking comes out of this budget too, even at low effort. 3000 covered
+    // the written block and left little for the reasoning in front of it, and
+    // a block that overran was silently dropped (see below).
+    max_tokens: 8000,
     system: `${COACH_VOICE}
 
 ${PRACTICE_SURFACE}
@@ -959,10 +979,12 @@ Write it out. Return ONLY this JSON:
     output_config: { effort: 'low' },
   })
 
-  const content = textFrom(await stream.finalMessage())
-  const match = content.match(/\{[\s\S]*\}/)
-  if (!match) return {}
-  try { return JSON.parse(match[0]) } catch { return {} }
+  // Throws rather than returning {}. Both end with the coach reading the block
+  // without its detail — the caller catches per block and keeps the skeleton —
+  // but {} threw the REASON away, so a block that quietly lost its setup, cues
+  // and watch-fors looked identical to a block that never had any. The caller
+  // logs what it catches; give it something worth logging.
+  return requireJson(await stream.finalMessage(), `"${block.title}" block`)
 }
 
 export async function generateReplacementBlock(
@@ -1038,14 +1060,7 @@ Return ONLY valid JSON for a single block:
       output_config: { effort: 'low' },
     })
 
-    const content = textFrom(response)
-
-    const jsonMatch = content.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0])
-    }
-
-    throw new Error('Failed to parse replacement block')
+    return requireJson(response, 'replacement block')
   } catch (error) {
     console.error('Replacement block generation error:', error)
     throw new Error('Failed to generate replacement block')

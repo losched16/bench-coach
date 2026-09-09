@@ -51,3 +51,43 @@ export function requireText(response: AnyMessage, what = 'response'): string {
     : ''
   throw new Error(`Claude returned no text for the ${what} (blocks: ${kinds}).${truncated}`)
 }
+
+/**
+ * The JSON object out of a Claude response, or a thrown error that says why not.
+ *
+ * The same max_tokens trap as above, one step further along. Every generator in
+ * this codebase asks for JSON and then does:
+ *
+ *   const match = content.match(/\{[\s\S]*\}/)
+ *   if (!match) throw new Error('...came back unreadable. Try again.')
+ *
+ * which produces the same sentence for three unrelated failures — the budget
+ * ran out before any text, the budget ran out MID-OBJECT, or the model wrote
+ * something that genuinely is not JSON. Only the third is worth retrying, and
+ * the first two are fixed by a number in the request rather than by the coach
+ * pressing the button again.
+ *
+ * Truncation mid-object is the sneaky one: a half-written object still contains
+ * a `}` from some nested value, so the regex matches, JSON.parse throws, and the
+ * caller reports a parse error with no hint that the cause was the budget.
+ * Checking stop_reason first is what separates them.
+ */
+export function requireJson<T = any>(response: AnyMessage, what = 'response'): T {
+  const text = requireText(response, what)
+  const hitCap = response?.stop_reason === 'max_tokens'
+
+  const match = text.match(/\{[\s\S]*\}/)
+  if (!match) {
+    throw new Error(hitCap
+      ? `The ${what} was cut off by its token limit before the JSON was complete — raise max_tokens.`
+      : `The ${what} came back without any JSON in it.`)
+  }
+
+  try {
+    return JSON.parse(match[0]) as T
+  } catch (e: any) {
+    throw new Error(hitCap
+      ? `The ${what} was cut off mid-object by its token limit — raise max_tokens.`
+      : `The ${what} contained JSON that would not parse: ${e.message}`)
+  }
+}
