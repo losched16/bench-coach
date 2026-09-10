@@ -743,6 +743,22 @@ export default function ChatPage() {
                   !!sourceQuestion &&
                   !loading
 
+                // Deliberately NOT gated on being the last message, unlike the
+                // commit above. That one is last-only because a column of
+                // identical red buttons up the thread is noise; this one is
+                // already rare — it needs a question that describes a practice
+                // — and the answer a coach wants to build from is usually one
+                // they have scrolled back to, not the newest thing on screen.
+                // It was nested inside canCommit and inherited both the
+                // last-message rule and the !loading rule, which is why it
+                // never appeared.
+                const canBuildPractice =
+                  message.role === 'assistant' &&
+                  !isPriority &&
+                  !message.id.startsWith('error-') &&
+                  !!sourceQuestion &&
+                  isUsablePracticePrompt(sourceQuestion)
+
                 return (
                 <div
                   key={message.id}
@@ -810,6 +826,54 @@ export default function ChatPage() {
                       </Link>
                     )}
 
+                      {/* The other thing a coach wants out of an answer like
+                          this. A conversation can describe a practice well —
+                          length, coaches, the order to work in — and until
+                          now that description died in the thread and had to
+                          be retyped into a form.
+
+                          It hands the question to the practice generator
+                          rather than trying to turn the prose above into
+                          blocks: that pipeline knows the drill library, the
+                          clock, station staffing and priority coverage, and
+                          an answer parsed out of chat knows none of it. The
+                          coach lands on the review screen and edits from
+                          there like any other plan. */}
+                      {canBuildPractice && (
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <button
+                            onClick={() => {
+                              // The answer travels in sessionStorage, not the
+                              // URL. A practice answer runs to thousands of
+                              // characters and a query string that long is
+                              // both fragile and unreadable in the address
+                              // bar. The question stays in the URL because it
+                              // is short and makes the link mean something on
+                              // its own — if the storage is gone by the time
+                              // the builder reads it, the question alone
+                              // still works.
+                              try {
+                                sessionStorage.setItem('bc.practice.fromChat', JSON.stringify({
+                                  question: sourceQuestion,
+                                  answer: message.content,
+                                }))
+                              } catch {}
+                              router.push(
+                                `/dashboard/practice?teamId=${teamId}&prompt=${encodeURIComponent(sourceQuestion!)}`
+                              )
+                            }}
+                            className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-sm rounded-lg hover:bg-gray-50"
+                          >
+                            <ClipboardList size={15} />
+                            Build a team practice from this
+                          </button>
+                          <p className="text-xs text-gray-500 mt-2">
+                            Opens the practice builder with what you asked for already filled in, and builds
+                            it to follow this answer. You review and edit it before anything is saved.
+                          </p>
+                        </div>
+                      )}
+
                     {/* The commit. Not a bookmark of this reply — it runs the
                         full structured read on the original question and puts
                         it on the three-week clock. */}
@@ -833,53 +897,6 @@ export default function ChatPage() {
                           afterwards whether it becomes a tracked priority — nothing is saved yet.
                         </p>
 
-                        {/* The other thing a coach wants out of an answer like
-                            this. A conversation can describe a practice well —
-                            length, coaches, the order to work in — and until
-                            now that description died in the thread and had to
-                            be retyped into a form.
-
-                            It hands the question to the practice generator
-                            rather than trying to turn the prose above into
-                            blocks: that pipeline knows the drill library, the
-                            clock, station staffing and priority coverage, and
-                            an answer parsed out of chat knows none of it. The
-                            coach lands on the review screen and edits from
-                            there like any other plan. */}
-                        {isUsablePracticePrompt(sourceQuestion) && (
-                          <div className="mt-3 pt-3 border-t border-gray-200">
-                            <button
-                              onClick={() => {
-                                // The answer travels in sessionStorage, not the
-                                // URL. A practice answer runs to thousands of
-                                // characters and a query string that long is
-                                // both fragile and unreadable in the address
-                                // bar. The question stays in the URL because it
-                                // is short and makes the link mean something on
-                                // its own — if the storage is gone by the time
-                                // the builder reads it, the question alone
-                                // still works.
-                                try {
-                                  sessionStorage.setItem('bc.practice.fromChat', JSON.stringify({
-                                    question: sourceQuestion,
-                                    answer: message.content,
-                                  }))
-                                } catch {}
-                                router.push(
-                                  `/dashboard/practice?teamId=${teamId}&prompt=${encodeURIComponent(sourceQuestion!)}`
-                                )
-                              }}
-                              className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-sm rounded-lg hover:bg-gray-50"
-                            >
-                              <ClipboardList size={15} />
-                              Build a team practice from this
-                            </button>
-                            <p className="text-xs text-gray-500 mt-2">
-                              Opens the practice builder with what you asked for already filled in, and builds
-                              it to follow this answer. You review and edit it before anything is saved.
-                            </p>
-                          </div>
-                        )}
                       </div>
                     )}
 
