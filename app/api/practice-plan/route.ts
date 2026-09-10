@@ -63,6 +63,10 @@ export async function POST(request: NextRequest) {
       // change keep the detail that was already written for them instead of
       // being generated again.
       previousBlocks,
+      // An answer the coach read in CoachAI and pressed a button to build.
+      // Shapes the plan; does not override the library, the clock, or the
+      // coach's own settings — every deterministic pass still runs after it.
+      priorAnswer,
     } = await request.json()
 
     // One adult is the floor for a practice that is happening at all; above
@@ -560,6 +564,8 @@ export async function POST(request: NextRequest) {
           focus,
           context,
           constraints: fullConstraints,
+          priorAnswer: typeof priorAnswer === 'string' && priorAnswer.trim()
+            ? priorAnswer.trim() : undefined,
           drillResources: drillResources || [],
           loopContext: loopContext || undefined,
           rosterSection: rosterSection || undefined,

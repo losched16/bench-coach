@@ -818,6 +818,14 @@ export interface PracticeInputs {
   // scheduler does not — but the budget itself is enforced on the way out
   // regardless, so a plan that ignores it gets trimmed rather than shipped.
   scheduleGuidance?: string
+  // An answer this coach already read in CoachAI and asked to turn into a
+  // plan. They are expecting the practice they were just described, so the
+  // shape of it — the order, the emphasis, the drills named — is a starting
+  // point rather than a suggestion. It is NOT authoritative over the library,
+  // the clock or the coach's settings: everything downstream still runs, so a
+  // block that will not fit still gets trimmed and a starved priority still
+  // gets repaired.
+  priorAnswer?: string
 }
 
 // The situation, written once and reused by both phases. Sending it to every
@@ -870,6 +878,24 @@ ${PRACTICE_SURFACE}
 You are doing the THINKING half of the job: deciding what this practice is, in what order, and what is wrong with how the coach has set it up. Somebody else writes out the step-by-step for each block afterwards — do not write it here, and do not pad. Short, specific, decided.`,
     messages: [{ role: 'user', content: `${practiceSituation(i)}
 ${drillMenu(i)}
+${i.priorAnswer ? `
+THE COACH ALREADY READ THIS ANSWER AND ASKED YOU TO BUILD IT
+
+They are not starting from scratch — they saw the practice below described in
+conversation and pressed a button to turn it into the real thing. Follow its
+shape: the order it works in, what it emphasises, and any drill it named by
+name. A formal plan that quietly rearranges what they just agreed to is the
+same surprise as one they never asked for.
+
+Depart from it only where you must, and only for a reason this answer could not
+have known: a drill that is not in the library below, a block that will not fit
+the clock, a selected focus area it left out. Where you depart, the flags array
+is where you say so.
+
+--- the answer they read ---
+${i.priorAnswer.slice(0, 6000)}
+--- end ---
+` : ''}
 
 Design the practice. Warm-up, two to four named drill blocks, a competitive game with real rules, cool-down.
 

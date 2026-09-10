@@ -849,17 +849,34 @@ export default function ChatPage() {
                         {isUsablePracticePrompt(sourceQuestion) && (
                           <div className="mt-3 pt-3 border-t border-gray-200">
                             <button
-                              onClick={() => router.push(
-                                `/dashboard/practice?teamId=${teamId}&prompt=${encodeURIComponent(sourceQuestion!)}`
-                              )}
+                              onClick={() => {
+                                // The answer travels in sessionStorage, not the
+                                // URL. A practice answer runs to thousands of
+                                // characters and a query string that long is
+                                // both fragile and unreadable in the address
+                                // bar. The question stays in the URL because it
+                                // is short and makes the link mean something on
+                                // its own — if the storage is gone by the time
+                                // the builder reads it, the question alone
+                                // still works.
+                                try {
+                                  sessionStorage.setItem('bc.practice.fromChat', JSON.stringify({
+                                    question: sourceQuestion,
+                                    answer: message.content,
+                                  }))
+                                } catch {}
+                                router.push(
+                                  `/dashboard/practice?teamId=${teamId}&prompt=${encodeURIComponent(sourceQuestion!)}`
+                                )
+                              }}
                               className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-sm rounded-lg hover:bg-gray-50"
                             >
                               <ClipboardList size={15} />
                               Build a team practice from this
                             </button>
                             <p className="text-xs text-gray-500 mt-2">
-                              Opens the practice builder with what you asked for already filled in —
-                              length, coaches and skills. You review and edit it before anything is saved.
+                              Opens the practice builder with what you asked for already filled in, and builds
+                              it to follow this answer. You review and edit it before anything is saved.
                             </p>
                           </div>
                         )}

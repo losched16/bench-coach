@@ -194,11 +194,28 @@ function PracticeContent() {
   // specifics box, which reads the length, the coaches and the skills out of
   // it, and the builder opens with all of it filled in. Nothing generates
   // until the coach presses the button: they see what was understood first.
+  const [fromChatAnswer, setFromChatAnswer] = useState<string | null>(null)
+
   useEffect(() => {
     const prompt = searchParams.get('prompt')
     if (!prompt) return
     setSpecifics(prompt)
     setShowPlanModal(true)
+
+    // The answer they read, handed over out of band because a practice answer
+    // is far too long for a query string. Read once and cleared, so a later
+    // visit to this page does not silently build against a conversation the
+    // coach has forgotten about.
+    try {
+      const raw = sessionStorage.getItem('bc.practice.fromChat')
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (parsed?.question === prompt && typeof parsed?.answer === 'string') {
+          setFromChatAnswer(parsed.answer)
+        }
+        sessionStorage.removeItem('bc.practice.fromChat')
+      }
+    } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
@@ -458,6 +475,10 @@ function PracticeContent() {
           // What the chips cannot say. The route has always accepted this and
           // folded it into the prompt; nothing ever sent it.
           constraints: (constraintsOverride ?? specifics).trim() || undefined,
+          // Follow the answer the coach already read, when they came from
+          // chat. Dropped on a rebuild: by then they have read the plan and
+          // asked for something different, and the conversation is stale.
+          priorAnswer: constraintsOverride ? undefined : (fromChatAnswer || undefined),
           // A refine rewrites a plan they already read, so it stays one
           // coherent call rather than a fan-out that could disagree with
           // itself about what changed.
@@ -1434,6 +1455,27 @@ function PracticeContent() {
                   Say the length, the coaches and the skills here and the settings
                   above follow.
                 </p>
+
+                {/* Say that a conversation is steering this, and give them a
+                    way out of it. A plan quietly built to follow an answer the
+                    coach half-remembers is the kind of magic that reads as the
+                    app doing something it was not asked to. */}
+                {fromChatAnswer && (
+                  <div className="mt-2 flex items-start gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2">
+                    <Sparkles size={14} className="text-indigo-700 shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1 text-xs text-indigo-900">
+                      Building this to follow the answer from your chat. The drill library,
+                      the clock and the settings above still win where they disagree.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFromChatAnswer(null)}
+                      className="shrink-0 text-xs text-indigo-700 hover:text-indigo-900 underline"
+                    >
+                      Start fresh
+                    </button>
+                  </div>
+                )}
 
                 {promptRead && (
                   <div className="mt-2 flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2">
