@@ -631,11 +631,17 @@ function PracticeContent() {
       const { title, ...content } = editingPlan.content
       const { error } = await supabase
         .from('practice_plans')
-        .update({ content, title: String(title || editingPlan.title || 'Practice plan') })
+        .update({
+          content,
+          title: String(title || editingPlan.title || 'Practice plan'),
+          duration_minutes: editingPlan.duration,
+        })
         .eq('id', editingPlan.id)
       if (error) throw error
       setPlans(prev => prev.map(p =>
-        p.id === editingPlan.id ? { ...p, content, title: String(title || p.title) } : p
+        p.id === editingPlan.id
+          ? { ...p, content, title: String(title || p.title), duration_minutes: editingPlan.duration }
+          : p
       ))
       setEditingPlan(null)
     } catch (error) {
@@ -1176,6 +1182,11 @@ function PracticeContent() {
           draft={editingPlan.content}
           onBlocksChange={(blocks) => setEditingPlan(prev => prev ? { ...prev, content: { ...prev.content, blocks } } : prev)}
           onOverviewChange={(patch) => setEditingPlan(prev => prev ? { ...prev, content: { ...prev.content, ...patch } } : prev)}
+          onSettingsChange={(p) => setEditingPlan(prev => prev ? {
+            ...prev,
+            duration: p.duration ?? prev.duration,
+            content: 'start_time' in p ? { ...prev.content, start_time: p.start_time || null } : prev.content,
+          } : prev)}
           onClose={() => setEditingPlan(null)}
           duration={editingPlan.duration}
           timeLabels={timeLabelsFor(editingPlan.content, editingPlan.content.start_time || null)}
@@ -1222,6 +1233,13 @@ function PracticeContent() {
           draft={draft}
           onBlocksChange={(blocks) => setDraft((prev: any) => ({ ...prev, blocks }))}
           onOverviewChange={(patch) => setDraft((prev: any) => ({ ...prev, ...patch }))}
+          onSettingsChange={(p) => {
+            if (p.duration != null) setDuration(p.duration)
+            if ('start_time' in p) {
+              setStartTime(p.start_time || '')
+              setDraft((prev: any) => ({ ...prev, start_time: p.start_time || null }))
+            }
+          }}
           onClose={() => { setShowPlanModal(false); setDraft(null); setGenError(null) }}
           duration={duration}
           timeLabels={timeLabelsFor({ blocks: draft.blocks || [] }, startTime || null)}

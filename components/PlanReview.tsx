@@ -233,6 +233,12 @@ interface Props {
    * the blocks. Optional so a caller that only wants block edits is unchanged.
    */
   onOverviewChange?: (patch: Record<string, any>) => void
+  /**
+   * The practice's own settings: how long it is and when it starts. These
+   * live outside the blocks — on the page's form for a draft, on the row for
+   * a saved plan — so the caller decides where a change goes.
+   */
+  onSettingsChange?: (patch: { duration?: number; start_time?: string | null }) => void
   /** The rebuild box and the save/discard buttons — their handlers live in the page. */
   footer: React.ReactNode
 }
@@ -240,7 +246,7 @@ interface Props {
 export function PlanReview({
   draft, onBlocksChange, onClose, duration, timeLabels, coverage, status,
   genError, drillResources = [], coachId = null, favorites, onFavoritesChanged, footer,
-  onOverviewChange,
+  onOverviewChange, onSettingsChange,
 }: Props) {
   const blocks: any[] = draft?.blocks || []
   // -1 is the overview. It is a rail row rather than a banner above the blocks
@@ -545,6 +551,41 @@ export function PlanReview({
 
               {onOverviewChange && overviewEditing ? (
                 <div className="space-y-4">
+                  {onSettingsChange && (
+                    <div className="grid grid-cols-2 gap-3 max-w-sm">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Practice length</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={15}
+                            max={240}
+                            step={5}
+                            className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            value={duration || ''}
+                            onChange={e => {
+                              const m = parseInt(e.target.value)
+                              if (Number.isFinite(m) && m > 0) onSettingsChange({ duration: m })
+                            }}
+                          />
+                          <span className="text-sm text-gray-500">min</span>
+                        </div>
+                        {total > duration && (
+                          <p className="mt-1 text-xs text-red-600">Blocks add up to {total} — over by {total - duration}.</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Starts at</label>
+                        <input
+                          type="time"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          value={draft?.start_time || ''}
+                          onChange={e => onSettingsChange({ start_time: e.target.value || null })}
+                        />
+                        <p className="mt-1 text-xs text-gray-500">Sets the clock on the sheet.</p>
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Title</label>
                     <input
