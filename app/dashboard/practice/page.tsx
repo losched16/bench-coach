@@ -191,6 +191,21 @@ function PracticeContent() {
     if (searchParams.get('start') === 'template') setShowTemplateModal(true)
   }, [searchParams])
 
+  // Arriving from a link to one plan (the dashboard's "View", a plan card):
+  // /dashboard/practice/<id> lands here with ?plan=<id>. Once the plans are
+  // in, open that one and bring it into view. Done once per arrival, so a
+  // coach who then collapses it is not fought.
+  const linkedPlanId = searchParams.get('plan')
+  useEffect(() => {
+    if (!linkedPlanId || !plans.some(p => p.id === linkedPlanId)) return
+    setExpandedPlan(linkedPlanId)
+    const t = setTimeout(() => {
+      document.getElementById(`plan-${linkedPlanId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 50)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkedPlanId, plans.length])
+
   // Arriving from CoachAI with a practice already described.
   //
   // The conversation is where a coach actually says what they want — "4
@@ -1036,7 +1051,7 @@ function PracticeContent() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {plans.map((plan) => (
-            <div key={plan.id} className="bg-white rounded-lg shadow overflow-hidden">
+            <div key={plan.id} id={`plan-${plan.id}`} className="bg-white rounded-lg shadow overflow-hidden scroll-mt-4">
               <div className="p-6">
                 <div className="flex items-start justify-between mb-2">
                   <h3 className="text-lg font-semibold text-gray-900">
