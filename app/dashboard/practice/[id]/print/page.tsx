@@ -15,8 +15,8 @@
 // Nothing here fetches anything the plan page does not already have — the sheet
 // is derived, so it cannot disagree with the app about what the practice is.
 
-import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Printer, ArrowLeft, Loader2 } from 'lucide-react'
 import { createSupabaseComponentClient } from '@/lib/supabase'
@@ -26,11 +26,44 @@ import {
 } from '@/lib/practicePlan'
 import { StepText } from '@/components/StepText'
 
+// useSearchParams needs a Suspense boundary above it in the App Router.
 export default function PracticeSheetPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-24 text-gray-500">
+        <Loader2 className="animate-spin mr-2" size={18} />
+        Loading the practice sheet…
+      </div>
+    }>
+      <PracticeSheetContent />
+    </Suspense>
+  )
+}
+
+function PracticeSheetContent() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createSupabaseComponentClient()
   const planId = String(params?.id || '')
+
+  // Two sheets from one plan.
+  //
+  // FULL is the clipboard: page one is the practice at a glance, the drill
+  // detail follows on its own pages. ONE PAGE is for sharing — the assistant
+  // who asked "what are we doing Tuesday", the parent helping at a station.
+  // It keeps the goal, the running order, the cues and the kit, drops the
+  // detail and the notes, and is then scaled to fit a single sheet whatever
+  // the length of the practice. In the URL (?view=one-page) so the link can
+  // be sent as the one-pager.
+  const condensed = searchParams.get('view') === 'one-page'
+  const setView = (v: 'full' | 'one-page') => {
+    const q = new URLSearchParams(searchParams.toString())
+    if (v === 'one-page') q.set('view', 'one-page'); else q.delete('view')
+    router.replace(`?${q.toString()}`)
+  }
+  const sheetRef = useRef<HTMLElement>(null)
+  const [fit, setFit] = useState(1)
 
   const [plan, setPlan] = useState<any>(null)
   const [teamName, setTeamName] = useState('')
@@ -66,6 +99,25 @@ export default function PracticeSheetPage() {
     return () => { cancelled = true }
   }, [planId, supabase])
 
+  // Fit to one page. Letter portrait with half-inch margins leaves 10in of
+  // height; the sheet is measured on screen (minus its screen-only padding
+  // and border) and, if taller, printed at the ratio that makes it fit. A
+  // 60-minute practice prints at full size; a 2-hour rotation-heavy one
+  // shrinks just enough. Never scales up.
+  useLayoutEffect(() => {
+    if (!condensed || loading) { setFit(1); return }
+    const el = sheetRef.current
+    if (!el) return
+    const measure = () => {
+      const h = el.scrollHeight - 66 // p-8 top+bottom and the 1px borders
+      const avail = 10 * 96 - 8       // 10in at CSS px, a hair of slack
+      setFit(h > avail ? Math.max(0.5, Math.round((avail / h) * 1000) / 1000) : 1)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [condensed, loading, plan])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24 text-gray-500">
@@ -98,6 +150,8 @@ export default function PracticeSheetPage() {
   const focus: string[] = plan.focus || plan.focus_areas || []
   const total = plannedMinutes(content.blocks)
   const dated = plan.scheduled_for || plan.created_at
+  const shownPoints = condensed ? points.slice(0, 4) : points
+  const showDetail = !condensed && detailBlocks(content.blocks).some(d => hasDetail(d.block))
 
   return (
     <div className="pb-16">
@@ -111,23 +165,51 @@ export default function PracticeSheetPage() {
           <ArrowLeft size={16} />
           Back to practice plans
         </Link>
-        <button
-          onClick={() => window.print()}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-        >
-          <Printer size={16} />
-          Print / Save as PDF
-        </button>
+        <div className="flex items-center gap-3 flex-wrap justify-end">
+          <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden text-sm" role="group" aria-label="Sheet layout">
+            <button
+              onClick={() => setView('full')}
+              className={`px-3 py-2 ${!condensed ? 'bg-gray-900 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+              aria-pressed={!condensed}
+            >
+              Full sheet
+            </button>
+            <button
+              onClick={() => setView('one-page')}
+              className={`px-3 py-2 border-l border-gray-300 ${condensed ? 'bg-gray-900 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+              aria-pressed={condensed}
+              title="Goal, schedule, cues and kit on a single page — for sharing"
+            >
+              One page
+            </button>
+          </div>
+          <button
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+          >
+            <Printer size={16} />
+            Print / Save as PDF
+          </button>
+        </div>
       </div>
+      {condensed && fit < 1 && (
+        <p className="print:hidden text-xs text-gray-500 -mt-3 mb-4 text-right">
+          Scaled to {Math.round(fit * 100)}% so it fits on one page.
+        </p>
+      )}
 
       <PrintStyles />
 
-      <article className="sheet mx-auto bg-white text-black border border-gray-300 print:border-0 rounded-lg print:rounded-none p-6 sm:p-8 print:p-0 max-w-[8.5in]">
+      <article
+        ref={sheetRef}
+        style={{ ['--fit' as any]: fit }}
+        className={`sheet ${condensed ? 'condensed' : ''} mx-auto bg-white text-black border border-gray-300 print:border-0 rounded-lg print:rounded-none p-6 sm:p-8 print:p-0 max-w-[8.5in]`}
+      >
         {/* Masthead */}
         <header className="flex items-start justify-between gap-6 border-b-2 border-black pb-3">
           <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-600">
-              BenchCoach · Practice Plan
+              BenchCoach · {condensed ? 'Practice at a glance' : 'Practice Plan'}
             </p>
             <h1 className="text-2xl font-black leading-tight mt-0.5">{plan.title}</h1>
             {teamName && <p className="text-sm text-gray-700 mt-0.5">{teamName}</p>}
@@ -171,10 +253,10 @@ export default function PracticeSheetPage() {
               </Box>
             )}
 
-            {points.length > 0 && (
+            {shownPoints.length > 0 && (
               <Box title="Coaching points">
                 <ol className="space-y-1.5">
-                  {points.map((p, i) => (
+                  {shownPoints.map((p, i) => (
                     <li key={i} className="flex gap-2 text-[13px] leading-snug">
                       <span className="font-black shrink-0">{i + 1}.</span>
                       <span>{p}</span>
@@ -250,7 +332,7 @@ export default function PracticeSheetPage() {
 
         {/* How to run it, and what is about to go wrong. Below the fold on
             purpose — a coach reads these once in the car, not mid-practice. */}
-        {(content.coach_notes || content.flags.length > 0) && (
+        {!condensed && (content.coach_notes || content.flags.length > 0) && (
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 print:grid-cols-2 gap-4 break-inside-avoid">
             {content.coach_notes && (
               <Box title="How to run this">
@@ -275,7 +357,7 @@ export default function PracticeSheetPage() {
         {/* Block detail. One page per practice is the goal, so this starts on a
             new sheet — a coach who wants the step-by-step wants all of it, and
             a coach who does not can print page 1 alone. */}
-        {detailBlocks(content.blocks).some(d => hasDetail(d.block)) && (
+        {showDetail && (
           <section className="mt-6 print:break-before-page">
             <h2 className="text-[10px] font-black uppercase tracking-[0.15em] border-b-2 border-black pb-1">
               Drill detail
@@ -432,6 +514,10 @@ function PrintStyles() {
           print-color-adjust: exact !important;
         }
         .sheet { font-size: 11.5px; }
+        /* The one-pager: measured on screen, printed at the ratio that fits.
+           zoom rather than transform so the page box sees the smaller size
+           and does not spill a blank second sheet. */
+        .sheet.condensed { zoom: var(--fit, 1); }
         .break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
         .print\\:break-before-page { break-before: page; page-break-before: always; }
         a[href]:after { content: none !important; }

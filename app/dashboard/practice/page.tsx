@@ -1137,6 +1137,14 @@ function PracticeContent() {
                     <Printer size={16} className="mr-1" />
                     Print
                   </Link>
+                  <Link
+                    href={`/dashboard/practice/${plan.id}/print?view=one-page`}
+                    className="text-sm text-gray-600 hover:text-gray-900 font-medium flex items-center"
+                    title="Goal, schedule, cues and kit on a single page — for sharing"
+                  >
+                    <FileText size={16} className="mr-1" />
+                    One page
+                  </Link>
                 </div>
               </div>
               
