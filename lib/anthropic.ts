@@ -708,10 +708,11 @@ export async function generateChatResponse(
       max_tokens: 10000,
       system: systemPrompt,
       messages: messages,
-      // A chat reply doesn't need deep reasoning; the system prompt already
-      // carries the structure and the evidence. Low effort keeps thinking from
-      // dominating both the token budget and the coach's wait.
-      output_config: { effort: 'low' },
+      // Medium, up from low (2026-09-11): the coach asked for better answers
+      // over faster ones. The 10000 cap above covers thinking and the reply
+      // together, so this still fits; the cost is a slower first token and
+      // more thinking spend per message.
+      output_config: { effort: 'medium' },
     })
 
     const response = await stream.finalMessage()
