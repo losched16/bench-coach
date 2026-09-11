@@ -30,7 +30,7 @@
 
 import { useState, useMemo } from 'react'
 import {
-  X, AlertCircle, Sparkles, Pencil, Check, RotateCcw, Clock, Video as VideoIcon, Trash2 } from 'lucide-react'
+  X, AlertCircle, Sparkles, Pencil, Check, RotateCcw, Clock, Video as VideoIcon, Trash2, Plus } from 'lucide-react'
 import { PracticeBlock } from './PracticeBlock'
 import { PriorityCoverageSummary } from './PriorityCoverageSummary'
 import { isStationGroup, listToLines, linesToList } from '@/lib/practicePlan'
@@ -305,6 +305,25 @@ export function PlanReview({
     setSelected(sel => (sel === i ? -1 : sel > i ? sel - 1 : sel))
   }
 
+  // A new block, after the one being looked at — or at the end from the
+  // overview — opened straight in Manual so the coach fills it in. Its
+  // arrival copy is the blank itself: "undo my edits" on a block that was
+  // never generated means "back to blank", which is the honest answer.
+  const addBlock = () => {
+    const at = selected >= 0 ? selected + 1 : blocks.length
+    const fresh = { type: 'drill', title: 'New block', minutes: 10, description: '', coaching_cues: [] as string[] }
+    onBlocksChange([...blocks.slice(0, at), fresh, ...blocks.slice(at)])
+    setOriginal(prev => [...prev.slice(0, at), JSON.parse(JSON.stringify(fresh)), ...prev.slice(at)])
+    const shiftUp = (set: Set<number>) => {
+      const next = new Set<number>()
+      set.forEach(n => next.add(n >= at ? n + 1 : n))
+      return next
+    }
+    setEdited(shiftUp)
+    setEditing(prev => new Set(shiftUp(prev)).add(at))
+    setSelected(at)
+  }
+
   const setMode = (i: number, manual: boolean) => {
     setEditing(prev => {
       const next = new Set(prev)
@@ -408,6 +427,14 @@ export function PlanReview({
                 </button>
               )
             })}
+
+            <button
+              onClick={addBlock}
+              className="shrink-0 md:w-full text-left px-3 py-2 rounded-lg text-sm border border-dashed border-gray-300 text-gray-600 hover:bg-gray-200 hover:text-gray-900 inline-flex items-center gap-1.5"
+              title="Add a block after the one selected, or at the end"
+            >
+              <Plus size={14} /> Add a block
+            </button>
           </div>
         </div>
 
