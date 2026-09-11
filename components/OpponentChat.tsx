@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Loader2, Send, MessageSquare, Plus, AlertCircle } from 'lucide-react'
+import { useEnterSends } from '@/lib/useEnterSends'
 
 // Talking about one opponent.
 //
@@ -34,6 +35,7 @@ interface Props {
 }
 
 export function OpponentChat({ teamId, opponentTeamId, opponentName }: Props) {
+  const enterSends = useEnterSends()
   const [threads, setThreads] = useState<ThreadSummary[]>([])
   const [threadId, setThreadId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Msg[]>([])
@@ -226,9 +228,13 @@ export function OpponentChat({ teamId, opponentTeamId, opponentName }: Props) {
         <textarea
           value={input}
           onChange={e => setInput(e.target.value)}
+          // Enter sends only where there is a keyboard to send it with. On a
+          // phone this preventDefault made a second line impossible: the
+          // return key posted the half-written question instead.
           onKeyDown={e => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
+            if (e.key === 'Enter' && enterSends && !e.shiftKey) { e.preventDefault(); send() }
           }}
+          enterKeyHint={enterSends ? 'send' : 'enter'}
           rows={2}
           placeholder={`Ask about ${opponentName}…`}
           className="flex-1 border border-gray-300 rounded-xl px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-blue-500"

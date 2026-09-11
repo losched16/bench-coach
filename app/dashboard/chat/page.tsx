@@ -14,6 +14,7 @@ import { DrillReview, ReviewDrill, DrillVerdict } from '@/components/DrillReview
 import { META_SENTINEL, splitSections } from '@/lib/analysis'
 import { usePageView, useTracker } from '@/lib/tracking'
 import { isUsablePracticePrompt } from '@/lib/practicePrompt'
+import { useEnterSends } from '@/lib/useEnterSends'
 
 interface Message {
   id: string
@@ -85,6 +86,19 @@ export default function ChatPage() {
   const [commit, setCommit] = useState<Commit | null>(null)
   const [coachId, setCoachId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const composerRef = useRef<HTMLTextAreaElement>(null)
+
+  const enterSends = useEnterSends()
+
+  // Grow with the question, up to the cap the class sets. A one-line box that
+  // scrolls at the second line is the same problem in a smaller form: you
+  // cannot see what you wrote before you send it.
+  useEffect(() => {
+    const el = composerRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [input])
   const router = useRouter()
   const searchParams = useSearchParams()
   const teamId = searchParams.get('teamId')
@@ -1009,14 +1023,36 @@ export default function ChatPage() {
           {/* Same measure as the messages, so the box a coach types into lines
               up with the conversation it joins instead of running the width of
               the pane. */}
-          <div className="flex gap-3 max-w-4xl w-full mx-auto">
-            <input
-              type="text"
+          {/* items-end so the button stays a button as the box grows, instead
+              of stretching into a tall blue column beside a four-line question. */}
+          <div className="flex items-end gap-3 max-w-4xl w-full mx-auto">
+            {/* A textarea, not an input. An <input type="text"> cannot hold a
+                newline at all, so on a phone there was nothing Enter could do
+                except send — a coach writing the second sentence of a question
+                posted the first one instead.
+
+                Enter only sends where a physical keyboard is in play. On a
+                touch device that key is a return key and behaves like one.
+                Shift+Enter still breaks the line on a desktop, and the button
+                always sends, everywhere. */}
+            <textarea
+              ref={composerRef}
+              rows={1}
               value={input}
               onChange={e => setInput(e.target.value)}
-              onKeyPress={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && enterSends && !e.shiftKey) {
+                  e.preventDefault()
+                  handleSend()
+                }
+              }}
+              // The on-screen keyboard draws its Enter key from this. "enter"
+              // gives a return arrow; the default for a lone textarea in a
+              // form can be a "Go" key, which promises exactly the send this
+              // no longer does.
+              enterKeyHint="enter"
               placeholder="Ask me anything about coaching..."
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none max-h-40 overflow-y-auto"
               disabled={loading}
             />
             <button
