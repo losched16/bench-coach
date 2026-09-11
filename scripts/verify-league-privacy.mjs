@@ -34,7 +34,7 @@
 //   npm run verify:league-privacy
 
 import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, sep } from 'node:path'
 
 // Free text written by a coach about a child, an opponent or their own team.
 // None of this is a commissioner's business and none of it appears in an
@@ -56,6 +56,12 @@ const PRIVATE_TABLES = [
   'game_notes',
   'swing_analyses',
   'coach_preferences',
+  // A coach's written assessment of a child, sent to the family — the most
+  // sensitive thing in the app. Added when the report feature and the league
+  // layer met on main; the guard cannot cover a table it has not been told about.
+  'player_reports',
+  'player_report_focus_areas',
+  'player_report_drills',
 ]
 
 // Allowed, but only for counting and only these columns. The value of "eleven
@@ -113,7 +119,8 @@ function walk(dir, out = []) {
   let entries
   try { entries = readdirSync(dir) } catch { return out }
   for (const name of entries) {
-    const p = join(dir, name)
+    // Forward slashes, so GUARD_EXEMPT and the route lists match on Windows as well as CI.
+    const p = join(dir, name).split(sep).join('/')
     if (statSync(p).isDirectory()) walk(p, out)
     else if (name === 'route.ts') out.push(p)
   }
