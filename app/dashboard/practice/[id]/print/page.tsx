@@ -22,7 +22,7 @@ import { Printer, ArrowLeft, Loader2 } from 'lucide-react'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import {
   readPlan, equipmentChecklist, scheduleRows, plannedMinutes,
-  fallbackCoachingPoints, isStationGroup,
+  fallbackCoachingPoints, isStationGroup, blockWatchUrl,
 } from '@/lib/practicePlan'
 import { StepText } from '@/components/StepText'
 
@@ -324,6 +324,20 @@ export default function PracticeSheetPage() {
                         ))}
                       </ul>
                     )}
+                    {/* The link, printed as its own text: clickable in a PDF
+                        and readable off paper. Built by the helper, never by
+                        hand, so a segment start reaches the page. */}
+                    {(() => {
+                      const url = blockWatchUrl(b)
+                      if (!url) return null
+                      const shown = url.replace('https://', '').replace('http://', '')
+                      return (
+                        <p className="text-[12px] leading-snug mt-1 break-all">
+                          <Label>Watch</Label>{' '}
+                          <a href={url} className="underline">{shown}</a>
+                        </p>
+                      )
+                    })()}
                   </div>
                 ) : null
               )}
@@ -346,7 +360,10 @@ export default function PracticeSheetPage() {
 function hasDetail(b: any): boolean {
   return Boolean(
     b?.setup || b?.detailed_instructions || b?.watch_for ||
-    b?.coaching_cues?.length || b?.common_mistakes?.length
+    b?.coaching_cues?.length || b?.common_mistakes?.length ||
+    // A video is detail: a block with nothing but a link still earns its
+    // line on the sheet, because the link is the thing the coach wanted.
+    blockWatchUrl(b)
   )
 }
 

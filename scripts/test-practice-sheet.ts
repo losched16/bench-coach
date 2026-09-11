@@ -14,7 +14,7 @@
 import {
   readPlan, equipmentKey, equipmentChecklist, scheduleRows, parseTime,
   plannedMinutes, fallbackCoachingPoints, reusableBlock, isExpanded, PlanBlock,
-  listToLines, linesToList, stepsFrom, moveItem, movedIndex,
+  listToLines, linesToList, stepsFrom, moveItem, movedIndex, blockWatchUrl,
 } from '@/lib/practicePlan'
 
 let failures = 0
@@ -219,6 +219,22 @@ check('movedIndex agrees with moveItem for a move down', agrees(0, 2) && agrees(
 check('movedIndex agrees with moveItem for a move up', agrees(3, 0) && agrees(2, 1))
 check('movedIndex leaves untouched indexes alone', movedIndex(3, 0, 1) === 3 && movedIndex(0, 2, 3) === 0)
 check('movedIndex is identity for a no-op move', movedIndex(2, 1, 1) === 2)
+
+// ── the video link on the printed sheet ─────────────────────────────────────
+// Same decision the on-screen block makes, minus the library guess.
+
+check('a library video prints its watch link, segment start included',
+  blockWatchUrl({ youtube_video_id: 'abc123XYZ_-', youtube_start_seconds: 90 }) === 'https://www.youtube.com/watch?v=abc123XYZ_-&t=90s',
+  String(blockWatchUrl({ youtube_video_id: 'abc123XYZ_-', youtube_start_seconds: 90 })))
+check('a library video with no segment prints from the start',
+  blockWatchUrl({ youtube_video_id: 'abc123XYZ_-' }) === 'https://www.youtube.com/watch?v=abc123XYZ_-')
+check('a pasted link prints as pasted',
+  blockWatchUrl({ video_url: 'https://www.instagram.com/reel/xyz/' }) === 'https://www.instagram.com/reel/xyz/')
+check('a pasted non-web address prints nothing',
+  blockWatchUrl({ video_url: 'javascript:alert(1)' }) === null && blockWatchUrl({ video_url: 'drills/tee' }) === null)
+check('a cleared video prints nothing', blockWatchUrl({ video_cleared: true }) === null)
+check('no video and no decision prints nothing — the sheet never guesses',
+  blockWatchUrl({ title: 'Tee Work' }) === null && blockWatchUrl(null) === null)
 
 console.log('')
 if (failures > 0) {

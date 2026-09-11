@@ -11,6 +11,8 @@
 // derives it, so the printed sheet and the app can never disagree about what
 // the practice is. Nothing here does I/O and nothing here calls a model.
 
+import { watchUrl, blockVideoMode } from './drillVideo'
+
 export interface PlanBlock {
   type?: string
   title?: string
@@ -457,4 +459,25 @@ export function movedIndex(n: number, from: number, to: number): number {
   if (from < to && n > from && n <= to) return n - 1
   if (to < from && n >= to && n < from) return n + 1
   return n
+}
+
+// ---------------------------------------------------------------------------
+// A block's video, for the printed sheet
+// ---------------------------------------------------------------------------
+// The sheet was "deliberately no video" and the coach overruled that: the
+// link belongs on the paper. Same decision the on-screen block makes
+// (blockVideoMode), with one difference — the sheet never guesses from the
+// library, because a printed link the coach did not choose is worse than
+// none. A library video goes through watchUrl so a segment start survives;
+// a pasted link is used as pasted, and only if it is a real web address.
+
+export function blockWatchUrl(block: any): string | null {
+  if (!block) return null
+  const mode = blockVideoMode(block)
+  if (mode === 'youtube') return watchUrl(block)
+  if (mode === 'link') {
+    const u = String(block.video_url || '').trim()
+    return u.startsWith('https://') || u.startsWith('http://') ? u : null
+  }
+  return null
 }
