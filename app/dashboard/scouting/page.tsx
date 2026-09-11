@@ -173,18 +173,33 @@ function ScoutingContent() {
         .eq('user_id', user.id)
         .single() as { data: { id: string } | null }
       if (!coach) return
-      setCoachId(coach.id)
 
+      // Whose scouting this is: the team's owner, not whoever is signed in.
+      //
+      // Opponents, entries and matchups are filed under a coach id. Every
+      // other module resolves that coach through the team, so an assistant on
+      // a staff sees the head coach's players, notes and plans. This page used
+      // the caller's own coach id instead, so an assistant opened Scouting on
+      // the team and saw their own, empty, record. The server already permits
+      // a team member to act on the owner's id (authorizeCoach checks
+      // membership of a team that coach owns), so only this choice changes.
+      // With no team in the URL there is nothing to resolve through, and the
+      // caller's own record is the only sensible answer.
+      let scopeCoachId = coach.id
       if (teamId) {
         const { data: team } = await supabase
           .from('teams')
-          .select('name, age_group')
+          .select('name, age_group, coach_id')
           .eq('id', teamId)
-          .single() as { data: { name: string; age_group: string | null } | null }
-        if (team) setOwnTeamName(team.name)
+          .single() as { data: { name: string; age_group: string | null; coach_id: string } | null }
+        if (team) {
+          setOwnTeamName(team.name)
+          if (team.coach_id) scopeCoachId = team.coach_id
+        }
       }
+      setCoachId(scopeCoachId)
 
-      await Promise.all([loadOpponents(coach.id), loadRules(coach.id)])
+      await Promise.all([loadOpponents(scopeCoachId), loadRules(scopeCoachId)])
       setLoading(false)
     }
     init()
