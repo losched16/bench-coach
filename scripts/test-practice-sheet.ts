@@ -14,7 +14,7 @@
 import {
   readPlan, equipmentKey, equipmentChecklist, scheduleRows, parseTime,
   plannedMinutes, fallbackCoachingPoints, reusableBlock, isExpanded, PlanBlock,
-  listToLines, linesToList, stepsFrom,
+  listToLines, linesToList, stepsFrom, moveItem, movedIndex,
 } from '@/lib/practicePlan'
 
 let failures = 0
@@ -198,6 +198,27 @@ check('numbered lines become a numbered list with markers stripped',
   linedNum.numbered && JSON.stringify(linedNum.items) === JSON.stringify(['Glove down', 'Step', 'Finish']))
 check('empty text is no steps', stepsFrom('').items.length === 0 && stepsFrom(null).items.length === 0)
 check('plain prose is one paragraph', JSON.stringify(stepsFrom('Just a sentence.').items) === JSON.stringify(['Just a sentence.']))
+
+// ── moving a block ──────────────────────────────────────────────────────────
+// Every per-block mark in the review is kept by index and has to move with
+// the block. "Undo put back the wrong block" is the bug these prevent.
+
+const L = ['a', 'b', 'c', 'd']
+check('moving down takes the place of the target', moveItem(L, 0, 2).join('') === 'bcad')
+check('moving up takes the place of the target', moveItem(L, 3, 0).join('') === 'dabc')
+check('moving to itself changes nothing', moveItem(L, 1, 1) === L)
+check('an out-of-range move changes nothing', moveItem(L, 0, 9) === L && moveItem(L, -1, 2) === L)
+check('the original list is not mutated', moveItem(L, 0, 2) !== L && L.join('') === 'abcd')
+
+// Every index must land where its item landed.
+const agrees = (from: number, to: number) => {
+  const moved = moveItem(L, from, to)
+  return L.every((item, n) => moved[movedIndex(n, from, to)] === item)
+}
+check('movedIndex agrees with moveItem for a move down', agrees(0, 2) && agrees(1, 3))
+check('movedIndex agrees with moveItem for a move up', agrees(3, 0) && agrees(2, 1))
+check('movedIndex leaves untouched indexes alone', movedIndex(3, 0, 1) === 3 && movedIndex(0, 2, 3) === 0)
+check('movedIndex is identity for a no-op move', movedIndex(2, 1, 1) === 2)
 
 console.log('')
 if (failures > 0) {

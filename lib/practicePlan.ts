@@ -431,3 +431,30 @@ export function stepsFrom(text: string | null | undefined): StepText {
   // item only if it says something.
   return { numbered: true, items: lead ? [lead, ...items] : items }
 }
+
+// ---------------------------------------------------------------------------
+// Moving a block
+// ---------------------------------------------------------------------------
+// The review keeps several things by block INDEX: the copy of each block as
+// it arrived, which ones were edited, which one is open. Moving a block means
+// every one of those has to move with it, and getting that wrong is the kind
+// of bug that only shows up as "undo put back the wrong block". So the two
+// rules live here, pure, and the tests hold them.
+
+/** The list with the item at `from` now at `to`. Out-of-range or no-op moves return the list unchanged. */
+export function moveItem<T>(list: T[], from: number, to: number): T[] {
+  if (from === to || from < 0 || to < 0 || from >= list.length || to >= list.length) return list
+  const next = [...list]
+  const [item] = next.splice(from, 1)
+  next.splice(to, 0, item)
+  return next
+}
+
+/** Where index `n` ends up after moveItem(list, from, to). */
+export function movedIndex(n: number, from: number, to: number): number {
+  if (from === to) return n
+  if (n === from) return to
+  if (from < to && n > from && n <= to) return n - 1
+  if (to < from && n >= to && n < from) return n + 1
+  return n
+}

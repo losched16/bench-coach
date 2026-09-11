@@ -30,10 +30,10 @@
 
 import { useState, useMemo } from 'react'
 import {
-  X, AlertCircle, Sparkles, Pencil, Check, RotateCcw, Clock, Video as VideoIcon, Trash2, Plus } from 'lucide-react'
+  X, AlertCircle, Sparkles, Pencil, Check, RotateCcw, Clock, Video as VideoIcon, Trash2, Plus, GripVertical, ChevronUp, ChevronDown } from 'lucide-react'
 import { PracticeBlock } from './PracticeBlock'
 import { PriorityCoverageSummary } from './PriorityCoverageSummary'
-import { isStationGroup, listToLines, linesToList } from '@/lib/practicePlan'
+import { isStationGroup, listToLines, linesToList, moveItem, movedIndex } from '@/lib/practicePlan'
 import { parsePastedVideo, formatTimestamp, videoFieldsFromPaste } from '@/lib/drillVideo'
 
 const TYPES = ['warmup', 'drill', 'station', 'game', 'cooldown'] as const
@@ -254,6 +254,10 @@ export function PlanReview({
   // The overview — everything the sheet prints above the blocks — edited by
   // hand, with the arrival copy kept so undo means something.
   const OVERVIEW_KEYS = ['title', 'objective', 'coaching_points', 'coach_notes', 'flags'] as const
+  // Reordering. dragFrom is the row being dragged; dropAt is the row under
+  // the pointer, for the highlight. Both are null when nothing is happening.
+  const [dragFrom, setDragFrom] = useState<number | null>(null)
+  const [dropAt, setDropAt] = useState<number | null>(null)
   const [overviewEditing, setOverviewEditing] = useState(false)
   const [overviewEdited, setOverviewEdited] = useState(false)
   const [originalOverview] = useState<Record<string, any>>(() =>
@@ -324,6 +328,24 @@ export function PlanReview({
     setSelected(at)
   }
 
+  // Move a block and everything the review knows about it by index — its
+  // arrival copy, whether it was edited, whether it is open, whether it is
+  // selected. moveItem/movedIndex are the tested pair that keep those in
+  // step; nothing here reasons about indexes on its own.
+  const moveBlock = (from: number, to: number) => {
+    if (from === to || from < 0 || to < 0 || from >= blocks.length || to >= blocks.length) return
+    onBlocksChange(moveItem(blocks, from, to))
+    setOriginal(prev => moveItem(prev, from, to))
+    const remap = (set: Set<number>) => {
+      const next = new Set<number>()
+      set.forEach(n => next.add(movedIndex(n, from, to)))
+      return next
+    }
+    setEdited(remap)
+    setEditing(remap)
+    setSelected(sel => (sel >= 0 ? movedIndex(sel, from, to) : sel))
+  }
+
   const setMode = (i: number, manual: boolean) => {
     setEditing(prev => {
       const next = new Set(prev)
@@ -388,12 +410,32 @@ export function PlanReview({
             {blocks.map((b, i) => {
               const on = selected === i
               return (
-                <button
+                <div
                   key={i}
-                  onClick={() => setSelected(i)}
-                  className={`shrink-0 md:w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                    on ? 'bg-blue-600 text-white' : 'hover:bg-gray-200'
+                  draggable
+                  onDragStart={e => { setDragFrom(i); e.dataTransfer.effectAllowed = 'move' }}
+                  onDragOver={e => { e.preventDefault(); if (dropAt !== i) setDropAt(i) }}
+                  onDragLeave={() => { if (dropAt === i) setDropAt(null) }}
+                  onDrop={e => { e.preventDefault(); if (dragFrom !== null) moveBlock(dragFrom, i); setDragFrom(null); setDropAt(null) }}
+                  onDragEnd={() => { setDragFrom(null); setDropAt(null) }}
+                  className={`shrink-0 md:w-full flex items-stretch gap-0.5 rounded-lg transition-colors ${
+                    on ? 'bg-blue-600' : 'hover:bg-gray-200'
+                  } ${dragFrom === i ? 'opacity-50' : ''} ${
+                    dropAt === i && dragFrom !== null && dragFrom !== i ? 'ring-2 ring-blue-400' : ''
                   }`}
+                >
+                {/* Drag on a desktop; on a phone the strip has no drag, so the
+                    arrows below are the way to move a block. Both call the
+                    same moveBlock. */}
+                <span
+                  className={`hidden md:flex items-center pl-1 cursor-grab active:cursor-grabbing ${on ? 'text-blue-200' : 'text-gray-300'}`}
+                  aria-hidden
+                >
+                  <GripVertical size={14} />
+                </span>
+                <button
+                  onClick={() => setSelected(i)}
+                  className={`flex-1 min-w-0 text-left px-3 py-2 rounded-lg ${on ? 'text-white' : ''}`}
                 >
                   {/* Title first and up to two lines — a real block is called
                       "Throwing Progression — Knee, Hip, Full", and one
@@ -425,6 +467,27 @@ export function PlanReview({
                     )}
                   </div>
                 </button>
+                <span className="flex flex-col justify-center shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => moveBlock(i, i - 1)}
+                    disabled={i === 0}
+                    aria-label={`Move ${b.title || `block ${i + 1}`} earlier`}
+                    className={`p-0.5 rounded disabled:opacity-25 ${on ? 'text-blue-100 hover:bg-blue-500' : 'text-gray-400 hover:bg-gray-200 hover:text-gray-700'}`}
+                  >
+                    <ChevronUp size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveBlock(i, i + 1)}
+                    disabled={i === blocks.length - 1}
+                    aria-label={`Move ${b.title || `block ${i + 1}`} later`}
+                    className={`p-0.5 rounded disabled:opacity-25 ${on ? 'text-blue-100 hover:bg-blue-500' : 'text-gray-400 hover:bg-gray-200 hover:text-gray-700'}`}
+                  >
+                    <ChevronDown size={14} />
+                  </button>
+                </span>
+                </div>
               )
             })}
 
