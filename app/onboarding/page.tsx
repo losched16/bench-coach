@@ -6,7 +6,7 @@ import { createSupabaseComponentClient } from '@/lib/supabase'
 
 type Step = 'season' | 'team' | 'players' | 'complete'
 
-const AGE_GROUPS = ['6U', '7U', '8U', '9U', '10U', '11U', '12U', '13U+']
+import { AGE_GROUPS } from '@/lib/ageGroups'
 const SKILL_LEVELS = ['beginner', 'mixed', 'advanced']
 const LEAGUE_TYPES = ['rec', 'travel', 'clinic', 'other']
 const PRACTICE_DURATIONS = [60, 75, 90, 120]

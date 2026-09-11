@@ -7,7 +7,7 @@ import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { usePageView } from '@/lib/tracking'
 
-const AGE_GROUPS = ['6U', '7U', '8U', '9U', '10U', '11U', '12U', '13U+']
+import { AGE_GROUPS } from '@/lib/ageGroups'
 const SKILL_LEVELS = [
   { value: 'beginner', label: 'Beginner - New to baseball' },
   { value: 'mixed', label: 'Mixed - Variety of skill levels' },

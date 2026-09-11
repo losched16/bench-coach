@@ -62,6 +62,9 @@ const PRIVATE_TABLES = [
   'player_reports',
   'player_report_focus_areas',
   'player_report_drills',
+  // A player's roster row after they left the team — ratings, positions and
+  // the coach's stated reason. Team-scoped like team_players.
+  'team_player_archive',
 ]
 
 // Allowed, but only for counting and only these columns. The value of "eleven

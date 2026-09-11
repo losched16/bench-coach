@@ -7,6 +7,7 @@ import { ArrowLeft, Save, Check, Star, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
 import { usePageView } from '@/lib/tracking'
 import { useRole } from '@/lib/useRole'
+import { AGE_GROUPS, isAgeGroup, nextAgeGroup } from '@/lib/ageGroups'
 
 const PRIMARY_GOALS = [
   { id: 'throwing', label: 'Throwing', icon: '🎯' },
@@ -35,10 +36,19 @@ const PRACTICE_DURATIONS = [
   { value: 120, label: '2 hours' },
 ]
 
+interface SeasonData {
+  id: string
+  name: string
+  league_type: string | null
+  start_date: string | null
+  end_date: string | null
+}
+
 interface TeamData {
   id: string
   name: string
   age_group: string
+  season_id: string | null
   skill_level: string
   practice_duration_minutes: number
   primary_goals: string[]
@@ -55,7 +65,19 @@ export default function SettingsPage() {
   
   // Editable fields
   const [teamName, setTeamName] = useState('')
+  const [ageGroup, setAgeGroup] = useState('')
   const [skillLevel, setSkillLevel] = useState('')
+
+  // The season. A team ages up every year with most of the same kids, so
+  // "new season" is the ordinary change: the team keeps its roster, notes,
+  // reports and plans; only the dates (and usually the age group) move.
+  const [season, setSeason] = useState<SeasonData | null>(null)
+  const [seasonName, setSeasonName] = useState('')
+  const [seasonStart, setSeasonStart] = useState('')
+  const [seasonEnd, setSeasonEnd] = useState('')
+  const [seasonMode, setSeasonMode] = useState<'view' | 'edit' | 'new'>('view')
+  const [seasonSaving, setSeasonSaving] = useState(false)
+  const [seasonNotice, setSeasonNotice] = useState<string | null>(null)
   const [practiceDuration, setPracticeDuration] = useState(60)
   const [goals, setGoals] = useState<string[]>([])
   const [improvedAreas, setImprovedAreas] = useState<string[]>([])
@@ -120,7 +142,19 @@ export default function SettingsPage() {
       if (data) {
         setTeam(data)
         setTeamName(data.name)
+        setAgeGroup(data.age_group || '')
         setSkillLevel(data.skill_level || 'mixed')
+        if (data.season_id) {
+          const { data: s } = await supabase
+            .from('seasons').select('id, name, league_type, start_date, end_date')
+            .eq('id', data.season_id).maybeSingle()
+          if (s) {
+            setSeason(s as any)
+            setSeasonName((s as any).name || '')
+            setSeasonStart((s as any).start_date || '')
+            setSeasonEnd((s as any).end_date || '')
+          }
+        }
         setPracticeDuration(data.practice_duration_minutes || 60)
         setGoals(data.primary_goals || [])
         setImprovedAreas(data.improved_areas || [])
@@ -175,6 +209,7 @@ export default function SettingsPage() {
         .from('teams')
         .update({
           name: teamName,
+          age_group: ageGroup || team?.age_group,
           skill_level: skillLevel,
           practice_duration_minutes: practiceDuration,
           primary_goals: goals,
@@ -204,6 +239,83 @@ export default function SettingsPage() {
 
   if (!team) {
     return <div className="text-gray-600">Team not found</div>
+  }
+
+  // Edit the current season's name and dates in place.
+  const saveSeason = async () => {
+    if (!season) return
+    setSeasonSaving(true)
+    setSeasonNotice(null)
+    try {
+      const { error } = await supabase
+        .from('seasons')
+        .update({
+          name: seasonName.trim() || season.name,
+          start_date: seasonStart || null,
+          end_date: seasonEnd || null,
+        })
+        .eq('id', season.id)
+      if (error) throw error
+      setSeason({ ...season, name: seasonName.trim() || season.name, start_date: seasonStart || null, end_date: seasonEnd || null })
+      setSeasonMode('view')
+    } catch (error) {
+      console.error('Error saving season:', error)
+      setSeasonNotice('Could not save the season.')
+    } finally {
+      setSeasonSaving(false)
+    }
+  }
+
+  // Start a new season: a new seasons row, and the team points at it. Nothing
+  // on the team moves — roster, notes, reports, plans and history all carry
+  // over. What changes is the window a new player report draws from, and the
+  // age group if the coach moved it above.
+  const startNewSeason = async () => {
+    if (!teamId) return
+    setSeasonSaving(true)
+    setSeasonNotice(null)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not signed in')
+      const { data: coach } = await supabase
+        .from('coaches').select('id').eq('user_id', user.id).maybeSingle()
+      // The season belongs to the team's owner; for the owner that is
+      // themselves. seasons.coach_id is what the RLS on seasons keys on.
+      const { data: teamRow } = await supabase
+        .from('teams').select('coach_id').eq('id', teamId).maybeSingle()
+      const ownerId = (teamRow as any)?.coach_id || (coach as any)?.id
+      if (!ownerId) throw new Error('No coach')
+
+      const { data: created, error: insErr } = await supabase
+        .from('seasons')
+        .insert({
+          coach_id: ownerId,
+          name: seasonName.trim() || `${new Date().getFullYear()} ${ageGroup || team?.age_group || ''}`.trim(),
+          league_type: season?.league_type || null,
+          start_date: seasonStart || null,
+          end_date: seasonEnd || null,
+        })
+        .select('id, name, league_type, start_date, end_date')
+        .single()
+      if (insErr || !created) throw insErr || new Error('No season created')
+
+      const { error: teamErr } = await supabase
+        .from('teams')
+        .update({ season_id: (created as any).id, age_group: ageGroup || team?.age_group })
+        .eq('id', teamId)
+      if (teamErr) throw teamErr
+
+      setSeason(created as any)
+      setSeasonMode('view')
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+      router.refresh()
+    } catch (error) {
+      console.error('Error starting season:', error)
+      setSeasonNotice('Could not start the new season. Nothing has been changed.')
+    } finally {
+      setSeasonSaving(false)
+    }
   }
 
   const saveBranding = async () => {
@@ -274,11 +386,137 @@ export default function SettingsPage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Age Group
             </label>
-            <div className="px-4 py-2 bg-gray-100 rounded-lg text-gray-700">
-              {team.age_group}
-            </div>
+            <select
+              value={ageGroup}
+              onChange={(e) => setAgeGroup(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+            >
+              {!isAgeGroup(ageGroup) && ageGroup && <option value={ageGroup}>{ageGroup}</option>}
+              {AGE_GROUPS.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+            {nextAgeGroup(team.age_group) && ageGroup === team.age_group && (
+              <button
+                type="button"
+                onClick={() => setAgeGroup(nextAgeGroup(team.age_group)!)}
+                className="mt-2 text-xs text-blue-600 hover:text-blue-700"
+              >
+                Moving up to {nextAgeGroup(team.age_group)} this season?
+              </button>
+            )}
           </div>
         </div>
+      </div>
+
+      {/* The season. Age group above, dates here; both change once a year and
+          everything else on the team carries over. */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Season</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Your roster, notes, reports, plans and history stay with the team from season to
+              season. The season sets the dates a new player report draws from.
+            </p>
+          </div>
+          {seasonMode === 'view' && (
+            <div className="flex items-center space-x-2">
+              {season && (
+                <button
+                  onClick={() => { setSeasonName(season.name); setSeasonStart(season.start_date || ''); setSeasonEnd(season.end_date || ''); setSeasonMode('edit') }}
+                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Edit dates
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  const y = new Date().getFullYear()
+                  setSeasonName(`${y} ${ageGroup || team.age_group}`.trim())
+                  setSeasonStart('')
+                  setSeasonEnd('')
+                  setSeasonMode('new')
+                }}
+                className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Start a new season
+              </button>
+            </div>
+          )}
+        </div>
+
+        {seasonMode === 'view' && (
+          <div className="text-sm text-gray-700">
+            {season ? (
+              <>
+                <span className="font-medium text-gray-900">{season.name}</span>
+                {(season.start_date || season.end_date) && (
+                  <span className="text-gray-500">
+                    {' · '}{season.start_date || '…'} to {season.end_date || '…'}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-gray-500">No season set.</span>
+            )}
+          </div>
+        )}
+
+        {seasonMode !== 'view' && (
+          <div className="space-y-4">
+            {seasonMode === 'new' && (
+              <p className="text-sm text-gray-600 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                Starting a new season keeps everything on this team. The age group above is saved
+                with it — set it to {nextAgeGroup(team.age_group) || 'the new group'} first if the
+                team is moving up. Players who are not coming back can be archived from the roster.
+              </p>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Season name</label>
+                <input
+                  type="text"
+                  value={seasonName}
+                  onChange={(e) => setSeasonName(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Starts</label>
+                <input
+                  type="date"
+                  value={seasonStart}
+                  onChange={(e) => setSeasonStart(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ends</label>
+                <input
+                  type="date"
+                  value={seasonEnd}
+                  onChange={(e) => setSeasonEnd(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            {seasonNotice && <p className="text-sm text-red-600">{seasonNotice}</p>}
+            <div className="flex space-x-3">
+              <button
+                onClick={() => { setSeasonMode('view'); setSeasonNotice(null) }}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={seasonMode === 'new' ? startNewSeason : saveSeason}
+                disabled={seasonSaving}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {seasonSaving ? 'Saving…' : seasonMode === 'new' ? 'Start season' : 'Save dates'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Player report branding — the coach's letterhead, not the team's */}

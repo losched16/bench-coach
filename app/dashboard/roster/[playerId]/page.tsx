@@ -10,6 +10,7 @@ import { PlayerMetrics } from '@/components/PlayerMetrics'
 import { PlayerHistory } from '@/components/PlayerHistory'
 import { PlayerReports } from '@/components/PlayerReports'
 import { useRole } from '@/lib/useRole'
+import { readSnapshot } from '@/lib/rosterArchive'
 
 interface PlayerData {
   id: string
@@ -126,6 +127,10 @@ function PlayerDetailContent() {
   // one; they do not author the document that goes to the family.
   const { can: allowed } = useRole(teamId)
   const [player, setPlayer] = useState<PlayerData | null>(null)
+  // Set when the player is in the roster archive rather than on the roster.
+  // Their notes, reports and measurements are still here; ratings are the
+  // ones they had and are not editable until they are restored.
+  const [archivedAt, setArchivedAt] = useState<string | null>(null)
   const [notes, setNotes] = useState<PlayerNote[]>([])
   const [playbooks, setPlaybooks] = useState<ActivePlaybook[]>([])
   const [loading, setLoading] = useState(true)
@@ -168,8 +173,21 @@ function PlayerDetailContent() {
     setLoading(true)
     try {
       const { data: playerData } = await supabase.from('players').select('id, name, jersey_number').eq('id', playerId).single()
-      const { data: teamPlayerData } = await supabase.from('team_players').select('id, positions, hitting_level, throwing_level, fielding_level, pitching_level, baserunning_level, coachability_level').eq('player_id', playerId).eq('team_id', teamId).single()
-      if (playerData && teamPlayerData) setPlayer({ ...playerData, team_player: teamPlayerData })
+      const { data: teamPlayerData } = await supabase.from('team_players').select('id, positions, hitting_level, throwing_level, fielding_level, pitching_level, baserunning_level, coachability_level').eq('player_id', playerId).eq('team_id', teamId).maybeSingle()
+      if (playerData && teamPlayerData) {
+        setPlayer({ ...playerData, team_player: teamPlayerData })
+        setArchivedAt(null)
+      } else if (playerData) {
+        // Not on the roster. Archived? Then show them as they were.
+        const { data: arch } = await supabase
+          .from('team_player_archive').select('archived_at, roster')
+          .eq('player_id', playerId).eq('team_id', teamId).maybeSingle()
+        if (arch) {
+          const snap = readSnapshot((arch as any).roster)
+          setPlayer({ ...playerData, team_player: { id: '', ...snap } as any })
+          setArchivedAt((arch as any).archived_at)
+        }
+      }
 
       const { data: notesData } = await supabase.from('player_notes').select('*').eq('player_id', playerId).eq('team_id', teamId).order('created_at', { ascending: false })
       setNotes(notesData || [])
@@ -185,7 +203,7 @@ function PlayerDetailContent() {
   }
 
   const handleSkillChange = async (skillKey: string, level: number | null) => {
-    if (!player) return
+    if (!player || archivedAt) return
     
     setSavingSkill(true)
     try {
@@ -256,6 +274,14 @@ function PlayerDetailContent() {
           </div>
         </div>
       </div>
+
+      {archivedAt && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-lg px-4 py-3 text-sm">
+          Archived {new Date(archivedAt).toLocaleDateString()}. Not on the roster, so not in lineups,
+          practice plans or CoachAI. Everything recorded here is kept. Restore them from the
+          roster page&apos;s <em>Archived players</em> section to put them back.
+        </div>
+      )}
 
       <div className="border-b border-gray-200">
         <nav className="flex space-x-6 sm:space-x-8 overflow-x-auto -mb-px">

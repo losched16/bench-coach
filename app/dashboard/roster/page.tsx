@@ -3,11 +3,12 @@
 import { useEffect, useState, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
-import { Plus, User, Trash2, ChevronRight, StickyNote, Upload, Camera, Check, X, Loader2 } from 'lucide-react'
+import { Plus, User, Trash2, ChevronRight, StickyNote, Upload, Camera, Check, X, Loader2, Archive, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react'
 import Link from 'next/link'
 import { usePageView } from '@/lib/tracking'
 import { PositionEligibility } from '@/components/PositionEligibility'
 import { useRole } from '@/lib/useRole'
+import { rosterSnapshot, readSnapshot, restoreRow, restoreEligibility } from '@/lib/rosterArchive'
 
 interface Player {
   id: string
@@ -21,6 +22,15 @@ interface Player {
   throwing_level: number | null
   fielding_level: number | null
   notes_count?: number
+}
+
+interface ArchivedPlayer {
+  id: string
+  player_id: string
+  archived_at: string
+  reason: string | null
+  roster: unknown
+  player: { id: string; name: string; jersey_number: string | null } | null
 }
 
 interface ImportedPlayer {
@@ -37,6 +47,15 @@ function RosterPageContent() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
   const [playerToDelete, setPlayerToDelete] = useState<Player | null>(null)
+  // Archiving: the ordinary way a player leaves. Their record stays.
+  const [archived, setArchived] = useState<ArchivedPlayer[]>([])
+  const [showArchived, setShowArchived] = useState(false)
+  const [showArchiveModal, setShowArchiveModal] = useState(false)
+  const [playerToArchive, setPlayerToArchive] = useState<Player | null>(null)
+  const [archiveReason, setArchiveReason] = useState('')
+  const [archiving, setArchiving] = useState(false)
+  const [restoring, setRestoring] = useState<string | null>(null)
+  const [archiveError, setArchiveError] = useState<string | null>(null)
   const [newPlayerName, setNewPlayerName] = useState('')
   const [newPlayerJersey, setNewPlayerJersey] = useState('')
   const searchParams = useSearchParams()
@@ -88,11 +107,111 @@ function RosterPageContent() {
         )
         setPlayers(playersWithNotes as any)
       }
+
+      // Who has been archived. A missing table (migration 061 not run yet)
+      // simply means nobody, and the archive section stays hidden.
+      const { data: arch } = await supabase
+        .from('team_player_archive')
+        .select('id, player_id, archived_at, reason, roster, player:players(id, name, jersey_number)')
+        .eq('team_id', teamId)
+        .order('archived_at', { ascending: false })
+      setArchived(((arch || []) as any[]).map(a => ({
+        ...a, player: Array.isArray(a.player) ? a.player[0] || null : a.player,
+      })))
     } catch (error) {
       console.error('Error loading roster:', error)
     } finally {
       setLoading(false)
     }
+  }
+
+  // Archive: the roster row and its position eligibility go into the archive
+  // as JSON; the roster row is then deleted, which is what takes the player
+  // out of lineups, plans and CoachAI. Notes, reports, measurements and
+  // priorities are keyed on the player and the team, not on the roster row,
+  // so they stay exactly where they are.
+  const handleArchivePlayer = async () => {
+    if (!playerToArchive || !teamId) return
+    setArchiving(true)
+    setArchiveError(null)
+    try {
+      const { data: row, error: rowErr } = await supabase
+        .from('team_players').select('*').eq('id', playerToArchive.id).single()
+      if (rowErr || !row) throw rowErr || new Error('Roster row not found')
+      const { data: elig } = await supabase
+        .from('position_eligibility').select('position, eligible').eq('team_player_id', playerToArchive.id)
+
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data: me } = user
+        ? await supabase.from('coaches').select('id').eq('user_id', user.id).maybeSingle()
+        : { data: null as any }
+
+      const { error: insErr } = await supabase.from('team_player_archive').insert({
+        team_id: teamId,
+        player_id: playerToArchive.player.id,
+        archived_by: (me as any)?.id || null,
+        reason: archiveReason.trim() || null,
+        roster: rosterSnapshot(row as any, (elig || []) as any[]),
+      })
+      if (insErr) throw insErr
+
+      const { error: delErr } = await supabase.from('team_players').delete().eq('id', playerToArchive.id)
+      if (delErr) {
+        // Do not leave a player both on the roster and in the archive.
+        await supabase.from('team_player_archive').delete()
+          .eq('team_id', teamId).eq('player_id', playerToArchive.player.id)
+        throw delErr
+      }
+
+      setShowArchiveModal(false)
+      setPlayerToArchive(null)
+      setArchiveReason('')
+      loadRoster()
+    } catch (error: any) {
+      console.error('Error archiving player:', error)
+      setArchiveError(
+        /team_player_archive/.test(String(error?.message || ''))
+          ? 'The roster archive is not set up yet — run migration 061_roster_archive.sql.'
+          : 'Could not archive this player. Nothing has been changed.'
+      )
+    } finally {
+      setArchiving(false)
+    }
+  }
+
+  // Restore: the roster row comes back as it was, then the eligibility rows
+  // attach to its new id, then the archive row goes.
+  const handleRestorePlayer = async (a: ArchivedPlayer) => {
+    if (!teamId) return
+    setRestoring(a.id)
+    setArchiveError(null)
+    try {
+      const snap = readSnapshot(a.roster)
+      const { data: inserted, error: insErr } = await supabase
+        .from('team_players').insert(restoreRow(teamId, a.player_id, snap) as any).select('id').single()
+      if (insErr || !inserted) throw insErr || new Error('Could not recreate the roster row')
+      const elig = restoreEligibility((inserted as any).id, snap)
+      if (elig.length) await supabase.from('position_eligibility').insert(elig as any)
+      const { error: delErr } = await supabase.from('team_player_archive').delete().eq('id', a.id)
+      if (delErr) throw delErr
+      loadRoster()
+    } catch (error: any) {
+      console.error('Error restoring player:', error)
+      setArchiveError(
+        /duplicate|unique/i.test(String(error?.message || ''))
+          ? 'That player is already on the roster. Remove the archive entry if it is stale.'
+          : 'Could not restore this player.'
+      )
+    } finally {
+      setRestoring(null)
+    }
+  }
+
+  const confirmArchivePlayer = (player: Player) => {
+    setPlayerToArchive(player)
+    setArchiveReason('')
+    setArchiveError(null)
+    setShowArchiveModal(true)
   }
 
   const handleDeletePlayer = async () => {
@@ -404,13 +523,13 @@ function RosterPageContent() {
                 <button
                   onClick={(e) => {
                     e.preventDefault()
-                    confirmDeletePlayer(player)
+                    confirmArchivePlayer(player)
                   }}
-                  className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors text-sm flex items-center space-x-1"
-                  title="Remove player"
+                  className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-sm flex items-center space-x-1"
+                  title="Archive player — keeps their notes, reports and measurements"
                 >
-                  <Trash2 size={16} />
-                  <span>Remove</span>
+                  <Archive size={16} />
+                  <span>Archive</span>
                 </button>
               </div>
             </div>
@@ -424,6 +543,58 @@ function RosterPageContent() {
       {teamId && players.length > 0 && allowed('decide') && (
         <div className="bg-white rounded-lg shadow p-6">
           <PositionEligibility teamId={teamId} players={players as any} />
+        </div>
+      )}
+
+      {/* Archived players. Their notes, reports and measurements are still on
+          their page; they are simply not on the roster. Restore puts them back
+          with the positions and ratings they had. */}
+      {archived.length > 0 && (
+        <div className="bg-white rounded-lg shadow">
+          <button
+            onClick={() => setShowArchived(v => !v)}
+            className="w-full flex items-center justify-between px-6 py-4 text-left"
+          >
+            <span className="font-semibold text-gray-900 flex items-center space-x-2">
+              <Archive size={18} className="text-gray-500" />
+              <span>Archived players</span>
+              <span className="text-sm font-normal text-gray-500">({archived.length})</span>
+            </span>
+            {showArchived ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
+          </button>
+          {showArchived && (
+            <div className="border-t border-gray-100 divide-y divide-gray-100">
+              {archiveError && (
+                <p className="px-6 py-3 text-sm text-red-600">{archiveError}</p>
+              )}
+              {archived.map(a => (
+                <div key={a.id} className="px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
+                  <div className="min-w-0">
+                    <Link
+                      href={`/dashboard/roster/${a.player_id}?teamId=${teamId}`}
+                      className="font-medium text-gray-900 hover:text-blue-600"
+                    >
+                      {a.player?.jersey_number ? `#${a.player.jersey_number} ` : ''}{a.player?.name || 'Player'}
+                    </Link>
+                    <p className="text-xs text-gray-500">
+                      Archived {new Date(a.archived_at).toLocaleDateString()}
+                      {a.reason ? ` · ${a.reason}` : ''}
+                    </p>
+                  </div>
+                  {allowed('decide') && (
+                    <button
+                      onClick={() => handleRestorePlayer(a)}
+                      disabled={restoring === a.id}
+                      className="flex items-center space-x-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      {restoring === a.id ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
+                      <span>Restore to roster</span>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -477,13 +648,65 @@ function RosterPageContent() {
         </div>
       )}
 
+      {/* Archive Player Modal */}
+      {showArchiveModal && playerToArchive && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Archive {playerToArchive.player.name}</h3>
+            <p className="text-gray-600 mb-4">
+              Takes them off the roster — out of lineups, practice plans and CoachAI. Their
+              notes, reports, measurements and priorities stay on their page, and you can
+              restore them to the roster at any time.
+            </p>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Reason (optional)</label>
+            <input
+              type="text"
+              value={archiveReason}
+              onChange={(e) => setArchiveReason(e.target.value)}
+              placeholder="Moved up to 10U, family relocated…"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
+            />
+            {archiveError && <p className="text-sm text-red-600 mb-4">{archiveError}</p>}
+            <div className="flex space-x-3">
+              <button
+                onClick={() => { setShowArchiveModal(false); setPlayerToArchive(null) }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleArchivePlayer}
+                disabled={archiving}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
+              >
+                {archiving && <Loader2 size={16} className="animate-spin" />}
+                <span>Archive</span>
+              </button>
+            </div>
+            <button
+              onClick={() => {
+                const p = playerToArchive
+                setShowArchiveModal(false)
+                setPlayerToArchive(null)
+                confirmDeletePlayer(p)
+              }}
+              className="mt-4 text-xs text-gray-400 hover:text-red-600 underline"
+            >
+              Delete permanently instead (erases their notes and reports)
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Delete Player Confirmation Modal */}
       {showDeleteModal && playerToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Remove Player</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Delete {playerToDelete.player.name}</h3>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to remove <strong>{playerToDelete.player.name}</strong> from this roster?
+              This removes <strong>{playerToDelete.player.name}</strong> from the roster and, if they are on
+              no other team, deletes their record — every note, report and measurement. This cannot
+              be undone. To keep their history, archive them instead.
             </p>
             <div className="flex space-x-3">
               <button
@@ -499,7 +722,7 @@ function RosterPageContent() {
                 onClick={handleDeletePlayer}
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
-                Remove
+                Delete permanently
               </button>
             </div>
           </div>
