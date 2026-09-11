@@ -376,3 +376,58 @@ export function linesToList(text: string | null | undefined): string[] {
     .map(l => l.trim())
     .filter(Boolean)
 }
+
+// ---------------------------------------------------------------------------
+// Steps written as one line
+// ---------------------------------------------------------------------------
+// The generator writes "1. Wrist Flips — ... 2. Rocker Throws — ..." as ONE
+// string with no line breaks, and a renderer that preserves line breaks has
+// nothing to preserve. Verified against production rows: instructions carry
+// five to eight inline markers and zero newlines. This turns that back into
+// the list the writer meant.
+//
+// Conservative on purpose. A marker is "N. " with a space after the period,
+// so "6.5 feet" and "10.30am" are never split, and the numbers must run
+// 1, 2, 3… — a stray "in 2. " in prose does not make a list.
+
+export interface StepText {
+  /** True when the text is a numbered list; items then carry no marker. */
+  numbered: boolean
+  items: string[]
+}
+
+export function stepsFrom(text: string | null | undefined): StepText {
+  const raw = String(text ?? '').trim()
+  if (!raw) return { numbered: false, items: [] }
+
+  // Real line breaks win: a coach who typed steps on separate lines meant
+  // exactly that, whether or not they numbered them.
+  const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+  if (lines.length > 1) {
+    const stripped = lines.map(l => l.replace(/^\d+[.)]\s+/, ''))
+    const allNumbered = lines.every(l => /^\d+[.)]\s/.test(l))
+    return { numbered: allNumbered, items: allNumbered ? stripped : lines }
+  }
+
+  // One line. Find inline markers and check they count up from 1.
+  const marker = /(^|\s)(\d+)\.\s+(?=\S)/g
+  const found: Array<{ n: number; at: number; len: number }> = []
+  let m: RegExpExecArray | null
+  while ((m = marker.exec(raw)) !== null) {
+    found.push({ n: Number(m[2]), at: m.index + m[1].length, len: m[0].length - m[1].length })
+  }
+  const sequential = found.length >= 2 && found.every((f, i) => f.n === i + 1)
+  if (!sequential) return { numbered: false, items: [raw] }
+
+  const items: string[] = []
+  const lead = raw.slice(0, found[0].at).trim()
+  for (let i = 0; i < found.length; i++) {
+    const start = found[i].at + found[i].len
+    const end = i + 1 < found.length ? found[i + 1].at : raw.length
+    const piece = raw.slice(start, end).trim()
+    if (piece) items.push(piece)
+  }
+  // Text before "1." is an intro sentence, not a step; keep it as the first
+  // item only if it says something.
+  return { numbered: true, items: lead ? [lead, ...items] : items }
+}

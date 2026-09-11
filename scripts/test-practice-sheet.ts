@@ -14,7 +14,7 @@
 import {
   readPlan, equipmentKey, equipmentChecklist, scheduleRows, parseTime,
   plannedMinutes, fallbackCoachingPoints, reusableBlock, isExpanded, PlanBlock,
-  listToLines, linesToList,
+  listToLines, linesToList, stepsFrom,
 } from '@/lib/practicePlan'
 
 let failures = 0
@@ -173,6 +173,31 @@ check('Windows line endings are not kept as items',
   JSON.stringify(linesToList('a' + String.fromCharCode(13) + String.fromCharCode(10) + 'b')) === JSON.stringify(['a', 'b']))
 check('an empty box is an empty list, not [""]', linesToList('').length === 0 && linesToList(null).length === 0)
 check('a round trip preserves the list', JSON.stringify(linesToList(listToLines(['x', 'y']))) === JSON.stringify(['x', 'y']))
+
+// ── steps written as one line ───────────────────────────────────────────────
+// Production rows: "1. Wrist Flips — ... 2. Rocker Throws — ..." with no line
+// breaks. This is what the renderer has to turn back into a list.
+
+const inline = '1. Line up on the foul line (1 minute): jog in place. 2. Arm circles (1 minute): 10 forward. 3. Walking lunges, 20 feet each way.'
+const st = stepsFrom(inline)
+check('inline numbered steps become a numbered list', st.numbered && st.items.length === 3, JSON.stringify(st))
+check('the markers are stripped from each step', st.items[0].startsWith('Line up') && st.items[2].startsWith('Walking'))
+check('an intro sentence before "1." is kept as the first item',
+  JSON.stringify(stepsFrom('Do this in pairs. 1. Throw. 2. Catch.').items) === JSON.stringify(['Do this in pairs.', 'Throw.', 'Catch.']))
+
+check('a decimal is not a step marker',
+  !stepsFrom('Stand 6.5 feet apart and throw 10.5 times.').numbered)
+check('numbers that do not count from 1 are prose, not a list',
+  !stepsFrom('Rotate every 5. Then 7. minutes.').numbered && !stepsFrom('2. second 3. third').numbered)
+check('a single marker is not a list', !stepsFrom('1. Just one thing here.').numbered)
+
+const lined = stepsFrom('Glove down early' + String.fromCharCode(10) + 'Step to the target' + String.fromCharCode(10) + 'Finish over the front side')
+check('real line breaks become separate paragraphs, unnumbered', !lined.numbered && lined.items.length === 3)
+const linedNum = stepsFrom('1. Glove down' + String.fromCharCode(10) + '2. Step' + String.fromCharCode(10) + '3. Finish')
+check('numbered lines become a numbered list with markers stripped',
+  linedNum.numbered && JSON.stringify(linedNum.items) === JSON.stringify(['Glove down', 'Step', 'Finish']))
+check('empty text is no steps', stepsFrom('').items.length === 0 && stepsFrom(null).items.length === 0)
+check('plain prose is one paragraph', JSON.stringify(stepsFrom('Just a sentence.').items) === JSON.stringify(['Just a sentence.']))
 
 console.log('')
 if (failures > 0) {

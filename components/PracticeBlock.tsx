@@ -1,5 +1,6 @@
 'use client'
 
+import { StepText } from '@/components/StepText'
 import { useState } from 'react'
 import { RefreshCw, ChevronDown, ChevronRight, Video } from 'lucide-react'
 import { DrillVideo, DrillVideoLookup } from './DrillVideo'
@@ -183,7 +184,7 @@ export function PracticeBlock({
               {block.setup && (
                 <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
                   <span className="text-xs font-semibold text-indigo-800 uppercase tracking-wide">Rotation</span>
-                  <p className="text-sm text-indigo-900 mt-1">{block.setup}</p>
+                  <StepText text={block.setup} className="text-sm text-indigo-900 mt-1" />
                 </div>
               )}
               {stations.map((s: any, i: number) => (
@@ -209,7 +210,7 @@ export function PracticeBlock({
               <p className="text-xs font-semibold text-amber-900 uppercase tracking-wide mb-1">
                 What to watch for
               </p>
-              <p className="text-sm text-amber-900 leading-relaxed">{block.watch_for}</p>
+              <StepText text={block.watch_for} className="text-sm text-amber-900 leading-relaxed" />
             </div>
           )}
           {/* Equipment */}
@@ -227,7 +228,7 @@ export function PracticeBlock({
           {block.setup && !station && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
               <span className="text-xs font-semibold text-amber-800 uppercase tracking-wide">Setup</span>
-              <p className="text-sm text-amber-900 mt-1">{block.setup}</p>
+              <StepText text={block.setup} className="text-sm text-amber-900 mt-1" />
             </div>
           )}
 
@@ -235,9 +236,7 @@ export function PracticeBlock({
           {block.detailed_instructions && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <span className="text-xs font-semibold text-blue-800 uppercase tracking-wide">How to Run This Drill</span>
-              <div className="text-sm text-blue-900 mt-2 whitespace-pre-line leading-relaxed">
-                {block.detailed_instructions}
-              </div>
+              <StepText text={block.detailed_instructions} className="text-sm text-blue-900 mt-2 leading-relaxed" />
             </div>
           )}
 

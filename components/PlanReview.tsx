@@ -30,8 +30,7 @@
 
 import { useState, useMemo } from 'react'
 import {
-  X, AlertCircle, Sparkles, Pencil, Check, RotateCcw, Clock, Video as VideoIcon,
-} from 'lucide-react'
+  X, AlertCircle, Sparkles, Pencil, Check, RotateCcw, Clock, Video as VideoIcon, Trash2 } from 'lucide-react'
 import { PracticeBlock } from './PracticeBlock'
 import { PriorityCoverageSummary } from './PriorityCoverageSummary'
 import { isStationGroup, listToLines, linesToList } from '@/lib/practicePlan'
@@ -251,7 +250,7 @@ export function PlanReview({
   const [editing, setEditing] = useState<Set<number>>(new Set())
   const [edited, setEdited] = useState<Set<number>>(new Set())
   // The block as it arrived, so "revert" means something after a manual edit.
-  const [original] = useState<any[]>(() => blocks.map(b => JSON.parse(JSON.stringify(b))))
+  const [original, setOriginal] = useState<any[]>(() => blocks.map(b => JSON.parse(JSON.stringify(b))))
   // The overview — everything the sheet prints above the blocks — edited by
   // hand, with the arrival copy kept so undo means something.
   const OVERVIEW_KEYS = ['title', 'objective', 'coaching_points', 'coach_notes', 'flags'] as const
@@ -285,6 +284,25 @@ export function PlanReview({
     onBlocksChange(blocks.map((b, n) => n === i ? JSON.parse(JSON.stringify(original[i])) : b))
     setEdited(prev => { const next = new Set(prev); next.delete(i); return next })
     setEditing(prev => { const next = new Set(prev); next.delete(i); return next })
+  }
+
+  // Take a block out of the practice altogether. Nothing is saved until the
+  // footer's save runs, so Discard still restores everything. The per-index
+  // state — arrival copies, edited and editing marks — shifts down with the
+  // blocks so undo keeps pointing at the right one.
+  const removeBlock = (i: number) => {
+    const b = blocks[i]
+    if (!window.confirm(`Remove "${b?.title || 'this block'}" from the practice?`)) return
+    onBlocksChange(blocks.filter((_, n) => n !== i))
+    setOriginal(prev => prev.filter((_, n) => n !== i))
+    const shift = (set: Set<number>) => {
+      const next = new Set<number>()
+      set.forEach(n => { if (n < i) next.add(n); else if (n > i) next.add(n - 1) })
+      return next
+    }
+    setEdited(shift)
+    setEditing(shift)
+    setSelected(sel => (sel === i ? -1 : sel > i ? sel - 1 : sel))
   }
 
   const setMode = (i: number, manual: boolean) => {
@@ -564,6 +582,13 @@ export function PlanReview({
                       <Check size={15} /> Done
                     </button>
                   )}
+                  <button
+                    onClick={() => removeBlock(selected)}
+                    className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-red-700"
+                    title="Take this block out of the practice"
+                  >
+                    <Trash2 size={13} /> Remove
+                  </button>
                 </div>
               </div>
 

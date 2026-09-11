@@ -24,6 +24,7 @@ import {
   readPlan, equipmentChecklist, scheduleRows, plannedMinutes,
   fallbackCoachingPoints, isStationGroup,
 } from '@/lib/practicePlan'
+import { StepText } from '@/components/StepText'
 
 export default function PracticeSheetPage() {
   const params = useParams()
@@ -291,13 +292,15 @@ export default function PracticeSheetPage() {
                     </div>
 
                     {b.setup && (
-                      <p className="text-[12px] leading-snug mt-1">
-                        <Label>Set up</Label> {b.setup}
-                      </p>
+                      <div className="text-[12px] leading-snug mt-1">
+                        <Label>Set up</Label>
+                        <StepText text={b.setup} />
+                      </div>
                     )}
                     {b.detailed_instructions && (
-                      <div className="text-[12px] leading-snug mt-1 whitespace-pre-line">
-                        <Label>Run it</Label> {b.detailed_instructions}
+                      <div className="text-[12px] leading-snug mt-1">
+                        <Label>Run it</Label>
+                        <StepText text={b.detailed_instructions} />
                       </div>
                     )}
                     {(b.coaching_cues?.length ?? 0) > 0 && (
@@ -307,9 +310,10 @@ export default function PracticeSheetPage() {
                       </p>
                     )}
                     {b.watch_for && (
-                      <p className="text-[12px] leading-snug mt-1">
-                        <Label>Watch for</Label> {b.watch_for}
-                      </p>
+                      <div className="text-[12px] leading-snug mt-1">
+                        <Label>Watch for</Label>
+                        <StepText text={b.watch_for} />
+                      </div>
                     )}
                     {(b.common_mistakes?.length ?? 0) > 0 && (
                       <ul className="text-[12px] leading-snug mt-1 space-y-0.5">
