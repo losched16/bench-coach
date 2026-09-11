@@ -355,3 +355,24 @@ export function fallbackCoachingPoints(blocks: PlanBlock[], limit = 3): string[]
   }
   return out
 }
+
+// ---------------------------------------------------------------------------
+// Editing the overview by hand
+// ---------------------------------------------------------------------------
+// Coaching points and flags are lists, but a coach edits them as lines in a
+// box. These two are the whole translation, kept here so the review and the
+// tests agree on what a blank line means (nothing) and what whitespace means
+// (nothing either).
+
+/** A list as textarea text: one item per line. */
+export function listToLines(items: string[] | null | undefined): string {
+  return (items || []).map(x => String(x ?? '').trim()).filter(Boolean).join(String.fromCharCode(10))
+}
+
+/** Textarea text as a list: one item per non-blank line, trimmed. */
+export function linesToList(text: string | null | undefined): string[] {
+  return String(text ?? '')
+    .split(/\r?\n/)
+    .map(l => l.trim())
+    .filter(Boolean)
+}

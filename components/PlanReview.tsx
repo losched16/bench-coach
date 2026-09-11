@@ -34,7 +34,7 @@ import {
 } from 'lucide-react'
 import { PracticeBlock } from './PracticeBlock'
 import { PriorityCoverageSummary } from './PriorityCoverageSummary'
-import { isStationGroup } from '@/lib/practicePlan'
+import { isStationGroup, listToLines, linesToList } from '@/lib/practicePlan'
 import { parsePastedVideo, formatTimestamp, videoFieldsFromPaste } from '@/lib/drillVideo'
 
 const TYPES = ['warmup', 'drill', 'station', 'game', 'cooldown'] as const
@@ -228,6 +228,12 @@ interface Props {
   coachId?: string | null
   favorites?: Set<string>
   onFavoritesChanged?: () => void
+  /**
+   * Write the overview back into the draft: title, objective, the coaching
+   * points, the notes, the flags. Everything the printed sheet shows above
+   * the blocks. Optional so a caller that only wants block edits is unchanged.
+   */
+  onOverviewChange?: (patch: Record<string, any>) => void
   /** The rebuild box and the save/discard buttons — their handlers live in the page. */
   footer: React.ReactNode
 }
@@ -235,6 +241,7 @@ interface Props {
 export function PlanReview({
   draft, onBlocksChange, onClose, duration, timeLabels, coverage, status,
   genError, drillResources = [], coachId = null, favorites, onFavoritesChanged, footer,
+  onOverviewChange,
 }: Props) {
   const blocks: any[] = draft?.blocks || []
   // -1 is the overview. It is a rail row rather than a banner above the blocks
@@ -245,6 +252,23 @@ export function PlanReview({
   const [edited, setEdited] = useState<Set<number>>(new Set())
   // The block as it arrived, so "revert" means something after a manual edit.
   const [original] = useState<any[]>(() => blocks.map(b => JSON.parse(JSON.stringify(b))))
+  // The overview — everything the sheet prints above the blocks — edited by
+  // hand, with the arrival copy kept so undo means something.
+  const OVERVIEW_KEYS = ['title', 'objective', 'coaching_points', 'coach_notes', 'flags'] as const
+  const [overviewEditing, setOverviewEditing] = useState(false)
+  const [overviewEdited, setOverviewEdited] = useState(false)
+  const [originalOverview] = useState<Record<string, any>>(() =>
+    Object.fromEntries(OVERVIEW_KEYS.map(k => [k, JSON.parse(JSON.stringify(draft?.[k] ?? null))]))
+  )
+  const patchOverview = (patch: Record<string, any>) => {
+    onOverviewChange?.(patch)
+    setOverviewEdited(true)
+  }
+  const revertOverview = () => {
+    onOverviewChange?.(JSON.parse(JSON.stringify(originalOverview)))
+    setOverviewEdited(false)
+    setOverviewEditing(false)
+  }
 
   const total = useMemo(
     () => blocks.reduce((s, b) => s + (Number(b?.minutes) || 0), 0),
@@ -292,6 +316,7 @@ export function PlanReview({
             {total > duration && <span className="text-red-600 font-medium"> · over by {total - duration}</span>}
             {' · '}{status}
             {edited.size > 0 && <span className="text-amber-700"> · {edited.size} edited by you</span>}
+            {overviewEdited && <span className="text-amber-700"> · overview edited by you</span>}
           </p>
         </div>
         <button onClick={onClose} className="p-2 -m-2 text-gray-400 hover:text-gray-700 shrink-0"
@@ -372,35 +397,128 @@ export function PlanReview({
         <div className="flex-1 overflow-y-auto min-h-0">
           {selected === -1 ? (
             <div className="p-5 space-y-4 max-w-3xl">
-              {draft?.objective && (
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Objective</p>
-                  <p className="text-gray-900">{draft.objective}</p>
+              {/* The overview is what the sheet prints above the blocks. It
+                  can be edited by hand when the caller allows it, with the
+                  same toggle a block has and the same undo. */}
+              {onOverviewChange && (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="inline-flex rounded-lg border border-gray-300 p-0.5 bg-gray-50">
+                    <button
+                      onClick={() => setOverviewEditing(false)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${
+                        !overviewEditing ? 'bg-white shadow-sm text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      <Sparkles size={14} /> As written
+                    </button>
+                    <button
+                      onClick={() => setOverviewEditing(true)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${
+                        overviewEditing ? 'bg-white shadow-sm text-gray-900 font-medium' : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      <Pencil size={14} /> Edit
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {overviewEdited && (
+                      <button onClick={revertOverview} className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900">
+                        <RotateCcw size={13} /> Undo my edits
+                      </button>
+                    )}
+                    {overviewEditing && (
+                      <button onClick={() => setOverviewEditing(false)} className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 font-medium">
+                        <Check size={15} /> Done
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
-              {Array.isArray(draft?.coaching_points) && draft.coaching_points.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-                    Say these all practice
-                  </p>
-                  <ul className="list-disc list-inside space-y-1 text-gray-800">
-                    {draft.coaching_points.map((p: string, i: number) => <li key={i}>{p}</li>)}
-                  </ul>
+
+              {onOverviewChange && overviewEditing ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Title</label>
+                    <input
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={draft?.title || ''}
+                      onChange={e => patchOverview({ title: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Objective</label>
+                    <input
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={draft?.objective || ''}
+                      onChange={e => patchOverview({ objective: e.target.value })}
+                      placeholder="The one thing this practice is for"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Say these all practice</label>
+                    <textarea
+                      rows={4}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={listToLines(draft?.coaching_points)}
+                      onChange={e => patchOverview({ coaching_points: linesToList(e.target.value) })}
+                      placeholder="One per line"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">One per line. These print as the three things to say all night.</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Before you start</label>
+                    <textarea
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={draft?.coach_notes || ''}
+                      onChange={e => patchOverview({ coach_notes: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Worth knowing</label>
+                    <textarea
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={listToLines(draft?.flags)}
+                      onChange={e => patchOverview({ flags: linesToList(e.target.value) })}
+                      placeholder="One per line — delete any you do not want on the sheet"
+                    />
+                  </div>
                 </div>
-              )}
-              {draft?.coach_notes && (
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Before you start</p>
-                  <p className="text-gray-800 whitespace-pre-line">{draft.coach_notes}</p>
-                </div>
-              )}
-              {Array.isArray(draft?.flags) && draft.flags.length > 0 && (
-                <div className="rounded-lg border border-amber-300 bg-amber-50 p-3">
-                  <p className="text-xs font-semibold text-amber-900 uppercase tracking-wide mb-1">Worth knowing</p>
-                  <ul className="list-disc list-inside space-y-1 text-sm text-amber-900">
-                    {draft.flags.map((f: string, i: number) => <li key={i}>{f}</li>)}
-                  </ul>
-                </div>
+              ) : (
+                <>
+
+                  {draft?.objective && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Objective</p>
+                      <p className="text-gray-900">{draft.objective}</p>
+                    </div>
+                  )}
+                  {Array.isArray(draft?.coaching_points) && draft.coaching_points.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                        Say these all practice
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 text-gray-800">
+                        {draft.coaching_points.map((p: string, i: number) => <li key={i}>{p}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {draft?.coach_notes && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Before you start</p>
+                      <p className="text-gray-800 whitespace-pre-line">{draft.coach_notes}</p>
+                    </div>
+                  )}
+                  {Array.isArray(draft?.flags) && draft.flags.length > 0 && (
+                    <div className="rounded-lg border border-amber-300 bg-amber-50 p-3">
+                      <p className="text-xs font-semibold text-amber-900 uppercase tracking-wide mb-1">Worth knowing</p>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-amber-900">
+                        {draft.flags.map((f: string, i: number) => <li key={i}>{f}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                </>
               )}
               <PriorityCoverageSummary report={coverage} />
             </div>

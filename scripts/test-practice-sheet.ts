@@ -14,6 +14,7 @@
 import {
   readPlan, equipmentKey, equipmentChecklist, scheduleRows, parseTime,
   plannedMinutes, fallbackCoachingPoints, reusableBlock, isExpanded, PlanBlock,
+  listToLines, linesToList,
 } from '@/lib/practicePlan'
 
 let failures = 0
@@ -158,6 +159,20 @@ check(
 )
 check('no previous plan means nothing to reuse', reusableBlock(written, null) === null)
 check('an untitled block never matches', reusableBlock({ minutes: 15 }, [written]) === null)
+
+// ── editing the overview by hand ────────────────────────────────────────────
+// Coaching points and flags are lists a coach edits as lines in a box.
+
+check('a list becomes one item per line',
+  listToLines(['Glove down early', 'Step to the target']) === 'Glove down early' + String.fromCharCode(10) + 'Step to the target')
+check('blank and whitespace-only items are dropped on the way out',
+  listToLines(['  a ', '', '   ', 'b']) === 'a' + String.fromCharCode(10) + 'b')
+check('lines become a trimmed list, blanks removed',
+  JSON.stringify(linesToList('  one  ' + String.fromCharCode(10) + String.fromCharCode(10) + 'two' + String.fromCharCode(10) + '   ')) === JSON.stringify(['one', 'two']))
+check('Windows line endings are not kept as items',
+  JSON.stringify(linesToList('a' + String.fromCharCode(13) + String.fromCharCode(10) + 'b')) === JSON.stringify(['a', 'b']))
+check('an empty box is an empty list, not [""]', linesToList('').length === 0 && linesToList(null).length === 0)
+check('a round trip preserves the list', JSON.stringify(linesToList(listToLines(['x', 'y']))) === JSON.stringify(['x', 'y']))
 
 console.log('')
 if (failures > 0) {

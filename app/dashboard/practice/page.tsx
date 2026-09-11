@@ -82,6 +82,11 @@ function PracticeContent() {
   const [showCustomModal, setShowCustomModal] = useState(false)
   const [showNewMenu, setShowNewMenu] = useState(false)
   const [expandedPlan, setExpandedPlan] = useState<string | null>(null)
+  // A saved plan reopened in the same review the draft used. Edits live here
+  // until Save changes writes them to practice_plans.content — the sheet is
+  // derived from that row, so this is the one place printed text is changed.
+  const [editingPlan, setEditingPlan] = useState<{ id: string; title: string; duration: number; focus: string[]; content: any } | null>(null)
+  const [savingEdit, setSavingEdit] = useState(false)
   // Which blocks are open, per surface. The overview is the default: every
   // block collapsed, the whole practice visible at a glance, detail on tap.
   // Never persisted — it is a reading position, not part of the plan.
@@ -604,6 +609,43 @@ function PracticeContent() {
     )
   }
 
+  const openEditPlan = (plan: PracticePlan) => {
+    // Normalise once so an old array-shaped plan edits like a new one, but
+    // keep every key the generator stored — readPlan only knows the ones the
+    // sheet prints, and a save must not quietly drop the rest.
+    const raw: any = plan.content
+    const content = { ...(Array.isArray(raw) ? {} : (raw || {})), ...readPlan(raw) }
+    setEditingPlan({
+      id: plan.id,
+      title: plan.title,
+      duration: plan.duration_minutes || 60,
+      focus: (plan as any).focus || (plan as any).focus_areas || [],
+      content: { ...content, title: plan.title },
+    })
+  }
+
+  const saveEditedPlan = async () => {
+    if (!editingPlan) return
+    setSavingEdit(true)
+    try {
+      const { title, ...content } = editingPlan.content
+      const { error } = await supabase
+        .from('practice_plans')
+        .update({ content, title: String(title || editingPlan.title || 'Practice plan') })
+        .eq('id', editingPlan.id)
+      if (error) throw error
+      setPlans(prev => prev.map(p =>
+        p.id === editingPlan.id ? { ...p, content, title: String(title || p.title) } : p
+      ))
+      setEditingPlan(null)
+    } catch (error) {
+      console.error('Save edited plan error:', error)
+      alert('Could not save your changes. Nothing was lost — try again.')
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
   const saveDraft = async () => {
     if (!draft) return
     setSavingDraft(true)
@@ -1056,6 +1098,17 @@ function PracticeContent() {
                       other two verbs rather than hidden inside the expanded
                       plan — printing is something a coach decides before they
                       have read anything. */}
+                  {/* Change what the sheet says — any block, or the
+                      objective, cues, notes and flags above them — before it
+                      is printed. Same review the draft used, saved back. */}
+                  <button
+                    type="button"
+                    onClick={() => openEditPlan(plan)}
+                    className="text-sm text-gray-600 hover:text-gray-900 font-medium flex items-center"
+                  >
+                    <Pencil size={16} className="mr-1" />
+                    Edit
+                  </button>
                   <Link
                     href={`/dashboard/practice/${plan.id}/print`}
                     className="text-sm text-gray-600 hover:text-gray-900 font-medium flex items-center"
@@ -1115,6 +1168,49 @@ function PracticeContent() {
         </div>
       )}
 
+      {/* Edit a saved plan. The same full-screen review the draft gets,
+          over the saved content; Save changes writes it back to the row the
+          printed sheet reads from. */}
+      {editingPlan && (
+        <PlanReview
+          draft={editingPlan.content}
+          onBlocksChange={(blocks) => setEditingPlan(prev => prev ? { ...prev, content: { ...prev.content, blocks } } : prev)}
+          onOverviewChange={(patch) => setEditingPlan(prev => prev ? { ...prev, content: { ...prev.content, ...patch } } : prev)}
+          onClose={() => setEditingPlan(null)}
+          duration={editingPlan.duration}
+          timeLabels={timeLabelsFor(editingPlan.content, editingPlan.content.start_time || null)}
+          coverage={coverageFor(editingPlan.content, editingPlan.focus, drillResources)}
+          status="editing a saved plan"
+          drillResources={drillResources}
+          coachId={coachId}
+          favorites={favorites}
+          onFavoritesChanged={() => refreshFavorites()}
+          footer={
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+              <p className="text-xs text-gray-500">
+                Changes here are what the printed sheet will say.
+              </p>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => setEditingPlan(null)}
+                  disabled={savingEdit}
+                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-50"
+                >
+                  Discard
+                </button>
+                <button
+                  onClick={saveEditedPlan}
+                  disabled={savingEdit}
+                  className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {savingEdit ? 'Saving…' : 'Save changes'}
+                </button>
+              </div>
+            </div>
+          }
+        />
+      )}
+
       {/* Generate Plan Modal */}
       {/* The draft.
           Generating straight into the database meant the first version was the
@@ -1125,6 +1221,7 @@ function PracticeContent() {
         <PlanReview
           draft={draft}
           onBlocksChange={(blocks) => setDraft((prev: any) => ({ ...prev, blocks }))}
+          onOverviewChange={(patch) => setDraft((prev: any) => ({ ...prev, ...patch }))}
           onClose={() => { setShowPlanModal(false); setDraft(null); setGenError(null) }}
           duration={duration}
           timeLabels={timeLabelsFor({ blocks: draft.blocks || [] }, startTime || null)}
