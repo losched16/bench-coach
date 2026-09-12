@@ -30,11 +30,14 @@
 
 import { useState, useMemo } from 'react'
 import {
-  X, AlertCircle, Sparkles, Pencil, Check, RotateCcw, Clock, Video as VideoIcon, Trash2, Plus, GripVertical, ChevronUp, ChevronDown, Repeat } from 'lucide-react'
+  X, AlertCircle, Sparkles, Pencil, Check, RotateCcw, Clock, Video as VideoIcon, Trash2, Plus, GripVertical, ChevronUp, ChevronDown, Repeat, MoreHorizontal, Copy, Layers } from 'lucide-react'
 import { PracticeBlock } from './PracticeBlock'
 import { PriorityCoverageSummary } from './PriorityCoverageSummary'
 import { isStationGroup, listToLines, linesToList, moveItem, movedIndex } from '@/lib/practicePlan'
-import { blockFromDrill, insertBlock, replaceBlock } from '@/lib/planEdits'
+import {
+  blockFromDrill, insertBlock, replaceBlock, setBlockMinutes,
+  duplicateBlock, makeStationGroup, ungroupStations, addStation, removeStation,
+} from '@/lib/planEdits'
 import { DrillLibrary } from './DrillLibrary'
 import { parsePastedVideo, formatTimestamp, videoFieldsFromPaste } from '@/lib/drillVideo'
 
@@ -78,6 +81,23 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 
 const inputClass =
   'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+
+function MenuItem({ icon, label, onClick, disabled, danger }: {
+  icon: React.ReactNode; label: string; onClick: () => void; disabled?: boolean; danger?: boolean
+}) {
+  return (
+    <button
+      role="menuitem"
+      onClick={onClick}
+      disabled={disabled}
+      className={`w-full flex items-center gap-2 px-3 py-1.5 text-left disabled:opacity-40 ${
+        danger ? 'text-red-700 hover:bg-red-50' : 'text-gray-700 hover:bg-gray-50'
+      }`}
+    >
+      {icon} {label}
+    </button>
+  )
+}
 
 /** One block, as a form. */
 function BlockEditor({ block, onChange }: { block: any; onChange: (patch: any) => void }) {
@@ -297,7 +317,23 @@ export function PlanReview({
   )
 
   const patchBlock = (i: number, patch: any) => {
-    onBlocksChange(blocks.map((b, n) => n === i ? { ...b, ...patch } : b))
+    let next = blocks.map((b, n) => n === i ? { ...b, ...patch } : b)
+
+    // Minutes are not an ordinary field on a station parent. That number is
+    // ELAPSED rotation time, and a plain spread set it while leaving
+    // rotation_minutes and every child's minutes at their old values — so a
+    // 26-minute rotation stretched to 32 still had three stations claiming
+    // eight minutes each, and the printed sheet disagreed with the clock in
+    // front of a coach holding both.
+    //
+    // setBlockMinutes re-derives the rotation and pushes it down. Skipped
+    // while the field is empty or zero, which is what it reads as mid-keystroke
+    // — flooring to 1 there would fight the coach typing "30".
+    if (Object.prototype.hasOwnProperty.call(patch, 'minutes') && Number(patch.minutes) > 0) {
+      next = setBlockMinutes(next, i, Number(patch.minutes))
+    }
+
+    onBlocksChange(next)
     setEdited(prev => new Set(prev).add(i))
   }
 
@@ -356,7 +392,9 @@ export function PlanReview({
   // Opening it for 'add' appends; opening it for 'replace' swaps one block and
   // keeps its slot AND its minutes, because the coach built a clock around that
   // slot rather than around that drill.
-  const [library, setLibrary] = useState<{ mode: 'add' } | { mode: 'replace'; at: number } | null>(null)
+  const [library, setLibrary] = useState<
+    { mode: 'add' } | { mode: 'replace'; at: number } | { mode: 'station'; at: number } | null
+  >(null)
 
   const addFromLibrary = (drill: any) => {
     const at = selected >= 0 ? selected + 1 : blocks.length
@@ -377,6 +415,68 @@ export function PlanReview({
   // No index moves, so none of the per-index bookkeeping shifts. The arrival
   // copy stays the block that arrived, so "undo my edits" still puts back what
   // the model wrote rather than what was just swapped in.
+  const [blockMenu, setBlockMenu] = useState(false)
+
+  // Duplicate, ungroup and station edits all go through lib/planEdits, which
+  // owns the arithmetic — elapsed time for a rotation, and the rule that a
+  // group of one is not a group. The per-index bookkeeping below is this
+  // screen's own and has to shift in step, exactly as addBlock does.
+  const duplicateAt = (i: number) => {
+    onBlocksChange(duplicateBlock(blocks, i))
+    setOriginal(prev => [...prev.slice(0, i + 1), JSON.parse(JSON.stringify(prev[i] ?? blocks[i])), ...prev.slice(i + 1)])
+    const shiftUp = (set: Set<number>) => {
+      const next = new Set<number>()
+      set.forEach(n => next.add(n > i ? n + 1 : n))
+      return next
+    }
+    setEdited(prev => new Set(shiftUp(prev)).add(i + 1))
+    setEditing(shiftUp)
+    setSelected(i + 1)
+  }
+
+  // Ungrouping turns one row into several, so everything after it shifts by
+  // the number of stations minus the row that was there.
+  const ungroupAt = (i: number) => {
+    const parent = blocks[i]
+    if (!isStationGroup(parent)) return
+    const grew = (parent.stations as any[]).length - 1
+    onBlocksChange(ungroupStations(blocks, i))
+    setOriginal(prev => {
+      const copies = (parent.stations as any[]).map(st => JSON.parse(JSON.stringify(st)))
+      return [...prev.slice(0, i), ...copies, ...prev.slice(i + 1)]
+    })
+    const shift = (set: Set<number>) => {
+      const next = new Set<number>()
+      set.forEach(n => next.add(n > i ? n + grew : n))
+      return next
+    }
+    setEdited(prev => new Set(shift(prev)).add(i))
+    setEditing(shift)
+    setSelected(i)
+  }
+
+  // Pairing a block with a drill makes a rotation; pairing one with a rotation
+  // adds a station to it. Deliberate either way — never inferred from a drag
+  // landing near another block, because grouping changes what the plan CLAIMS:
+  // that the squad splits, that every group sees every station, and that the
+  // elapsed time stops being the sum.
+  const stationFromLibrary = (drill: any) => {
+    if (!library || library.mode !== 'station') return
+    const at = library.at
+    const parent = blocks[at]
+    if (isStationGroup(parent)) {
+      onBlocksChange(addStation(blocks, at, blockFromDrill(drill)))
+    } else {
+      const group = makeStationGroup([parent, blockFromDrill(drill)], {
+        rotationMinutes: Math.max(5, Math.round((Number(parent?.minutes) || 10) / 2)),
+      })
+      onBlocksChange(blocks.map((b, n) => n === at ? group : b))
+    }
+    setEdited(prev => new Set(prev).add(at))
+    setSelected(at)
+    setLibrary(null)
+  }
+
   const replaceFromLibrary = (drill: any) => {
     if (!library || library.mode !== 'replace') return
     onBlocksChange(replaceBlock(blocks, library.at, blockFromDrill(drill)))
@@ -776,22 +876,54 @@ export function PlanReview({
                       <Check size={15} /> Done
                     </button>
                   )}
-                  {drills.length > 0 && (
+                  {/* Secondary actions in one menu. Six of these as a row of
+                      icons is unreadable beside the AI/Manual toggle and
+                      unusable with a thumb; duration stays out of here because
+                      it is the one a coach reaches for constantly. */}
+                  <div className="relative">
                     <button
-                      onClick={() => setLibrary({ mode: 'replace', at: selected })}
-                      className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900"
-                      title="Swap this block for another drill, keeping its place and its minutes"
+                      onClick={() => setBlockMenu(v => !v)}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                      aria-expanded={blockMenu}
+                      aria-haspopup="menu"
+                      title="More actions for this block"
                     >
-                      <Repeat size={13} /> Replace
+                      <MoreHorizontal size={15} /> More
                     </button>
-                  )}
-                  <button
-                    onClick={() => removeBlock(selected)}
-                    className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-red-700"
-                    title="Take this block out of the practice"
-                  >
-                    <Trash2 size={13} /> Remove
-                  </button>
+                    {blockMenu && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setBlockMenu(false)} />
+                        <div role="menu"
+                             className="absolute right-0 top-8 z-20 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 text-sm">
+                          {drills.length > 0 && (
+                            <MenuItem
+                              icon={<Repeat size={14} />}
+                              label={isStationGroup(block) ? 'Replace whole rotation…' : 'Replace…'}
+                              onClick={() => { setBlockMenu(false); setLibrary({ mode: 'replace', at: selected }) }}
+                            />
+                          )}
+                          <MenuItem icon={<Copy size={14} />} label="Duplicate"
+                                    onClick={() => { setBlockMenu(false); duplicateAt(selected) }} />
+                          {isStationGroup(block) ? (
+                            <>
+                              {drills.length > 0 && (
+                                <MenuItem icon={<Layers size={14} />} label="Add a station…"
+                                          onClick={() => { setBlockMenu(false); setLibrary({ mode: 'station', at: selected }) }} />
+                              )}
+                              <MenuItem icon={<Layers size={14} />} label="Ungroup the stations"
+                                        onClick={() => { setBlockMenu(false); ungroupAt(selected) }} />
+                            </>
+                          ) : drills.length > 0 ? (
+                            <MenuItem icon={<Layers size={14} />} label="Make a station group…"
+                                      onClick={() => { setBlockMenu(false); setLibrary({ mode: 'station', at: selected }) }} />
+                          ) : null}
+                          <div className="my-1 border-t border-gray-100" />
+                          <MenuItem icon={<Trash2 size={14} />} label="Remove from practice" danger
+                                    onClick={() => { setBlockMenu(false); removeBlock(selected) }} />
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -837,19 +969,32 @@ export function PlanReview({
             <DrillLibrary
               drills={drills}
               loading={drillsLoading}
-              onAdd={library.mode === 'replace' ? replaceFromLibrary : addFromLibrary}
+              onAdd={
+                library.mode === 'replace' ? replaceFromLibrary
+                  : library.mode === 'station' ? stationFromLibrary
+                  : addFromLibrary
+              }
               recommendedFor={focusAreas}
               coachId={coachId}
               favorites={favorites}
               onClose={() => setLibrary(null)}
-              addLabel={library.mode === 'replace' ? 'Use' : 'Add'}
-              heading={library.mode === 'replace'
-                ? `Replace “${blocks[library.at]?.title || 'this block'}”`
-                : 'Add a drill'}
+              addLabel={library.mode === 'replace' ? 'Use' : library.mode === 'station' ? 'Pair' : 'Add'}
+              heading={
+                library.mode === 'replace'
+                  ? `Replace “${blocks[library.at]?.title || 'this block'}”`
+                  : library.mode === 'station'
+                    ? `Station alongside “${blocks[library.at]?.title || 'this block'}”`
+                    : 'Add a drill'
+              }
             />
             {library.mode === 'replace' && (
               <p className="px-3 py-2 text-xs text-gray-500 border-t border-gray-200 shrink-0">
                 Keeps this block&apos;s place and its {blocks[library.at]?.minutes} minutes, so nothing after it moves.
+              </p>
+            )}
+            {library.mode === 'station' && (
+              <p className="px-3 py-2 text-xs text-gray-500 border-t border-gray-200 shrink-0">
+                Every group does both. The block&apos;s elapsed time is recalculated from the rotation.
               </p>
             )}
           </div>

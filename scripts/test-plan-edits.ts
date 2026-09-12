@@ -190,6 +190,67 @@ eq('an empty plan does not crash', readPlan(null).blocks.length, 0)
 check('edits work on a historical plan too',
   moveBlock(readPlan([{ title: 'A', minutes: 5 }, { title: 'B', minutes: 5 }]).blocks, 1, 0)[0].title === 'B')
 
+// ── every entry path becomes the same PlanBlock[] ───────────────────────────
+//
+// AI, template, manual and saved are four ways to OBTAIN blocks. Once obtained
+// they are the same thing, and the builder must not be able to tell them apart.
+// readPlan is the funnel; these assert each shape survives it and then edits
+// identically.
+
+const AI_CONTENT = { blocks: PLAN(), objective: 'Two hands', coaching_points: ['a'], flags: [] }
+const TEMPLATE_CONTENT = { blocks: [{ type: 'warmup', title: 'Dynamic Stretch', minutes: 10 }] }
+const BLANK_CONTENT = { blocks: [{ type: 'warmup', title: 'Warm-up', minutes: 10, description: '', coaching_cues: [] }] }
+const HISTORICAL = [{ title: 'Old array plan', minutes: 12 }]
+
+for (const [name, content] of [
+  ['AI', AI_CONTENT], ['template', TEMPLATE_CONTENT], ['blank', BLANK_CONTENT], ['historical', HISTORICAL],
+] as Array<[string, any]>) {
+  const blocks = readPlan(content).blocks
+  check(`${name} content normalises to blocks`, Array.isArray(blocks) && blocks.length > 0)
+  check(`...and ${name} edits the same way`,
+    insertBlock(blocks, blockFromDrill({ drill_name: 'Wall Ball' })).length === blocks.length + 1)
+  check(`...and ${name} retimes the same way`,
+    setBlockMinutes(blocks, 0, 14)[0].minutes === 14)
+}
+
+// A blank plan is a real plan, not a special case.
+eq('a blank plan has a total', totalMinutes(readPlan(BLANK_CONTENT).blocks), 10)
+
+// ── the save/reload shape is stable ─────────────────────────────────────────
+//
+// Edit, "save", reopen. The second read must give back what the first one
+// produced, or a coach loses work between sessions without being told.
+
+const edited = setBlockMinutes(
+  insertBlock(readPlan(AI_CONTENT).blocks, blockFromDrill({ drill_name: 'Wall Ball' }), 1), 0, 12)
+const roundTripped = readPlan({ ...AI_CONTENT, blocks: edited }).blocks
+eq('a saved-and-reopened plan is identical', JSON.stringify(roundTripped), JSON.stringify(edited))
+eq('...including the block that was added', roundTripped[1].title, 'Wall Ball')
+eq('...and the one that was retimed', roundTripped[0].minutes, 12)
+
+// ── the totals coverage is measured from ────────────────────────────────────
+//
+// Priority coverage reads the blocks, so it follows every edit for free — but
+// only if the edits produce a correct block list. These assert the arithmetic
+// coverage depends on.
+
+const base = PLAN()
+eq('add changes the total',
+  totalMinutes(insertBlock(base, blockFromDrill({ drill_name: 'X' }, 9))), totalMinutes(base) + 9)
+eq('delete changes the total', totalMinutes(removeBlock(base, 0)), totalMinutes(base) - 10)
+eq('reorder does not', totalMinutes(moveBlock(base, 0, 3)), totalMinutes(base))
+eq('replace does not, by design', totalMinutes(replaceBlock(base, 1, blockFromDrill({ drill_name: 'X' }, 99))), totalMinutes(base))
+eq('a station child swap does not either',
+  totalMinutes(replaceStation(base, 2, 0, blockFromDrill({ drill_name: 'X' }, 99))), totalMinutes(base))
+
+// Coverage reads skills off blocks; a replacement must not carry the old
+// block's skills, or the summary credits work that is no longer in the plan.
+const withSkills = [{ type: 'drill', title: 'Tee', minutes: 10, skills: ['hitting'] }]
+const swapped = replaceBlock(withSkills, 0, blockFromDrill({ drill_name: 'Ground Balls' }))
+check('a replacement does not inherit the old block\'s skills',
+  swapped[0].skills === undefined,
+  'otherwise coverage credits hitting for an infield drill')
+
 // ── nothing mutates ─────────────────────────────────────────────────────────
 //
 // The builder keeps the pre-edit copy for "undo my edits". If any of these

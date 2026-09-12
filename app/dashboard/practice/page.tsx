@@ -85,7 +85,7 @@ function PracticeContent() {
   // A saved plan reopened in the same review the draft used. Edits live here
   // until Save changes writes them to practice_plans.content — the sheet is
   // derived from that row, so this is the one place printed text is changed.
-  const [editingPlan, setEditingPlan] = useState<{ id: string; title: string; duration: number; focus: string[]; content: any } | null>(null)
+  const [editingPlan, setEditingPlan] = useState<{ id: string | null; title: string; duration: number; focus: string[]; content: any } | null>(null)
   const [savingEdit, setSavingEdit] = useState(false)
   // Which blocks are open, per surface. The overview is the default: every
   // block collapsed, the whole practice visible at a glance, detail on tap.
@@ -624,6 +624,37 @@ function PracticeContent() {
     )
   }
 
+  // BUILD FROM SCRATCH.
+  //
+  // The old custom-plan modal was a third way to describe a practice: its own
+  // form, its own block shape, its own save, and none of the builder — no drill
+  // library, no reorder, no station groups, no coverage. A coach who started
+  // from blank got a worse editor than one who started from AI, for no reason
+  // anybody chose.
+  //
+  // A blank plan is just PlanBlock[] with one empty block in it, so it opens
+  // the same builder as everything else. It has no row in the database until
+  // the coach saves, which is what `id: null` means above.
+  const startBlankPlan = () => {
+    setEditingPlan({
+      id: null,
+      title: 'New practice plan',
+      duration,
+      focus: focusAreas,
+      content: {
+        title: 'New practice plan',
+        blocks: [{ type: 'warmup', title: 'Warm-up', minutes: 10, description: '', coaching_cues: [] }],
+        objective: null,
+        coaching_points: [],
+        coach_notes: null,
+        flags: [],
+        start_time: null,
+        equipment_available: [],
+        priority_coverage: null,
+      },
+    })
+  }
+
   const openEditPlan = (plan: PracticePlan) => {
     // Normalise once so an old array-shaped plan edits like a new one, but
     // keep every key the generator stored — readPlan only knows the ones the
@@ -644,18 +675,42 @@ function PracticeContent() {
     setSavingEdit(true)
     try {
       const { title, ...content } = editingPlan.content
+      const planTitle = String(title || editingPlan.title || 'Practice plan')
+
+      // No id means this plan has never been saved — a blank one the coach
+      // just built. Insert rather than update, so "Build from scratch" ends in
+      // the same place as every other path instead of needing its own save.
+      if (!editingPlan.id) {
+        const { data, error } = await supabase
+          .from('practice_plans')
+          .insert({
+            team_id: teamId,
+            title: planTitle,
+            duration_minutes: editingPlan.duration,
+            focus_areas: editingPlan.focus,
+            content,
+          } as any)
+          .select()
+          .single()
+        if (error) throw error
+        if (data) setPlans(prev => [data as any, ...prev])
+        setEditingPlan(null)
+        setSavingEdit(false)
+        return
+      }
+
       const { error } = await supabase
         .from('practice_plans')
         .update({
           content,
-          title: String(title || editingPlan.title || 'Practice plan'),
+          title: planTitle,
           duration_minutes: editingPlan.duration,
         })
         .eq('id', editingPlan.id)
       if (error) throw error
       setPlans(prev => prev.map(p =>
         p.id === editingPlan.id
-          ? { ...p, content, title: String(title || p.title), duration_minutes: editingPlan.duration }
+          ? { ...p, content, title: planTitle, duration_minutes: editingPlan.duration }
           : p
       ))
       setEditingPlan(null)
@@ -922,7 +977,7 @@ function PracticeContent() {
                   <button
                     onClick={() => {
                       setShowNewMenu(false)
-                      setShowCustomModal(true)
+                      startBlankPlan()
                     }}
                     className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors text-left"
                   >
@@ -1219,6 +1274,8 @@ function PracticeContent() {
           coachId={coachId}
           favorites={favorites}
           onFavoritesChanged={() => refreshFavorites()}
+          drills={drillResources}
+          focusAreas={editingPlan.focus}
           footer={
             <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
               <p className="text-xs text-gray-500">
@@ -1281,12 +1338,12 @@ function PracticeContent() {
             <div className="flex flex-col lg:flex-row gap-3 lg:items-end">
               <div className="flex-1 min-w-0">
                 <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Want the whole thing rethought? Say what to change.
+                  Ask BenchCoach
                 </label>
                 <input
                   value={adjustment}
                   onChange={(e) => setAdjustment(e.target.value)}
-                  placeholder="e.g. Drop the bunting station, more baserunning. And the warm-up is too long."
+                  placeholder="Give me 10 more minutes of hitting · Make the last drill competitive · I only have 2 coaches now"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   disabled={generating}
                 />
@@ -1297,7 +1354,7 @@ function PracticeContent() {
                   disabled={generating || expanding || !adjustment.trim()}
                   className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
                 >
-                  {generating || expanding ? 'Rebuilding…' : 'Rebuild'}
+                  {generating || expanding ? 'Working…' : 'Ask'}
                 </button>
                 <button
                   onClick={() => { setShowPlanModal(false); setDraft(null); setGenError(null) }}
