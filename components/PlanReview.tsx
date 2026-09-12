@@ -30,10 +30,12 @@
 
 import { useState, useMemo } from 'react'
 import {
-  X, AlertCircle, Sparkles, Pencil, Check, RotateCcw, Clock, Video as VideoIcon, Trash2, Plus, GripVertical, ChevronUp, ChevronDown } from 'lucide-react'
+  X, AlertCircle, Sparkles, Pencil, Check, RotateCcw, Clock, Video as VideoIcon, Trash2, Plus, GripVertical, ChevronUp, ChevronDown, Repeat } from 'lucide-react'
 import { PracticeBlock } from './PracticeBlock'
 import { PriorityCoverageSummary } from './PriorityCoverageSummary'
 import { isStationGroup, listToLines, linesToList, moveItem, movedIndex } from '@/lib/practicePlan'
+import { blockFromDrill, insertBlock, replaceBlock } from '@/lib/planEdits'
+import { DrillLibrary } from './DrillLibrary'
 import { parsePastedVideo, formatTimestamp, videoFieldsFromPaste } from '@/lib/drillVideo'
 
 const TYPES = ['warmup', 'drill', 'station', 'game', 'cooldown'] as const
@@ -241,12 +243,22 @@ interface Props {
   onSettingsChange?: (patch: { duration?: number; start_time?: string | null }) => void
   /** The rebuild box and the save/discard buttons — their handlers live in the page. */
   footer: React.ReactNode
+  /**
+   * The drill library. With it, "Add" can put a real drill in the practice and
+   * a block can be swapped for another; without it both fall back to the blank
+   * block, which is all this screen could offer before.
+   */
+  drills?: any[]
+  drillsLoading?: boolean
+  /** What the coach selected — decides what the library calls "Recommended". */
+  focusAreas?: string[]
 }
 
 export function PlanReview({
   draft, onBlocksChange, onClose, duration, timeLabels, coverage, status,
   genError, drillResources = [], coachId = null, favorites, onFavoritesChanged, footer,
   onOverviewChange, onSettingsChange,
+  drills = [], drillsLoading = false, focusAreas = [],
 }: Props) {
   const blocks: any[] = draft?.blocks || []
   // -1 is the overview. It is a rail row rather than a banner above the blocks
@@ -332,6 +344,45 @@ export function PlanReview({
     setEdited(shiftUp)
     setEditing(prev => new Set(shiftUp(prev)).add(at))
     setSelected(at)
+  }
+
+  // THE LIBRARY.
+  //
+  // addBlock above puts a blank "New block" in the practice, which is the right
+  // answer for an activity a coach is inventing and the wrong one for a drill
+  // that already exists — 208 of them, with descriptions, equipment and video,
+  // and no way to reach any of them from here.
+  //
+  // Opening it for 'add' appends; opening it for 'replace' swaps one block and
+  // keeps its slot AND its minutes, because the coach built a clock around that
+  // slot rather than around that drill.
+  const [library, setLibrary] = useState<{ mode: 'add' } | { mode: 'replace'; at: number } | null>(null)
+
+  const addFromLibrary = (drill: any) => {
+    const at = selected >= 0 ? selected + 1 : blocks.length
+    const fresh = blockFromDrill(drill)
+    onBlocksChange(insertBlock(blocks, fresh, at))
+    setOriginal(prev => [...prev.slice(0, at), JSON.parse(JSON.stringify(fresh)), ...prev.slice(at)])
+    const shiftUp = (set: Set<number>) => {
+      const next = new Set<number>()
+      set.forEach(n => next.add(n >= at ? n + 1 : n))
+      return next
+    }
+    setEdited(prev => new Set(shiftUp(prev)).add(at))
+    setEditing(shiftUp)
+    setSelected(at)
+    setLibrary(null)
+  }
+
+  // No index moves, so none of the per-index bookkeeping shifts. The arrival
+  // copy stays the block that arrived, so "undo my edits" still puts back what
+  // the model wrote rather than what was just swapped in.
+  const replaceFromLibrary = (drill: any) => {
+    if (!library || library.mode !== 'replace') return
+    onBlocksChange(replaceBlock(blocks, library.at, blockFromDrill(drill)))
+    setEdited(prev => new Set(prev).add(library.at))
+    setSelected(library.at)
+    setLibrary(null)
   }
 
   // Move a block and everything the review knows about it by index — its
@@ -497,12 +548,24 @@ export function PlanReview({
               )
             })}
 
+            {/* Two ways to add, because they answer different questions. The
+                library is for "what drill works here", the blank block for an
+                activity a coach is inventing. */}
+            {drills.length > 0 && (
+              <button
+                onClick={() => setLibrary({ mode: 'add' })}
+                className="shrink-0 md:w-full text-left px-3 py-2 rounded-lg text-sm bg-blue-600 text-white hover:bg-blue-700 inline-flex items-center gap-1.5"
+                title="Pick a drill from the library"
+              >
+                <Plus size={14} /> Add a drill
+              </button>
+            )}
             <button
               onClick={addBlock}
               className="shrink-0 md:w-full text-left px-3 py-2 rounded-lg text-sm border border-dashed border-gray-300 text-gray-600 hover:bg-gray-200 hover:text-gray-900 inline-flex items-center gap-1.5"
               title="Add a block after the one selected, or at the end"
             >
-              <Plus size={14} /> Add a block
+              <Plus size={14} /> Write my own
             </button>
           </div>
         </div>
@@ -713,6 +776,15 @@ export function PlanReview({
                       <Check size={15} /> Done
                     </button>
                   )}
+                  {drills.length > 0 && (
+                    <button
+                      onClick={() => setLibrary({ mode: 'replace', at: selected })}
+                      className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900"
+                      title="Swap this block for another drill, keeping its place and its minutes"
+                    >
+                      <Repeat size={13} /> Replace
+                    </button>
+                  )}
                   <button
                     onClick={() => removeBlock(selected)}
                     className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-red-700"
@@ -753,6 +825,37 @@ export function PlanReview({
           ) : null}
         </div>
       </div>
+      {/* A left column on a desktop, a bottom sheet on a phone. Opened on
+          demand rather than standing there permanently — three fixed columns
+          is how the chat page ended up with a 300px conversation. */}
+      {library && (
+        <>
+          <div className="fixed inset-0 bg-black/30 z-30 md:hidden" onClick={() => setLibrary(null)} />
+          <div className="fixed z-40 bg-white shadow-2xl flex flex-col
+                          inset-x-0 bottom-0 h-[75vh] rounded-t-2xl
+                          md:inset-y-0 md:left-0 md:right-auto md:w-96 md:h-auto md:rounded-none md:border-r md:border-gray-200">
+            <DrillLibrary
+              drills={drills}
+              loading={drillsLoading}
+              onAdd={library.mode === 'replace' ? replaceFromLibrary : addFromLibrary}
+              recommendedFor={focusAreas}
+              coachId={coachId}
+              favorites={favorites}
+              onClose={() => setLibrary(null)}
+              addLabel={library.mode === 'replace' ? 'Use' : 'Add'}
+              heading={library.mode === 'replace'
+                ? `Replace “${blocks[library.at]?.title || 'this block'}”`
+                : 'Add a drill'}
+            />
+            {library.mode === 'replace' && (
+              <p className="px-3 py-2 text-xs text-gray-500 border-t border-gray-200 shrink-0">
+                Keeps this block&apos;s place and its {blocks[library.at]?.minutes} minutes, so nothing after it moves.
+              </p>
+            )}
+          </div>
+        </>
+      )}
+
 
       {/* Footer: rebuild, save, discard — owned by the page. */}
       <div className="border-t border-gray-200 px-5 py-3 shrink-0 bg-white">

@@ -1275,6 +1275,8 @@ function PracticeContent() {
           coachId={coachId}
           favorites={favorites}
           onFavoritesChanged={() => refreshFavorites()}
+          drills={drillResources}
+          focusAreas={focusAreas}
           footer={
             <div className="flex flex-col lg:flex-row gap-3 lg:items-end">
               <div className="flex-1 min-w-0">

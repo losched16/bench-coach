@@ -63,7 +63,8 @@
     "test:claude-text": "npx --yes tsx --tsconfig tsconfig.json scripts/test-claude-text.ts",
     "test:practice-prompt": "npx --yes tsx --tsconfig tsconfig.json scripts/test-practice-prompt.ts",
     "test:memory-split": "npx --yes tsx --tsconfig tsconfig.json scripts/test-memory-split.ts",
-    "test:roster-archive": "npx --yes tsx --tsconfig tsconfig.json scripts/test-roster-archive.ts"
+    "test:roster-archive": "npx --yes tsx --tsconfig tsconfig.json scripts/test-roster-archive.ts",
+    "test:plan-edits": "npx --yes tsx --tsconfig tsconfig.json scripts/test-plan-edits.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",
