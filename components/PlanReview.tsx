@@ -100,7 +100,9 @@ function MenuItem({ icon, label, onClick, disabled, danger }: {
 }
 
 /** One block, as a form. */
-function BlockEditor({ block, onChange }: { block: any; onChange: (patch: any) => void }) {
+function BlockEditor({ block, onChange, onRemoveStation }: {
+  block: any; onChange: (patch: any) => void; onRemoveStation?: (stationIndex: number) => void
+}) {
   const [video, setVideo] = useState(() => videoValueOf(block))
   const parsed = parsePastedVideo(video)
   const stations: any[] = isStationGroup(block) ? block.stations : []
@@ -215,6 +217,23 @@ function BlockEditor({ block, onChange }: { block: any; onChange: (patch: any) =
                       onChange({ stations: next })
                     }}
                   />
+                  {/* Dropping a station is not a patch — at two stations it
+                      collapses the rotation back to an ordinary block, and the
+                      parent's elapsed time has to be recalculated either way.
+                      So it goes up to the owner rather than being written here. */}
+                  {onRemoveStation && (
+                    <button
+                      type="button"
+                      onClick={() => onRemoveStation(si)}
+                      className="shrink-0 p-1.5 text-gray-400 hover:text-red-700"
+                      title={stations.length <= 2
+                        ? 'Remove this station — the rotation becomes a single block'
+                        : 'Remove this station from the rotation'}
+                      aria-label={`Remove station ${String.fromCharCode(65 + si)}`}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                 </div>
                 <textarea
                   rows={2}
@@ -460,6 +479,14 @@ export function PlanReview({
   // landing near another block, because grouping changes what the plan CLAIMS:
   // that the squad splits, that every group sees every station, and that the
   // elapsed time stops being the sum.
+  // Removing a station can collapse the group (planEdits turns a rotation of
+  // one back into an ordinary block), so the selection stays on the same index
+  // and the block simply becomes something else.
+  const removeStationAt = (i: number, stationIndex: number) => {
+    onBlocksChange(removeStation(blocks, i, stationIndex))
+    setEdited(prev => new Set(prev).add(i))
+  }
+
   const stationFromLibrary = (drill: any) => {
     if (!library || library.mode !== 'station') return
     const at = library.at
@@ -928,7 +955,11 @@ export function PlanReview({
               </div>
 
               {isEditing ? (
-                <BlockEditor block={block} onChange={patch => patchBlock(selected, patch)} />
+                <BlockEditor
+                  block={block}
+                  onChange={patch => patchBlock(selected, patch)}
+                  onRemoveStation={si => removeStationAt(selected, si)}
+                />
               ) : (
                 <>
                   {timeLabels[selected] && (
