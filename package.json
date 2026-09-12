@@ -68,7 +68,8 @@
     "acceptance:builder": "node scripts/acceptance-builder.mjs",
     "test:block-reuse": "npx --yes tsx --tsconfig tsconfig.json scripts/test-block-reuse.ts",
     "test:drill-library": "npx --yes tsx --tsconfig tsconfig.json scripts/test-drill-library.ts",
-    "typecheck:baseline": "node scripts/typecheck-baseline.mjs"
+    "typecheck:baseline": "node scripts/typecheck-baseline.mjs",
+    "test:practice-adjust": "npx --yes tsx --tsconfig tsconfig.json scripts/test-practice-adjust.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

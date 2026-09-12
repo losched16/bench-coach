@@ -20,6 +20,7 @@ import { PriorityCoverageSummary } from '@/components/PriorityCoverageSummary'
 import { parsePastedVideo, formatTimestamp } from '@/lib/drillVideo'
 import { PlanReview } from '@/components/PlanReview'
 import { practiceInputsFromPrompt, practiceFocusFromPrompt } from '@/lib/practicePrompt'
+import { buildAdjustmentPrompt } from '@/lib/practiceAdjust'
 import { evaluatePriorityCoverage } from '@/lib/priorityCoverage'
 
 // A plan's coverage summary: the one measured at generation time when the
@@ -602,15 +603,19 @@ function PracticeContent() {
   // they just read plus what they said about it.
   const refinePlan = async () => {
     if (!adjustment.trim()) return
-    await handleGeneratePlan(
-      `${specifics}\n\nThe coach read this plan and asked for a change:\n` +
-      `${JSON.stringify({ title: draft?.title, blocks: draft?.blocks }, null, 1).slice(0, 6000)}\n\n` +
-      `THEIR WORDS: "${adjustment.trim()}"\n` +
-      `Rebuild the plan honouring that. Any block they did not complain about ` +
-      `must come back with the SAME title and the SAME number of minutes — ` +
-      `that is how its already-written detail is carried across untouched. ` +
-      `Change a title or a duration only where they asked you to.`
-    )
+    // Built in lib/practiceAdjust, where it is tested against the other end of
+    // its own contract. The plan goes as an outline rather than as its JSON:
+    // stringified and cut at 6000 characters, a twelve-block practice reached
+    // the model three blocks short and a nine-block one arrived cut mid-object.
+    // A block the model never sees cannot come back with the same title and
+    // minutes, so the blocks the coach did not mention lost their detail
+    // exactly on the long plans where that hurts most.
+    await handleGeneratePlan(buildAdjustmentPrompt({
+      specifics,
+      planTitle: draft?.title,
+      blocks: draft?.blocks,
+      words: adjustment,
+    }))
   }
 
   // BUILD FROM SCRATCH.
