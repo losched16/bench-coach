@@ -65,7 +65,8 @@
     "test:memory-split": "npx --yes tsx --tsconfig tsconfig.json scripts/test-memory-split.ts",
     "test:roster-archive": "npx --yes tsx --tsconfig tsconfig.json scripts/test-roster-archive.ts",
     "test:plan-edits": "npx --yes tsx --tsconfig tsconfig.json scripts/test-plan-edits.ts",
-    "acceptance:builder": "node scripts/acceptance-builder.mjs"
+    "acceptance:builder": "node scripts/acceptance-builder.mjs",
+    "test:block-reuse": "npx --yes tsx --tsconfig tsconfig.json scripts/test-block-reuse.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

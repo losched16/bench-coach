@@ -16,7 +16,8 @@ import { chromium } from 'playwright'
 const URL = process.env.HARNESS_URL || 'http://127.0.0.1:3111/dev/builder-harness'
 
 let pass = 0, fail = 0, skip = 0
-const results = []
+let results = []
+let label = 'desktop'
 
 function record(n, name, ok, evidence) {
   if (ok === null) { skip++; results.push([n, name, 'SKIP', evidence]) }
@@ -27,9 +28,10 @@ function record(n, name, ok, evidence) {
 const state = async (page) =>
   JSON.parse(await page.locator('#state').textContent())
 
-async function main() {
-  const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' })
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+async function run(browser, viewport, name) {
+  label = name
+  results = []; pass = 0; fail = 0; skip = 0
+  const page = await browser.newPage({ viewport })
   page.on('pageerror', e => console.log('  [page error]', e.message))
   await page.goto(URL, { waitUntil: 'networkidle' })
 
@@ -184,23 +186,35 @@ async function main() {
     !!saved && JSON.stringify(saved.titles) === JSON.stringify(beforeSave.titles),
     saved ? `${saved.titles.length} blocks round-tripped identically` : 'nothing saved')
 
-  // ── mobile: no horizontal overflow, library is a sheet ───────────────────
-  await page.setViewportSize({ width: 390, height: 844 })
-  await page.waitForTimeout(400)
+  // ── the page must never scroll sideways ──────────────────────────────────
   const overflow = await page.evaluate(() =>
     document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)
-  console.log(`\nmobile 390px: horizontal overflow = ${overflow ? 'YES (bad)' : 'no'}`)
+  record(11, 'no horizontal overflow', !overflow,
+    `scrollWidth vs clientWidth at ${viewport.width}px`)
 
-  await browser.close()
+  await page.close()
 
-  console.log('\n' + '='.repeat(74))
-  for (const [n, name, verdict, ev] of results) {
-    console.log(`${String(n).padStart(2)}. ${verdict.padEnd(4)} ${name}`)
+  console.log(`\n${'='.repeat(74)}\n${name.toUpperCase()}  (${viewport.width}x${viewport.height})\n${'='.repeat(74)}`)
+  for (const [n, nm, verdict, ev] of results) {
+    console.log(`${String(n).padStart(2)}. ${verdict.padEnd(4)} ${nm}`)
     console.log(`         ${ev}`)
   }
-  console.log('='.repeat(74))
   console.log(`${pass} passed, ${fail} failed, ${skip} skipped`)
-  if (fail > 0) process.exit(1)
+  return fail
+}
+
+async function main() {
+  const browser = await chromium.launch({
+    executablePath: process.env.CHROME_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+  })
+  // The same ten actions at both widths. A builder that only works with a
+  // mouse is not a builder a coach can use at the field, and the brief's
+  // mobile requirements are not a separate feature — they are these actions,
+  // on a phone.
+  const a = await run(browser, { width: 1440, height: 900 }, 'desktop')
+  const b = await run(browser, { width: 390, height: 844 }, 'mobile')
+  await browser.close()
+  if (a + b > 0) process.exit(1)
 }
 
 main().catch(e => { console.error('harness error:', e.message); process.exit(2) })
