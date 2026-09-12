@@ -130,8 +130,8 @@ export function TemplateGallery({
           These cover the nights the AI has no advantage — a first practice, a rained-out
           gym, thirty minutes before first pitch. <strong>Build for my team</strong> hands
           the occasion to the planner, which then shapes it around your roster and what
-          you&apos;ve been working on. <strong>Use as-is</strong> drops it straight into your
-          plans, unchanged.
+          you&apos;ve been working on. <strong>Copy &amp; edit</strong> drops the plan straight
+          into your plans, where you can change any of it before you print it.
         </p>
       </div>
 
@@ -237,7 +237,7 @@ export function TemplateGallery({
                     ? <><Check size={15} />Added to your plans</>
                     : copying === t.id
                       ? <>Adding…</>
-                      : <><Copy size={15} />Use as-is</>}
+                      : <><Copy size={15} />Copy &amp; edit</>}
                 </button>
               </div>
 
