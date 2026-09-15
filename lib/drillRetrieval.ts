@@ -38,7 +38,7 @@
 // question because both mention "pitching". Taxonomy mapping outranks text,
 // and text alone can only get a drill into consideration.
 
-import { visibleDrills, DRILL_FIELDS, DrillRecord } from '@/lib/drills'
+import { schedulableDrills, DRILL_FIELDS, DrillRecord } from '@/lib/drills'
 import { watchUrl } from '@/lib/drillVideo'
 import { scoreDrillRelevance } from '@/lib/analysis'
 import { Diagnosis, TaxonomyRow, diagnose, loadTaxonomy, ageCaveats } from '@/lib/drillDiagnosis'
@@ -705,7 +705,11 @@ export async function retrieveDrills(input: RetrieveInput): Promise<RetrievalRes
   const slugs = diagnosis?.slugs ?? []
   const categories = input.categories?.length ? input.categories : (diagnosis?.categories ?? [])
 
-  const { data: poolRaw } = await visibleDrills(supabase, coachId, DRILL_FIELDS).limit(POOL_CEILING)
+  // schedulableDrills, not visibleDrills: this pool is the answer to "what
+  // should I run", and a compilation video or a mechanics tutorial is not an
+  // answer to it. Rows demoted in 062 stay fully resolvable BY ID through
+  // visibleDrills, which is what keeps a 2026 report working in 2027.
+  const { data: poolRaw } = await schedulableDrills(supabase, coachId, DRILL_FIELDS).limit(POOL_CEILING)
   const pool = (poolRaw || []) as DrillRecord[]
 
   let mappingRows: Array<{ drill_id: string; problem_slug: string; curated: boolean; sort_order: number }> = []

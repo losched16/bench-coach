@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { generateReplacementBlock } from '@/lib/anthropic'
 import { guard } from '@/lib/authz'
-import { visibleDrills } from '@/lib/drills'
+import { schedulableDrills } from '@/lib/drills'
 import { describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
 
 // Never prerendered. This route reads the session cookie to decide who is
@@ -41,7 +41,8 @@ export async function POST(request: NextRequest) {
     const { data: ownerTeam } = await supabaseAdmin
       .from('teams').select('coach_id').eq('id', teamId).maybeSingle()
 
-    const { data: drillResources } = await visibleDrills(
+    // Swap offers a coach something else to run in this slot — discovery.
+    const { data: drillResources } = await schedulableDrills(
       supabaseAdmin,
       (ownerTeam as any)?.coach_id,
       'id, drill_name, skill_category, description, youtube_url, youtube_video_id, channel, age_range, difficulty_level, mechanic_focus, common_flaws_fixed, equipment_needed, ai_coaching_notes, safety_notes, created_by_coach_id'

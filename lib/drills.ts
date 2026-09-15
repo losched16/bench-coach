@@ -103,6 +103,12 @@ export interface DrillRecord {
   progression_notes?: string | null
   advanced_progression_notes?: string | null
 
+  // What this row IS (migration 062). activity | practice_unit |
+  // source_collection | teaching_content, or NULL for anything nobody has
+  // classified — which includes every coach-authored drill and every curated
+  // row outside the pilot. NULL is treated as runnable everywhere.
+  resource_kind?: string | null
+
   // Provenance and scoping
   status?: string | null
   source?: string | null
@@ -130,7 +136,7 @@ export const DRILL_FIELDS =
   'safety_notes, min_age, max_age, age_range, competition_level, mechanic_focus, ' +
   'common_flaws_fixed, indoor_outdoor, space_required, requires_partner, ' +
   'reps_guidance, frequency_guidance, success_markers, est_duration_minutes, ' +
-  'status, source, created_by_coach_id, ' +
+  'status, source, created_by_coach_id, resource_kind, ' +
   // Practice intelligence (056). Selected in the same round trip rather than a
   // second query: retrieval already pulls the whole library once and ranks it
   // in memory, and a per-drill lookup for these would be the N+1 the brief
@@ -218,6 +224,149 @@ export async function visibleDrillsSafe(
   )
 
   return { data: second.data, error: second.error, degraded: !second.error }
+}
+
+// ── visible vs schedulable ───────────────────────────────────────────────────
+//
+// These are two different questions and conflating them breaks one of them.
+//
+//   VISIBLE      this coach is authorized to see and resolve this row.
+//   SCHEDULABLE  this visible row may be OFFERED as something to run.
+//
+// visibleDrills answers the first and must keep answering only the first. It is
+// what resolves a drill id stored on a 2026 player report, a prescription, or a
+// saved practice plan. A row demoted to source_collection in 2027 still has to
+// come back through it, or a finalized report silently loses the drill it
+// recommended and a coach sees a blank where their plan used to be.
+//
+// Demotion stops FUTURE recommendations. It does not edit the past.
+//
+// So: discovery — "what should I run?" — goes through schedulableDrills.
+// History — "what did this id refer to?" — stays on visibleDrills.
+
+/**
+ * Every value resource_kind is allowed to hold, matching the CHECK constraint
+ * in migration 062.
+ *
+ * Written here as well as in SQL so the two can be asserted equal. Adding a
+ * kind is a migration, and a migration that does not also land here would drop
+ * every row of the new kind out of the schedulable pool without a word.
+ * scripts/test-schedulable.ts fails if these drift apart.
+ */
+export const RESOURCE_KINDS = [
+  'activity', 'practice_unit', 'source_collection', 'teaching_content',
+] as const
+
+/** Kinds that may never be offered as something to run. */
+export const NOT_SCHEDULABLE = ['source_collection', 'teaching_content'] as const
+
+export interface SchedulableOptions {
+  /**
+   * Whether a practice_unit — a warm-up routine, a three-phase progression, a
+   * sequence run as one block — belongs in this pool.
+   *
+   * True by default because most "what should I run" surfaces are building a
+   * practice, and a warm-up routine is a perfectly good block of one. Pass
+   * false from a surface that must hand back a single drill for a single
+   * problem, where a routine is the wrong shape of answer.
+   */
+  practiceUnits?: boolean
+}
+
+/**
+ * The classified kinds a given surface will accept, derived from the full enum
+ * rather than listed by hand — so a kind added to RESOURCE_KINDS is included by
+ * default and has to be excluded deliberately.
+ */
+export function schedulableKinds(options: SchedulableOptions = {}): string[] {
+  const excluded: string[] = [...NOT_SCHEDULABLE]
+  if (options.practiceUnits === false) excluded.push('practice_unit')
+  return RESOURCE_KINDS.filter(k => !excluded.includes(k))
+}
+
+/**
+ * visibleDrills, narrowed to rows that may be offered as runnable activities.
+ *
+ * Built ON TOP of visibleDrills rather than beside it. That is the whole point:
+ * the ownership and privacy boundary is defined in exactly one place, and this
+ * can only ever narrow it. A second query spelling out its own
+ * created_by_coach_id filter would be a second boundary to keep in step, and
+ * the failure when the two drift is one coach seeing another's drills.
+ *
+ * NULL resource_kind is INCLUDED. Coach-authored drills are NULL forever, and
+ * curated rows nobody has classified are NULL until somebody does. Treating
+ * unknown as unrunnable would empty the library on the day this shipped.
+ */
+export function schedulableDrills(
+  supabase: any,
+  coachId: string | null | undefined,
+  fields: string = DRILL_FIELDS,
+  options: SchedulableOptions = {}
+): any {
+  const allowed = schedulableKinds(options)
+
+  // Stated as the kinds that ARE allowed rather than as `not.in` of the ones
+  // that are not. Two reasons, and the second is the load-bearing one:
+  //
+  //   * `is.null` has to be spelled out either way. In SQL, `kind NOT IN (...)`
+  //     is NULL for a NULL kind — not true — so an exclusion list drops every
+  //     unclassified row unless the null branch is explicit. It is, below.
+  //   * an `in` list of literals is the idiom every PostgREST deployment
+  //     parses. A `not.in` nested inside an `or` is rarer, and a filter the
+  //     server rejects does not throw here — it returns an error object the
+  //     caller destructures past, and the surface renders an empty library.
+  //     schedulableDrillsSafe catches that; this avoids needing it to.
+  return visibleDrills(supabase, coachId, fields)
+    .or(`resource_kind.is.null,resource_kind.in.(${allowed.join(',')})`)
+}
+
+/**
+ * schedulableDrills, but survives a database that has not run migration 062.
+ *
+ * Same reasoning as visibleDrillsSafe, and the same failure it exists to
+ * prevent: before 062 there is no resource_kind column, so both the projection
+ * and the filter fail — and a failed drill query does not throw, it returns an
+ * error object callers destructure past. The result is a practice plan built
+ * from an EMPTY library, which nobody sees as an error. It just quietly becomes
+ * a much worse plan.
+ *
+ * Falling back to visibleDrillsSafe is correct rather than merely convenient:
+ * in a pre-062 world no row is classified, so nothing is demoted, and
+ * "everything visible is schedulable" is the true answer, not a lenient one.
+ */
+export async function schedulableDrillsSafe(
+  supabase: any,
+  coachId: string | null | undefined,
+  fields: string = DRILL_FIELDS,
+  apply: (q: any) => any = (q) => q,
+  options: SchedulableOptions = {}
+): Promise<{ data: any[] | null; error: any; degraded: boolean }> {
+  const first = await apply(schedulableDrills(supabase, coachId, fields, options))
+  if (!first.error) return { data: first.data, error: null, degraded: false }
+
+  const legacyFields = fields
+    .split(',')
+    .map(f => f.trim())
+    .filter(f => f !== 'resource_kind')
+    .join(', ')
+
+  const second = await visibleDrillsSafe(supabase, coachId, legacyFields, apply)
+  return { data: second.data, error: second.error, degraded: true }
+}
+
+/**
+ * The in-memory twin of the schedulableDrills filter.
+ *
+ * For callers that already hold rows — a fixture, a cached pool, a list that
+ * came back from somewhere else — so the rule lives in one place whether it is
+ * applied by PostgREST or by JavaScript.
+ */
+export function isSchedulable(d: any, options: SchedulableOptions = {}): boolean {
+  const kind = d?.resource_kind
+  if (kind === null || kind === undefined || kind === '') return true
+  if ((NOT_SCHEDULABLE as readonly string[]).includes(kind)) return false
+  if (kind === 'practice_unit') return options.practiceUnits !== false
+  return true
 }
 
 /**

@@ -16,7 +16,7 @@ import {
   cleanText, cleanBranding, drillSnapshot, recommendationReason,
   type FullReport, type ReportContext, type DrillSnapshot,
 } from './playerReports'
-import { visibleDrills, DRILL_FIELDS } from './drills'
+import { visibleDrills, schedulableDrills, DRILL_FIELDS } from './drills'
 
 // Everything a snapshot reads, plus the one column DRILL_FIELDS does not carry:
 // where a timestamp came from. Without it the provenance gate in
@@ -374,8 +374,13 @@ export async function playerIsOnTeam(
  * wrong and wants the drill they had in mind. Deliberately a server-side
  * lookup rather than shipping the library to the browser: 206 drills with
  * coaching notes is not a payload a phone in a car park should download to
- * filter locally. Goes through visibleDrills, so it finds the curated library
- * and this coach's own drills, and nobody else's.
+ * filter locally. Goes through schedulableDrills, so it finds the curated
+ * library and this coach's own drills, and nobody else's — and does NOT offer
+ * a compilation video or a mechanics tutorial as a drill to prescribe.
+ *
+ * loadSelectableDrills above stays on visibleDrills on purpose. This is the
+ * coach CHOOSING a drill; that is a stored id being RESOLVED, and a report
+ * finalized before a row was demoted has to keep rendering it.
  */
 export async function searchLibraryByName(
   supabase: any,
@@ -388,7 +393,7 @@ export async function searchLibraryByName(
   // ilike patterns are built from typed text, so the wildcards and the escape
   // character are neutralised — a stray % would return the whole library.
   const safe = q.replace(/[\%_]/g, ch => `\${ch}`)
-  const { data } = await visibleDrills(supabase, coachId, SNAPSHOT_FIELDS)
+  const { data } = await schedulableDrills(supabase, coachId, SNAPSHOT_FIELDS)
     .or(`drill_name.ilike.%${safe}%,description.ilike.%${safe}%,skill_category.ilike.%${safe}%`)
     .limit(limit)
   return (data || []) as any[]

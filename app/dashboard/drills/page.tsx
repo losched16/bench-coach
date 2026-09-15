@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { Search, Filter, Play, Clock, Users, MapPin, ChevronDown, ChevronUp, X, Star, Plus, Pencil } from 'lucide-react'
 import { usePageView } from '@/lib/tracking'
-import { visibleDrills } from '@/lib/drills'
+import { schedulableDrills } from '@/lib/drills'
 import { DrillForm } from '@/components/DrillForm'
 import { embedUrl } from '@/lib/drillVideo'
 
@@ -137,7 +137,11 @@ export default function DrillLibraryPage() {
       // actually applies. The explicit filter is here anyway: a database
       // where 041's policies have not been applied would otherwise show every
       // coach's private drills to everybody, silently.
-      const { data, error } = await visibleDrills(supabase, cid, '*')
+      //
+      // schedulableDrills rather than visibleDrills: this is the library a
+      // coach browses to decide what to run, and a row classified as a
+      // compilation or a tutorial is not something to run.
+      const { data, error } = await schedulableDrills(supabase, cid, '*')
         .order('skill_category')
         .order('progression_level')
 

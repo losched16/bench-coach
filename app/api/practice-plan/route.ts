@@ -7,7 +7,7 @@ import {
 import { assembleCoachContext, renderCoachContext } from '@/lib/coachContext'
 import { categoriesForPracticeFocus } from '@/lib/focusAreas'
 import { guard } from '@/lib/authz'
-import { visibleDrillsSafe, favoriteDrillIds, drillMenuLine, DRILL_PREFERENCE_NOTE, DRILL_FIELDS } from '@/lib/drills'
+import { visibleDrillsSafe, schedulableDrillsSafe, favoriteDrillIds, drillMenuLine, DRILL_PREFERENCE_NOTE, DRILL_FIELDS } from '@/lib/drills'
 import { reusableBlock } from '@/lib/practicePlan'
 import { describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
 import { retrieveDrills } from '@/lib/drillRetrieval'
@@ -331,11 +331,14 @@ export async function POST(request: NextRequest) {
     // A focus with no library coverage (confidence, focus/behavior) would
     // otherwise send nothing at all, and the plan loses its videos.
     //
-    // The ceiling here is deliberately the whole visible library rather than a
-    // number: this is the "we found almost nothing" path, and capping it at 45
-    // was how a fallback meant to widen the pool ended up narrowing it.
+    // The ceiling here is deliberately the whole schedulable library rather
+    // than a number: this is the "we found almost nothing" path, and capping
+    // it at 45 was how a fallback meant to widen the pool ended up narrowing
+    // it. Widening must not reach for the demoted rows, though — a plan that
+    // falls back to "10 Best Hitting Drills for Kids" as a block is worse
+    // than a plan with fewer videos.
     if (!drillResources || drillResources.length < 8) {
-      const wide = await visibleDrillsSafe(
+      const wide = await schedulableDrillsSafe(
         supabaseAdmin, team.coach_id, DRILL_FIELDS, (q: any) => q.limit(500)
       )
       if (wide.error) {
@@ -354,6 +357,9 @@ export async function POST(request: NextRequest) {
     let mustUse: any[] = []
     const wantedIds: string[] = Array.isArray(mustIncludeDrillIds) ? mustIncludeDrillIds : []
     if (wantedIds.length > 0) {
+      // visibleDrillsSafe, deliberately: these are ids the coach CHOSE, and
+      // a stored id must still resolve after its row is classified. Asking
+      // for a drill by id is not asking the library what to run.
       const picked = await visibleDrillsSafe(
         supabaseAdmin, team.coach_id, DRILL_FIELDS,
         (q: any) => q.in('id', wantedIds)

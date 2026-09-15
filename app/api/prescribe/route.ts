@@ -7,7 +7,7 @@ import { resolveFocusArea, focusAreaLabel } from '@/lib/focusAreas'
 import { textFrom } from '@/lib/claudeText'
 import { commitPrescription } from '@/lib/prescriptions'
 import { guard, requireSession } from '@/lib/authz'
-import { visibleDrills } from '@/lib/drills'
+import { visibleDrills, schedulableDrills } from '@/lib/drills'
 import { diagnose, TaxonomyRow, TAXONOMY_FIELDS } from '@/lib/drillDiagnosis'
 import { claude as anthropic, describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
 
@@ -231,7 +231,11 @@ export async function POST(request: NextRequest) {
     //     answerable even though it is not a catalogued flaw.
     if (selected.length < 2) {
       const already = new Set(selected.map(d => d.id))
-      let q = visibleDrills(supabaseAdmin, coachId, '*').limit(400)
+      // A prescription hands back ONE drill for one problem, so a practice
+      // unit — a warm-up routine, a three-phase progression — is the wrong
+      // shape of answer here even though it is perfectly schedulable
+      // elsewhere. Collections and tutorials are excluded outright.
+      let q = schedulableDrills(supabaseAdmin, coachId, '*', { practiceUnits: false }).limit(400)
       if (categories.length > 0) q = q.in('skill_category', categories)
 
       const { data: candidates } = await q

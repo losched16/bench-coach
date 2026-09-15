@@ -11,6 +11,21 @@
 // when you test with one account. It shows up months later as somebody else's
 // drill in your practice plan. So: the build fails instead.
 //
+// TWO HELPERS, ONE BOUNDARY
+//
+// lib/drills.ts now exports schedulableDrills as well. It answers a different
+// question — may this row be OFFERED as something to run, rather than may this
+// coach SEE it — but it is built by calling visibleDrills and adding a filter,
+// so it cannot widen the ownership scope, only narrow it. Both therefore count
+// as going through the boundary.
+//
+// That is a widening of what this script ACCEPTS, so it is worth being precise
+// about what it is not: no file is newly exempt, the exemption list is
+// unchanged, and a read that goes through neither helper and does not name
+// created_by_coach_id still fails. scripts/test-schedulable.ts asserts the
+// containment claim above — that the schedulable query is the visible query
+// plus one clause — so this script can rely on it instead of assuming it.
+//
 //   npm run verify:drills
 
 import { readdirSync, readFileSync, statSync } from 'node:fs'
@@ -40,6 +55,14 @@ const EXEMPT = new Map([
    'fetches by id from prescription.drill_ids, which the caller already owns'],
 ])
 
+// Both helpers scope to the coach. schedulableDrills is visibleDrills plus a
+// resource_kind filter — it narrows, it cannot widen — so a read through either
+// is inside the boundary. Written once so the two places below cannot drift.
+//
+// Deliberately a CALL, not an import: a file that imports the name and never
+// calls it has not scoped anything.
+const HELPER = /\b(visibleDrills|schedulableDrills)(Safe)?\s*\(/
+
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {
     if (name === 'node_modules' || name === '.next' || name.startsWith('.')) continue
@@ -64,13 +87,13 @@ for (const file of files) {
   const rel = relative(ROOT, file).split(sep).join('/')
   const src = readFileSync(file, 'utf8')
 
-  // Files that go through visibleDrills are safe by construction. Counting
-  // them matters: without it this script reports "checked 1 file" once
-  // everything has been migrated, which reads as the check having stopped
-  // working rather than as everything being fine.
+  // Files that go through visibleDrills or schedulableDrills are safe by
+  // construction. Counting them matters: without it this script reports
+  // "checked 1 file" once everything has been migrated, which reads as the
+  // check having stopped working rather than as everything being fine.
   // Exclude the definition itself by PATH — every consumer imports from
   // '@/lib/drills', so matching on the string would exclude all of them.
-  if (rel !== 'lib/drills.ts' && /\bvisibleDrills(Safe)?\s*\(/.test(src)) viaHelper++
+  if (rel !== 'lib/drills.ts' && HELPER.test(src)) viaHelper++
 
   if (!src.includes("from('drill_resources')")) continue
 
@@ -91,14 +114,16 @@ for (const file of files) {
 
   // The filter can arrive two ways: through the helper, or spelled out. Both
   // are acceptable; neither being present is not.
-  const usesHelper = /\bvisibleDrills(Safe)?\s*\(/.test(src)
+  const usesHelper = HELPER.test(src)
   const spellsItOut = src.includes('created_by_coach_id')
 
   if (!usesHelper && !spellsItOut) {
     for (const { n } of reads) {
       problems.push(
         `${rel}:${n} reads drill_resources without scoping it to a coach.\n` +
-        `    Use visibleDrills(client, coachId) from lib/drills.ts. Without it ` +
+        `    Use schedulableDrills(client, coachId) from lib/drills.ts if this ` +
+        `surface offers a coach something to RUN, or visibleDrills(client, ` +
+        `coachId) if it resolves a drill already chosen. Without one of them ` +
         `this surface shows every coach's private drills to everybody.`
       )
     }
@@ -116,7 +141,7 @@ if (problems.length > 0) {
 }
 
 console.log(
-  `Drill library reads: ${viaHelper} via visibleDrills, ${direct} direct and ` +
-  `scoped, ${exemptSeen} exempt (by-id lookups the caller already owns) — ` +
-  `no path leaks one coach's drills to another.`
+  `Drill library reads: ${viaHelper} via visibleDrills/schedulableDrills, ` +
+  `${direct} direct and scoped, ${exemptSeen} exempt (by-id lookups the caller ` +
+  `already owns) — no path leaks one coach's drills to another.`
 )

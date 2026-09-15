@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireSession, callerCoachId } from '@/lib/authz'
-import { visibleDrills } from '@/lib/drills'
+import { visibleDrills, schedulableDrills } from '@/lib/drills'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -63,10 +63,31 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ drill: null })
     }
 
-    // Get all drills (optionally filtered by category)
-    let query = visibleDrills(supabaseAdmin, coachId, 'id, drill_name, youtube_video_id, youtube_url, thumbnail_url, channel, description, skill_category, difficulty_level, common_flaws_fixed, ai_coaching_notes')
-      .order('skill_category')
-      .order('drill_name')
+    // Get all drills (optionally filtered by category).
+    //
+    // This is the browse/pick path — discovery — so it goes through
+    // schedulableDrills. The two by-name lookups above deliberately do NOT:
+    // they resolve a name that already appears in a saved plan or a model's
+    // output, and a block whose drill was later classified still has to find
+    // its video.
+    // ?include=all returns the demoted rows too, with resource_kind, so ONE
+    // cached fetch can serve both jobs: the client browses the schedulable
+    // rows and still resolves a name that a saved plan already contains.
+    // Two of the fifteen practice plans in production today name a row this
+    // change demotes; without this they would lose their video card.
+    const includeAll = searchParams.get('include') === 'all'
+    const fields = 'id, drill_name, youtube_video_id, youtube_url, thumbnail_url, channel, description, skill_category, difficulty_level, common_flaws_fixed, ai_coaching_notes' +
+      (includeAll ? ', resource_kind' : '')
+
+    // Spelled out as two branches rather than picking the helper with a
+    // ternary. A ternary reads fine and is invisible to grep — and grep is
+    // exactly how scripts/verify-drill-scope.mjs proves every library read goes
+    // through the coach-privacy boundary. A control that a clever line can slip
+    // past is not a control.
+    let query = includeAll
+      ? visibleDrills(supabaseAdmin, coachId, fields)
+      : schedulableDrills(supabaseAdmin, coachId, fields)
+    query = query.order('skill_category').order('drill_name')
 
     if (category) {
       query = query.eq('skill_category', category)

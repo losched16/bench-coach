@@ -13,7 +13,7 @@ import {
   aggregatePitchingLines,
 } from '@/lib/scouting'
 import { guard, authorizeTeam, can } from '@/lib/authz'
-import { visibleDrills, favoriteDrillIds } from '@/lib/drills'
+import { favoriteDrillIds } from '@/lib/drills'
 import { retrieveDrills, RetrievalResult, describeRetrieval } from '@/lib/drillRetrieval'
 import { constraintsFromText, ageFromText } from '@/lib/drillConstraints'
 import { checkGrounding, stripUngroundedVideos } from '@/lib/drillGrounding'
@@ -281,8 +281,10 @@ export async function POST(request: NextRequest) {
     // 206 drills in the library that made roughly half of it invisible on any
     // given request, non-deterministically.
     //
-    // Now the question is read against the problem taxonomy, the whole visible
-    // library is eligible, and a dozen ranked candidates go to the model.
+    // Now the question is read against the problem taxonomy, the whole
+    // SCHEDULABLE library is eligible, and a dozen ranked candidates go to the
+    // model. retrieveDrills applies that filter, so a compilation video can no
+    // longer be offered here as a drill to run.
     let drillResources: any[] = []
     let retrieval: RetrievalResult | null = null
     try {
