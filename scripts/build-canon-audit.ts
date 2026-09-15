@@ -109,6 +109,25 @@ export function resourceKindFor(disposition: string): string {
   return KIND[disposition] ?? ''
 }
 
+/**
+ * The kind a row should actually carry, once a merge is taken into account.
+ *
+ * A MERGE_INTO row is THE SAME ACTIVITY as its target, so it is the same KIND
+ * of thing. Without this, the knee/hip/full throwing progression lands as one
+ * practice_unit and two activities — three rows describing one three-phase
+ * sequence, disagreeing about what a sequence is. Nothing would break; the
+ * library would just quietly hold a contradiction about itself.
+ *
+ * Only MERGE_INTO inherits. A VARIATION_OF or PROGRESSION_OF is a DIFFERENT
+ * activity in the same family, and a variation of a routine is not obliged to
+ * be a routine.
+ */
+export function effectiveKind(d: Decision, all: Decision[]): string {
+  if (d.disposition !== 'MERGE_INTO') return resourceKindFor(d.disposition)
+  const target = all.find(x => x.drill_id === d.canonical_target_id)
+  return target ? resourceKindFor(target.disposition) : resourceKindFor(d.disposition)
+}
+
 /** Everything but source collections and teaching content may still be run. */
 export function schedulableAfter(disposition: string): boolean {
   const k = resourceKindFor(disposition)
@@ -205,7 +224,7 @@ async function main() {
         dec.canonical_target_id,
         dec.family_slug,
         dec.variation_type,
-        resourceKindFor(dec.disposition),
+        effectiveKind(dec, decisions),
         schedulableAfter(dec.disposition) ? 'yes' : 'no',
         // Nothing in this phase touches a video. Stated per row so the claim is
         // checkable against the file rather than against a paragraph.

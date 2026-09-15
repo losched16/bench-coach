@@ -41,7 +41,7 @@ async function main() {
   const [{ data: drills, error: e1 }, { data: problems, error: e2 }, { data: maps, error: e3 }] =
     await Promise.all([
       sb.from('drill_resources')
-        .select('id,drill_name,description,skill_category,youtube_video_id,youtube_start_seconds,min_coaches,throwing_load')
+        .select('id,drill_name,description,skill_category,youtube_video_id,youtube_start_seconds,min_coaches,throwing_load,resource_kind')
         .eq('status', 'approved'),
       sb.from('problem_taxonomy').select('slug,label,skill_category,aliases'),
       sb.from('drill_problem_map').select('drill_id,problem_slug,curated'),
@@ -66,6 +66,33 @@ async function main() {
     if (m.curated) curatedPerProblem.set(m.problem_slug, (curatedPerProblem.get(m.problem_slug) || 0) + 1)
   }
   const mappedDrills = new Set(liveMaps.map(m => m.drill_id))
+
+  // Approved is no longer the same as offerable.
+  //
+  // Migration 062 lets a row be approved and still never reach a coach as a
+  // drill — a compilation video, a mechanics tutorial. Counting approved rows
+  // here would report full coverage for a problem whose only drill is
+  // "3 Great Outfield Drills for Youth Players", which a coach can no longer be
+  // given. The hard rule this file exists to enforce is about what a coach can
+  // actually be handed, so it has to count what is SCHEDULABLE.
+  //
+  // Kept in step with lib/drills.ts by hand; importing it here would drag the
+  // app's module graph into a standalone script. scripts/test-schedulable.ts
+  // owns the definition, and the two agreeing is what that test checks.
+  const OFFERABLE = (d: any) =>
+    !['source_collection', 'teaching_content'].includes(String(d.resource_kind || ''))
+
+  const schedulable = new Set(D.filter(OFFERABLE).map(d => d.id))
+  const schedPerProblem = new Map<string, number>()
+  for (const m of liveMaps) {
+    if (schedulable.has(m.drill_id)) {
+      schedPerProblem.set(m.problem_slug, (schedPerProblem.get(m.problem_slug) || 0) + 1)
+    }
+  }
+
+  const zeroSched = P.filter(p =>
+    (perProblem.get(p.slug) || 0) > 0 && (schedPerProblem.get(p.slug) || 0) === 0)
+  const demoted = D.filter(d => !OFFERABLE(d))
 
   const zero = P.filter(p => (perProblem.get(p.slug) || 0) === 0)
   const thin = P.filter(p => { const n = perProblem.get(p.slug) || 0; return n >= 1 && n <= 2 })
@@ -106,12 +133,24 @@ async function main() {
 
   console.log(`\nCAN EVERY PROBLEM BE ANSWERED?   (${P.length} problems in the taxonomy)`)
   line('ZERO approved drills', zero.length, P.length)
+  // The one that matters after 062: mapped drills exist, but every one of them
+  // is a collection or a tutorial, so the coach gets nothing.
+  line('ZERO SCHEDULABLE drills', zeroSched.length, P.length)
   line('only 1-2 drills', thin.length, P.length)
   line('no CURATED mapping (text-only)', noCurated.length, P.length)
   line('no aliases at all', noAliases.length, P.length)
   console.log(`  median aliases per problem        ${medianAliases}`)
 
+  if (zeroSched.length > 0) {
+    console.log('\n  PROBLEMS WHOSE ONLY DRILLS ARE NO LONGER OFFERABLE:')
+    for (const p of zeroSched) {
+      console.log(`    ${p.slug} — ${perProblem.get(p.slug)} mapped, 0 schedulable`)
+    }
+    console.log('    Curate a replacement before demoting anything else here.')
+  }
+
   console.log(`\nIS EVERY DRILL REACHABLE?   (${D.length} approved drills)`)
+  line('classified as not-a-drill', demoted.length, D.length)
   line('mapped to no problem', unmapped.length, D.length)
   line('description under 120 chars', thinDesc.length, D.length)
 

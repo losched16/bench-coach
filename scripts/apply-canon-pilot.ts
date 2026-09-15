@@ -40,7 +40,7 @@
 // Without --apply it prints the whole plan and touches nothing.
 
 import { createClient } from '@supabase/supabase-js'
-import { loadDecisions, resourceKindFor, schedulableAfter } from './build-canon-audit'
+import { loadDecisions, effectiveKind, schedulableAfter } from './build-canon-audit'
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -107,7 +107,7 @@ async function main() {
     if (!dec) { console.error(`No decision for ${d.id} — run npm run audit:canon first.`); process.exit(1) }
 
     const patch: Record<string, any> = {}
-    const kind = resourceKindFor(dec.disposition)
+    const kind = effectiveKind(dec, decisions)
     // REVIEW_REQUIRED maps to '' and must stay NULL: an unreviewed row keeps
     // working. Writing nothing is the decision, not an omission.
     if (kind && d.resource_kind !== kind) patch.resource_kind = kind

@@ -16,6 +16,7 @@ import {
 import { mediaRowFor } from './backfill-drill-media'
 import { videoIdFor } from '@/lib/drillVideo'
 import { readFileSync } from 'fs'
+import { createHash } from 'crypto'
 
 let failures = 0
 function check(label: string, cond: boolean, detail?: string) {
@@ -24,6 +25,32 @@ function check(label: string, cond: boolean, detail?: string) {
 }
 
 const LIBRARY: any[] = JSON.parse(readFileSync('scripts/fixtures/drill-library-snapshot.json', 'utf8'))
+
+// ── the video columns are frozen ───────────────────────────────────────────
+//
+// Taken from production BEFORE migration 062, the media backfill and the
+// Hitting/Infield/Throwing classification pass, and re-read from production
+// after all three. Identical both times.
+//
+// This is the whole "no video is touched" claim reduced to one number. Any
+// future change that edits a youtube_* column, or renames a drill, or drops a
+// row, moves it — including a change that means to. That is the point: moving
+// it should require saying so here, in a commit, rather than happening.
+const VIDEO_COLUMNS_BEFORE_PHASE_1 = '2e01642dcd2801686b8a594cd64e0cff'
+
+const videoFingerprint = createHash('md5').update(
+  LIBRARY.slice().sort((a, b) => String(a.id).localeCompare(String(b.id))).map(d =>
+    [d.id, d.drill_name, d.youtube_video_id, d.youtube_url, d.youtube_start_seconds,
+     d.youtube_start_source, d.channel, d.thumbnail_url]
+      .map(v => v === null || v === undefined ? '~' : String(v)).join('|')
+  ).join('\n')
+).digest('hex')
+
+check('not one video column changed across the whole of Phase 1',
+  videoFingerprint === VIDEO_COLUMNS_BEFORE_PHASE_1,
+  `expected ${VIDEO_COLUMNS_BEFORE_PHASE_1}, got ${videoFingerprint}`)
+
+check('...and no curated row was deleted', LIBRARY.length === 208, `${LIBRARY.length} rows`)
 
 // ── 12-14. the backfill loses nothing and invents nothing ──────────────────
 
