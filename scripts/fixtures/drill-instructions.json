@@ -754,5 +754,272 @@
     ],
     "regression_notes": "Have them hold the high-five position for a count before throwing, or physically place the arm once so they can feel the height. The position has to be familiar before it can be found at speed.",
     "progression_notes": "Remove the pause and let the high five become part of the arm swing, then add distance — the dropped elbow usually comes back the moment the throw gets long."
+  },
+  {
+    "drill_id": "29276b7a-fd04-45ff-825d-1d715d384908",
+    "drill_name": "Fly Ball Drill with Cones",
+    "source": "written from the existing description and tags (cones teaching positioning and angles on fly balls)",
+    "description": "Cones mark where the fly ball is going to land, so a young outfielder can practise the route before they can read a ball off a bat. Set three or four cones out at different distances and angles from the fielder's starting spot. Call a cone, then throw or hit a fly ball to it. The fielder's job is to get to that cone and be standing still underneath the ball when it arrives, rather than drifting into it at the last moment.",
+    "ai_coaching_notes": "Call the cone as the ball leaves your hand, not before — the point is reading and moving, not memorising. 'Get there and wait' is the cue: a fielder still moving when the ball arrives is the one who drops it. Watch the first step. Turning and running beats backpedalling every time, and the cone gives them a reason to turn.",
+    "success_markers": [
+      "Turns and runs to the cone rather than backpedalling",
+      "Arrives set under the ball with time to spare",
+      "Catches with two hands above the head, not at the chest"
+    ],
+    "practice_roles": [
+      "teach",
+      "repetition"
+    ],
+    "regression_notes": "Fewer cones, closer in, and throw rather than hit. Walking the route to each cone with no ball is a legitimate first round.",
+    "progression_notes": "Add cones behind the fielder so some routes go back, stop calling the cone until after the ball is in the air, or move to live fungo where there is no cone at all."
+  },
+  {
+    "drill_id": "0c9a28d6-8fcf-4000-82fa-a1216ed45916",
+    "drill_name": "Flyball Communication Drill",
+    "source": "written from the existing description and its existing success marker (call early and loud, the other peels off)",
+    "description": "Two outfielders start about thirty feet apart and a coach hits or throws a fly ball deliberately into the gap between them. One of them has to call it — loud, early, three times — and the other has to answer and peel away. The catch itself is the easy part; what is being drilled is the half-second of decision before it, which is the half-second that produces every collision and every ball that lands between two players.",
+    "ai_coaching_notes": "The call has to come before the ball reaches its highest point, or it is too late to be useful. Make the answer mandatory too — 'take it' — because a silent peel-off looks identical to a player who has not seen the ball. If nobody calls it, let the ball drop and run it again. Start with soft balls so nobody is managing fear and a decision at once.",
+    "reps_guidance": "2 sets of 8 fly balls between two outfielders",
+    "success_markers": [
+      "Call comes before the ball peaks, loud enough to hear from the infield",
+      "The other player answers out loud and clears the space",
+      "No ball lands between two players across a full set"
+    ],
+    "equipment_needed": [
+      "Gloves",
+      "Baseballs or soft training balls"
+    ],
+    "practice_roles": [
+      "teach",
+      "team_execution"
+    ],
+    "regression_notes": "Throw the ball rather than hit it, closer and lower, so the flight is predictable and the only thing left to get right is the call.",
+    "progression_notes": "Hit the ball further into the gap, add a third fielder, or bring an infielder in so the priority rule has to be applied as well as the call."
+  },
+  {
+    "drill_id": "a648dcab-45b3-4c81-9ed4-f29eaea4323e",
+    "drill_name": "Bunting with Lacrosse Stick",
+    "source": "written from the existing description and cue (lacrosse stick as a target, deaden the contact)",
+    "description": "A bunting target that gives immediate, unambiguous feedback. A coach holds a lacrosse stick — head up, like a catching net — a few feet in front and to one side of the plate, and the hitter bunts tosses into it. Either the ball goes in the net or it does not, so there is no argument about whether a bunt was placed well. It also forces the deadened contact a good bunt needs, because a hard bunt bounces straight back out.",
+    "ai_coaching_notes": "Move the stick between reps so the hitter has to aim rather than repeat. 'Catch the ball with the bat' is the cue that produces the soft top hand — the barrel gives backwards slightly at contact instead of pushing through. Hold the stick low and near the ground; a target at chest height teaches them to pop the ball up, which is the opposite of the point.",
+    "success_markers": [
+      "Ball stays in the net rather than bouncing back out",
+      "Bat angle changes to match where the stick is held",
+      "Barrel starts at the top of the strike zone and moves down to the ball"
+    ],
+    "equipment_needed": [
+      "Bat",
+      "Baseballs or wiffle balls",
+      "Lacrosse stick or similar net target"
+    ],
+    "practice_roles": [
+      "isolate",
+      "repetition"
+    ],
+    "regression_notes": "Hold the stick still in one spot and toss from close range. Getting the deadened contact is the first skill; steering it is the second.",
+    "progression_notes": "Move the target between first-base and third-base lanes and call the side mid-toss, which is the Deaden and Direct drill with a harder target."
+  },
+  {
+    "drill_id": "cf43c787-c5f1-4188-9aff-e574b2b08c0a",
+    "drill_name": "Deaden & Direct — Bunt Placement Drill",
+    "source": "description rewritten as instructions from the existing cues, which already set out the lane targets and the called side",
+    "description": "Bunting practice where placement is scored, not just contact. Lay towels or cone lanes down the first-base and third-base lines, a few feet from the plate. A feeder tosses from short range and calls 'first' or 'third' as the ball is released, and the hitter has to deaden the ball and steer it into the called lane. Ten bunts a round, alternating. It is the drill that turns a player who can bunt into a player who can bunt somewhere.",
+    "ai_coaching_notes": "Call the side late — as the ball leaves your hand — or the hitter sets the bat angle in advance and learns nothing. 'Catch it with the barrel' gives you the soft top hand that deadens the ball. The knob chases the angle, not the barrel: the hitter steers by turning the bat around the top hand, not by pushing the end of it.",
+    "reps_guidance": "3 rounds of 10 bunts, alternating target lanes",
+    "practice_roles": [
+      "isolate",
+      "progress"
+    ],
+    "regression_notes": "Call the side before the toss, or bunt from a tee into the lanes with no feeder at all. Separating the placement from the reaction makes both learnable.",
+    "progression_notes": "Move to live pitching, shrink the lanes, or add a take rule so the hitter has to judge the pitch as well as place the bunt."
+  },
+  {
+    "drill_id": "2db609fb-e152-400c-8927-038809eb062f",
+    "drill_name": "Competitive Team Bunting Game",
+    "source": "description rewritten as instructions from the existing cues, which already set out the situation cards, live pitching and scoring",
+    "description": "Bunting practice with a scoreboard. Split the team in two. Each hitter draws a situation — sacrifice to third, push past the pitcher, squeeze — and gets one attempt against live pitching or a machine. Points only for a bunt that actually executes the situation drawn; a good bunt to the wrong side scores nothing. Four to six attempts each, and the losing team clears the field. Bunting is the skill most likely to be practised without pressure and then attempted under maximum pressure, which is the gap this closes.",
+    "ai_coaching_notes": "The situation card is what makes this work — the hitter has to pick the bunt type themselves rather than being told. Do not coach mid-attempt; let the failed ones fail and talk afterwards. Live pitching matters here more than anywhere else in the bunting category, because bunting a machine ball is a different skill from bunting a teammate's.",
+    "reps_guidance": "Each player: 4-6 competitive bunt attempts",
+    "regression_notes": "Drop to one bunt type per round and toss instead of pitching. The competition still works, and the decision can be added once the technique holds up.",
+    "progression_notes": "Add a runner so the bunt has a real consequence, tighten the target areas, or make an unexecuted bunt cost a point rather than simply scoring none."
+  },
+  {
+    "drill_id": "0dba3ce4-0df5-4905-b95b-09705a5595d5",
+    "drill_name": "Call It Early — Outfield Communication Basics",
+    "source": "description rewritten as instructions from the existing cues, which already set out the pre-peak call rule and the verbal answer",
+    "description": "The introduction to calling the ball, with one rule that makes it teachable: the call has to come before the ball reaches its highest point, and it has to be said three times. Two fielders, one coach tossing high balls into the space between them. One calls 'mine, mine, mine', the other answers 'take it, take it' and peels away. Soft balls to start, so nobody is deciding and flinching at the same time.",
+    "ai_coaching_notes": "Before the peak is the rule, because after the peak there is no time for the other player to react. Three times is not arbitrary either — once is easy to miss under a helmet in wind. Make the answer compulsory; that is the half of it most coaches skip, and it is the half that prevents the collision.",
+    "reps_guidance": "10-12 fly balls per pair",
+    "regression_notes": "Toss lower and slower, or have the players call the ball with no catch at all — just the call and the peel. The verbal habit can be built before the catching is reliable.",
+    "progression_notes": "Toss higher and further into the gap, then move to live fungo. Adding an infielder turns it into the priority drill, where the call also has to be overruled correctly."
+  },
+  {
+    "drill_id": "7ae1f28a-6e16-4163-b481-1b89226397eb",
+    "drill_name": "Infield/Outfield Priority Drill",
+    "source": "description rewritten as instructions from the existing cues, which already set out the tweener balls and the freeze-and-ask method",
+    "description": "The ball hit between the infield and the outfield — the tweener — and the rule about who takes it. Position an infielder and an outfielder in the same lane and hit balls deliberately into the space between them. The rule is plain: the outfielder is coming in and can see the whole play, so any ball they call is theirs, and the infielder yields. Freeze the play after every rep and ask the group whose ball it was and why.",
+    "ai_coaching_notes": "The freeze-and-ask is the teaching, not the reps. Players who can state the rule out loud apply it in a game; players who have only been shouted at during one do not. Hit the genuinely awkward ones on purpose — the easy tweeners teach nothing. Watch that the infielder peels out of the landing zone rather than stopping in it.",
+    "reps_guidance": "8-10 tweeners per group",
+    "practice_roles": [
+      "teach",
+      "team_execution"
+    ],
+    "regression_notes": "Throw rather than hit, and tell them the answer before the rep so the movement can be practised without the decision.",
+    "progression_notes": "Add a second infielder, or run it live within a team defence period where the priority has to survive everything else going on."
+  },
+  {
+    "drill_id": "ce379eeb-fa92-47f0-b41f-dd3831ebc5bc",
+    "drill_name": "Youth J-Band Routine — Pre-Throwing Activation",
+    "source": "description rewritten as instructions from the existing cues, which already set out the anchor height, light tension and pre-throwing placement",
+    "description": "The band routine that happens before anyone picks up a ball. Anchor the bands to a fence at about elbow height and work through the standard shoulder set — external rotation, internal rotation, reverse throw, forward throw — eight to ten light reps of each. The resistance should be enough to feel and not enough to strain. It takes five minutes, it goes first, every time, and it is the cheapest arm insurance in youth baseball.",
+    "ai_coaching_notes": "Anchor at elbow height and keep the tension light — these are activation reps, not strength reps. 'Slow out, slow back', with no snap at the end of the band. The habit is the hard part, not the exercises: make it the first station on the field rather than something offered to players who arrive early.",
+    "regression_notes": "Fewer exercises and lighter bands, or no band at all — arm circles and slow reach-throughs activate the same area for a first-year player.",
+    "progression_notes": "Move to the nine-exercise strength routine on low-throwing days. The activation version stays as the pre-throwing routine regardless; the strength version is additional, not a replacement."
+  },
+  {
+    "drill_id": "b67499b8-314b-415f-a789-c0b90f1f9a3f",
+    "drill_name": "Post-Throwing Recovery Routine",
+    "source": "description rewritten as instructions from the existing cues, which already set out the 15-minute window and the light-and-rhythmic standard",
+    "description": "What a pitcher does in the fifteen minutes after their last pitch. Eight light exercises — band work through the shoulder, slow arm circles, reach-throughs, gentle range-of-motion work — done at an effort that feels easier than the warm-up did. Nothing here is strength work. The purpose is to move blood through an arm that has just been asked for a lot, and the only thing that makes it effective is doing it every outing rather than the ones where the arm already aches.",
+    "ai_coaching_notes": "Fifteen minutes is the window, and consistency is the entire mechanism — a recovery routine done half the time does roughly nothing. Keep it light and rhythmic. Get players to note next-day soreness for a couple of weeks; seeing their own numbers change is what makes a twelve-year-old keep doing it.",
+    "reps_guidance": "1 round of 8 exercises immediately after throwing",
+    "practice_roles": [
+      "finish"
+    ],
+    "regression_notes": "Four exercises done every time beats eight done occasionally. Cut the list before you cut the frequency.",
+    "progression_notes": "Pair it with the pre-throwing activation routine so the arm is bracketed at both ends, and add next-day mobility work for players throwing on consecutive days."
+  },
+  {
+    "drill_id": "9d95c228-0f42-487d-bfa0-164df2646c50",
+    "drill_name": "9-Exercise J-Band Strength Routine",
+    "source": "description rewritten as instructions from the existing cues, which already set out the tempo, the low-throwing-day placement and the elbow-height check",
+    "description": "A standalone band workout for the rotator cuff and the muscles around the shoulder blade, run on days with little or no throwing. Nine exercises, two sets of ten, at a controlled two-second tempo in each direction. Unlike the pre-throwing activation routine this is genuine strength work and it belongs on a light day — doing it after a max-effort outing takes away the recovery it is meant to support.",
+    "ai_coaching_notes": "Two seconds out, two seconds back, on every rep — speed is how players make band work useless. Elbows stay at the height you set them; an elbow drifting down is a fatigue signal and the cue to stop the set rather than push through it. Progress the band colour only after three or four weeks at a clean tempo.",
+    "reps_guidance": "2 sets of 10 reps per exercise",
+    "practice_roles": [
+      "isolate"
+    ],
+    "regression_notes": "Cut to five exercises and one set, with the lightest band available. Tempo and control matter more than the exercise count at every age in this library.",
+    "progression_notes": "Add resistance rather than reps, and keep the tempo. Once this is routine, the pre-throwing activation routine can be shortened because the baseline strength is there."
+  },
+  {
+    "drill_id": "dfa91c84-6ce8-4d03-9c5d-4252adc5fe3d",
+    "drill_name": "Complete Pitching and Throwing Warm-Up Routine",
+    "source": "description rewritten as instructions from the existing cues, which already set out the big-to-small arm circles and the progressive throwing sequence",
+    "description": "The full pre-throwing sequence, in order: move the whole body first, then the shoulder, then the arm with a ball. Jog and do dynamic leg movements, then large arm circles becoming progressively smaller, then band or reach-through shoulder work, then throw — starting close and easy, building distance and effort gradually. It takes about ten minutes and it is the same routine before a practice and before a game, which is most of why it works.",
+    "ai_coaching_notes": "Whole body before arm, every time — a warm shoulder on a cold body is not a warm-up. Big circles to small is the sequence players remember. The progressive throwing at the end is part of the routine, not the practice that follows it: nobody throws hard until they have thrown easy first. Tell them out loud that reporting a sore arm is what you want, not something to avoid.",
+    "equipment_needed": [
+      "Baseball",
+      "Glove",
+      "Resistance band (optional)"
+    ],
+    "practice_roles": [
+      "warmup"
+    ],
+    "regression_notes": "Shorten the throwing ladder and keep the movement work. For the youngest groups, five minutes of moving and two distances of easy throwing is a complete warm-up.",
+    "progression_notes": "Add the band activation routine before the throwing phase, and extend the throwing ladder for pitchers who are about to throw a bullpen."
+  },
+  {
+    "drill_id": "977c1fd1-12b0-42c6-8b8b-e3a90303e385",
+    "drill_name": "Baseball Arm Stretches and Pre-Throwing Warm-Up",
+    "source": "rewritten from video framing; the arm circles, gentle-stretch standard and never-throw-cold rule are kept from the existing description and cues",
+    "description": "A five-minute arm and shoulder preparation done before a ball is picked up. Arm circles forward and backward, starting large and getting smaller. Cross-body shoulder stretches held gently. Reach-throughs and slow trunk rotations. No equipment, no partner, and it works on a touchline or in a car park. It is the shortest routine in the library and it is the one that should never be skipped, because throwing cold is how youth arms get hurt.",
+    "ai_coaching_notes": "Gentle pull, never pain — a stretch that hurts is doing the opposite of what it is for. Slow and controlled beats big range. Do it as a group so it takes the same five minutes for everyone and nobody is negotiating. 'Warm up to throw, do not throw to warm up' is worth saying out loud until the players say it back.",
+    "success_markers": [
+      "Full pain-free range of motion in both shoulders before throwing",
+      "Players start the routine without being told",
+      "Nobody picks up a ball before the routine is finished"
+    ],
+    "practice_roles": [
+      "warmup"
+    ],
+    "regression_notes": "Three movements instead of six, done properly. A short routine that happens is worth more than a complete one that gets skipped when practice starts late.",
+    "progression_notes": "Add band activation for players who throw a lot, and extend into the full pre-throwing warm-up on game days."
+  },
+  {
+    "drill_id": "b194ff1d-f857-47d5-911c-0bab06c6e6bc",
+    "drill_name": "Baseball Dynamic Stretches for Youth Players",
+    "source": "description rewritten as instructions from the existing cues, which already set out the smooth-and-controlled standard and the gentle-pull limit",
+    "description": "A moving warm-up built around the positions baseball actually asks for: leg swings forward and sideways, walking lunges with a trunk rotation, arm swings across the body, hip openers, and slow trunk twists. Everything is done moving rather than held, over about fifteen yards each. It raises temperature and range of motion at the same time, which is what a warm-up is for — a static stretch on a cold body does neither.",
+    "ai_coaching_notes": "Smooth and controlled, not big and fast — the range comes from repetition, not from forcing it. A gentle pull is the limit. Run it as a group moving down a line so everyone does the same movement at the same time, which is the only practical way to keep twelve eight-year-olds stretching. Anything that hurts is a stop-and-tell-me, not a push-through.",
+    "success_markers": [
+      "Players move through the full range without forcing or bouncing",
+      "Group completes the sequence together rather than drifting",
+      "Nobody reports pain during the routine"
+    ],
+    "practice_roles": [
+      "warmup"
+    ],
+    "regression_notes": "Fewer movements over a shorter distance. Four done well is a warm-up; ten done badly is a queue.",
+    "progression_notes": "Add the arm-specific stretches and band activation before throwing days, and lengthen the distance for older players who need more cardiovascular preparation."
+  },
+  {
+    "drill_id": "daea5efc-42ce-4a83-9f07-a867dd6fbddd",
+    "drill_name": "Do-or-Die Charge & Throw",
+    "source": "next steps written for the existing description, which already sets out the charge, the glove-side pickup and the throw home",
+    "regression_notes": "Roll the ball rather than hitting it, and shorten the throw to second base. The charging footwork is the skill; the distance to the plate is what makes it a max-effort throw, and that can wait.",
+    "progression_notes": "Hit the ball harder and to either side, add a live runner so the decision to go do-or-die is real, and chart the time from pickup to catch at the plate."
+  },
+  {
+    "drill_id": "744a47da-ef0c-42b0-b961-1175aaad42d9",
+    "drill_name": "Outfield Drop Step Drill",
+    "source": "description rewritten to remove the brand-led opening; markers and next steps written for the existing cues",
+    "description": "The first movement an outfielder makes on a ball hit over their head. Instead of backpedalling, the fielder drops the foot on the ball's side straight back, opens the hips, turns, and runs. The coach stands in front, points or throws to one side, and the fielder drop steps and runs to the spot. Both sides, every session. It is the most fundamental outfield movement there is, and backpedalling — which is what every untaught player does — is both slower and how outfielders fall over.",
+    "ai_coaching_notes": "Drop the foot back, do not step across — a crossover first step turns the hips the wrong way. 'Open the gate' is the cue that gets the hip to rotate. Run to the spot and then find the ball; players who try to watch the ball the whole way end up drifting. Practise both sides deliberately, because everyone has a strong one and a side they avoid.",
+    "success_markers": [
+      "First step goes back and opens the hips rather than backpedalling",
+      "Turns and runs, then locates the ball, rather than tracking it the whole way",
+      "Drop steps to the weaker side look like the stronger side by the end of a session"
+    ],
+    "regression_notes": "Point rather than throw, and let them drop step and run to a cone with no ball at all. The footwork is learnable before the catch is.",
+    "progression_notes": "Throw the ball as they turn so they have to find it mid-run, then move to live fungo where they read it off the bat."
+  },
+  {
+    "drill_id": "ab8f57ca-ebf4-49b7-8f08-e62e5dd54a3f",
+    "drill_name": "Dynamic Warm-Up with Arm Stretches",
+    "source": "markers and next steps written for the existing description, which already sets out the active upper-body sequence and the gentle-pull limit",
+    "success_markers": [
+      "Shoulders move through full range without forcing",
+      "Routine is finished before anyone picks up a ball",
+      "Players can run the sequence themselves by mid-season"
+    ],
+    "practice_roles": [
+      "warmup"
+    ],
+    "regression_notes": "Cut to the three arm movements and skip the rest. Something short that happens every time beats a full routine that gets dropped when practice starts late.",
+    "progression_notes": "Add band activation before throwing days, and follow with a progressive throwing ladder rather than going straight to full-distance catch."
+  },
+  {
+    "drill_id": "3df6814c-4d77-4592-8693-9fd419ded05c",
+    "drill_name": "8 Baseball Warm-Up Exercises You Must Do",
+    "source": "markers and next steps written for the existing description, which already sets out the eight exercises and the 15-20 yard distance",
+    "success_markers": [
+      "Chest stays up and the movement stays controlled across all eight",
+      "Group finishes together rather than strung out",
+      "Easy throws at the end look like proper throws, not flicks"
+    ],
+    "practice_roles": [
+      "warmup"
+    ],
+    "regression_notes": "Pick four of the eight and shorten to ten yards. The sequence matters less than the fact that the body is moving before the balls come out.",
+    "progression_notes": "Extend the distance, add a change-of-direction element to the shuffles and backpedals, and lengthen the progressive throwing at the end on game days."
+  },
+  {
+    "drill_id": "32d3b75f-3d94-4048-b1e1-26a3d87e9449",
+    "drill_name": "Base Running Athletic Circuit",
+    "source": "description rewritten to remove the brand-led opening; markers and next steps written for the existing cues",
+    "description": "A timed circuit around the bases that trains acceleration, turning and body control rather than baserunning rules. Players run the full circuit — home to first with a turn, first to third, third to home — hitting the inside corner of each base and staying low through the turns. Time each round and let them chase their own number. It develops the sprint mechanics and change of direction that every part of the game depends on, in a format a nine-year-old will do repeatedly without being asked twice.",
+    "ai_coaching_notes": "Hit the inside corner of the base and lean into the turn — a player who runs wide and pops up tall loses more time at the bag than they gain on the straight. Arms pump; they do not flail. Time every round out loud so there is a number to beat. Two or three rounds is plenty, with real rest between; this is a speed drill and a tired sprint trains the wrong thing.",
+    "success_markers": [
+      "Touches the inside corner of each base",
+      "Stays low through the turn instead of standing up",
+      "Round times improve or hold across the session rather than degrading"
+    ],
+    "practice_roles": [
+      "repetition",
+      "competition"
+    ],
+    "regression_notes": "Run half the circuit — home to second — and drop the clock. The turn mechanics are the skill; the full lap is just conditioning.",
+    "progression_notes": "Add a lead and a start signal, or run two players staggered so there is someone to chase. Timing the segments separately shows which turn is costing them."
   }
 ]

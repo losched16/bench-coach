@@ -122,9 +122,17 @@ const CONCRETE = [
   'grounder', 'grounders', 'hop', 'hops', 'charge', 'sprint', 'shuffle', 'jog', 'tag', 'slide',
   'step', 'steps', 'stand', 'stands', 'kneel', 'kneeling', 'run', 'runs', 'move', 'moves',
   // body and measurement
-  'feet', 'foot', 'hand', 'hands', 'knee', 'knees', 'hips', 'eyes', 'head',
+  'feet', 'foot', 'hand', 'hands', 'knee', 'knees', 'hip', 'hips', 'eyes', 'head',
+  'arm', 'arms', 'leg', 'legs', 'shoulder', 'shoulders', 'elbow', 'elbows', 'wrist',
+  'chest', 'body', 'back',
   'rep', 'reps', 'round', 'rounds', 'set', 'sets', 'circuit', 'count', 'seconds', 'minutes',
-  'distance', 'apart', 'behind', 'front', 'side', 'start', 'starts', 'alternate', 'rotate',
+  'distance', 'apart', 'behind', 'front', 'side', 'sideways', 'start', 'starts',
+  'alternate', 'rotate', 'forward', 'backward', 'yards',
+  // conditioning and arm care, which are activities too — the list was built
+  // from throwing and fielding drills and had no words for a warm-up at all,
+  // so a routine of leg swings and walking lunges scored as abstract.
+  'stretch', 'stretches', 'lunge', 'lunges', 'squat', 'jog', 'walk', 'walking',
+  'band', 'bands', 'circles', 'rotation', 'rotations', 'anchor', 'exercise', 'exercises',
 ]
 
 /**
