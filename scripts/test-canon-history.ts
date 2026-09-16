@@ -96,12 +96,21 @@ check('the admin link checker still scans demoted rows too',
 // ── the audit itself ───────────────────────────────────────────────────────
 
 const decisions = loadDecisions()
-check('every curated row has a decision', decisions.length === 208, `${decisions.length}`)
+const snapshotRows: any[] = JSON.parse(src('scripts/fixtures/drill-library-snapshot.json'))
+
+// Compared to the library rather than to a number. Phase 2A added twelve
+// activities, and a hardcoded 208 would have had to be edited on every
+// legitimate addition — which is how a completeness check quietly becomes a
+// number somebody updates to make the test pass.
+check('every curated row has a decision',
+  decisions.length === snapshotRows.length,
+  `${decisions.length} decisions for ${snapshotRows.length} rows`)
 check('no drill id is decided twice',
   new Set(decisions.map(d => d.drill_id)).size === decisions.length)
 
 const csv = src('docs/audits/drill-canonicalization-decisions.csv').trim().split('\n')
-check('the generated CSV holds every row and a header', csv.length === 209, `${csv.length} lines`)
+check('the generated CSV holds every row and a header',
+  csv.length === snapshotRows.length + 1, `${csv.length} lines for ${snapshotRows.length} rows`)
 check('every CSV row claims its video is preserved',
   csv.slice(1).every(l => l.includes(',yes,')),
   'preserve_current_video is yes on all 208')
@@ -123,14 +132,30 @@ const unknownTarget = decisions.filter(d =>
 check('every canonical target is itself a row in the audit', unknownTarget.length === 0,
   unknownTarget.map(d => d.canonical_target_id).join(', '))
 
-// The pilot writes only three categories; everything else must stay NULL.
-const snapshot: any[] = JSON.parse(src('scripts/fixtures/drill-library-snapshot.json'))
-const PILOT = ['Hitting', 'Fielding (Infield)', 'Throwing']
-const cat = new Map(snapshot.map(d => [d.id, d.skill_category]))
-const outsidePilot = decisions.filter(d => !PILOT.includes(String(cat.get(d.drill_id))))
-check('the pilot leaves the other categories unclassified',
-  outsidePilot.length === 208 - snapshot.filter(d => PILOT.includes(d.skill_category)).length,
-  `${outsidePilot.length} rows outside Hitting / Infield / Throwing`)
+// Phase 1 classified three categories and left the rest NULL. Phase 2A finished
+// the job, so the invariant to hold now is the opposite one: every row carries a
+// classification EXCEPT the ones deliberately left for a human.
+const unclassified = snapshotRows.filter(d => !d.resource_kind)
+const reviewRequired = decisions.filter(d => d.disposition === 'REVIEW_REQUIRED')
+check('every row is classified except those marked REVIEW_REQUIRED',
+  unclassified.length === reviewRequired.length,
+  `${unclassified.length} unclassified, ${reviewRequired.length} awaiting review`)
+check('...and they are the same rows',
+  unclassified.every(d => reviewRequired.some(r => r.drill_id === d.id)),
+  'a row is unclassified for a reason nobody wrote down')
+
+// Uncertainty must not have demoted anything: an unreviewed row stays usable.
+check('an unreviewed row is still offerable',
+  unclassified.every(d => !d.duplicate_of_drill_id),
+  'REVIEW_REQUIRED means unknown, and unknown is not a reason to take a drill away')
+
+// Every demoted row must have left its activity family — a source collection is
+// not a member of a family of real drills.
+const demotedInFamily = snapshotRows.filter(d =>
+  ['source_collection', 'teaching_content'].includes(String(d.resource_kind)) && d.activity_family_id)
+check('no demoted row still holds a place in an activity family',
+  demotedInFamily.length === 0,
+  demotedInFamily.map(d => d.drill_name).join(', '))
 
 console.log('')
 if (failures > 0) { console.log(`${failures} FAILED`); process.exit(1) }

@@ -46,8 +46,42 @@ const URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 const APPLY = process.argv.includes('--apply')
 
-/** The pilot. Every other skill_category is left entirely alone. */
+/**
+ * Phase 1's pilot. Kept as a named constant because the tests assert that the
+ * pilot wrote these three and nothing else.
+ */
 export const PILOT_CATEGORIES = ['Hitting', 'Fielding (Infield)', 'Throwing']
+
+/**
+ * Every skill_category in the library, in the order Phase 2A works through
+ * them. Catching and Fly Balls lead because they carry the coverage blockers.
+ *
+ * Which ones a run actually touches comes from --categories on the command
+ * line, defaulting to the pilot. One batch at a time is the whole safety
+ * model: a demotion that starves a problem stops that batch, and the batches
+ * before it stay written.
+ */
+export const ALL_CATEGORIES = [
+  'Catching', 'Fielding (Fly Balls)', 'Pitching', 'Baserunning', 'Bunting',
+  'Team Defense', 'Soft Toss', 'Warmup', 'Arm Care', 'Athletic Development',
+  ...PILOT_CATEGORIES,
+]
+
+/** Categories this run is allowed to write, from --categories or the pilot. */
+export function requestedCategories(argv: string[] = process.argv): string[] {
+  const flag = argv.find(a => a.startsWith('--categories='))
+  if (!flag) return PILOT_CATEGORIES
+  const raw = flag.slice('--categories='.length)
+  if (raw === 'all') return ALL_CATEGORIES
+  const asked = raw.split('|').map(s => s.trim()).filter(Boolean)
+  const unknown = asked.filter(c => !ALL_CATEGORIES.includes(c))
+  if (unknown.length) {
+    console.error(`Unknown skill_category: ${unknown.join(', ')}`)
+    console.error(`Known: ${ALL_CATEGORIES.join(' | ')}`)
+    process.exit(1)
+  }
+  return asked
+}
 
 /**
  * The fewest drills a taxonomy problem may be left with.
@@ -90,8 +124,10 @@ async function main() {
     process.exit(1)
   }
 
-  const inPilot = (drills as any[]).filter(d => PILOT_CATEGORIES.includes(d.skill_category))
-  console.log(`${drills.length} curated rows, ${inPilot.length} in the pilot categories.\n`)
+  const CATEGORIES = requestedCategories()
+  const inPilot = (drills as any[]).filter(d => CATEGORIES.includes(d.skill_category))
+  console.log(`categories this run: ${CATEGORIES.join(' | ')}`)
+  console.log(`${drills.length} curated rows, ${inPilot.length} in scope.\n`)
 
   // ── what would change ─────────────────────────────────────────────────────
   const { data: families } = await sb.from('drill_activity_families').select('id, slug')

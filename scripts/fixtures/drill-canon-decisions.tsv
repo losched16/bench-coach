@@ -68,7 +68,7 @@ e709ba50-5004-4e9c-a2b6-3abffa809e78	SOURCE_COLLECTION			 	high	no	Covers receiv
 e7bd95b6-d491-49e2-a383-7fc381e7b0ce	KEEP_CANONICAL			 	high	no	One receiving progression with stated glove presentation.
 # ── FIELDING (FLY BALLS) (11) ───────────────────────────────────────────────
 8f9473e4-ff47-41cd-96b1-756aa76a3379	SOURCE_COLLECTION			 	high	no	Two drills in one row, by its own description.
-79c17c8e-3331-4930-a729-a0d18196cf73	SOURCE_COLLECTION		outfield-fly-ball-reads	base	medium	yes	Three progressive drills. DEMOTING THIS LEAVES THE outfield-fly-ball-reads FAMILY WITHOUT A BASE — see report.
+79c17c8e-3331-4930-a729-a0d18196cf73	SOURCE_COLLECTION			 	medium	yes	Three progressive drills. DEMOTING THIS LEAVES THE outfield-fly-ball-reads FAMILY WITHOUT A BASE — see report.
 19e2c8a9-d4a2-48bc-a511-0471f030d2e2	SOURCE_COLLECTION			 	high	no	Three drills covering drop step, footwork and more.
 0dba3ce4-0df5-4905-b95b-09705a5595d5	KEEP_CANONICAL			 	high	no	One communication activity with a stated drill format.
 daea5efc-42ce-4a83-9f07-a867dd6fbddd	KEEP_CANONICAL			 	high	no	One play, one footwork rule, one release.
@@ -79,7 +79,7 @@ daea5efc-42ce-4a83-9f07-a867dd6fbddd	KEEP_CANONICAL			 	high	no	One play, one fo
 7ae1f28a-6e16-4163-b481-1b89226397eb	KEEP_CANONICAL			 	high	no	One priority rule drilled across the two groups.
 744a47da-ef0c-42b0-b961-1175aaad42d9	KEEP_CANONICAL		outfield-fly-ball-reads	base	high	yes	Promoted to family base: the current base 79c17c8e is a collection.
 # ── FIELDING (INFIELD) (22) — PILOT ─────────────────────────────────────────
-f0c8b459-6bb1-499b-8fae-3969e7917846	SOURCE_COLLECTION		ground-ball-fundamentals	base	high	yes	Three beginner drills in one row. DEMOTING THIS LEAVES ground-ball-fundamentals WITHOUT A BASE — 4c68b693 is promoted below.
+f0c8b459-6bb1-499b-8fae-3969e7917846	SOURCE_COLLECTION			 	high	yes	Three beginner drills in one row. DEMOTING THIS LEAVES ground-ball-fundamentals WITHOUT A BASE — 4c68b693 is promoted below.
 64c760e9-fb4d-449a-ba23-81dd057e0b11	SOURCE_COLLECTION			 	high	no	Four drills in one row, by its own description.
 5afa81e5-ec55-4066-b62f-1b535884060b	KEEP_CANONICAL			 	high	no	Specific first-base work around the bag.
 0833de14-902c-408a-a3a9-a8c4df28c4f1	KEEP_CANONICAL			 	high	no	Specific, named footwork pattern. Brief: keep.
@@ -244,3 +244,25 @@ d6a3170b-ec74-4e4f-96df-64fba2aed225	REVIEW_REQUIRED			 	low	yes	A pre-practice 
 # ── WARMUP (2) ──────────────────────────────────────────────────────────────
 3df6814c-4d77-4592-8693-9fd419ded05c	PRACTICE_UNIT			 	high	no	Eight named exercises run as one warm-up block.
 ab8f57ca-ebf4-49b7-8f08-e62e5dd54a3f	PRACTICE_UNIT			 	high	no	A dynamic warm-up routine run as one block.
+# ── PHASE 2A COVERAGE RESCUE (3) — written for BenchCoach, migration 063 ────
+#
+# These exist because Phase 1's demotions left three problems with nothing a
+# coach could be handed. They are canonical by construction: each was authored
+# as one runnable activity for one problem.
+3013e235-fd0a-5e1a-82a8-94bd2384f9d4	KEEP_CANONICAL			 	high	no	Written for fear-fly-balls, whose only mapped row was a three-drill compilation. Progressive exposure with the distance as the dial.
+fbbf59c6-6024-5692-9db9-6a0257139f65	KEEP_CANONICAL			 	high	no	Written for no-changeup, whose three mapped rows were all grip explanations with no rep structure.
+e6299ad6-888e-5507-a5a5-57cdf5359996	KEEP_CANONICAL			 	high	no	Written for plate-confidence, which had a compilation, a parent-facing video, and a CATCHING row mis-mapped to a hitting problem.
+# ── PHASE 2A.5 NEW ACTIVITIES (9) — migration 065 ───────────────────────────
+#
+# Genuinely missing, checked by name and by concept against all 211 rows.
+# Six candidates from the research list were DROPPED as near-duplicates of rows
+# the library already has; migration 065's header names each and says why.
+2a82682f-f56c-527b-ba67-b57bd5a62e4d	KEEP_CANONICAL			 	high	no	Stride control as a constraint. The three existing stride rows are all PITCHING stride; nothing constrained a hitter's.
+9847fa60-e5cd-53af-9831-5c6424dfe80c	KEEP_CANONICAL			 	high	no	The shortest gap between now and swing. Distinct from bounce toss, which still gives the hitter an arc to read.
+2f3326af-9848-534e-9cc2-3d0f628c1162	KEEP_CANONICAL			 	high	no	Recovery after a misplay. The library drilled clean ground balls almost exclusively.
+f3ca0dde-8e0c-56f3-8791-29c0e51045f2	KEEP_CANONICAL			 	high	no	The 3-1 play. Nothing in the library covered the pitcher covering first.
+07a59bb9-1b7c-554a-a1f1-98f4af671e21	KEEP_CANONICAL			 	high	no	Catching a fly ball while already moving. Every existing outfield row starts the player stationary.
+d358d3cd-7da8-5baf-9843-3fe2a81a6773	KEEP_CANONICAL			 	high	no	Attaches the sprint to the swing. Baserunning held 13 rows and nothing joining the two.
+92366675-97a6-5d04-b3b6-5a2909ce858f	KEEP_CANONICAL			 	high	no	Through the bag or around it, decided while moving. No row covered the choice.
+3e15ab9d-f443-5a82-87df-8c4cc418c2e6	KEEP_CANONICAL			 	high	no	Tagging up. Nothing in 211 rows mentioned it.
+3f65e53c-eebc-511c-89a9-23e519dffba0	KEEP_CANONICAL			 	high	no	Reading a ball in the dirt. Nothing in 211 rows mentioned it.

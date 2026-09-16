@@ -150,10 +150,15 @@ function csvCell(v: any): string {
  * worth knowing about, so the script says which source it used, every time.
  */
 async function loadLibrary(): Promise<{ rows: any[]; source: string }> {
+  // channel and thumbnail_url are here because scripts/test-drill-media.ts
+  // builds media rows from this snapshot and reads both. Leaving them out does
+  // not fail anything — it makes every assertion about them compare null to
+  // null and pass while production holds real values, which is worse.
   const COLS =
     'id, drill_name, skill_category, youtube_video_id, youtube_url, ' +
-    'youtube_start_seconds, youtube_start_source, activity_family_id, ' +
-    'variation_type, created_by_coach_id, status'
+    'youtube_start_seconds, youtube_start_source, channel, thumbnail_url, ' +
+    'activity_family_id, variation_type, resource_kind, ' +
+    'duplicate_of_drill_id, created_by_coach_id, status'
 
   if (URL && KEY) {
     const sb = createClient(URL, KEY)

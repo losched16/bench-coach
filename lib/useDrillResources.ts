@@ -21,6 +21,9 @@ export interface DrillResource {
   // Present only on the ?include=all payload. NULL or absent means nobody has
   // classified this row, which is the normal state and counts as runnable.
   resource_kind?: string | null
+  // Set on a true duplicate. findDrill still searches these so a saved plan
+  // naming the duplicate resolves; the browse list filters them out.
+  duplicate_of_drill_id?: string | null
 }
 
 // Simple in-memory cache.

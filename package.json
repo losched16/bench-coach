@@ -76,7 +76,9 @@
     "test:schedulable": "npx --yes tsx --tsconfig tsconfig.json scripts/test-schedulable.ts",
     "test:drill-media": "npx --yes tsx --tsconfig tsconfig.json scripts/test-drill-media.ts",
     "test:canon-history": "npx --yes tsx --tsconfig tsconfig.json scripts/test-canon-history.ts",
-    "test:migration-062": "bash scripts/test-migration-062.sh"
+    "test:migration-062": "bash scripts/test-migration-062.sh",
+    "test:duplicates": "npx --yes tsx --tsconfig tsconfig.json scripts/test-duplicates.ts",
+    "test:migration-064": "bash scripts/test-migration-064.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

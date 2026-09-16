@@ -26,31 +26,58 @@ function check(label: string, cond: boolean, detail?: string) {
 
 const LIBRARY: any[] = JSON.parse(readFileSync('scripts/fixtures/drill-library-snapshot.json', 'utf8'))
 
-// ── the video columns are frozen ───────────────────────────────────────────
+// ── the video columns of every Phase 1 row are frozen ─────────────────────
 //
-// Taken from production BEFORE migration 062, the media backfill and the
-// Hitting/Infield/Throwing classification pass, and re-read from production
-// after all three. Identical both times.
+// Taken from production BEFORE migration 062 and re-read after every write in
+// Phase 1 and Phase 2A. Identical every time.
 //
-// This is the whole "no video is touched" claim reduced to one number. Any
-// future change that edits a youtube_* column, or renames a drill, or drops a
-// row, moves it — including a change that means to. That is the point: moving
-// it should require saying so here, in a commit, rather than happening.
-const VIDEO_COLUMNS_BEFORE_PHASE_1 = '2e01642dcd2801686b8a594cd64e0cff'
+// Frozen PER ROW rather than as one library-wide hash, because the library is
+// allowed to grow — Phase 2A added twelve activities — and a whole-library
+// checksum would have to be edited on every legitimate addition, which is
+// exactly how a freeze stops meaning anything. What may never change is an
+// EXISTING row's video, and that is what this asserts. A row that vanishes from
+// the library fails it too.
+const BASELINE = JSON.parse(readFileSync('scripts/fixtures/video-baseline.json', 'utf8'))
+const byId = new Map(LIBRARY.map((d: any) => [d.id, d]))
+const f = (v: any) => v === null || v === undefined ? '~' : String(v)
 
-const videoFingerprint = createHash('md5').update(
-  LIBRARY.slice().sort((a, b) => String(a.id).localeCompare(String(b.id))).map(d =>
+const changed: string[] = []
+const vanished: string[] = []
+for (const [id, frozen] of Object.entries(BASELINE.rows as Record<string, string>)) {
+  const d = byId.get(id)
+  if (!d) { vanished.push(id); continue }
+  const now = [d.youtube_video_id, d.youtube_url, d.youtube_start_seconds, d.youtube_start_source]
+    .map(f).join('|')
+  if (now !== frozen) changed.push(`${d.drill_name}: ${frozen} -> ${now}`)
+}
+
+check(`not one of the ${Object.keys(BASELINE.rows).length} original rows had its video changed`,
+  changed.length === 0, changed.slice(0, 3).join(' ; '))
+check('...and not one of them was deleted', vanished.length === 0,
+  `${vanished.length} missing`)
+
+// The aggregate the Phase 1 closeout reported, reconstructed from the same
+// rows, so the number in that document stays checkable.
+const originals = LIBRARY.filter((d: any) => BASELINE.rows[d.id])
+const aggregate = createHash('md5').update(
+  originals.map((d: any) =>
     [d.id, d.drill_name, d.youtube_video_id, d.youtube_url, d.youtube_start_seconds,
-     d.youtube_start_source, d.channel, d.thumbnail_url]
-      .map(v => v === null || v === undefined ? '~' : String(v)).join('|')
-  ).join('\n')
+     d.youtube_start_source, d.channel, d.thumbnail_url].map(f).join('|')
+  ).sort().join('\n')
 ).digest('hex')
+check('the Phase 1 closeout checksum still reconstructs',
+  aggregate === BASELINE.checksum, `${aggregate} vs ${BASELINE.checksum}`)
 
-check('not one video column changed across the whole of Phase 1',
-  videoFingerprint === VIDEO_COLUMNS_BEFORE_PHASE_1,
-  `expected ${VIDEO_COLUMNS_BEFORE_PHASE_1}, got ${videoFingerprint}`)
+check('the library has grown rather than shrunk',
+  LIBRARY.length >= Object.keys(BASELINE.rows).length,
+  `${LIBRARY.length} now, ${Object.keys(BASELINE.rows).length} frozen`)
 
-check('...and no curated row was deleted', LIBRARY.length === 208, `${LIBRARY.length} rows`)
+// The snapshot must carry the columns this file reads, or every assertion
+// about channel and thumbnail compares null to null and passes for nothing.
+check('the snapshot carries channel and thumbnail_url',
+  LIBRARY.some((d: any) => d.channel) && LIBRARY.some((d: any) => d.thumbnail_url),
+  'refresh scripts/build-canon-audit.ts COLS — a narrowed projection makes this file lie')
+
 
 // ── 12-14. the backfill loses nothing and invents nothing ──────────────────
 

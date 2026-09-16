@@ -103,6 +103,12 @@ export interface DrillRecord {
   progression_notes?: string | null
   advanced_progression_notes?: string | null
 
+  // The canonical row this one duplicates (migration 064). Set only for TRUE
+  // duplicates — the same activity written twice — never for a variation or a
+  // progression, which are different activities a coach might choose between.
+  // Resolvable by id through visibleDrills; excluded from schedulableDrills.
+  duplicate_of_drill_id?: string | null
+
   // What this row IS (migration 062). activity | practice_unit |
   // source_collection | teaching_content, or NULL for anything nobody has
   // classified — which includes every coach-authored drill and every curated
@@ -136,7 +142,7 @@ export const DRILL_FIELDS =
   'safety_notes, min_age, max_age, age_range, competition_level, mechanic_focus, ' +
   'common_flaws_fixed, indoor_outdoor, space_required, requires_partner, ' +
   'reps_guidance, frequency_guidance, success_markers, est_duration_minutes, ' +
-  'status, source, created_by_coach_id, resource_kind, ' +
+  'status, source, created_by_coach_id, resource_kind, duplicate_of_drill_id, ' +
   // Practice intelligence (056). Selected in the same round trip rather than a
   // second query: retrieval already pulls the whole library once and ranks it
   // in memory, and a per-drill lookup for these would be the N+1 the brief
@@ -243,6 +249,11 @@ export async function visibleDrillsSafe(
 //
 // So: discovery — "what should I run?" — goes through schedulableDrills.
 // History — "what did this id refer to?" — stays on visibleDrills.
+//
+// Migration 064 adds a second reason a visible row may not be schedulable:
+// duplicate_of_drill_id. A row that is the same activity as another, written
+// twice, is excluded from discovery and still resolves by id — the same split,
+// applied to duplication rather than to kind.
 
 /**
  * Every value resource_kind is allowed to hold, matching the CHECK constraint
@@ -318,6 +329,11 @@ export function schedulableDrills(
   //     schedulableDrillsSafe catches that; this avoids needing it to.
   return visibleDrills(supabase, coachId, fields)
     .or(`resource_kind.is.null,resource_kind.in.(${allowed.join(',')})`)
+    // A true duplicate is the same activity as another row, so offering it is
+    // offering the same drill twice. Plain `.is(...)` rather than an `or`:
+    // there is no "unknown" case here — a row either points at a canonical or
+    // it does not, and every row that does has a better row to show instead.
+    .is('duplicate_of_drill_id', null)
 }
 
 /**
@@ -347,7 +363,7 @@ export async function schedulableDrillsSafe(
   const legacyFields = fields
     .split(',')
     .map(f => f.trim())
-    .filter(f => f !== 'resource_kind')
+    .filter(f => f !== 'resource_kind' && f !== 'duplicate_of_drill_id')
     .join(', ')
 
   const second = await visibleDrillsSafe(supabase, coachId, legacyFields, apply)
@@ -362,6 +378,10 @@ export async function schedulableDrillsSafe(
  * applied by PostgREST or by JavaScript.
  */
 export function isSchedulable(d: any, options: SchedulableOptions = {}): boolean {
+  // Checked before the kind: a duplicate of a perfectly good activity is still
+  // not something to offer, and its own resource_kind says 'activity'.
+  if (d?.duplicate_of_drill_id) return false
+
   const kind = d?.resource_kind
   if (kind === null || kind === undefined || kind === '') return true
   if ((NOT_SCHEDULABLE as readonly string[]).includes(kind)) return false

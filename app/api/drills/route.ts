@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
     // change demotes; without this they would lose their video card.
     const includeAll = searchParams.get('include') === 'all'
     const fields = 'id, drill_name, youtube_video_id, youtube_url, thumbnail_url, channel, description, skill_category, difficulty_level, common_flaws_fixed, ai_coaching_notes' +
-      (includeAll ? ', resource_kind' : '')
+      (includeAll ? ', resource_kind, duplicate_of_drill_id' : '')
 
     // Spelled out as two branches rather than picking the helper with a
     // ternary. A ternary reads fine and is invisible to grep — and grep is
