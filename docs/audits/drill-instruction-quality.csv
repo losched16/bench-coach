@@ -20,7 +20,7 @@ fbbe6484-8b9d-486b-839e-23114e600c77,Groundball Transfer Catch,Fielding (Infield
 971dccd3-bc0f-4043-9e2d-3417fc6f7361,Double-Play Feeds & Turns,Fielding (Infield),activity,,,432,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,READY,NONE,high,
 4c68b693-a617-4827-a732-653c2a64a27d,The Flamingo Drill,Fielding (Infield),activity,base,c0facd55-0073-4488-8bd6-74bc884a1afe,430,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
 c345c3a1-bda3-43f7-b6f3-16e77432ab83,Figure Eight Infield Drill,Fielding (Infield),activity,,,424,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
-adf1d78d-fbe5-417c-a2d0-5860e555b356,The Best Youth Infield Drill,Fielding (Infield),,,,493,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
+adf1d78d-fbe5-417c-a2d0-5860e555b356,The Best Youth Infield Drill,Fielding (Infield),activity,,,493,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
 9fea10f7-efb9-4006-bce8-7a6109bb7fbe,Protect the Castle,Fielding (Infield),activity,base,f2a7e03a-e60b-40ce-9b0f-50a4a52ea593,388,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
 3a2f690d-095d-46ea-98e8-088a7a7ea7db,Throwing Accuracy Race — Competitive Catch Under Pressure,Throwing,activity,,,232,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
 726384a7-dacf-440b-8b42-381843a01722,Over-Under — Two Ways to Throw and Catch,Throwing,activity,,,219,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
@@ -46,7 +46,7 @@ ce798b52-883f-4cf3-a6b8-311ef084a1be,Funnel Drill — Correct Arm Path Out of th
 2ac95ee1-db4f-4ab1-b2ec-569a5419b6ef,Second Baseman Flip/Throw Combo,Throwing,activity,,,444,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,READY,NONE,high,
 5b5b59e9-4906-4ba5-ad8b-1e9608041ef5,Partner Catch,Throwing,activity,,,446,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
 69d859e5-5214-4b2d-b42f-07fcc56ff519,"Throwing Progression for Youth Players — Knee, Hip, Full",Throwing,practice_unit,base,c01ac61d-ac35-4280-afc2-82d51fc95f8d,440,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
-d6a3170b-ec74-4e4f-96df-64fba2aed225,Warm-Up Catch,Throwing,,,,464,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
+d6a3170b-ec74-4e4f-96df-64fba2aed225,Warm-Up Catch,Throwing,practice_unit,,,464,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
 012241e0-c2ce-4a32-b037-39f90bd35437,Extreme Catch — Progressive Distance Arm Builder,Throwing,activity,,,395,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,READY,NONE,high,
 3f2af696-fe22-4fb6-936f-fefe7d86681a,Long Toss,Throwing,activity,base,770a5e11-bc25-4641-b73d-8155afdb48fc,409,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,READY,NONE,high,
 0ddcfd4a-2520-4d3a-ae98-b647bf07c49b,One-Hand Tee Drill (Top Hand),Hitting,activity,progression,0ca15713-64e1-4c3c-96ba-1ea78374e63f,221,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
@@ -67,7 +67,7 @@ ee6aa905-1e2c-4f96-8eff-4dc22fc01d4f,Mini Wiffle Ball & Skinny Bat Drill,Hitting
 a50f834a-2912-4b0d-9da2-e6856760b644,Frisbee Drill — Hip Rotation & Finish,Hitting,activity,,,271,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
 5381544c-f5e5-4e30-a9e8-fe049a090a07,Happy Gilmore / Walking Load Drill,Hitting,activity,,,276,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
 ca7017e4-6fa1-4440-8d93-e08dd55eeaa8,Two-Strike Hitting Adjustment Drill,Hitting,activity,,,256,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
-6c655fff-6181-4b7b-b22b-e1401e2e1f27,Stay Back — Beat the Changeup,Hitting,,,,434,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
+6c655fff-6181-4b7b-b22b-e1401e2e1f27,Stay Back — Beat the Changeup,Hitting,activity,,,434,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
 aeae3e6a-487e-4f74-874d-edfeb83d3446,The Move-'Em At-Bat — Advancing Runners,Hitting,activity,,,452,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
 2a82682f-f56c-527b-ba67-b57bd5a62e4d,Stride Box,Hitting,activity,,,412,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
 769ab66e-93c9-41bb-8519-91bd3e0ab186,Oppo Tee & Toss — Stay Inside the Ball,Hitting,activity,,,484,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
@@ -123,33 +123,33 @@ b610bf25-fbc7-46e3-9c8a-16e07224bf70,Bent-Leg Slide Basics — The Right Way to 
 ecf4c61b-0b8b-49bd-bbe5-697d42991d79,Base Running Circuit,Baserunning,practice_unit,,,435,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
 5f398d5c-6377-4119-b5b7-99b81f4b8028,MLB-Style Receiving & Framing Circuit,Catching,practice_unit,,,187,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
 e7bd95b6-d491-49e2-a383-7fc381e7b0ce,Youth Receiving Foundations — Quiet Glove & Soft Hands,Catching,activity,,,194,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,READY,NONE,high,
-478cb186-6370-494d-b94a-47136344ccd8,One-Knee Receiving — Advanced Framing Setup,Catching,,,,466,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
+478cb186-6370-494d-b94a-47136344ccd8,One-Knee Receiving — Advanced Framing Setup,Catching,practice_unit,,,466,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
 367642e8-dfd4-4988-90e5-f2c4d10b3401,Catcher Throw-Down Footwork to Second,Catching,activity,,,431,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,READY,NONE,high,
 808e703f-d60e-4a0b-8cbd-845bcb4cc1bb,Game-Speed Reaction Blocking,Catching,activity,,,443,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,READY,NONE,high,
 babe5481-655c-4c2e-9985-2465937c1067,Blocking the Right Way — Technique to Reaction Reps,Catching,activity,,,493,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,READY,NONE,high,
-a559ea0e-7d73-4920-905f-ccb86e117f4e,Flamingo Balance Drill — Single-Leg Stability,Pitching,activity,,,283,yes,yes,no,yes,yes,yes,yes,no,no,no,no,yes,USABLE,COMPLETE_MISSING,medium,fewer than two success markers; no progression or regression; no practice role
-41ff62cc-fb54-4266-8d0c-083a1c341161,Follow-Through Hold Drill — Finishing Strong,Pitching,activity,,,289,yes,yes,no,yes,yes,yes,yes,no,no,no,no,yes,USABLE,COMPLETE_MISSING,medium,fewer than two success markers; no progression or regression; no practice role
-b22aa9c8-7cd1-4dc0-bba3-c66b03396e21,The Heel-Toe Drill — Front Foot Landing,Pitching,activity,,,272,yes,yes,no,yes,yes,yes,yes,no,no,no,no,yes,USABLE,COMPLETE_MISSING,medium,fewer than two success markers; no progression or regression; no practice role
-b1c3653c-82a0-446e-a9cb-0dd5ebf09864,Glove-Side Pull Drill — Front Side Control,Pitching,activity,,,284,yes,yes,no,yes,yes,yes,yes,no,no,no,no,yes,USABLE,COMPLETE_MISSING,medium,fewer than two success markers; no progression or regression; no practice role
-f47eba7c-bf41-4e1a-8a65-882f6fdcb0b1,Stride Direction Drill — Using a Chalk Line or Tape,Pitching,activity,,,289,yes,yes,no,yes,yes,yes,yes,no,no,no,no,yes,USABLE,COMPLETE_MISSING,medium,fewer than two success markers; no progression or regression; no practice role
-94124e82-c8f2-411b-9daa-f0a1a176663e,Kneel-Down (Wrist Snap) Drill — Release Point & Backspin,Pitching,activity,,,292,yes,yes,no,yes,yes,yes,yes,no,no,no,no,yes,USABLE,COMPLETE_MISSING,medium,fewer than two success markers; no progression or regression; no practice role
-03eab7d0-7e67-4143-91e5-b8e4e783014a,The Rocker Drill — Hip Lead & Weight Shift,Pitching,activity,,,335,yes,yes,no,yes,yes,yes,yes,no,no,no,no,yes,USABLE,COMPLETE_MISSING,medium,fewer than two success markers; no progression or regression; no practice role
-ffc26e2a-7801-42b7-b610-9a996527e638,Square Hips / Hip Lock Drill — Hip-Shoulder Separation,Pitching,activity,,,322,yes,yes,no,yes,yes,yes,yes,no,no,no,no,yes,USABLE,COMPLETE_MISSING,medium,fewer than two success markers; no progression or regression; no practice role
-93cf7e08-9bd0-48c3-a344-26e092c651e7,Towel Drill — Arm Speed & Release Point,Pitching,activity,,,339,yes,yes,no,yes,yes,yes,yes,yes,no,no,no,yes,USABLE,COMPLETE_MISSING,medium,fewer than two success markers; no progression or regression
-a54d536f-e4f0-4dd5-91d2-d007bd274250,Balance Point Drill — Leg Lift & Pause,Pitching,activity,,,297,yes,yes,yes,yes,yes,yes,yes,yes,no,no,no,yes,USABLE,COMPLETE_MISSING,medium,fewer than two success markers; no progression or regression
-cf56cda8-d397-4ed7-873b-560b78d6473e,The Swing Shuffle Drill — Momentum & Rhythm,Pitching,activity,,,322,yes,yes,yes,yes,yes,yes,yes,no,no,no,no,yes,USABLE,COMPLETE_MISSING,medium,fewer than two success markers; no progression or regression; no practice role
+a559ea0e-7d73-4920-905f-ccb86e117f4e,Flamingo Balance Drill — Single-Leg Stability,Pitching,activity,,,283,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
 253fee8d-d86f-497b-83db-44e622fb0a2d,4-Part Windup Drill — Breaking Down the Delivery,Pitching,practice_unit,,,277,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
+41ff62cc-fb54-4266-8d0c-083a1c341161,Follow-Through Hold Drill — Finishing Strong,Pitching,activity,,,289,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
+f47eba7c-bf41-4e1a-8a65-882f6fdcb0b1,Stride Direction Drill — Using a Chalk Line or Tape,Pitching,activity,,,289,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
+cf56cda8-d397-4ed7-873b-560b78d6473e,The Swing Shuffle Drill — Momentum & Rhythm,Pitching,activity,,,322,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
+b1c3653c-82a0-446e-a9cb-0dd5ebf09864,Glove-Side Pull Drill — Front Side Control,Pitching,activity,,,284,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
+94124e82-c8f2-411b-9daa-f0a1a176663e,Kneel-Down (Wrist Snap) Drill — Release Point & Backspin,Pitching,activity,,,292,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
+ffc26e2a-7801-42b7-b610-9a996527e638,Square Hips / Hip Lock Drill — Hip-Shoulder Separation,Pitching,activity,,,322,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
+93cf7e08-9bd0-48c3-a344-26e092c651e7,Towel Drill — Arm Speed & Release Point,Pitching,activity,,,339,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
+b22aa9c8-7cd1-4dc0-bba3-c66b03396e21,The Heel-Toe Drill — Front Foot Landing,Pitching,activity,,,417,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
 25b42f9f-7769-47ac-ad0e-f9140091660e,The Lawnmower Drill — Arm Action & Wrist Snap,Pitching,activity,,,449,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
+a54d536f-e4f0-4dd5-91d2-d007bd274250,Balance Point Drill — Leg Lift & Pause,Pitching,activity,,,447,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
 77722605-74bc-44b8-9581-fdd1c7d9a4d3,Wrist Snap Drill,Pitching,activity,,,455,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
-e5d28c39-30b0-48fd-9534-8a43cd8154db,Hip Lead Drill,Pitching,,,,453,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
+03eab7d0-7e67-4143-91e5-b8e4e783014a,The Rocker Drill — Hip Lead & Weight Shift,Pitching,activity,,,462,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
+e5d28c39-30b0-48fd-9534-8a43cd8154db,Hip Lead Drill,Pitching,activity,,,453,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
 fbbf59c6-6024-5692-9db9-6a0257139f65,Changeup Catch Play,Pitching,activity,,,463,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,READY,NONE,high,
-2da70c16-18d3-4b63-8eca-12804ac048ea,"Calm Rundowns — Push Back, Follow Your Throw",Team Defense,activity,progression,ced192f0-32a9-4137-b521-f22b4822d782,160,yes,yes,yes,yes,yes,yes,yes,yes,no,no,yes,yes,USABLE,COMPLETE_MISSING,medium,description is thin on setup or execution; no progression or regression
-dac833d7-c4f6-42ce-8409-ea83dd77fa65,Two-Base Pickle Drill,Team Defense,activity,base,ced192f0-32a9-4137-b521-f22b4822d782,158,yes,yes,yes,yes,yes,yes,yes,yes,no,no,yes,yes,USABLE,COMPLETE_MISSING,medium,description is thin on setup or execution; no progression or regression
-b1f220a4-fdc3-4750-810f-b431e0c8a16f,Cutoff Responsibilities by Situation,Team Defense,activity,advanced,b38a7a6a-495e-43f5-a77d-d791c84ce300,173,yes,yes,yes,yes,yes,yes,yes,yes,no,no,yes,yes,USABLE,COMPLETE_MISSING,medium,description is thin on setup or execution; no progression or regression
-ef98c922-d86a-46ea-913c-903b41c8ba2e,"Line Relay Race — Catch, Turn, Throw",Team Defense,activity,base,b38a7a6a-495e-43f5-a77d-d791c84ce300,187,yes,yes,yes,yes,yes,yes,yes,yes,no,no,yes,yes,USABLE,COMPLETE_MISSING,medium,no progression or regression
-62b2ed36-03da-4e9d-a424-1d94620fde7d,Machine-Fed Relay Sequences at Game Speed,Team Defense,activity,,,154,yes,yes,yes,yes,yes,yes,yes,no,no,no,yes,yes,USABLE,COMPLETE_MISSING,medium,description is thin on setup or execution; no progression or regression; no practice role
-37f0c306-4c6c-4fa6-8491-96fa90893be9,Little League Cuts & Relays System,Team Defense,activity,progression,b38a7a6a-495e-43f5-a77d-d791c84ce300,173,yes,yes,yes,yes,yes,yes,yes,yes,no,no,yes,yes,USABLE,COMPLETE_MISSING,medium,description is thin on setup or execution; no progression or regression
+ef98c922-d86a-46ea-913c-903b41c8ba2e,"Line Relay Race — Catch, Turn, Throw",Team Defense,activity,base,b38a7a6a-495e-43f5-a77d-d791c84ce300,187,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,READY,NONE,high,
+2da70c16-18d3-4b63-8eca-12804ac048ea,"Calm Rundowns — Push Back, Follow Your Throw",Team Defense,activity,progression,ced192f0-32a9-4137-b521-f22b4822d782,493,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,READY,NONE,high,
+dac833d7-c4f6-42ce-8409-ea83dd77fa65,Two-Base Pickle Drill,Team Defense,activity,base,ced192f0-32a9-4137-b521-f22b4822d782,493,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,READY,NONE,high,
+b1f220a4-fdc3-4750-810f-b431e0c8a16f,Cutoff Responsibilities by Situation,Team Defense,activity,advanced,b38a7a6a-495e-43f5-a77d-d791c84ce300,465,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,READY,NONE,high,
+62b2ed36-03da-4e9d-a424-1d94620fde7d,Machine-Fed Relay Sequences at Game Speed,Team Defense,activity,,,457,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,READY,NONE,high,
 91bc52cf-a234-4ad3-97a6-6df6038c752c,Game-Speed Rundown Execution,Team Defense,activity,advanced,ced192f0-32a9-4137-b521-f22b4822d782,453,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,READY,NONE,high,
+37f0c306-4c6c-4fa6-8491-96fa90893be9,Little League Cuts & Relays System,Team Defense,activity,progression,b38a7a6a-495e-43f5-a77d-d791c84ce300,491,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,READY,NONE,high,
 f3ca0dde-8e0c-56f3-8791-29c0e51045f2,"Grounder to First, Pitcher Covers",Team Defense,activity,,,400,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,READY,NONE,high,
 ab8f57ca-ebf4-49b7-8f08-e62e5dd54a3f,Dynamic Warm-Up with Arm Stretches,Warmup,practice_unit,,,214,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,
 3df6814c-4d77-4592-8693-9fd419ded05c,8 Baseball Warm-Up Exercises You Must Do,Warmup,practice_unit,,,243,yes,yes,yes,yes,yes,yes,yes,yes,yes,yes,no,yes,READY,NONE,high,

@@ -2,6 +2,10 @@
 -- 068 — The last five unreviewed rows, and the taxonomy gaps
 -- ============================================================================
 --
+-- APPLIED to production on 2026-09-16. REVIEW_REQUIRED went to zero, the bad
+-- plate-confidence mapping is gone, 26 mappings landed, and starved problems
+-- stayed at zero in both the schedulable and the prescribe-compatible pools.
+--
 -- Two jobs that share a transaction because they share a risk: both change what
 -- the prescription engine is allowed to offer, and the only thing that must not
 -- happen is a problem_taxonomy entry ending up with nothing behind it.
