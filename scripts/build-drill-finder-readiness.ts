@@ -125,14 +125,24 @@ async function main() {
   console.log(`generic compilation      ${compilation} of ${rows.length}`)
   console.log(`no media at all          ${noMedia} of ${rows.length}`)
 
-  const verdict = stamped === 0 ? 'NOT READY'
+  // The verdict is about the MEDIA, not about the Finder.
+  //
+  // It used to read "Drill Finder: NOT READY", which was the right sentence in
+  // Phase 2C — the question then was whether the redesign could go ahead. Phase
+  // 2D answered that by shipping a Finder that leads with the activity and
+  // needs no timestamp at all, so the same number now means something narrower:
+  // media still cannot be promoted to a lead object. Leaving the old wording
+  // would have this script reporting a blocked redesign that is live.
+  const verdict = stamped === 0 ? 'NOT READY TO LEAD'
     : compilation / rows.length > 0.2 ? 'PARTIAL'
-    : 'READY'
-  console.log(`\nDrill Finder: ${verdict}`)
-  if (verdict === 'NOT READY') {
+    : 'READY TO LEAD'
+  console.log(`\nMedia as a lead object: ${verdict}`)
+  if (verdict === 'NOT READY TO LEAD') {
     console.log(`  Not one schedulable activity has a curated timestamp, and ${compilation} would`)
-    console.log('  open a coach on a compilation. Leading a card with media would promise')
-    console.log('  something the library cannot yet deliver.')
+    console.log('  open a coach on a compilation. The Finder therefore keeps media below the')
+    console.log('  written drill and labels an unverified shared video "Source video".')
+    console.log(`  Instructions are complete on ${count(rows, r => r.instructions_complete === 'yes')} of ${rows.length}, which is what the`)
+    console.log('  activity-first card is built on.')
   }
 }
 

@@ -42,6 +42,12 @@ import { schedulableDrills, DRILL_FIELDS, DrillRecord } from '@/lib/drills'
 import { watchUrl } from '@/lib/drillVideo'
 import { scoreDrillRelevance } from '@/lib/analysis'
 import { Diagnosis, TaxonomyRow, diagnose, loadTaxonomy, ageCaveats } from '@/lib/drillDiagnosis'
+// The three physical-world predicates live in their own module so the Drill
+// Finder can import them in the browser without dragging the Anthropic SDK in
+// behind them. Re-exported so every existing caller of this module is
+// unaffected, and so there stays exactly one copy of the rules.
+import { environmentEligible, spaceEligible, equipmentEligible } from '@/lib/drillEligibility'
+export { environmentEligible, spaceEligible, equipmentEligible }
 
 // ---------------------------------------------------------------------------
 // Inputs and outputs
@@ -391,61 +397,6 @@ export function competitionAffinity(d: DrillRecord, level?: string | null): numb
   const c = lower(d.competition_level)
   if (!c || c === 'both') return 0
   return c === lower(level) ? 1 : -1
-}
-
-/**
- * Indoor/outdoor. `Both` and `Indoor/Outdoor` satisfy either request.
- *
- * Only exclusionary in one direction that matters: asking for indoor must not
- * return an outdoor-only drill. Asking for outdoor keeps everything, since an
- * indoor drill run outside is merely unnecessary, not impossible.
- */
-export function environmentEligible(d: DrillRecord, want?: 'indoor' | 'outdoor' | null): boolean {
-  if (!want) return true
-  const v = lower(d.indoor_outdoor)
-  if (!v || v.includes('both') || v.includes('/')) return true
-  // Asymmetric on purpose. A coach stuck in a gym cannot run an outdoor-only
-  // drill, so "indoor" genuinely excludes. But an indoor drill run outside is
-  // merely unnecessary, not impossible — so "outdoor" excludes nothing and the
-  // preference is expressed by scoring instead.
-  //
-  // (Production only stores Outdoor, Both and Indoor/Outdoor today, so this
-  // branch is defensive rather than load-bearing — but the column is free text
-  // and a plain "Indoor" would otherwise start silently disappearing.)
-  if (want === 'outdoor') return true
-  return v.includes('indoor')
-}
-
-const SPACE_RANK: Record<string, number> = {
-  small: 1, medium: 2, 'medium-large': 3, large: 3, 'outfield/large': 4, outfield: 4, field: 4,
-}
-
-/** A drill needing more room than the coach has is out. Unknown space passes. */
-export function spaceEligible(d: DrillRecord, have?: 'small' | 'medium' | 'large' | null): boolean {
-  if (!have) return true
-  const need = SPACE_RANK[lower(d.space_required)]
-  if (need == null) return true
-  const got = SPACE_RANK[have]
-  return got == null ? true : need <= got
-}
-
-/**
- * Equipment.
- *
- * Substring matching in both directions, because the library says "Tee" and a
- * coach says "batting tee". An empty or absent list means unknown — the coach
- * has not told us they own nothing.
- */
-export function equipmentEligible(d: DrillRecord, have?: string[] | null): boolean {
-  if (!have || have.length === 0) return true
-  const needs = asArray(d.equipment_needed).map(lower).filter(Boolean)
-  if (needs.length === 0) return true
-  const got = have.map(lower)
-  return needs.every(n =>
-    // "none" and "no equipment" are library values meaning exactly that.
-    n.includes('none') || n === 'no equipment' ||
-    got.some(g => g.includes(n) || n.includes(g))
-  )
 }
 
 /** Score one drill against the diagnosis, the query and the context. */

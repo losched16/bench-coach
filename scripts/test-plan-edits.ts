@@ -123,6 +123,22 @@ eq('...and it carries the drill through', replaced[1].equipment, ['L-screen'])
 eq('a replacement may take its own length when asked',
   replaceBlock(PLAN(), 1, blockFromDrill(NEW_DRILL, 25), { keepMinutes: false })[1].minutes, 25)
 
+// Phase 2D: the id travels with the block, so a reader no longer has to resolve
+// the library by name. Name-only resolution still has to work — every plan
+// saved before this has no id on any block — but a block built from a real
+// library row should not need it. "Wall Ball" is a substring of "Wall Ball Solo
+// Drill — Partner-Free Mechanics Builder" and both are schedulable.
+const WITH_ID = { ...NEW_DRILL, id: '2a82682f-f56c-527b-ba67-b57bd5a62e4d' }
+eq('a block built from a library row carries its id',
+  blockFromDrill(WITH_ID).drill_id, '2a82682f-f56c-527b-ba67-b57bd5a62e4d')
+eq('...and still carries the name for the readers that predate it',
+  blockFromDrill(WITH_ID).drill_name, 'Front Toss')
+check('a drill with no id produces no drill_id key at all',
+  !('drill_id' in blockFromDrill(NEW_DRILL)),
+  'an undefined drill_id would survive JSON.stringify as a key on some paths')
+check('a coach-written activity has no drill_id',
+  !('drill_id' in customActivityBlock({ title: 'Parent volunteer briefing' })))
+
 // One station, not the rotation.
 const stationSwap = replaceStation(PLAN(), 2, 1, blockFromDrill({ drill_name: 'Backhand Series' }))
 eq('only the named station changes',

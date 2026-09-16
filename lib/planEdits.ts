@@ -184,6 +184,11 @@ export function blockFromDrill(drill: any, minutes = 10): PlanBlock {
     type: 'drill',
     title: drill?.drill_name || 'Drill',
     drill_name: drill?.drill_name || undefined,
+    // The id as well as the name. Name-only resolution has to stay — every
+    // plan saved before Phase 2D has no id on any block — but a new block
+    // should not need it: see PlanBlock.drill_id for why substring matching
+    // on names is no longer safe in a library with drill families.
+    ...(drill?.id ? { drill_id: String(drill.id) } : {}),
     minutes: Math.max(1, Math.round(Number(minutes) || 10)),
     description: drill?.description || '',
     equipment: Array.isArray(drill?.equipment_needed) ? drill.equipment_needed : [],

@@ -86,7 +86,11 @@
     "test:media-segments": "npx --yes tsx --tsconfig tsconfig.json scripts/test-media-segments.ts",
     "audit:instructions": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/build-instruction-audit.ts",
     "audit:instructions:pending": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/build-instruction-audit.ts --pending",
-    "audit:finder-readiness": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/build-drill-finder-readiness.ts"
+    "audit:finder-readiness": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/build-drill-finder-readiness.ts",
+    "test:drill-finder": "npx --yes tsx --tsconfig tsconfig.json scripts/test-drill-finder.ts",
+    "audit:finder-search": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/audit-finder-search.ts",
+    "fixture:finder-harness": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/build-finder-harness-fixture.ts",
+    "acceptance:finder": "node scripts/acceptance-drill-finder.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

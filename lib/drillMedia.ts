@@ -24,7 +24,7 @@
 // frame", which for a twelve-minute compilation is a confident wrong answer.
 // null stays null all the way to the surface, and the surface says nothing.
 
-import { watchUrl, thumbnailUrl, videoIdFor, VideoDrill } from './drillVideo'
+import { watchUrl, thumbnailUrl, videoIdFor, parseVideoId, VideoDrill } from './drillVideo'
 
 export type MediaType = 'youtube' | 'instagram' | 'article' | 'illustration' | 'animation'
 export type VerificationStatus = 'unverified' | 'verified' | 'rejected'
@@ -102,6 +102,42 @@ export async function loadMediaFor(
     return out
   }
 
+  return out
+}
+
+/**
+ * Every media row, for a surface that has to know how videos are SHARED.
+ *
+ * 219 rows — smaller than one page of drills — so pulling the table is cheaper
+ * than the alternative, which is asking per video how many drills it backs.
+ *
+ * Needed because "is this a compilation?" is not a property of one drill's
+ * media row. It is a property of the table, and a surface that only loaded its
+ * own rows would have to either guess or promise.
+ */
+export async function loadAllMedia(supabase: any): Promise<DrillMedia[]> {
+  try {
+    const { data, error } = await supabase
+      .from('drill_media_resources')
+      .select('id, drill_id, media_type, provider, external_id, url, title, ' +
+              'source_name, thumbnail_url, start_seconds, end_seconds, ' +
+              'start_source, is_primary, verification_status, notes')
+    if (error) throw error
+    return (data || []) as DrillMedia[]
+  } catch {
+    // A missing table costs a coach an extra camera angle, not their library.
+    return []
+  }
+}
+
+/** Group loaded media rows by drill, the shape every renderer wants. */
+export function groupByDrill(media: DrillMedia[] | null | undefined): Map<string, DrillMedia[]> {
+  const out = new Map<string, DrillMedia[]>()
+  for (const row of media || []) {
+    const list = out.get(row.drill_id) || []
+    list.push(row)
+    out.set(row.drill_id, list)
+  }
   return out
 }
 
@@ -264,6 +300,52 @@ export function primaryMediaFor(
   media: DrillMedia[] | null | undefined
 ): PlayableMedia | null {
   return mediaForDrill(drill, media)[0] ?? null
+}
+
+/**
+ * How many drills each video backs, keyed the way pickPrimary keys them.
+ *
+ * This is the number that decides whether a surface may say "watch this drill".
+ * 69 of the 154 schedulable activities point at a video that also backs another
+ * drill — those are compilations, and with no timestamp a coach who taps one
+ * lands at 0:00 of something covering ten drills. A surface cannot tell that
+ * from the media row alone; it needs the whole table.
+ *
+ * Counted across EVERY row, not just the schedulable ones. A video shared with
+ * a demoted teaching-content row is exactly as much of a compilation as one
+ * shared with an activity — the demotion changed what we offer, not what is in
+ * the video.
+ */
+export function sharedVideoCounts(media: DrillMedia[] | null | undefined): Map<string, number> {
+  const drillsPerVideo = new Map<string, Set<string>>()
+  for (const m of media || []) {
+    const key = m.external_id || m.url
+    if (!key) continue
+    const set = drillsPerVideo.get(key) || new Set<string>()
+    set.add(m.drill_id)
+    drillsPerVideo.set(key, set)
+  }
+
+  const out = new Map<string, number>()
+  drillsPerVideo.forEach((set, key) => out.set(key, set.size))
+  return out
+}
+
+/**
+ * How many drills the video behind this playable backs, including this one.
+ *
+ * Falls back to 1 — "nothing says otherwise" — rather than to 0, because the
+ * caller uses this to decide how cautious to be, and an unknown video is not
+ * evidence of a single-drill resource.
+ */
+export function sharedCountFor(
+  m: PlayableMedia | null | undefined,
+  counts: Map<string, number> | null | undefined
+): number {
+  if (!m || !counts) return 1
+  // watchUrl may have stamped a time parameter on, so match on the id first.
+  const id = m.media_type === 'youtube' ? parseVideoId(m.url) : null
+  return (id && counts.get(id)) || counts.get(m.url) || 1
 }
 
 /** A drill with no media at all is a valid drill. Two of the 208 are exactly that. */

@@ -27,6 +27,22 @@ export interface PlanBlock {
   coaching_cues?: string[]
   setup?: string
   watch_for?: string
+  /**
+   * The drill_resources row this block came from, when it came from one.
+   *
+   * Added in Phase 2D. Before it, a block carried only `drill_name`, and every
+   * reader resolved back to the library by name — exact match, then substring.
+   * That was tolerable when drill names were distinct and stopped being so as
+   * the library grew families: "Wall Ball" is a substring of "Wall Ball Solo
+   * Drill — Partner-Free Mechanics Builder", and both are schedulable members
+   * of the same family.
+   *
+   * Always the canonical, schedulable id — a source collection or a true
+   * duplicate must never arrive here. Optional forever: coach-written blocks
+   * have no drill behind them, and every plan saved before this existed has no
+   * id on any block, so a reader has to keep the name fallback.
+   */
+  drill_id?: string | null
   /** Which selected focus areas this block gives real reps for. */
   skills?: string[]
   /**

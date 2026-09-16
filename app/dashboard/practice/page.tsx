@@ -164,6 +164,15 @@ function PracticeContent() {
   const supabase = createSupabaseComponentClient()
   const { drills: drillResources, findDrill } = useDrillResources()
 
+  // A drill sent over from the Drill Library ("Add to practice").
+  //
+  // Read in a state initializer rather than on every render, because the
+  // dashboard layout calls router.replace() to stamp a teamId onto any URL
+  // that lacks one — which drops every other query parameter. Capturing it on
+  // the first render means the handoff survives that whether or not it fires.
+  const [handoffDrillId] = useState<string | null>(() => searchParams.get('drill'))
+  const handoffApplied = useRef(false)
+
   const FOCUS_OPTIONS = [
     'throwing',
     'catching',
@@ -446,6 +455,9 @@ function PracticeContent() {
     const newBlock = {
       type: swapModal?.block?.type || 'drill',
       title: drill.drill_name,
+      // The canonical id, not just the name. drillResources is the schedulable
+      // pool, so this cannot be a source collection or a duplicate.
+      ...(drill.id ? { drill_id: String(drill.id) } : {}),
       minutes: swapModal?.block?.minutes || 10,
       description: drill.description || '',
       setup: drill.equipment_needed?.length ? `Equipment: ${drill.equipment_needed.join(', ')}` : '',
@@ -816,12 +828,26 @@ function PracticeContent() {
 
   const upcoming = plans.filter(p => p.scheduled_for && p.scheduled_for >= todayStr())
 
-  // The starred drills, resolved to names. drillResources is already loaded
+  // The drills a coach can tick for this practice: the ones they have starred,
+  // plus whatever the Drill Library sent over. drillResources is already loaded
   // for the video lookups, so this costs nothing.
-  const favoriteDrills = (drillResources as any[])
-    .filter(d => d.id && favorites.has(d.id))
+  //
+  // drillResources is the SCHEDULABLE pool, so a handed-over id that is a
+  // source collection, a demoted row or a true duplicate simply does not
+  // resolve and nothing is ticked. That is the check — not a second filter
+  // written here that could drift from the one in lib/drills.
+  const pickableDrills = (drillResources as any[])
+    .filter(d => d.id && (favorites.has(d.id) || d.id === handoffDrillId))
     .sort((a, b) => (a.skill_category || '').localeCompare(b.skill_category || '')
       || a.drill_name.localeCompare(b.drill_name))
+
+  // Tick the handed-over drill once, when the library has confirmed it exists.
+  useEffect(() => {
+    if (handoffApplied.current || !handoffDrillId) return
+    if (!(drillResources as any[]).some(d => d.id === handoffDrillId)) return
+    handoffApplied.current = true
+    setPickedDrills(prev => new Set(prev).add(handoffDrillId))
+  }, [drillResources, handoffDrillId])
 
   const dismissRecap = async (planId: string) => {
     setDismissing(planId)
@@ -1455,13 +1481,15 @@ function PracticeContent() {
                   than a hint. Only shown when they actually have favorites —
                   an empty box teaching a feature nobody has used yet is
                   clutter. */}
-              {favoriteDrills.length > 0 && (
+              {pickableDrills.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Use any of your favorites?
+                    {handoffApplied.current
+                      ? 'Drills to build in'
+                      : 'Use any of your favorites?'}
                   </label>
                   <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-52 overflow-y-auto">
-                    {favoriteDrills.map((d: any) => {
+                    {pickableDrills.map((d: any) => {
                       const on = pickedDrills.has(d.id)
                       return (
                         <button
