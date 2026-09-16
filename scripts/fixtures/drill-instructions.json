@@ -905,7 +905,7 @@
   {
     "drill_id": "dfa91c84-6ce8-4d03-9c5d-4252adc5fe3d",
     "drill_name": "Complete Pitching and Throwing Warm-Up Routine",
-    "source": "description rewritten as instructions from the existing cues, which already set out the big-to-small arm circles and the progressive throwing sequence",
+    "source": "markers written for the existing description, which already sets out the whole-body-then-arm sequence and the progressive throwing",
     "description": "The full pre-throwing sequence, in order: move the whole body first, then the shoulder, then the arm with a ball. Jog and do dynamic leg movements, then large arm circles becoming progressively smaller, then band or reach-through shoulder work, then throw — starting close and easy, building distance and effort gradually. It takes about ten minutes and it is the same routine before a practice and before a game, which is most of why it works.",
     "ai_coaching_notes": "Whole body before arm, every time — a warm shoulder on a cold body is not a warm-up. Big circles to small is the sequence players remember. The progressive throwing at the end is part of the routine, not the practice that follows it: nobody throws hard until they have thrown easy first. Tell them out loud that reporting a sore arm is what you want, not something to avoid.",
     "equipment_needed": [
@@ -917,7 +917,12 @@
       "warmup"
     ],
     "regression_notes": "Shorten the throwing ladder and keep the movement work. For the youngest groups, five minutes of moving and two distances of easy throwing is a complete warm-up.",
-    "progression_notes": "Add the band activation routine before the throwing phase, and extend the throwing ladder for pitchers who are about to throw a bullpen."
+    "progression_notes": "Add the band activation routine before the throwing phase, and extend the throwing ladder for pitchers who are about to throw a bullpen.",
+    "success_markers": [
+      "Whole body is moving before any arm work starts",
+      "Arm circles progress from large to small without being prompted",
+      "Throwing builds from short and easy to full distance rather than starting there"
+    ]
   },
   {
     "drill_id": "977c1fd1-12b0-42c6-8b8b-e3a90303e385",
@@ -956,9 +961,11 @@
   {
     "drill_id": "daea5efc-42ce-4a83-9f07-a867dd6fbddd",
     "drill_name": "Do-or-Die Charge & Throw",
-    "source": "next steps written for the existing description, which already sets out the charge, the glove-side pickup and the throw home",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the attack angle, glove-side pickup and the throw home",
     "regression_notes": "Roll the ball rather than hitting it, and shorten the throw to second base. The charging footwork is the skill; the distance to the plate is what makes it a max-effort throw, and that can wait.",
-    "progression_notes": "Hit the ball harder and to either side, add a live runner so the decision to go do-or-die is real, and chart the time from pickup to catch at the plate."
+    "progression_notes": "Hit the ball harder and to either side, add a live runner so the decision to go do-or-die is real, and chart the time from pickup to catch at the plate.",
+    "description": "The outfield play with the game on the line: a single with a runner rounding third, and the only chance is to charge the ball hard and throw home. The outfielder starts at normal depth, a coach hits or rolls a ball in front of them, and they attack it, field it off the glove-side foot while still moving, and release toward a plate-sized target without stopping. Six to eight charged balls a session. It is deliberately distinct from the routine knee-down block, and knowing which situation is which is half of what is being taught.",
+    "reps_guidance": "6-8 charged balls per session"
   },
   {
     "drill_id": "744a47da-ef0c-42b0-b961-1175aaad42d9",
@@ -1671,5 +1678,430 @@
     ],
     "regression_notes": "Hold the stride with no bat at all, or shorten the stride to a small toe tap. A hitter who cannot balance in the stride position is not going to swing from it.",
     "progression_notes": "Remove the pause so the stride flows into the swing, then add soft toss and front toss where the stride has to be timed to someone else's release."
+  },
+  {
+    "drill_id": "267777ed-01d2-4985-a4aa-5a1c41299f11",
+    "drill_name": "Fun Fielding Drill for Young Players",
+    "source": "rewritten from video framing; the alligator cue, soft hands and game-like format are kept from the existing description and cues",
+    "description": "Ground balls made into a game for players who are not yet interested in ground balls. Set two cones about ten feet apart as a gate. A coach rolls balls through the gate and the fielder has to get in front and field them, scoring a point for each clean one. Keep the rolls soft and the pace high. The mechanics being built are ordinary — glove out front, fingers down, let the ball come — but the scoring is what keeps a seven-year-old doing forty of them.",
+    "ai_coaching_notes": "Keep it moving and keep score out loud; the moment there is a queue the energy is gone. 'Alligator' — glove on the ground, throwing hand on top, jaws closing — is the cue that actually lands at this age. Roll softly enough that nobody is afraid, because a fielder managing fear is not learning hand position. Praise the ones where they got in front, not just the ones they caught.",
+    "success_markers": [
+      "Moves in front of the ball rather than reaching sideways at it",
+      "Glove is down with the fingers pointing at the ground before the ball arrives",
+      "Throwing hand covers the ball on most catches"
+    ],
+    "practice_roles": [
+      "teach",
+      "competition"
+    ],
+    "regression_notes": "Widen the gate, roll slower, and use a tennis ball. Any of the three makes it easier without changing what is being taught.",
+    "progression_notes": "Narrow the gate, roll harder, alternate sides without warning, or add a throw to a target after each ball."
+  },
+  {
+    "drill_id": "781605ce-10f5-400c-b7e2-6243915b5da2",
+    "drill_name": "Four Cones Ground Ball Drill",
+    "source": "rewritten from video framing; the four-cone pathway, footwork intent and existing cues are unchanged",
+    "description": "Four cones laid out as a pathway that forces the feet to do the work. The fielder shuffles along the cone path and a coach rolls a ground ball at each cone, so every ball is fielded from a different position and after a different movement. The cones make the approach angle and the shuffle explicit — a fielder who tries to reach sideways instead of moving their feet simply cannot get to the next ball.",
+    "ai_coaching_notes": "Shuffle, do not cross over, and stay low between cones rather than standing up and resetting. 'Move through the ball' — field it going forward, not stopped and waiting for it. Roll at a pace they can handle; this is a footwork drill and a ball they cannot reach teaches nothing. Two sets of ten is a full session's worth.",
+    "reps_guidance": "2 sets of 10 ground balls",
+    "success_markers": [
+      "Shuffles to get in front of the ball and fields through it moving forward",
+      "Stays low between cones rather than standing up between reps",
+      "Glove is out in front of the front foot on every catch"
+    ],
+    "regression_notes": "Fewer cones, closer together, and roll every other pass so there is recovery time. Walking the path with no ball is a legitimate first round.",
+    "progression_notes": "Widen the cone spacing, roll faster, or add a throw to a base after each ball so the rep finishes with a completed play."
+  },
+  {
+    "drill_id": "192913af-c080-4361-b20e-f88f29db530f",
+    "drill_name": "The Hands Routine — Infield Fielding Drill",
+    "source": "rewritten from video framing; the solo wall progression, soft hands and transfer emphasis are kept from the existing description and cues",
+    "description": "A solo glove routine a player can do against a wall with no partner and no field. The player throws a ball at the wall from about ten feet, fields the rebound as a ground ball, makes the transfer to the throwing hand, and throws again. Progressively: two hands, then glove hand only, then backhand, then short hops. It takes five minutes, it needs a ball and a wall, and it is the between-practices work that separates players who improve from players who wait to be coached.",
+    "ai_coaching_notes": "Aim small — pick a spot on the wall, because where the ball hits determines what comes back, and a player who throws anywhere gets a random drill. 'Receive it, do not fight it' for the soft hands. Make the transfer part of every rep: catch, grip, throwing position, then throw. Give them a rep target rather than a time, and tell them it is a daily thing rather than a practice thing.",
+    "success_markers": [
+      "Ball is received and funnelled rather than stabbed at",
+      "Transfer reaches throwing position in one motion",
+      "Can complete the full progression without chasing a rebound"
+    ],
+    "practice_roles": [
+      "warmup",
+      "repetition"
+    ],
+    "regression_notes": "Stand closer, throw softer, and stay on the two-hand stage. A tennis ball makes the short-hop stage survivable for a bare hand.",
+    "progression_notes": "Move back, add short hops on purpose, or use an uneven wall so the rebound is unpredictable. The same routine works as a pre-game warm-up."
+  },
+  {
+    "drill_id": "6c2e8d58-e7f0-4727-b561-cb61bca27e25",
+    "drill_name": "First Base Footwork & Throw Adjustments",
+    "source": "rewritten from video framing; the four-quadrant throws and the glove-side-foot cue are unchanged",
+    "description": "Footwork around the bag for throws that are not on target, which at youth level is most of them. The first baseman sets up on the bag and a coach throws deliberately to all four quadrants — high, low, glove side, arm side — one round per quadrant. The stretch foot moves toward the throw while the anchor foot keeps contact with the edge of the bag. Six throws a round, four rounds, mixing in throws from different infield angles.",
+    "ai_coaching_notes": "'Chase the ball with your glove-side foot' — the feet adjust to the throw, not the glove alone. Keep the anchor toe on the edge of the bag, not the middle, or there is nowhere left to stretch to. Throw genuinely off-line on purpose; a first baseman who only practises good throws is not being prepared for the ones they will get.",
+    "reps_guidance": "4 rounds of 6 throws (one round per quadrant)",
+    "success_markers": [
+      "Stretch foot mirrors the throw location automatically",
+      "Anchor foot stays on the bag on wide throws",
+      "Clean catches on throws to both sides without crossing the feet"
+    ],
+    "practice_roles": [
+      "isolate",
+      "repetition"
+    ],
+    "regression_notes": "Throw only to one quadrant per session and keep the throws catchable. Four directions at once is too many decisions for a first-year first baseman.",
+    "progression_notes": "Add short hops and genuinely wild throws, then put a runner down the line so the stretch has to be timed rather than set up."
+  },
+  {
+    "drill_id": "971dccd3-bc0f-4043-9e2d-3417fc6f7361",
+    "drill_name": "Double-Play Feeds & Turns",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the feed-then-turn sequence and the 4-6-3 / 6-4-3 alternation",
+    "description": "Double-play work for both middle infield positions, built in order. First the feeds: the fielder delivers the ball chest-high to a partner standing on the bag, from both the shortstop and second-base sides. Then the turns, with no runner: receive at the bag, clear it, and throw to first. Then both together at game speed. Alternate 4-6-3 and 6-4-3 every round so each player learns both ends of the play rather than only their own.",
+    "ai_coaching_notes": "'Give him the ball where his hands start' — a feed at the chest is catchable on the move, and a feed at the ankles ends the play. Rep the turn without a runner until the footwork clears the bag naturally, because footwork learned while avoiding a slide is footwork learned wrong. Watch the exchange: one step or fewer for the pivot man.",
+    "reps_guidance": "4 rounds of 6 turns per pairing",
+    "practice_roles": [
+      "isolate",
+      "progress"
+    ],
+    "regression_notes": "Feeds only, from a standstill, with no turn and no throw to first. The feed is the half most youth teams never practise and the half that kills most double plays.",
+    "progression_notes": "Add a runner at half speed, then a timed sequence from contact to the catch at first. Keep slides out of it until the footwork is automatic."
+  },
+  {
+    "drill_id": "d685834e-1b6a-45ad-b06a-d7cf63447eef",
+    "drill_name": "First Base Fundamentals — Finding the Bag & the Stretch",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the footwork-first sequence and the stretch-on-release timing",
+    "description": "The starting point for playing first base: getting to the bag from fielding depth, finding it without looking down, setting the feet, and stretching to receive. Run the footwork with no ball first — sprint from fielding position to the bag, find it with the foot, square up to the thrower. Then add easy chest-high throws. Three rounds of eight, the first round footwork only. Everything harder at first base assumes this, and most youth first basemen have never been taught it.",
+    "reps_guidance": "3 rounds of 8 reps (footwork only, then with throws)",
+    "practice_roles": [
+      "teach",
+      "repetition"
+    ],
+    "regression_notes": "Footwork only, walking rather than sprinting, until the foot finds the bag without a look. Add the ball once that is automatic.",
+    "progression_notes": "Move to throws in all four quadrants, then to short hops and picks. Adding a runner down the line makes the stretch timing real."
+  },
+  {
+    "drill_id": "2f5901d2-ed57-4f6b-9dcc-6d1dc6110ef9",
+    "drill_name": "Daily Backhand Series",
+    "source": "next steps written for the existing description, which already sets out the five-drill daily series from knees to full speed",
+    "regression_notes": "Stay on the knees-only stages and roll the ball slowly. The glove angle is the skill; footwork can be added once the hand knows where to be.",
+    "progression_notes": "Move through to full speed, then add a throw after each backhand so the play is completed. Balls hit rather than rolled make the read genuine."
+  },
+  {
+    "drill_id": "2d15c6de-d4a9-414a-9755-533140dd68b0",
+    "drill_name": "Three-Ball Slow Roller Drill",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the three spaced balls and the no-reset sequence",
+    "description": "Three balls placed at progressively shorter distances in front of the fielder, and the fielder charges, fields and throws each one in sequence with no reset in between. It is the do-or-die slow roller — the play against a fast runner where stopping to set up loses the race. Three circuits of three balls. Because the balls come closer together, each rep is harder than the last and the fielder is already moving when they reach it.",
+    "reps_guidance": "3 circuits of 3 balls per session",
+    "regression_notes": "Two balls instead of three, further apart, at a walk. The charging footwork can be learned slowly; the time pressure is what makes it a conditioning drill as much as a skill one.",
+    "progression_notes": "Add a runner or a clock, or roll the balls rather than placing them so the fielder has to read the pace as well as charge it."
+  },
+  {
+    "drill_id": "5afa81e5-ec55-4066-b62f-1b535884060b",
+    "drill_name": "Advanced First Base — Off-Line Throws, Picks & Short Hops",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the announced-then-random hop progression and the runner added last",
+    "description": "Academy-level first base work in three stages. Stage one: short hops thrown deliberately and announced, so the glove learns the path. Stage two: the same hops at random. Stage three: add a baserunner sprinting the line, which is what makes the stretch timing real rather than rehearsed. Three sets of eight picks, one set per stage. Also covers shifting for throws to either side and choosing when to leave the bag entirely on a wild one.",
+    "reps_guidance": "3 sets of 8 picks (announced, random, with runner)",
+    "practice_roles": [
+      "progress",
+      "game_application"
+    ],
+    "regression_notes": "Announced hops only, thrown softly, with tennis balls. High-volume short-hop work bruises a glove hand quickly and a sore hand stops picking.",
+    "progression_notes": "Add genuinely wild throws where leaving the bag is correct, and time the runner so the decision has a real cost attached."
+  },
+  {
+    "drill_id": "ecf4c61b-0b8b-49bd-bbe5-697d42991d79",
+    "drill_name": "Base Running Circuit",
+    "source": "written from the existing description and cue (team circuit, explosive first steps, efficient turns, eyes on the coach) — replaces cues copied across the category",
+    "description": "A rotating team circuit with a different baserunning skill at each base. At home, an explosive three-step start on a coach's signal. At first, a lead and a break toward second. At second, reading a coach's point to advance or hold. At third, a read on a ball in the dirt. Players move around the circuit in small groups so everyone is working at once, and the whole thing doubles as conditioning without ever looking like conditioning.",
+    "ai_coaching_notes": "The first three steps are where baserunning is won or lost, so make the start signal unpredictable at every station. 'Eyes on the coach, not on your feet' — a runner watching the ground cannot take the extra base. Keep groups small and the rotation brisk. Timing the stations gives them something to chase and stops the circuit drifting into a walk.",
+    "success_markers": [
+      "First three steps are explosive rather than a gradual build",
+      "Runners look up to find the coach rather than watching their feet",
+      "Turns cut the inside corner of the base instead of swinging wide"
+    ],
+    "practice_roles": [
+      "repetition",
+      "team_execution"
+    ],
+    "regression_notes": "Two stations instead of four, and remove the reads so it is pure starts and turns. Four decisions at four bases is too much for a first session.",
+    "progression_notes": "Add live reads at every station, put a clock on the circuit, or run two groups against each other for a team score."
+  },
+  {
+    "drill_id": "b9bb75c7-9ed0-47ee-9d11-2de953510027",
+    "drill_name": "Secondary Lead & Delayed Steal",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the two-shuffle timing and the break on the catcher's return throw",
+    "description": "Two related pieces of baserunning that do not need speed. The secondary lead: from the primary lead, two shuffles timed so the runner's weight lands moving toward the next base as the pitch crosses the plate. The delayed steal: taking that secondary, then breaking as the catcher throws the ball casually back to the pitcher. Ten secondary leads, then six delayed-steal repetitions. At levels where catchers lob the return throw, the delayed steal works almost every time.",
+    "reps_guidance": "10 secondary leads + 6 delayed-steal reps",
+    "practice_roles": [
+      "teach",
+      "game_application"
+    ],
+    "regression_notes": "Secondary leads only, with no steal attempt, until the timing is automatic. The shuffle timing is the foundation and the delayed steal is useless without it.",
+    "progression_notes": "Add a live catcher returning the ball, then run it inside a scrimmage where the runner has to pick the moment themselves."
+  },
+  {
+    "drill_id": "35a5e10e-9713-4887-ad07-030b421db06f",
+    "drill_name": "Simple Base Running Drills for Youth Practice",
+    "source": "markers and next steps written for the existing description, which already sets out the three-base game-like setup",
+    "success_markers": [
+      "Runners hit the inside corner of each base",
+      "First steps are hard rather than a jog into speed",
+      "Players look up to the coach for the next instruction instead of stopping"
+    ],
+    "practice_roles": [
+      "teach",
+      "repetition"
+    ],
+    "regression_notes": "Use two bases instead of three and walk the routes first. The turn is the skill; the distance is just running.",
+    "progression_notes": "Add reads — a coach pointing to advance or hold — and time the runs so there is a number to beat."
+  },
+  {
+    "drill_id": "f9d5d796-ce11-4964-bc70-a3ce5f8a607f",
+    "drill_name": "Steal Breaks — Reading the Pitcher & First Move",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the tells and the charted jumps",
+    "description": "Practising the jump itself, separately from the sprint. Runners take a primary lead against a pitcher working from the stretch and break on the first movement toward home. A coach charts every repetition as a good jump, a late one, or a pickoff. One pitcher tell is taught at a time — the heel lifting, the front shoulder leaning, the head turning — because a runner watching for three tells is watching for none. The sprint hardly matters here; the half-second of recognition is the whole skill.",
+    "practice_roles": [
+      "isolate",
+      "decision"
+    ],
+    "regression_notes": "Have the pitcher exaggerate one tell and announce what to watch for. Recognising a signposted move is the step before spotting a subtle one.",
+    "progression_notes": "Stop announcing the tell, add genuine pickoff attempts, and time first-move-to-second so the jump becomes a number that can improve."
+  },
+  {
+    "drill_id": "4106c25c-beeb-4d11-b1aa-eb9aa85978ae",
+    "drill_name": "Pro Base-Stealing Package — Leads, Reads & Jumps",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the live pitcher, the charting and the one-tell-at-a-time method",
+    "description": "The complete stealing package against a live pitcher from the stretch: how far to take the primary lead, which pitcher tells to read, and how to convert the read into a jump. Eight to ten live repetitions, every one charted as safe, late or picked off. One tell is introduced per session. First-move-to-second is timed so improvement is visible rather than asserted. This is the advanced end of the category and it assumes the secondary lead is already automatic.",
+    "reps_guidance": "8-10 live steal reps, charted",
+    "practice_roles": [
+      "progress",
+      "decision"
+    ],
+    "regression_notes": "Drop the live pitcher for a coach making an exaggerated move, and remove the pickoff threat. The read is learnable without the consequence attached.",
+    "progression_notes": "Add left-handed pitchers, which is a different read entirely, and run it inside a scrimmage where the runner chooses whether to go at all."
+  },
+  {
+    "drill_id": "9335a346-33a3-4bd1-b65c-2664f9c7fcfb",
+    "drill_name": "Pop-Up Slide — Slide and Advance",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the slide-through-the-bag momentum and the overthrow read",
+    "description": "The slide that finishes standing up. The runner slides bent-leg into the bag, but rather than stopping there, the momentum carries them up onto the planted foot so they finish on their feet facing the next base. A coach throws a simulated overthrow on the last few repetitions so the runner has to find the ball and decide whether to advance. Eight to ten slides, the last four with an overthrow read. It only works once the basic bent-leg slide is automatic.",
+    "reps_guidance": "8-10 pop-up slides, last 4 with an overthrow read",
+    "regression_notes": "Go back to the basic bent-leg slide on grass or a mat, without popping up. A runner who is still thinking about the slide cannot also read a throw.",
+    "progression_notes": "Slide at full speed on dirt, and make the overthrow read live rather than simulated, so the decision to advance carries a real risk of being out."
+  },
+  {
+    "drill_id": "282be624-51e9-4a06-ab37-7646b0a3da8b",
+    "drill_name": "Sliding Practice Stations",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the rotating stations and the left/right call",
+    "description": "Sliding volume for a whole team without anyone getting dirt burn. Set two or three sliding lanes on grass or on mats, each with a loose base, and rotate small groups through them as a station during practice. Two rounds of six to eight slides per station. Because the surface is forgiving, players get far more repetitions than they would on the infield, and a coach pointing left or right as they approach adds the choice of which side of the bag to slide to.",
+    "reps_guidance": "2 rounds of 6-8 slides per station",
+    "practice_roles": [
+      "repetition"
+    ],
+    "regression_notes": "One lane, straight slides only, from a jog. The volume is the point and volume at a walk is still volume.",
+    "progression_notes": "Add the left/right call, then move to a dirt surface, then run slides at the end of a full-speed baserunning circuit where the legs are already tired."
+  },
+  {
+    "drill_id": "b610bf25-fbc7-46e3-9c8a-16e07224bf70",
+    "drill_name": "Bent-Leg Slide Basics — The Right Way to Slide",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the figure-4 tuck, the grass-first rule and the marked start line",
+    "description": "The first sliding lesson, taught somewhere soft. On grass in socks or on a sliding mat, the runner starts from a walk, sits into the slide, tucks one leg under the other into a figure-four, and keeps both hands up in the air. Mark a start line about two body lengths from the base so the slide begins at the right distance rather than on top of the bag. Walk, then jog, then run. Ten to fifteen slides, and nobody goes near dirt on day one.",
+    "reps_guidance": "10-15 slides per session, building speed gradually",
+    "regression_notes": "Sit and slide from a standing start on a wet mat, with no approach at all. The figure-four shape is the whole first lesson and the run-up can wait.",
+    "progression_notes": "Build to full speed on grass, then to dirt, then to the pop-up slide. Never move a player on who is still landing on their knees."
+  },
+  {
+    "drill_id": "478cb186-6370-494d-b94a-47136344ccd8",
+    "drill_name": "One-Knee Receiving — Advanced Framing Setup",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the drill count, the free-leg check and the gradual speed increase",
+    "description": "Receiving from the one-knee-down stance, for catchers who have outgrown the two-knee setup. The catcher drops the throwing-side knee, keeps the free leg positioned so a block or a throw is still possible, and receives pitches with the glove working up into the zone rather than dropping under the ball. Four sets of ten receives per setup — glove-side low, arm-side low, and the edges. Machine work is ideal because the volume matters and the location has to repeat.",
+    "reps_guidance": "4 sets of 10 receives per setup (RH low, LH low, edges)",
+    "practice_roles": [
+      "isolate",
+      "progress"
+    ],
+    "regression_notes": "Go back to the two-knee setup and get the glove path right there first. The one-knee stance is a ceiling, not a starting point, and it makes a bad receiver look worse.",
+    "progression_notes": "Increase pitch velocity gradually, then add blocking and throw-downs from the same stance so the free-leg position has to survive a real play."
+  },
+  {
+    "drill_id": "5f398d5c-6377-4119-b5b7-99b81f4b8028",
+    "drill_name": "MLB-Style Receiving & Framing Circuit",
+    "source": "next steps written for the existing description, which already sets out the five-station circuit and the freeze-for-a-count habit",
+    "practice_roles": [
+      "isolate",
+      "repetition"
+    ],
+    "regression_notes": "Run two stations instead of five, with tossed balls rather than pitched ones. Beating the ball to the spot is learnable slowly and not at all in a hurry.",
+    "progression_notes": "Increase velocity, work only the edges of the zone, and film from behind the plate so the catcher sees what an umpire sees."
+  },
+  {
+    "drill_id": "367642e8-dfd4-4988-90e5-f2c4d10b3401",
+    "drill_name": "Catcher Throw-Down Footwork to Second",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the dry-then-toss-then-live progression and the timed reps",
+    "description": "Catcher footwork for the throw to second, built in three stages. Dry first: no ball, just the replace step and the jab step, until the feet move without thought. Then from a partner's toss. Then live off a machine or a pitcher. Three sets of six throw-downs, every one timed glove to glove. The exchange happens during the footwork rather than after it, and that overlap is where pop time is actually found — not in a stronger arm.",
+    "reps_guidance": "3 sets of 6 throw-downs, timed",
+    "practice_roles": [
+      "isolate",
+      "progress"
+    ],
+    "regression_notes": "Dry footwork only, with no ball and no clock. A catcher thinking about the throw stops moving their feet properly, which is the thing being built.",
+    "progression_notes": "Add live pitching at game speed, then a runner actually stealing, so the throw has a real target and a real deadline."
+  },
+  {
+    "drill_id": "808e703f-d60e-4a0b-8cbd-845bcb4cc1bb",
+    "drill_name": "Game-Speed Reaction Blocking",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the random locations and the two-one-zero scoring",
+    "description": "Blocking at game speed with nothing telegraphed. Balls are thrown or machine-fed into the dirt at random locations and the catcher has to read and react rather than pre-set to a side. Three rounds of ten, scored: two points for a ball blocked and kept in front, one for a ball blocked but pushed away, nothing for one that gets past. A runner-on-third scenario is added so recovering to a throwing position matters as much as the block itself.",
+    "reps_guidance": "3 rounds of 10 random blocks, scored",
+    "practice_roles": [
+      "progress",
+      "game_application"
+    ],
+    "regression_notes": "Go back to announced locations at reduced speed, or to the technique drill with placed and rolled balls. Reaction work on top of unsound mechanics builds a flinch.",
+    "progression_notes": "Increase velocity, add a runner who actually advances on anything not kept in front, and score the recovery throw as well as the block."
+  },
+  {
+    "drill_id": "e7bd95b6-d491-49e2-a383-7fc381e7b0ce",
+    "drill_name": "Youth Receiving Foundations — Quiet Glove & Soft Hands",
+    "source": "next steps written for the existing description, which already sets out the quiet-glove standard and the soft-hands receiving",
+    "regression_notes": "Toss underhand from short range with a soft ball, and work one zone at a time. A young catcher fighting the ball needs slower pitches, not more cues.",
+    "progression_notes": "Move to the five-station framing circuit, then to live pitching. The quiet glove is the foundation everything else in the category is built on."
+  },
+  {
+    "drill_id": "babe5481-655c-4c2e-9985-2465937c1067",
+    "drill_name": "Blocking the Right Way — Technique to Reaction Reps",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the placed-to-rolled-to-thrown progression and the block shape",
+    "description": "Blocking built from the shape outwards. Stage one: balls placed on the ground, no throw, so the catcher can drop into position and feel it — knees replacing the feet, chin tucked, shoulders rounded so the chest angles the ball back toward the plate. Stage two: rolled balls. Stage three: short-hop throws to the middle, the glove side and the arm side. Three sets of eight. On lateral blocks the push comes off the opposite foot, which is the part that has to be drilled rather than explained.",
+    "reps_guidance": "3 sets of 8 blocks (middle, glove-side, arm-side)",
+    "regression_notes": "Placed balls only, in full gear, with no throw at all. The shape has to be comfortable before a ball is moving toward it.",
+    "progression_notes": "Move to the game-speed reaction version with random locations, and add a recovery throw so the block finishes as a completed play."
+  },
+  {
+    "drill_id": "e5d28c39-30b0-48fd-9534-8a43cd8154db",
+    "drill_name": "Hip Lead Drill",
+    "source": "written from the existing description and cue (lead with the hip toward home, the arm follows) and the recorded flaws it fixes",
+    "description": "The order of the pitching delivery, isolated at the one point where it goes wrong. From the balance point at the top of the leg lift, the pitcher moves toward the plate hip first — the front hip leads down the mound while the shoulders and throwing arm stay back. They hold that separated position, then finish the pitch. Ten repetitions slowly, then at normal speed. A pitcher whose shoulders go with the hip has nothing left to generate velocity with.",
+    "ai_coaching_notes": "Have them stop and hold the moment the hip has moved but the shoulders have not, so they can feel the stretch across the middle. 'Your hip goes first, your arm follows.' Watch from the side: the front hip should be visibly ahead of the front shoulder on the way down. Leaking — the whole body drifting early — looks similar and is the opposite, so check that the back leg is still loaded.",
+    "success_markers": [
+      "Front hip moves toward the plate before the shoulders do",
+      "Can hold the separated position for a count without falling forward",
+      "Back leg stays loaded rather than the whole body drifting"
+    ],
+    "practice_roles": [
+      "isolate",
+      "teach"
+    ],
+    "regression_notes": "Do it without a ball, from a standing start rather than a full leg lift, and just walk the hip forward. The feel is the whole lesson.",
+    "progression_notes": "Remove the hold so the sequence flows, then throw at full speed to a catcher and check whether the separation survives. Pair it with the Balance Point drill if the leg lift is unstable."
+  },
+  {
+    "drill_id": "77722605-74bc-44b8-9581-fdd1c7d9a4d3",
+    "drill_name": "Wrist Snap Drill",
+    "source": "written from the existing description and cue (isolate the wrist snap, pull the fingers down the back of the ball)",
+    "description": "The wrist snap on its own, with everything else removed. The pitcher kneels or stands close to a partner or a wall, holds the throwing arm up with the elbow supported by the glove hand, and flips the ball using only the wrist. The fingers pull down the back of the ball at release, producing visible backspin. Twenty to thirty flips. The ball should travel only a few feet and rotate cleanly — distance is not the goal and chasing it reintroduces the arm.",
+    "ai_coaching_notes": "Hold their elbow for the first few if the arm keeps joining in; the isolation is what makes this work. Look at the spin, not the flight — tight backspin means the fingers stayed behind the ball, and a wobbling ball means they came off the side of it. Close range only. A player throwing this thirty feet has turned it back into a throw.",
+    "success_markers": [
+      "Ball comes out with tight backspin rather than wobbling",
+      "Only the wrist moves — the elbow and shoulder stay still",
+      "Can repeat the spin on most flips rather than occasionally"
+    ],
+    "equipment_needed": [
+      "Baseball",
+      "Partner or wall"
+    ],
+    "practice_roles": [
+      "isolate",
+      "teach"
+    ],
+    "regression_notes": "Have a coach hold the elbow and use a tennis ball. Feeling the wrist work in isolation is the entire objective and any setup that achieves it is fine.",
+    "progression_notes": "Move to the kneeling throw where the wrist snap is combined with the arm and torso, then to the full delivery. The spin is what should carry through."
+  },
+  {
+    "drill_id": "25b42f9f-7769-47ac-ad0e-f9140091660e",
+    "drill_name": "The Lawnmower Drill — Arm Action & Wrist Snap",
+    "source": "description rewritten to remove the brand-led attribution; markers and next steps written for the existing cues",
+    "description": "Arm action drilled through a motion players already know: the pull that starts a lawnmower. The pitcher mimics that fast, loose downward pull with the throwing arm, snapping the wrist at the bottom of it. It isolates the arm action and the release without any of the lower half being involved, and the looseness is the point — a stiff arm is slower than a relaxed one, which is counterintuitive to most young pitchers until they feel the difference.",
+    "success_markers": [
+      "Arm moves loosely rather than rigidly through the pull",
+      "Wrist snaps at the bottom of the motion rather than staying locked",
+      "Player can describe the difference between a loose and a tight arm after a few reps"
+    ],
+    "practice_roles": [
+      "isolate",
+      "teach"
+    ],
+    "regression_notes": "Do it slowly with no ball until the looseness is there. A player gripping the ball tightly will keep the arm tight no matter what they are told.",
+    "progression_notes": "Add the ball, then throw to a target from a knee, then from the full delivery. Check whether the arm stays loose once the legs are involved."
+  },
+  {
+    "drill_id": "253fee8d-d86f-497b-83db-44e622fb0a2d",
+    "drill_name": "4-Part Windup Drill — Breaking Down the Delivery",
+    "source": "markers and next steps written for the existing description, which already sets out the four checkpoints and the stop-at-each-one method",
+    "success_markers": [
+      "Stops balanced at each checkpoint instead of rushing through the motion",
+      "Can be stopped mid-delivery on command and hold the position",
+      "Full-speed delivery keeps the checkpoints rather than reverting"
+    ],
+    "practice_roles": [
+      "teach",
+      "isolate"
+    ],
+    "regression_notes": "Work two checkpoints instead of four, and hold each for a count of three. Four positions is a lot to hold in mind for a seven-year-old.",
+    "progression_notes": "Join the checkpoints into one continuous slow delivery, then speed it up, then throw to a catcher. Go back to the checkpoint that breaks first."
+  },
+  {
+    "drill_id": "91bc52cf-a234-4ad3-97a6-6df6038c752c",
+    "drill_name": "Game-Speed Rundown Execution",
+    "source": "next steps written for the existing description, which already sets out the sprint-show-dart sequence and the two-throw scoring",
+    "practice_roles": [
+      "competition",
+      "game_application"
+    ],
+    "regression_notes": "Drop to the calm rundown version at half speed with slower runners. Game speed on top of shaky rotation produces chaos rather than practice.",
+    "progression_notes": "Add a second runner, or start the rundown from a live play rather than a set position so the defence has to organise itself under real conditions."
+  },
+  {
+    "drill_id": "2da70c16-18d3-4b63-8eca-12804ac048ea",
+    "drill_name": "Calm Rundowns — Push Back, Follow Your Throw",
+    "source": "next steps written for the existing description, which already sets out the push-back rule and the follow-your-throw rotation",
+    "regression_notes": "Go back to the two-base pickle with one throw and no rotation. The push-back rule is learnable before the rotation is.",
+    "progression_notes": "Move to game speed with fast runners, then add a second runner so the defence has to decide which one to chase."
+  },
+  {
+    "drill_id": "dac833d7-c4f6-42ce-8409-ea83dd77fa65",
+    "drill_name": "Two-Base Pickle Drill",
+    "source": "next steps written for the existing description, which already sets out the two bases, the ball-up rule and the one-throw target",
+    "regression_notes": "Walk the runner rather than letting them sprint, so the fielders can practise running at them without it becoming a race they lose.",
+    "progression_notes": "Add the push-back rule and the follow-your-throw rotation, which is the Calm Rundowns progression, then take it to game speed."
+  },
+  {
+    "drill_id": "62b2ed36-03da-4e9d-a424-1d94620fde7d",
+    "drill_name": "Machine-Fed Relay Sequences at Game Speed",
+    "source": "description rewritten to remove the brand-led attribution; next steps written for the existing cues",
+    "description": "Full outfield-to-infield relays at game tempo, fed by a machine or a fungo on a fixed interval so the pace never drops. Balls go into the gaps and to the wall, and the defence runs complete sequences — outfielder to relay man to the base — including double cuts on the deepest balls. Three rounds of five sequences. Scoring it as runs prevented against bases gained turns it into a competition between defensive groups, which is what keeps the tempo honest.",
+    "practice_roles": [
+      "team_execution",
+      "competition"
+    ],
+    "regression_notes": "Slow the feed interval and drop the double cuts. Single relays at a manageable pace are still the same skill and most youth teams have not mastered them.",
+    "progression_notes": "Shorten the interval, add runners so the throw destination is a real decision, and time each sequence from the outfielder's touch to the tag."
+  },
+  {
+    "drill_id": "ef98c922-d86a-46ea-913c-903b41c8ba2e",
+    "drill_name": "Line Relay Race — Catch, Turn, Throw",
+    "source": "next steps written for the existing description, which already sets out the two lines, the spacing and the race format",
+    "regression_notes": "Shorten the links and use fewer players per line. A relay race where the throws cannot reach is a dropping contest, not a relay drill.",
+    "progression_notes": "Lengthen the links, add a turn to the weak side, or require every player to call for the ball before it is thrown."
+  },
+  {
+    "drill_id": "b1f220a4-fdc3-4750-810f-b431e0c8a16f",
+    "drill_name": "Cutoff Responsibilities by Situation",
+    "source": "next steps written for the existing description, which already sets out the situational reps with runners and the cutoff man's call",
+    "regression_notes": "Run the Little League system walk-through first, with no runners and no ball. Assignments have to be known before they can be executed under pressure.",
+    "progression_notes": "Add more complex situations — two runners, a ball to the wall — and let the cutoff man run the play without a coach calling it."
+  },
+  {
+    "drill_id": "37f0c306-4c6c-4fa6-8491-96fa90893be9",
+    "drill_name": "Little League Cuts & Relays System",
+    "source": "next steps written for the existing description, which already sets out the half-speed walk-through and the four scenarios",
+    "regression_notes": "Two scenarios instead of four, walked through with no ball at all. Every player knowing where to go on two situations beats everyone guessing on four.",
+    "progression_notes": "Add live hit balls, then runners, then move to the situational version where the cutoff man makes the call rather than the coach."
   }
 ]

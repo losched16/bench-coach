@@ -132,6 +132,7 @@ const CONCRETE = [
   // from throwing and fielding drills and had no words for a warm-up at all,
   // so a routine of leg swings and walking lunges scored as abstract.
   'stretch', 'stretches', 'lunge', 'lunges', 'squat', 'jog', 'walk', 'walking',
+  'stride', 'pivot', 'turn', 'lean', 'drop', 'release', 'grip', 'stance',
   'band', 'bands', 'circles', 'rotation', 'rotations', 'anchor', 'exercise', 'exercises',
 ]
 
@@ -165,9 +166,16 @@ export function describesAnActivity(d: InstructionFields): boolean {
 
   if (STOCK.some(re => re.test(desc))) return false
 
-  const words = new Set(desc.toLowerCase().match(/[a-z]+/g) || [])
-  const concrete = CONCRETE.filter(w => words.has(w)).length
-  return concrete >= 3
+  // Matched against the singular too. Without this the list needs every plural
+  // spelled out, and the ones that get forgotten fail real rows for no reason —
+  // "Pitchers perform each part in slow motion" missed because the list held
+  // `pitcher` and not `pitchers`, which is a typo masquerading as a standard.
+  const found = new Set<string>()
+  for (const w of desc.toLowerCase().match(/[a-z]+/g) || []) {
+    found.add(w)
+    if (w.endsWith('s')) found.add(w.slice(0, -1))
+  }
+  return CONCRETE.filter(w => found.has(w)).length >= 3
 }
 
 /**
