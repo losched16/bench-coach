@@ -2,7 +2,9 @@
 -- 066 — Collection videos, attached to the drills they actually demonstrate
 -- ============================================================================
 --
--- NOT APPLIED IN THE SESSION THAT WROTE IT. Apply deliberately.
+-- APPLIED to production on 2026-09-16 (Phase 2C). All 13 rows verified absent
+-- beforehand and present afterwards; media table went 206 -> 219 rows, and
+-- timestamps and verified rows both stayed at zero.
 --
 -- docs/audits/drill-collection-extraction.csv found 27 cases where a demoted
 -- source collection demonstrates an activity the library already holds as its
