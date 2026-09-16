@@ -79,6 +79,8 @@
     "test:migration-062": "bash scripts/test-migration-062.sh",
     "test:duplicates": "npx --yes tsx --tsconfig tsconfig.json scripts/test-duplicates.ts",
     "test:migration-064": "bash scripts/test-migration-064.sh",
+    "test:instruction-quality": "npx --yes tsx --tsconfig tsconfig.json scripts/test-instruction-quality.ts",
+    "test:migration-067": "bash scripts/test-migration-067.sh",
     "audit:media-segments": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/build-media-segment-audit.ts",
     "test:media-segments": "npx --yes tsx --tsconfig tsconfig.json scripts/test-media-segments.ts",
     "audit:instructions": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/build-instruction-audit.ts",

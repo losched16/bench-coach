@@ -2049,27 +2049,30 @@
   {
     "drill_id": "91bc52cf-a234-4ad3-97a6-6df6038c752c",
     "drill_name": "Game-Speed Rundown Execution",
-    "source": "next steps written for the existing description, which already sets out the sprint-show-dart sequence and the two-throw scoring",
+    "source": "description expanded into setup and execution from the existing cues, which already set out sprint-show-dart and the two-throw scoring",
     "practice_roles": [
       "competition",
       "game_application"
     ],
     "regression_notes": "Drop to the calm rundown version at half speed with slower runners. Game speed on top of shaky rotation produces chaos rather than practice.",
-    "progression_notes": "Add a second runner, or start the rundown from a live play rather than a set position so the defence has to organise itself under real conditions."
+    "progression_notes": "Add a second runner, or start the rundown from a live play rather than a set position so the defence has to organise itself under real conditions.",
+    "description": "Rundowns at the speed they actually happen. Use the fastest players on the team as the runners, and score it: an out in two throws or fewer and the defence wins the repetition. Three things, in order — sprint to close the distance rather than jogging, show the ball high and early so the receiver can see it, and make a short dart throw only when the receiver calls for it. Fielders rotate behind the play at full speed. Eight to ten scored repetitions."
   },
   {
     "drill_id": "2da70c16-18d3-4b63-8eca-12804ac048ea",
     "drill_name": "Calm Rundowns — Push Back, Follow Your Throw",
-    "source": "next steps written for the existing description, which already sets out the push-back rule and the follow-your-throw rotation",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the push-back rule and the follow-your-throw rotation",
     "regression_notes": "Go back to the two-base pickle with one throw and no rotation. The push-back rule is learnable before the rotation is.",
-    "progression_notes": "Move to game speed with fast runners, then add a second runner so the defence has to decide which one to chase."
+    "progression_notes": "Move to game speed with fast runners, then add a second runner so the defence has to decide which one to chase.",
+    "description": "Rundowns without the panic. Two lines of fielders at two bases with a runner trapped between them. Two rules and nothing else: always push the runner back toward the base they came from, so a failed rundown costs nothing; and always follow your throw to the back of the opposite line, so there is a fielder in place for the next one. Six to eight repetitions with the full rotation. Most youth rundowns fail because four players converge, nobody backs up, and the ball ends up in the outfield."
   },
   {
     "drill_id": "dac833d7-c4f6-42ce-8409-ea83dd77fa65",
     "drill_name": "Two-Base Pickle Drill",
-    "source": "next steps written for the existing description, which already sets out the two bases, the ball-up rule and the one-throw target",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the ball-up rule and the one-throw target",
     "regression_notes": "Walk the runner rather than letting them sprint, so the fielders can practise running at them without it becoming a race they lose.",
-    "progression_notes": "Add the push-back rule and the follow-your-throw rotation, which is the Calm Rundowns progression, then take it to game speed."
+    "progression_notes": "Add the push-back rule and the follow-your-throw rotation, which is the Calm Rundowns progression, then take it to game speed.",
+    "description": "The simplest rundown there is: two bases about forty feet apart, one fielder at each, one runner in between. The fielder with the ball runs hard at the runner holding the ball up by their ear where everyone can see it, and when the runner commits, the receiving fielder calls for it and takes the tag. Four to six repetitions per player in each role. Counting the throws out loud — and celebrating the one-throw outs — is what teaches them that running at the runner beats standing and faking."
   },
   {
     "drill_id": "62b2ed36-03da-4e9d-a424-1d94620fde7d",
@@ -2093,15 +2096,188 @@
   {
     "drill_id": "b1f220a4-fdc3-4750-810f-b431e0c8a16f",
     "drill_name": "Cutoff Responsibilities by Situation",
-    "source": "next steps written for the existing description, which already sets out the situational reps with runners and the cutoff man's call",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the runners, the loud call and the role rotation",
     "regression_notes": "Run the Little League system walk-through first, with no runners and no ball. Assignments have to be known before they can be executed under pressure.",
-    "progression_notes": "Add more complex situations — two runners, a ball to the wall — and let the cutoff man run the play without a coach calling it."
+    "progression_notes": "Add more complex situations — two runners, a ball to the wall — and let the cutoff man run the play without a coach calling it.",
+    "description": "Cutoff assignments practised as decisions rather than as positions. Put runners on so every repetition has a real answer: runner on first, ball into left-centre — where does the throw go, and who is the cutoff? Six to eight situational repetitions, with the cutoff man calling 'cut two', 'cut three' or 'let it go' loudly enough for the outfielder to hear. Players rotate through the cutoff role and the outfield role so both ends of the play get learned rather than one."
   },
   {
     "drill_id": "37f0c306-4c6c-4fa6-8491-96fa90893be9",
     "drill_name": "Little League Cuts & Relays System",
-    "source": "next steps written for the existing description, which already sets out the half-speed walk-through and the four scenarios",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the half-speed walk-through and the four scenarios",
     "regression_notes": "Two scenarios instead of four, walked through with no ball at all. Every player knowing where to go on two situations beats everyone guessing on four.",
-    "progression_notes": "Add live hit balls, then runners, then move to the situational version where the cutoff man makes the call rather than the coach."
+    "progression_notes": "Add live hit balls, then runners, then move to the situational version where the cutoff man makes the call rather than the coach.",
+    "description": "A cutoff system simple enough for a Little League team to actually run in a game. Walk the whole team through four scenarios at half speed with no ball — a ball to each outfield spot, with every player physically moving to where they belong. Then add a rolled ball, then a thrown one. Two live repetitions per scenario. The test is not whether it looks tidy but whether a player can answer 'ball in the right-centre gap, runner on first — where do you go?' without looking around first."
+  },
+  {
+    "drill_id": "a559ea0e-7d73-4920-905f-ccb86e117f4e",
+    "drill_name": "Flamingo Balance Drill — Single-Leg Stability",
+    "source": "markers and next steps written for the existing description, which already sets out the single-leg hold and the escalating times",
+    "success_markers": [
+      "Holds the position for thirty seconds without the other foot touching down",
+      "Ankle and hip stay quiet rather than constantly correcting",
+      "Can hold it on both legs, not just the strong one"
+    ],
+    "practice_roles": [
+      "isolate",
+      "warmup"
+    ],
+    "regression_notes": "Hold for five seconds with a fingertip on a fence, then remove the support. Any duration held cleanly beats a longer one spent wobbling.",
+    "progression_notes": "Close the eyes, stand on an uneven surface, or hold the balance point of an actual leg lift with the glove and ball in hand."
+  },
+  {
+    "drill_id": "41ff62cc-fb54-4266-8d0c-083a1c341161",
+    "drill_name": "Follow-Through Hold Drill — Finishing Strong",
+    "source": "markers and next steps written for the existing description, which already sets out the three-second freeze and the four things to check",
+    "success_markers": [
+      "Holds the finish for three seconds without stumbling",
+      "Chest finishes over the front knee with the throwing hand past the opposite hip",
+      "Ends in a position from which a ground ball could actually be fielded"
+    ],
+    "practice_roles": [
+      "isolate",
+      "teach"
+    ],
+    "regression_notes": "Throw at half effort and hold, or walk through the finish with no ball. A pitcher who cannot hold the finish is falling off, and that is easier to see slowly.",
+    "progression_notes": "Hold the finish at full effort, then have a coach roll a ball at them immediately after release so the fielding-ready position has a purpose."
+  },
+  {
+    "drill_id": "b22aa9c8-7cd1-4dc0-bba3-c66b03396e21",
+    "drill_name": "The Heel-Toe Drill — Front Foot Landing",
+    "source": "description rewritten to remove the brand-led attribution; markers and next steps written for the existing cues",
+    "description": "Where the front foot lands, and which way it points. The pitcher throws a normal delivery but with attention only on the landing: heel first, with the toes slightly closed — pointed a little toward third base for a right-hander. A front foot that lands turned open toward home lets the hips rotate early, and everything stored in the back leg leaks out before the arm gets to use it. Check the foot after every throw.",
+    "success_markers": [
+      "Front foot lands heel first rather than flat or on the toe",
+      "Toes point slightly closed rather than open toward the plate",
+      "Hips stay loaded until the foot is down"
+    ],
+    "practice_roles": [
+      "isolate",
+      "teach"
+    ],
+    "regression_notes": "Walk through the stride and landing with no ball, checking the foot each time. The position has to be findable slowly before it can survive a delivery.",
+    "progression_notes": "Throw at full effort and check whether the landing holds, then combine it with the stride direction line so both direction and foot angle are being checked at once."
+  },
+  {
+    "drill_id": "b1c3653c-82a0-446e-a9cb-0dd5ebf09864",
+    "drill_name": "Glove-Side Pull Drill — Front Side Control",
+    "source": "markers and next steps written for the existing description, which already sets out the glove extension and the pull into the ribs",
+    "success_markers": [
+      "Glove extends toward the target during the stride rather than flopping",
+      "Glove elbow pulls tight into the ribs as the shoulder rotates",
+      "Chest finishes facing the target instead of the pitcher falling off to the side"
+    ],
+    "practice_roles": [
+      "isolate",
+      "teach"
+    ],
+    "regression_notes": "Do it dry with no ball, or have them hold a second ball in the glove hand and squeeze it into the ribs. Feeling where the glove ends up is the whole point.",
+    "progression_notes": "Add full-effort throws and check whether the front side holds, then pair it with the hip lead work — a stable front side is what the hip is driving into."
+  },
+  {
+    "drill_id": "f47eba7c-bf41-4e1a-8a65-882f6fdcb0b1",
+    "drill_name": "Stride Direction Drill — Using a Chalk Line or Tape",
+    "source": "markers and next steps written for the existing description, which already sets out the chalk line and the landing spot beside it",
+    "success_markers": [
+      "Front foot lands consistently just to the glove side of the line",
+      "Stride neither crosses over the line nor lands well outside it",
+      "Pitcher checks their own landing spot without being asked"
+    ],
+    "practice_roles": [
+      "isolate",
+      "teach"
+    ],
+    "regression_notes": "Walk the stride with no ball and look at the foot each time. The line is feedback and it works just as well at walking pace.",
+    "progression_notes": "Throw at full effort, then remove the line and see whether the direction holds. Pair with the heel-toe drill so the angle of the foot is checked as well as its position."
+  },
+  {
+    "drill_id": "94124e82-c8f2-411b-9daa-f0a1a176663e",
+    "drill_name": "Kneel-Down (Wrist Snap) Drill — Release Point & Backspin",
+    "source": "markers and next steps written for the existing description, which already sets out the kneeling pair at 15-20 feet and the backspin target",
+    "success_markers": [
+      "Ball spins straight back like a wheel rather than sideways",
+      "Only the forearm and wrist move — the shoulder stays quiet",
+      "Can repeat the backspin across most of a set rather than occasionally"
+    ],
+    "practice_roles": [
+      "isolate",
+      "teach"
+    ],
+    "regression_notes": "Move closer and use a lighter ball, or have a coach support the elbow so the arm cannot join in. Isolation is the mechanism and anything that preserves it is fine.",
+    "progression_notes": "Stand up and add the torso, then the full delivery. The spin is what has to survive; if it disappears when the legs come in, go back."
+  },
+  {
+    "drill_id": "03eab7d0-7e67-4143-91e5-b8e4e783014a",
+    "drill_name": "The Rocker Drill — Hip Lead & Weight Shift",
+    "source": "description rewritten to remove the brand-led attribution; markers and next steps written for the existing cues",
+    "description": "The hip lead, taught with a rocking start that makes it easy to feel. The pitcher rocks their weight back onto the back foot, then drives the front hip toward home plate while the shoulders stay back and tilted slightly uphill. The arm follows rather than leads. It is the single most useful mechanical correction for a youth pitcher losing both velocity and command, because a shoulder that arrives before the hip has spent the energy before the arm can use it.",
+    "success_markers": [
+      "Front hip moves toward the plate before the front shoulder does",
+      "Shoulders stay tilted uphill through the stride rather than flattening",
+      "Weight stays back on the rock rather than drifting forward with it"
+    ],
+    "practice_roles": [
+      "isolate",
+      "teach"
+    ],
+    "regression_notes": "Rock and hold without throwing, so the separated position can be felt and checked. A coach standing side-on can show them where the hip is relative to the shoulder.",
+    "progression_notes": "Remove the rock so the hip lead happens from a normal leg lift, then throw at full effort to a catcher. Pair it with the Square Hips drill for the separation it creates."
+  },
+  {
+    "drill_id": "ffc26e2a-7801-42b7-b610-9a996527e638",
+    "drill_name": "Square Hips / Hip Lock Drill — Hip-Shoulder Separation",
+    "source": "markers and next steps written for the existing description, which already sets out squaring the hips at landing while the shoulder stays back",
+    "success_markers": [
+      "Hips are square to the plate at front-foot landing",
+      "Throwing shoulder is still back at that moment rather than opening with the hips",
+      "Pitcher can feel and describe the twist across the middle"
+    ],
+    "practice_roles": [
+      "isolate",
+      "progress"
+    ],
+    "regression_notes": "Hold the position without throwing, or work it from a standing start with no leg lift. The separation is a feel and it needs to be found slowly first.",
+    "progression_notes": "Add full-effort throws and check whether the separation survives, then build it into the complete delivery. The Rocker Drill is the natural partner since it builds the hip lead this depends on."
+  },
+  {
+    "drill_id": "93cf7e08-9bd0-48c3-a344-26e092c651e7",
+    "drill_name": "Towel Drill — Arm Speed & Release Point",
+    "source": "markers and next steps written for the existing description, which already sets out the towel, the target at release distance and the snap",
+    "success_markers": [
+      "Towel snaps the target consistently rather than falling short or overshooting",
+      "Full delivery is used, not a shortened arm action",
+      "Release point stays in the same place across a whole set"
+    ],
+    "regression_notes": "Move the target closer and go at half speed. A pitcher who cannot reach the target will lunge to get there, which trains the opposite of what is wanted.",
+    "progression_notes": "Move the target further out gradually, then throw a real ball and see whether the extension holds. This is a drill that can be done daily without arm cost, which is most of its value."
+  },
+  {
+    "drill_id": "a54d536f-e4f0-4dd5-91d2-d007bd274250",
+    "drill_name": "Balance Point Drill — Leg Lift & Pause",
+    "source": "description rewritten to remove the brand-led closing attribution; markers and next steps written for the existing cues",
+    "description": "The top of the delivery, held still. The pitcher lifts the front knee to about belt height and stops there for two to three seconds, front foot hanging straight down rather than tucked behind the knee, eyes on the target throughout. Then they finish the pitch. The pause turns a position that normally flashes past into something a pitcher can feel and a coach can correct, and a pitcher who cannot balance there is not going to repeat a delivery.",
+    "success_markers": [
+      "Holds the balance point for two seconds without wobbling",
+      "Front foot hangs straight down rather than tucking behind the back knee",
+      "Eyes stay on the target throughout the hold"
+    ],
+    "regression_notes": "Hold without a ball, or with a fingertip on a fence. Balance is trainable in isolation, and the Flamingo drill is the version with the pitch removed entirely.",
+    "progression_notes": "Shorten the pause until it disappears into a normal delivery, and check whether the balance holds at full effort. Add the hip lead work once the top of the delivery is stable."
+  },
+  {
+    "drill_id": "cf56cda8-d397-4ed7-873b-560b78d6473e",
+    "drill_name": "The Swing Shuffle Drill — Momentum & Rhythm",
+    "source": "markers and next steps written for the existing description, which already sets out the lateral shuffle before delivery and the crow-hop comparison",
+    "success_markers": [
+      "Momentum flows into the delivery rather than the shuffle and the pitch being separate",
+      "Throws noticeably harder than from a dead stop",
+      "Lands under control despite the moving start"
+    ],
+    "practice_roles": [
+      "isolate",
+      "progress"
+    ],
+    "regression_notes": "Take one small step instead of a shuffle, or walk into the delivery. The lesson is that momentum adds power, and it works at any size of movement.",
+    "progression_notes": "Shrink the shuffle toward a normal delivery and see how much of the momentum carries. Tell them plainly this is a feel drill rather than a game motion."
   }
 ]
