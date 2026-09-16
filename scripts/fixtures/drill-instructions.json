@@ -1,0 +1,298 @@
+[
+  {
+    "drill_id": "fe94a671-1d24-40fe-9771-4c7f5f708c14",
+    "drill_name": "Soft Toss",
+    "source": "recovered from hidden duplicate 18e0cf1e (Soft Toss From the Side), source framing removed",
+    "description": "The base soft toss station. A partner kneels off the hitter's front shoulder, about arm's length plus a step away and slightly in front, and tosses balls underhand into the hitting zone. The hitter tracks the ball out of the tosser's hand, lets it travel to the contact point, and drives it into a net or open field. One tosser, one hitter, one bucket — this is the station everything else in the category is a variation of.",
+    "ai_coaching_notes": "Toss to the same spot every time until the swing is repeatable; a station that moves the target is testing, not teaching. Tell the hitter to watch the ball leave your hand, not to guess off your arm. 'Let it travel' is the cue that fixes most of what goes wrong here — young hitters reach out and catch the ball early. Toss from a knee so your arm path stays under the hitter's eye line.",
+    "success_markers": [
+      "Ball is struck out in front of the front foot, not beside it",
+      "Line drives into the middle of the net rather than pulled into the ground",
+      "Hitter finishes balanced and can hold the finish for a count"
+    ],
+    "equipment_needed": [
+      "Baseballs or wiffle balls",
+      "Bat",
+      "Net or open field",
+      "Bucket"
+    ],
+    "practice_roles": [
+      "repetition"
+    ],
+    "regression_notes": "Move closer and toss slower, or switch to wiffle balls. If the hitter is still lunging, put the ball on a tee for a round and come back.",
+    "progression_notes": "Vary the toss height and depth within the zone so the hitter has to adjust. From there, move to front toss, which puts the ball on a realistic flight path."
+  },
+  {
+    "drill_id": "4cd55f36-4ac8-447a-9633-936c9b1f6c22",
+    "drill_name": "Ripken Soft Toss Drill",
+    "source": "rewritten from video framing; mechanics kept from the existing description (eliminate the lower half, isolate hands and bat path)",
+    "description": "Soft toss with the lower half taken out of the equation, so the hitter can only fix the swing with their hands. The hitter sets up in a wide, already-strided stance — front foot down, weight centred, no stride to take — and a partner tosses from the side as normal. Because there is no stride and no weight shift to hide behind, every mishit traces back to bat path, and that is the point of the station.",
+    "ai_coaching_notes": "Set the feet wider than a game stance and tell the hitter they are not allowed to move them. 'Turn, don't slide' — the back hip rotates in place instead of drifting toward the pitcher. If the ball keeps going into the ground, the hands are casting out; cue 'knob to the ball, then release.' Keep rounds short: this is a correction station, not a volume station.",
+    "success_markers": [
+      "Back foot stays planted through contact — no drift toward the tosser",
+      "Consistent line drives despite the restricted stance",
+      "Hitter can describe what their hands did on a bad swing"
+    ],
+    "equipment_needed": [
+      "Baseballs or wiffle balls",
+      "Bat",
+      "Net"
+    ],
+    "practice_roles": [
+      "isolate",
+      "teach"
+    ],
+    "regression_notes": "Let the hitter take a small stride if the no-stride setup collapses their balance entirely. The restriction is a teaching tool, not a rule worth losing the swing over.",
+    "progression_notes": "Return to normal soft toss and see whether the bat path holds up once the lower half comes back. If it does not, the correction has not transferred yet."
+  },
+  {
+    "drill_id": "1f64a6c2-11bd-40d4-a45d-ae028f83db91",
+    "drill_name": "Two Balls Toss Drill",
+    "source": "written from the existing description (two balls, reaction time, decision making) and its advanced variation role in the soft toss family",
+    "description": "The reaction and decision variant of soft toss. The tosser holds a ball in each hand, calls a colour or a number for each before the round starts, then tosses both at once — and the hitter has to pick the called one and hit it while ignoring the other. The swing is ordinary soft toss; what changes is that the hitter cannot pre-decide, which is the gap between a clean cage swing and one that survives a live pitch.",
+    "ai_coaching_notes": "Use two visibly different balls — one marked, one plain — so the call is unmistakable at speed. Call the target ball as the toss leaves your hand, not before. Expect the first few rounds to look worse than normal soft toss; that is the drill working. Cue 'see it, then swing' and accept a slightly later contact point while they adjust.",
+    "success_markers": [
+      "Hitter swings at the called ball more often than not by the second round",
+      "Swing quality holds up rather than turning into a lunge or a slap",
+      "No swing at all is better than a swing at the wrong ball — the hitter takes when unsure"
+    ],
+    "equipment_needed": [
+      "Two visibly different balls",
+      "Bat",
+      "Net",
+      "Bucket"
+    ],
+    "practice_roles": [
+      "progress",
+      "decision"
+    ],
+    "regression_notes": "Call the ball earlier, or go back to one ball with a called 'yes/no' on each toss. Younger hitters often need the decision separated from the swing before they can do both.",
+    "progression_notes": "Call later, toss the two balls at slightly different heights, or make the call a take-or-swing rather than a pick. From here the hitter is ready for live front toss with a take sign."
+  },
+  {
+    "drill_id": "fac499f5-7d4b-49b2-a924-55c97a96eeef",
+    "drill_name": "Sunflower Seed Soft Toss",
+    "source": "written from the existing description (sunflower seeds in place of balls, hand-eye and focus) — a long-standing hitting-station variant",
+    "description": "Soft toss with sunflower seeds instead of baseballs. The tosser flicks seeds underhand into the hitting zone from a few feet away and the hitter tries to hit them. A seed is small enough that only genuine ball-tracking connects with it, so the station trains the eyes without asking anything of the swing, and it is short, funny, and safe enough to use with the youngest group on a cold day indoors.",
+    "ai_coaching_notes": "Stand closer than for normal soft toss — a seed does not carry. Flick them one at a time and give the hitter a moment between each. Contact rate will be low and that is fine; praise the swings where the head stayed still rather than the ones that connect. Best used as a five-minute break inside a longer hitting block, not as a station on its own.",
+    "success_markers": [
+      "Head stays down and still through the swing",
+      "Hitter makes contact at least a few times in a round",
+      "Attention holds — the group is engaged rather than drifting"
+    ],
+    "equipment_needed": [
+      "Sunflower seeds",
+      "Bat",
+      "Indoor space or open field"
+    ],
+    "practice_roles": [
+      "isolate",
+      "finish"
+    ],
+    "regression_notes": "Move closer still, or switch to a larger small object such as a bottle cap or a plastic golf ball. The size is the difficulty dial.",
+    "progression_notes": "Go straight back to soft toss with a real ball. The ball looks enormous afterwards, which is most of the value."
+  },
+  {
+    "drill_id": "9fea10f7-efb9-4006-bce8-7a6109bb7fbe",
+    "drill_name": "Protect the Castle",
+    "source": "cues and markers written for the existing description, which already sets out the castle, the roll and the scoring",
+    "ai_coaching_notes": "You stand about fifteen feet away and roll — do not throw. Roll firmly enough that the ball would reach the castle if they missed it, or the game has no stakes. Alternate sides without announcing which. The only thing worth coaching here is 'stay in front'; the low posture arrives on its own because a player defending something crouches without being told. Keep score out loud.",
+    "success_markers": [
+      "Moves laterally and gets the body in front rather than reaching sideways with the glove",
+      "Stays low between rolls instead of standing up and resetting",
+      "Blocks the ball with something — glove, chest, shin — rather than letting it through"
+    ],
+    "practice_roles": [
+      "repetition",
+      "competition"
+    ]
+  },
+  {
+    "drill_id": "6b13a4df-dc75-417f-89db-578fe99bdf44",
+    "drill_name": "Protect the Castle + Throw",
+    "source": "cues and markers written for the existing description, which already sets out the castle, the throw and the scoring",
+    "ai_coaching_notes": "Put the target where the real play is — first base if you have a base, a coach with a glove if you do not. Roll from about fifteen feet, same as the base version. The cue that matters is 'field it, then find the target' in that order: the players who rush start missing both. A wild throw scores against them exactly like a ball through the castle, and saying so before the first rep is what makes them slow down.",
+    "success_markers": [
+      "Fields the ball cleanly before looking up for the target",
+      "Throw arrives at the target on the fly, chest height",
+      "Gets back into fielding position before the next roll rather than watching the throw"
+    ],
+    "reps_guidance": "3 rounds of 8 rolls, alternating sides"
+  },
+  {
+    "drill_id": "4c68b693-a617-4827-a732-653c2a64a27d",
+    "drill_name": "The Flamingo Drill",
+    "source": "written from the existing description (balance on one leg to feel fielding posture) and its base role in the fielding-position family",
+    "description": "The fielding position, taught by making it impossible to fake. The player stands on one leg with the other lifted behind them, glove down in front, and holds it — the flamingo. From there you roll gentle ground balls they field while still balanced on the one leg. A player who is standing too tall or has their weight on their heels simply falls over, so the posture corrects itself without anyone being told to bend their knees.",
+    "ai_coaching_notes": "Have them hold the flamingo for a count of three before the first roll so they feel where the balance lives. Roll softly and straight at them — this is a posture station, not a range station. 'Chest over your toes' is the correction when they wobble backwards. Switch legs every few reps so neither side gets skipped, and keep the whole thing under five minutes; it is tiring in a way that does not look tiring.",
+    "success_markers": [
+      "Holds the one-leg position for three seconds without putting the foot down",
+      "Glove stays out in front of the body, not tucked underneath",
+      "Fields a gentle roll without losing balance"
+    ],
+    "practice_roles": [
+      "isolate",
+      "teach"
+    ],
+    "regression_notes": "Let them touch the lifted toe to the ground for balance, or hold the fence with the throwing hand. The point is the chest-over-toes posture, not the circus trick.",
+    "progression_notes": "Go to two feet and a normal fielding position, then add lateral movement — Protect the Castle is the natural next station once the posture holds."
+  },
+  {
+    "drill_id": "6517d249-a27d-41af-a86e-72bb8187c28b",
+    "drill_name": "The Cone Drill",
+    "source": "written from the existing description and tags (cones, approach angles on ground balls)",
+    "description": "A cone teaches the approach angle that words do not. Set a cone a few feet in front and to the glove side of the fielder's starting spot. Roll a ground ball toward the cone, and the fielder has to come around the outside of it — not straight at the ball — so they arrive moving through the ball at an angle rather than stopping beside it. Field, then throw to a target at first. Rotate the next fielder in after two reps.",
+    "ai_coaching_notes": "The cone is the whole teaching point: 'go around it, then attack.' A fielder who cuts inside the cone has taken the straight line you are trying to break them of. Set the cone closer for a tighter angle, wider for a longer approach. Roll from about twenty feet at a pace they can handle — the angle is what is being learned, not the reaction.",
+    "success_markers": [
+      "Rounds the outside of the cone rather than cutting inside it",
+      "Arrives at the ball moving forward, not stopped and waiting",
+      "Fields off the glove-side foot and steps into the throw"
+    ],
+    "equipment_needed": [
+      "Cones",
+      "Gloves",
+      "Baseballs",
+      "Target or base"
+    ],
+    "practice_roles": [
+      "teach",
+      "repetition"
+    ],
+    "regression_notes": "Walk them through the path with no ball first, then add a rolled ball at half pace. The footwork has to be familiar before the ball speeds it up.",
+    "progression_notes": "Put a cone on each side and call which one as you roll, so the fielder picks the angle instead of knowing it. Add a time limit on the throw."
+  },
+  {
+    "drill_id": "6f1ef230-3f1a-4bcd-a969-87be5cdc65ed",
+    "drill_name": "Youth Infield Drill (Practice Anywhere)",
+    "source": "written from the existing description (posture and footwork, minimal equipment, anywhere)",
+    "description": "Infield posture and footwork with no field and almost no equipment — a driveway, a gym, a patch of grass before the game. Players pair off about fifteen feet apart. One rolls a ground ball along the ground to the other, who fields it in proper position, makes the exchange to the throwing hand, and rolls it back. No throwing, no diamond, no fungo. The pairs alternate every rep so both are working the whole time.",
+    "ai_coaching_notes": "Because the ball comes slowly, there is time to coach the parts that get skipped at game speed: glove out front, funnel to the middle, exchange in front of the chest. 'Roll it, don't throw it' needs saying to the partner every few reps. Fifteen feet is close enough that a missed ball does not become a chase, which is why this works in a car park.",
+    "success_markers": [
+      "Glove reaches the ball out in front of the front foot",
+      "Ball is funnelled to the middle of the body, not caught out to the side",
+      "Exchange happens in front of the chest without the glove dropping to the hip"
+    ],
+    "equipment_needed": [
+      "Gloves",
+      "Baseballs or tennis balls"
+    ],
+    "practice_roles": [
+      "teach",
+      "repetition"
+    ],
+    "regression_notes": "Use a tennis ball and move the pair closer. If the exchange is the problem, have them field and simply hold the ball up in throwing position rather than rolling it back.",
+    "progression_notes": "Widen the gap, roll harder, and roll to either side so the fielder has to move. Once there is a field available, the same footwork goes straight into ground balls off a fungo."
+  },
+  {
+    "drill_id": "0833de14-902c-408a-a3a9-a8c4df28c4f1",
+    "drill_name": "Cross-Shuffle Drill",
+    "source": "written from the existing description and tags (shuffle footwork, fielding mechanics, communication)",
+    "description": "Two fielders start about twenty feet apart facing the coach and shuffle laterally toward each other, crossing paths, before peeling back to where they started. The coach rolls a ground ball into the space between them as they cross, and one of them has to call it and field it while the other clears out. It works the lateral shuffle and forces the call at the same time, which is the pair of things that goes wrong on a ball up the middle.",
+    "ai_coaching_notes": "Shuffle — do not cross the feet. The call has to be loud and it has to be early: 'ball, ball, ball' before either player commits. The one who does not call it peels behind, they do not stop and watch. Roll the ball late, as they cross, so the decision is real. If nobody calls it, roll it again and let the silence be the lesson.",
+    "success_markers": [
+      "Feet shuffle rather than cross over",
+      "One player calls the ball out loud before either reaches it",
+      "The player who does not call it clears the space instead of stopping"
+    ],
+    "equipment_needed": [
+      "Gloves",
+      "Baseballs",
+      "Two cones to mark the starting spots"
+    ],
+    "practice_roles": [
+      "progress",
+      "game_application"
+    ],
+    "regression_notes": "Run the shuffle with no ball until the footwork is clean, then roll directly to one player and have the other practise calling 'yours'. Separating the movement from the decision makes both easier.",
+    "progression_notes": "Roll harder and later, or add a third player so the call has more than one candidate. Finish with a throw to a base so the play is completed rather than abandoned."
+  },
+  {
+    "drill_id": "c345c3a1-bda3-43f7-b6f3-16e77432ab83",
+    "drill_name": "Figure Eight Infield Drill",
+    "source": "rewritten from video framing; pattern and intent kept from the existing description (figure eight for range and footwork)",
+    "description": "Two cones about ten feet apart, and the fielder moves in a figure eight around them — around the outside of one, back through the middle, around the outside of the other. The coach stands in front and rolls a ground ball each time the fielder comes through the middle of the eight. The pattern keeps them moving laterally and changing direction continuously, so every ball is fielded on the move rather than from a set stop.",
+    "ai_coaching_notes": "Stay low through the whole pattern — the standing-up-between-reps habit is exactly what this breaks. Roll the ball as they pass through the middle, not when they are settled. 'Field it moving forward' is the cue; a fielder who stops to receive has lost the point of the drill. Two laps of the eight is a set, and three sets is plenty — it is more tiring than it looks.",
+    "success_markers": [
+      "Stays in a low athletic position through the whole pattern, not just at the ball",
+      "Fields on the move without stopping to set up",
+      "Changes direction off the outside foot rather than shuffling to a halt first"
+    ],
+    "equipment_needed": [
+      "Two cones",
+      "Glove",
+      "Baseballs"
+    ],
+    "regression_notes": "Widen the cones and roll less often — every second pass through the middle — so there is recovery time. Walk the pattern first with no ball at all.",
+    "progression_notes": "Narrow the cones, roll on every pass, or add a throw to a target after each ball. Calling the direction of the next roll as they come through makes it a reaction drill as well as a footwork one."
+  },
+  {
+    "drill_id": "fbbe6484-8b9d-486b-839e-23114e600c77",
+    "drill_name": "Groundball Transfer Catch",
+    "source": "written from the existing description and the recorded flaw it fixes (slow transfer)",
+    "description": "A partner drill that treats the exchange as the skill rather than an afterthought. Two players stand about twenty feet apart. One rolls a ground ball, the other fields it and makes the glove-to-hand transfer immediately, showing the ball in throwing position before rolling it back. Nothing is thrown. Every rep is a fielding rep and an exchange rep, and because there is no throw to think about, the transfer is the only thing left to get wrong.",
+    "ai_coaching_notes": "The exchange happens in front of the chest, not down at the hip and not up by the ear. 'Funnel and go' — the glove brings the ball to the middle, the hand takes it there. Have them hold the throwing position for a beat so you can see the grip; a player who is fumbling for four seams will show you immediately. Count the exchanges out loud to add pressure without adding a throw.",
+    "success_markers": [
+      "Ball leaves the glove and reaches throwing position in one motion",
+      "Exchange happens in front of the chest, not below the waist",
+      "Four-seam grip more often than not, without the player looking at their hand"
+    ],
+    "equipment_needed": [
+      "Gloves",
+      "Baseballs"
+    ],
+    "practice_roles": [
+      "isolate",
+      "repetition"
+    ],
+    "regression_notes": "Slow everything down and let them look at the grip. Getting four seams deliberately is the step before getting it fast.",
+    "progression_notes": "Add the throw back instead of a roll, then put a time target on the exchange. From here the same exchange goes into the Infield Throwing Drill with footwork attached."
+  },
+  {
+    "drill_id": "b3534518-f0df-4f30-8378-0b7d084e5fb9",
+    "drill_name": "Infield Throwing Drill",
+    "source": "written from the existing description (fielding plus throwing, clean transfer and footwork) and the recorded flaw it fixes",
+    "description": "The whole infield play, start to finish: field the ground ball, exchange, step, throw to a base. The coach rolls or hits from home plate, the fielder works from normal infield depth, and the throw goes to a player or coach with a glove at first. What separates this from ordinary ground-ball work is that the throw counts — the rep is not over when the ball is caught, it is over when it arrives on target. Rotate after two reps.",
+    "ai_coaching_notes": "The footwork between the catch and the throw is the part to coach: field, right foot behind the ball, step through toward the target. 'Throw through the base, not at it' keeps them from decelerating. Stand behind the fielder where you can see whether they are throwing off a set front side or falling away. Accuracy over velocity every time at this age — a hard throw into the dugout is a worse rep than a soft one on the bag.",
+    "success_markers": [
+      "Throw arrives chest-high and catchable at first",
+      "Fielder steps toward the target rather than throwing across their body",
+      "Exchange and throw happen without an extra shuffle to gather"
+    ],
+    "equipment_needed": [
+      "Gloves",
+      "Baseballs",
+      "Base or target",
+      "Fungo (optional)"
+    ],
+    "practice_roles": [
+      "progress",
+      "game_application"
+    ],
+    "regression_notes": "Shorten the throw — field at the edge of the infield grass and throw to a coach twenty feet away. Get the footwork repeatable before adding distance.",
+    "progression_notes": "Move to full depth, alternate the target base so the fielder has to decide, or add a runner to create real urgency."
+  },
+  {
+    "drill_id": "adf1d78d-fbe5-417c-a2d0-5860e555b356",
+    "drill_name": "The Best Youth Infield Drill",
+    "source": "written from the existing description (team drill, constant reps on infield fundamentals); see docs/audits/drill-canonicalization-decisions.csv for the disposition",
+    "description": "A whole-team ground-ball circuit built so nobody stands still. Players line up in two or three short lines facing a coach with a bucket. The coach rolls to the front of one line, that player fields and throws to a target beside the coach, then runs to the back of the next line along. With three coaches and three lines a twelve-player team gets a ground ball every few seconds, which is the actual problem this solves: the standard infield drill gives each player four reps in twenty minutes.",
+    "ai_coaching_notes": "Keep the lines short — three or four deep at most — because line length is what kills rep count. Roll the next ball before the previous player has finished their throw; the pace is the feature. Coach one thing across the whole circuit rather than correcting each player individually, or the tempo collapses. Rotate the lines so players field from different angles rather than doing forty reps of the same one.",
+    "success_markers": [
+      "Every player gets a ball at least every fifteen seconds",
+      "Fielders stay in athletic position while waiting rather than standing up in line",
+      "Throws go to the target on the fly without a gather step"
+    ],
+    "equipment_needed": [
+      "Gloves",
+      "Baseballs",
+      "Buckets",
+      "Targets or bases"
+    ],
+    "practice_roles": [
+      "repetition",
+      "warmup"
+    ],
+    "regression_notes": "Drop to one line and one coach, and roll slower. The tempo is the point, but not at the cost of the fielding position falling apart.",
+    "progression_notes": "Add a second ball in the air, vary the roll between each line, or put a team score on clean reps in a two-minute block."
+  }
+]
