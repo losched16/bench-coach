@@ -1,0 +1,42 @@
+drill_id,drill_name,category,schedulable,current_problem_count,proposed_problem_slug,action,confidence,rationale
+ecf4c61b-0b8b-49bd-bbe5-697d42991d79,Base Running Circuit,Baserunning,yes,0,slow-first-step,ADD_MAPPING,high,The circuit's first station is an explosive three-step start on an unpredictable signal.
+ecf4c61b-0b8b-49bd-bbe5-697d42991d79,Base Running Circuit,Baserunning,yes,0,bad-base-turns,ADD_MAPPING,high,Cutting the inside corner of the base is one of the circuit's scored success markers.
+b2de2724-cd95-417e-ad7a-d6df5e55b34d,Fastest Technique Running Out of the Box,Baserunning,no,0,,NO_MAPPING_NEEDED,high,teaching_content — explains a technique rather than being a station a coach runs.
+23a37283-c85e-4564-a48a-eaad8a691f78,How to Add Base Running Into Practice,Baserunning,no,0,,NO_MAPPING_NEEDED,high,"teaching_content — advice about practice structure, not a drill."
+a9b479c8-a255-4886-b35f-02986820de03,Skills and Drills for Baserunning,Baserunning,no,0,,NO_MAPPING_NEEDED,high,"source_collection — a video of several drills, not one activity."
+a648dcab-45b3-4c81-9ed4-f29eaea4323e,Bunting with Lacrosse Stick,Bunting,yes,0,cant-bunt,ADD_MAPPING,high,A bunting station whose whole feedback loop is whether the bunt was placed.
+a50b19b7-e1ef-48fb-81b0-7cff9a96a0a0,How to Bunt Like a PRO,Bunting,no,0,,NO_MAPPING_NEEDED,high,"teaching_content — bunting instruction, not a runnable station."
+41594e0a-9e09-44f9-96f5-5b4ef955afab,Catching For Beginners (Jingle),Catching,no,0,,NO_MAPPING_NEEDED,high,"teaching_content — a mnemonic, not an activity."
+1be09ab8-a1a3-45ca-945b-b7b26585c379,Top 5 Catching Drills for 8U,Catching,no,0,,NO_MAPPING_NEEDED,high,source_collection — five drills in one video.
+e709ba50-5004-4e9c-a2b6-3abffa809e78,Youth Baseball Catching Drills,Catching,no,0,,NO_MAPPING_NEEDED,high,"source_collection — covers receiving, blocking and throwing at once."
+8f9473e4-ff47-41cd-96b1-756aa76a3379,2 Outfield Drills for Fly Balls,Fielding (Fly Balls),no,0,,NO_MAPPING_NEEDED,high,source_collection — two drills in one video.
+79c17c8e-3331-4930-a729-a0d18196cf73,3 Great Drills for Teaching Fly Balls,Fielding (Fly Balls),no,0,,NO_MAPPING_NEEDED,high,source_collection — three drills in one video.
+29276b7a-fd04-45ff-825d-1d715d384908,Fly Ball Drill with Cones,Fielding (Fly Balls),yes,0,backpedaling-flyballs,ADD_MAPPING,high,"The cone gives the fielder somewhere to turn and run to, which is the direct alternative to backpedalling."
+6594d761-ce0b-4f2b-b72f-1f19fdb6574c,How to Catch a Fly Ball With Confidence,Fielding (Fly Balls),no,0,,NO_MAPPING_NEEDED,high,"teaching_content — progressions described, not a station."
+0833de14-902c-408a-a3a9-a8c4df28c4f1,Cross-Shuffle Drill,Fielding (Infield),yes,0,poor-fielding-footwork,ADD_MAPPING,high,The lateral shuffle without crossing the feet is the drill's first success marker.
+c345c3a1-bda3-43f7-b6f3-16e77432ab83,Figure Eight Infield Drill,Fielding (Infield),yes,0,poor-fielding-footwork,ADD_MAPPING,high,"Continuous direction changes around two cones, with every ball fielded on the move."
+c345c3a1-bda3-43f7-b6f3-16e77432ab83,Figure Eight Infield Drill,Fielding (Infield),yes,0,fielding-flat-footed,ADD_MAPPING,high,Staying low through the whole pattern is the marker the drill exists to build.
+9fea10f7-efb9-4006-bce8-7a6109bb7fbe,Protect the Castle,Fielding (Infield),yes,0,poor-fielding-footwork,ADD_MAPPING,high,Lateral movement to get the body in front is the scoring condition of the game.
+9fea10f7-efb9-4006-bce8-7a6109bb7fbe,Protect the Castle,Fielding (Infield),yes,0,fielding-flat-footed,ADD_MAPPING,high,Staying low between rolls is an explicit success marker; the castle produces the crouch on its own.
+6b13a4df-dc75-417f-89db-578fe99bdf44,Protect the Castle + Throw,Fielding (Infield),yes,0,poor-fielding-footwork,ADD_MAPPING,high,"Same fielding requirement as the base version, with the play completed."
+6b13a4df-dc75-417f-89db-578fe99bdf44,Protect the Castle + Throw,Fielding (Infield),yes,0,inaccurate-throws,ADD_MAPPING,high,A throw that misses the target scores against the fielder exactly like a ball through the castle.
+adf1d78d-fbe5-417c-a2d0-5860e555b356,The Best Youth Infield Drill,Fielding (Infield),yes,0,poor-fielding-footwork,ADD_MAPPING,medium,A high-rep ground-ball circuit; footwork is what the single coached cue is spent on. Lower confidence because the row is a volume drill rather than a corrective one.
+6517d249-a27d-41af-a86e-72bb8187c28b,The Cone Drill,Fielding (Infield),yes,0,poor-fielding-footwork,ADD_MAPPING,high,The cone exists to break the straight-line approach and force an angle.
+4c68b693-a617-4827-a732-653c2a64a27d,The Flamingo Drill,Fielding (Infield),yes,0,fielding-flat-footed,ADD_MAPPING,high,"The one-leg hold makes a tall, heel-weighted posture physically impossible to hold."
+270f1772-259d-4a05-8376-6b993d20137b,Three Drill Progression,Fielding (Infield),no,0,,NO_MAPPING_NEEDED,high,"source_collection — three drills in progression, not one."
+6f1ef230-3f1a-4bcd-a969-87be5cdc65ed,Youth Infield Drill (Practice Anywhere),Fielding (Infield),yes,0,poor-fielding-footwork,ADD_MAPPING,high,Posture and footwork are the drill's stated subject and its success markers.
+6f1ef230-3f1a-4bcd-a969-87be5cdc65ed,Youth Infield Drill (Practice Anywhere),Fielding (Infield),yes,0,slow-transfer,ADD_MAPPING,high,"Every rep ends with a glove-to-hand exchange in front of the chest, scored as a marker."
+0997fc64-a8e8-44b1-995c-3aa1e0291a99,Baby Steps - Hip Load,Hitting,yes,0,lunging,ADD_MAPPING,high,Staged specifically so the weight loads into the back hip instead of drifting forward with the stride.
+ba7e4b8c-ad36-45bd-9b63-b7b354b9d43d,Freeze at Extension Drill,Hitting,yes,0,,REVIEW,low,"Freeze at Extension trains the finish of the swing. No problem in the taxonomy describes an incomplete finish, and the nearest — barring-arm — is about the front arm locking EARLY, which this drill could arguably reinforce rather than fix. Adding a mapping here would be guessing, and guessing wrong would prescribe it to exactly the wrong hitter."
+31af2888-b541-479e-8a0f-78bcb528ea17,Load to Launch Drill,Hitting,yes,0,lunging,ADD_MAPPING,high,The held launch position exists to show that the hands stay back when the front foot lands.
+5abc9df7-d4ad-40d3-b95e-2eb275e82710,PVC Posture Drill,Hitting,yes,0,loses-posture,ADD_MAPPING,high,The pipe across the shoulders is a posture mirror; the whole drill is shoulder angle by pitch height.
+1176adaf-60f6-4dc1-a596-f30773a9c5be,5 Youth Pitching Drills From Your Knees,Pitching,no,0,,NO_MAPPING_NEEDED,high,source_collection — five drills in one video.
+6955e8e1-756d-4f11-a1ca-0675527ebc9e,Indoor Team Pitching Drills,Pitching,no,0,,NO_MAPPING_NEEDED,high,"source_collection — a set of indoor drills, not one activity."
+9611311a-34f7-444d-a98c-44b689a181b6,Rotational Efficiency Drills,Pitching,no,0,,NO_MAPPING_NEEDED,high,source_collection — two drills in one video.
+4cd55f36-4ac8-447a-9633-936c9b1f6c22,Ripken Soft Toss Drill,Soft Toss,yes,0,casting,ADD_MAPPING,high,"The no-stride setup removes every excuse but bat path, which is what casting is."
+4cd55f36-4ac8-447a-9633-936c9b1f6c22,Ripken Soft Toss Drill,Soft Toss,yes,0,lunging,ADD_MAPPING,high,The wide already-strided stance makes drifting forward physically impossible.
+fac499f5-7d4b-49b2-a924-55c97a96eeef,Sunflower Seed Soft Toss,Soft Toss,yes,0,pulling-head,ADD_MAPPING,high,A seed is small enough that only a still head connects with it; head position is the graded marker.
+1f64a6c2-11bd-40d4-a45d-ae028f83db91,Two Balls Toss Drill,Soft Toss,yes,0,late-timing,ADD_MAPPING,medium,"Trains seeing rather than pre-deciding, which is the root of guess-hitting. Medium because the drill deliberately makes contact later before it makes it better."
+663dc298-e5f2-4ea8-9d6d-6812e652cf28,Fun Baseball Throwing Drill,Throwing,yes,0,inaccurate-throws,ADD_MAPPING,high,Scored purely on whether the throw hit a target.
+2ac95ee1-db4f-4ab1-b2ec-569a5419b6ef,Second Baseman Flip/Throw Combo,Throwing,yes,0,slow-transfer,ADD_MAPPING,high,The underhand flip is the fastest way to get rid of the ball at short range and is half the drill.
+4e1975e2-eb6b-49a8-9d29-0b9d0afd2f68,Simple Throwing Progressions,Throwing,yes,0,throwing-mechanics,ADD_MAPPING,high,"Three named mechanical steps — grip, glove, step — practised in sets."

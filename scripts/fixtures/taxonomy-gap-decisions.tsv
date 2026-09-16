@@ -1,0 +1,65 @@
+# What to do about each curated drill that maps to no problem in problem_taxonomy.
+#
+# 35 rows map to nothing. That is not automatically wrong: a source collection
+# and a teaching-content row are not offered to a coach as something to run, so
+# a mapping on one is dead weight that only makes the coverage numbers look
+# better than they are. Those are NO_MAPPING_NEEDED on purpose.
+#
+# What is left is the schedulable rows, and the rule for those is the standing
+# drill-audit instruction: only add a mapping when the activity CLEARLY
+# addresses an existing problem. Inventing a loose fit to make a count go up is
+# how a prescription engine starts recommending a fielding drill for a hitting
+# complaint.
+#
+# Columns, tab-separated:
+#   drill_id  action  problem_slug  confidence  rationale
+#
+# action is ADD_MAPPING, NO_MAPPING_NEEDED or REVIEW.
+# A drill needing two mappings gets two lines.
+#
+# ── demoted rows: nothing to prescribe, so nothing to map ────────────────────
+b2de2724-cd95-417e-ad7a-d6df5e55b34d	NO_MAPPING_NEEDED		high	teaching_content — explains a technique rather than being a station a coach runs.
+a9b479c8-a255-4886-b35f-02986820de03	NO_MAPPING_NEEDED		high	source_collection — a video of several drills, not one activity.
+23a37283-c85e-4564-a48a-eaad8a691f78	NO_MAPPING_NEEDED		high	teaching_content — advice about practice structure, not a drill.
+a50b19b7-e1ef-48fb-81b0-7cff9a96a0a0	NO_MAPPING_NEEDED		high	teaching_content — bunting instruction, not a runnable station.
+41594e0a-9e09-44f9-96f5-5b4ef955afab	NO_MAPPING_NEEDED		high	teaching_content — a mnemonic, not an activity.
+1be09ab8-a1a3-45ca-945b-b7b26585c379	NO_MAPPING_NEEDED		high	source_collection — five drills in one video.
+e709ba50-5004-4e9c-a2b6-3abffa809e78	NO_MAPPING_NEEDED		high	source_collection — covers receiving, blocking and throwing at once.
+6594d761-ce0b-4f2b-b72f-1f19fdb6574c	NO_MAPPING_NEEDED		high	teaching_content — progressions described, not a station.
+8f9473e4-ff47-41cd-96b1-756aa76a3379	NO_MAPPING_NEEDED		high	source_collection — two drills in one video.
+79c17c8e-3331-4930-a729-a0d18196cf73	NO_MAPPING_NEEDED		high	source_collection — three drills in one video.
+270f1772-259d-4a05-8376-6b993d20137b	NO_MAPPING_NEEDED		high	source_collection — three drills in progression, not one.
+1176adaf-60f6-4dc1-a596-f30773a9c5be	NO_MAPPING_NEEDED		high	source_collection — five drills in one video.
+6955e8e1-756d-4f11-a1ca-0675527ebc9e	NO_MAPPING_NEEDED		high	source_collection — a set of indoor drills, not one activity.
+9611311a-34f7-444d-a98c-44b689a181b6	NO_MAPPING_NEEDED		high	source_collection — two drills in one video.
+#
+# ── schedulable rows with a clear problem ────────────────────────────────────
+ecf4c61b-0b8b-49bd-bbe5-697d42991d79	ADD_MAPPING	slow-first-step	high	The circuit's first station is an explosive three-step start on an unpredictable signal.
+ecf4c61b-0b8b-49bd-bbe5-697d42991d79	ADD_MAPPING	bad-base-turns	high	Cutting the inside corner of the base is one of the circuit's scored success markers.
+a648dcab-45b3-4c81-9ed4-f29eaea4323e	ADD_MAPPING	cant-bunt	high	A bunting station whose whole feedback loop is whether the bunt was placed.
+29276b7a-fd04-45ff-825d-1d715d384908	ADD_MAPPING	backpedaling-flyballs	high	The cone gives the fielder somewhere to turn and run to, which is the direct alternative to backpedalling.
+6f1ef230-3f1a-4bcd-a969-87be5cdc65ed	ADD_MAPPING	poor-fielding-footwork	high	Posture and footwork are the drill's stated subject and its success markers.
+6f1ef230-3f1a-4bcd-a969-87be5cdc65ed	ADD_MAPPING	slow-transfer	high	Every rep ends with a glove-to-hand exchange in front of the chest, scored as a marker.
+9fea10f7-efb9-4006-bce8-7a6109bb7fbe	ADD_MAPPING	poor-fielding-footwork	high	Lateral movement to get the body in front is the scoring condition of the game.
+9fea10f7-efb9-4006-bce8-7a6109bb7fbe	ADD_MAPPING	fielding-flat-footed	high	Staying low between rolls is an explicit success marker; the castle produces the crouch on its own.
+6b13a4df-dc75-417f-89db-578fe99bdf44	ADD_MAPPING	poor-fielding-footwork	high	Same fielding requirement as the base version, with the play completed.
+6b13a4df-dc75-417f-89db-578fe99bdf44	ADD_MAPPING	inaccurate-throws	high	A throw that misses the target scores against the fielder exactly like a ball through the castle.
+0833de14-902c-408a-a3a9-a8c4df28c4f1	ADD_MAPPING	poor-fielding-footwork	high	The lateral shuffle without crossing the feet is the drill's first success marker.
+4c68b693-a617-4827-a732-653c2a64a27d	ADD_MAPPING	fielding-flat-footed	high	The one-leg hold makes a tall, heel-weighted posture physically impossible to hold.
+c345c3a1-bda3-43f7-b6f3-16e77432ab83	ADD_MAPPING	poor-fielding-footwork	high	Continuous direction changes around two cones, with every ball fielded on the move.
+c345c3a1-bda3-43f7-b6f3-16e77432ab83	ADD_MAPPING	fielding-flat-footed	high	Staying low through the whole pattern is the marker the drill exists to build.
+adf1d78d-fbe5-417c-a2d0-5860e555b356	ADD_MAPPING	poor-fielding-footwork	medium	A high-rep ground-ball circuit; footwork is what the single coached cue is spent on. Lower confidence because the row is a volume drill rather than a corrective one.
+6517d249-a27d-41af-a86e-72bb8187c28b	ADD_MAPPING	poor-fielding-footwork	high	The cone exists to break the straight-line approach and force an angle.
+5abc9df7-d4ad-40d3-b95e-2eb275e82710	ADD_MAPPING	loses-posture	high	The pipe across the shoulders is a posture mirror; the whole drill is shoulder angle by pitch height.
+31af2888-b541-479e-8a0f-78bcb528ea17	ADD_MAPPING	lunging	high	The held launch position exists to show that the hands stay back when the front foot lands.
+0997fc64-a8e8-44b1-995c-3aa1e0291a99	ADD_MAPPING	lunging	high	Staged specifically so the weight loads into the back hip instead of drifting forward with the stride.
+1f64a6c2-11bd-40d4-a45d-ae028f83db91	ADD_MAPPING	late-timing	medium	Trains seeing rather than pre-deciding, which is the root of guess-hitting. Medium because the drill deliberately makes contact later before it makes it better.
+4cd55f36-4ac8-447a-9633-936c9b1f6c22	ADD_MAPPING	casting	high	The no-stride setup removes every excuse but bat path, which is what casting is.
+4cd55f36-4ac8-447a-9633-936c9b1f6c22	ADD_MAPPING	lunging	high	The wide already-strided stance makes drifting forward physically impossible.
+fac499f5-7d4b-49b2-a924-55c97a96eeef	ADD_MAPPING	pulling-head	high	A seed is small enough that only a still head connects with it; head position is the graded marker.
+663dc298-e5f2-4ea8-9d6d-6812e652cf28	ADD_MAPPING	inaccurate-throws	high	Scored purely on whether the throw hit a target.
+4e1975e2-eb6b-49a8-9d29-0b9d0afd2f68	ADD_MAPPING	throwing-mechanics	high	Three named mechanical steps — grip, glove, step — practised in sets.
+2ac95ee1-db4f-4ab1-b2ec-569a5419b6ef	ADD_MAPPING	slow-transfer	high	The underhand flip is the fastest way to get rid of the ball at short range and is half the drill.
+#
+# ── schedulable, but no existing problem fits ────────────────────────────────
+ba7e4b8c-ad36-45bd-9b63-b7b354b9d43d	REVIEW		low	Freeze at Extension trains the finish of the swing. No problem in the taxonomy describes an incomplete finish, and the nearest — barring-arm — is about the front arm locking EARLY, which this drill could arguably reinforce rather than fix. Adding a mapping here would be guessing, and guessing wrong would prescribe it to exactly the wrong hitter.

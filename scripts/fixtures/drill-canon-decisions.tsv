@@ -61,7 +61,7 @@ babe5481-655c-4c2e-9985-2465937c1067	KEEP_CANONICAL			 	high	no	Technique stated
 808e703f-d60e-4a0b-8cbd-845bcb4cc1bb	KEEP_CANONICAL			 	high	no	Unpredictable balls in the dirt; a concrete read-and-react setup.
 5c529012-7999-489d-90cb-4ccbeab94846	TEACHING_CONTENT			 	high	no	How to teach catching; addressed to the coach.
 5f398d5c-6377-4119-b5b7-99b81f4b8028	PRACTICE_UNIT			 	medium	yes	Five receiving drills presented as one circuit. Unit or collection is genuinely unclear.
-478cb186-6370-494d-b94a-47136344ccd8	REVIEW_REQUIRED			 	low	yes	Title names one setup, description names five drills. Cannot resolve from the row.
+478cb186-6370-494d-b94a-47136344ccd8	PRACTICE_UNIT			 	high	no	Resolved in Phase 2C. Five receiving drills run at one station from one stance — the same shape as MLB-Style Receiving & Framing Circuit, which is already a practice_unit. Classified for consistency with its settled sibling rather than on prose alone. Still schedulable.
 a1914ed5-c1e1-4123-ad4c-66685131199b	SOURCE_COLLECTION			 	high	no	Names five distinct drills. Each is separately extractable — Phase 2 candidate.
 1be09ab8-a1a3-45ca-945b-b7b26585c379	SOURCE_COLLECTION			 	high	no	Top-5 compilation.
 e709ba50-5004-4e9c-a2b6-3abffa809e78	SOURCE_COLLECTION			 	high	no	Covers receiving, blocking and throwing — three subjects.
@@ -94,7 +94,7 @@ fbbe6484-8b9d-486b-839e-23114e600c77	KEEP_CANONICAL			 	high	yes	One partner dri
 b3534518-f0df-4f30-8378-0b7d084e5fb9	KEEP_CANONICAL			 	high	no	One combined field-and-throw activity.
 9fea10f7-efb9-4006-bce8-7a6109bb7fbe	KEEP_CANONICAL		protect-the-castle	base	high	no	Already the family base. One of only TWO rows with no media at all, and it works — the written setup carries it.
 6b13a4df-dc75-417f-89db-578fe99bdf44	KEEP_CANONICAL		protect-the-castle	progression	high	no	Already the family progression.
-adf1d78d-fbe5-417c-a2d0-5860e555b356	REVIEW_REQUIRED			 	low	yes	Singular by name and description, but the row carries no setup to confirm one activity. Unknown beats invented certainty.
+adf1d78d-fbe5-417c-a2d0-5860e555b356	KEEP_CANONICAL			 	medium	no	Resolved in Phase 2C. Singular by name and description, and its video backs no other row, so there is no compilation ambiguity to resolve. One team ground-ball circuit. Medium because it is a volume drill and the setup was specified in 2C rather than found.
 6517d249-a27d-41af-a86e-72bb8187c28b	KEEP_CANONICAL			 	high	no	Named approach-angle drill. Brief: do NOT merge with Four Cones or Figure Eight.
 4c68b693-a617-4827-a732-653c2a64a27d	KEEP_CANONICAL		ground-ball-fundamentals	base	high	yes	Promoted from regression to family base: the current base f0c8b459 is a collection.
 192913af-c080-4361-b20e-f88f29db530f	KEEP_CANONICAL			 	high	no	Named signature routine, one activity. Brief: keep specific.
@@ -146,7 +146,7 @@ fe94a671-1d24-40fe-9771-4c7f5f708c14	KEEP_CANONICAL		soft-toss	base	high	no	CANO
 d38bd8d0-2293-41ce-a97d-b5cb15f47fbc	MERGE_INTO	fe94a671-1d24-40fe-9771-4c7f5f708c14	soft-toss	base	high	yes	Exact duplicate of 18e0cf1e — same title, same video, both already base of the same family.
 252404f0-38c3-481f-a18b-f7ce0262903f	KEEP_CANONICAL		hitting-stance	base	high	no	CANONICAL stance work; carries the fuller setup.
 4483bfeb-19df-401b-97ce-6f97e527a99b	MERGE_INTO	252404f0-38c3-481f-a18b-f7ce0262903f	hitting-stance	base	high	no	Stance Drill is the same activity on the same video. Brief names this pair.
-6c655fff-6181-4b7b-b22b-e1401e2e1f27	REVIEW_REQUIRED			 	low	yes	Explains a concept and then mentions drills. Cannot tell one activity from several.
+6c655fff-6181-4b7b-b22b-e1401e2e1f27	KEEP_CANONICAL			 	high	no	Resolved in Phase 2C. Its video backs no other row, and the row is one station — varied-speed front toss, three rounds of twelve. The 'concept then drills' ambiguity is gone now the station is specified.
 f35c8a06-d0e9-4a8b-ac8a-efffb204f026	KEEP_CANONICAL			 	high	no	One pause point inserted into the swing.
 bd106179-ca57-47ef-9e7e-5f8f235405b0	MERGE_INTO	6a2c9dc7-f08c-47fd-9a08-f9e117f466cb	tee-work	base	high	no	Tee Drill and Tee Work carry WORD-FOR-WORD IDENTICAL descriptions and the same video.
 6a2c9dc7-f08c-47fd-9a08-f9e117f466cb	KEEP_CANONICAL		tee-work	base	high	no	CANONICAL Tee Work; keeps its existing family base.
@@ -169,7 +169,7 @@ a559ea0e-7d73-4920-905f-ccb86e117f4e	KEEP_CANONICAL			 	high	no	Single-leg holds
 45f3c274-4d4c-473f-bb3a-a74ecd64ef04	MERGE_INTO	41ff62cc-fb54-4266-8d0c-083a1c341161		 	high	no	Same hold, same video, thinner row.
 41ff62cc-fb54-4266-8d0c-083a1c341161	KEEP_CANONICAL			 	high	no	CANONICAL follow-through hold with stated checks.
 b1c3653c-82a0-446e-a9cb-0dd5ebf09864	KEEP_CANONICAL			 	high	no	One isolated arm with a stated action.
-e5d28c39-30b0-48fd-9534-8a43cd8154db	REVIEW_REQUIRED			 	low	yes	Hip Lead may be the Rocker cue under another name, or its own drill. Same video as the Rocker rows. Not resolvable from the row.
+e5d28c39-30b0-48fd-9534-8a43cd8154db	KEEP_CANONICAL			 	high	no	Resolved in Phase 2C. The only argument for merging into the Rocker was a shared video; that video backs NINETEEN distinct rows including Wall Ball, Long Toss and High Five, so it is a compilation and carries no information about identity. Different setup from the Rocker.
 6955e8e1-756d-4f11-a1ca-0675527ebc9e	SOURCE_COLLECTION			 	high	no	Team drills, plural, gathered by venue rather than by activity.
 7d82c674-bbcf-44da-99cf-4c1a8e1c123f	MERGE_INTO	94124e82-c8f2-411b-9daa-f0a1a176663e		 	high	no	Kneel and throw with forearm and wrist — the kneel-down drill, thinner row, same video.
 94124e82-c8f2-411b-9daa-f0a1a176663e	KEEP_CANONICAL			 	high	no	CANONICAL kneel-down wrist snap with stated distance.
@@ -240,7 +240,7 @@ f1e620a8-1016-4097-b104-502ddcab967a	KEEP_CANONICAL		solo-throwing-reps	progress
 9a6f58a3-0172-47e6-b159-8eb98306f5ca	KEEP_CANONICAL			 	high	no	One stated catching rule.
 3cc99259-c968-4977-bd66-c168250a27b8	KEEP_CANONICAL		solo-throwing-reps	base	high	no	CANONICAL Wall Ball and the family base, per the brief.
 d873c9db-09cd-406c-b53b-fbd6d5033185	VARIATION_OF	3cc99259-c968-4977-bd66-c168250a27b8	solo-throwing-reps	progression	high	no	Full mechanics against the wall. Brief: canonical plus variation, NOT a merge.
-d6a3170b-ec74-4e4f-96df-64fba2aed225	REVIEW_REQUIRED			 	low	yes	A pre-practice warm-up routine that may be Partner Catch under another name, or a unit of its own.
+d6a3170b-ec74-4e4f-96df-64fba2aed225	PRACTICE_UNIT			 	high	no	Resolved in Phase 2C. A staged pre-practice routine — distances built in rounds — not a single station. The Partner Catch concern rested on a shared video that backs TEN distinct rows including High Tee. Practice units stay schedulable.
 # ── WARMUP (2) ──────────────────────────────────────────────────────────────
 3df6814c-4d77-4592-8693-9fd419ded05c	PRACTICE_UNIT			 	high	no	Eight named exercises run as one warm-up block.
 ab8f57ca-ebf4-49b7-8f08-e62e5dd54a3f	PRACTICE_UNIT			 	high	no	A dynamic warm-up routine run as one block.
