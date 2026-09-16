@@ -1021,5 +1021,655 @@
     ],
     "regression_notes": "Run half the circuit — home to second — and drop the clock. The turn mechanics are the skill; the full lap is just conditioning.",
     "progression_notes": "Add a lead and a start signal, or run two players staggered so there is someone to chase. Timing the segments separately shows which turn is costing them."
+  },
+  {
+    "drill_id": "6a2c9dc7-f08c-47fd-9a08-f9e117f466cb",
+    "drill_name": "Tee Work",
+    "source": "written from the existing description and cue (tee out in front, line drives to the middle); base of the tee-work family",
+    "description": "The base hitting station and the one every other hitting drill assumes. A ball on a tee, set at belt height and positioned just in front of the hitter's front foot, and the hitter swings. Because the ball does not move, nothing about timing can go wrong, which leaves the swing itself as the only variable. Three sets of ten, into a net or out onto a field, with the coach watching one thing at a time.",
+    "ai_coaching_notes": "Tee placement is the coaching. In front of the front foot produces extension; too deep produces the weak ground ball to second that half a youth lineup hits every week. Coach one thing per set and say what you are watching for before it starts. A ball that leaves with a snap rather than a thud is the audible version of good contact, and players can hear their own.",
+    "reps_guidance": "3 sets of 10",
+    "success_markers": [
+      "Hits firm line drives back up the middle, not pop-ups or choppers",
+      "Contact happens in front of the front foot",
+      "Finishes balanced enough to hold the finish for a count"
+    ],
+    "regression_notes": "Lower the tee and move it closer to the middle of the stance, and use a larger ball. A hitter missing the tee itself needs an easier target before they need a better swing.",
+    "progression_notes": "Move the tee further forward for extension work, or higher and lower for the High Tee and Low Tee variations. Soft toss is the next step once the swing repeats off a still ball."
+  },
+  {
+    "drill_id": "037c8a5a-327f-42cf-a2a1-bd550fed9e68",
+    "drill_name": "High Tee",
+    "source": "recovered from hidden duplicate 874e0c3a (High Tee Drill), whose description and cues were richer than this canonical row's; base of the high-tee family",
+    "description": "The tee set at the top of the strike zone, around chest height, for the pitch most young hitters get under. A high pitch needs a short, flat path — the hitter's hands stay above the ball and the barrel matches the plane of the pitch rather than swinging up at it. It is the direct fix for the hitter who drops their hands on every swing and pops up anything above the belt.",
+    "ai_coaching_notes": "Hands above the ball is the whole cue, and it is worth saying before every set because the habit is strong. Watch for the barrel dragging behind the hands — if it does, the hands are not moving fast enough, not that the swing is too short. A backspun line drive toward second base is the shape you want; a high fly ball means they got underneath it again.",
+    "success_markers": [
+      "Hands stay above the ball through contact",
+      "Line drives with backspin rather than high fly balls",
+      "Swing stays short — no loop on its way to a chest-high ball"
+    ],
+    "practice_roles": [
+      "isolate",
+      "repetition"
+    ],
+    "regression_notes": "Drop the tee to belt height until the path is repeatable, then raise it back gradually. A hitter who cannot square up a belt-high ball is not ready to be fixed at the letters.",
+    "progression_notes": "Alternate between the high tee and the low tee within a round so the hitter has to adjust the path, or move to front toss up in the zone."
+  },
+  {
+    "drill_id": "e597ce36-5625-42f2-a378-30052499bb18",
+    "drill_name": "Low Tee",
+    "source": "written from the existing description, cue and success marker (stay in the legs, drive low pitches on a line)",
+    "description": "The tee set low, around knee height, for the pitch that produces most of the weak contact in youth baseball. The low pitch is where hitters either stay down in their legs and drive it, or stand up, drop the barrel underneath it, and pop it straight up. Setting the tee down there makes the difference obvious immediately, because the two swings produce completely different ball flights.",
+    "ai_coaching_notes": "'Stay in your legs' is the cue, and the failure it prevents is standing up — a hitter who straightens their back leg to reach a low ball has lost the swing before contact. Bend from the knees, not the waist. A popped-up ball off a low tee means the barrel got underneath it; a hard ground ball means they came over the top. The line drive is between the two.",
+    "reps_guidance": "3 sets of 8",
+    "success_markers": [
+      "Stays in the legs and drives low pitches on a line, not under them",
+      "Back knee stays bent through contact rather than straightening",
+      "No pop-ups across a full set"
+    ],
+    "practice_roles": [
+      "isolate",
+      "repetition"
+    ],
+    "regression_notes": "Raise the tee toward belt height until the leg position holds, then lower it again. Knee height is genuinely hard for a small hitter, and failing at it repeatedly teaches nothing.",
+    "progression_notes": "Alternate low and high tees within a round, then take it to front toss down in the zone where the hitter also has to judge whether it is a strike."
+  },
+  {
+    "drill_id": "eec48dc4-af21-406e-95a2-9db5e22b7596",
+    "drill_name": "Front Toss",
+    "source": "recovered from hidden duplicate 54cf8f72 (Front Toss Drill), whose description, cues and marker were richer than this canonical row's; base of the front-toss family",
+    "description": "The bridge between tee work and live pitching. A feeder kneels behind a screen or L-screen about fifteen to twenty feet directly in front of the hitter and throws underhand on a realistic downward path into the zone. Closer to game speed than soft toss and far safer than live pitching, it is the station where a swing that works off a tee has to start working against a moving ball.",
+    "ai_coaching_notes": "Throw from behind the screen, every time, with no exceptions — this is the drill in the library most capable of hurting the feeder. The ball should arrive on a slight downward plane, not floated. 'Stay back, then go' is the cue: a hitter who commits their weight before seeing the ball is the one who gets beaten by anything slow. Contact out in front, line drives up the middle.",
+    "success_markers": [
+      "Drives line drives up the middle against game-speed tosses, on time",
+      "Weight stays back until the ball is out of the feeder's hand",
+      "Head stays down through contact rather than pulling off"
+    ],
+    "equipment_needed": [
+      "Baseballs or wiffle balls",
+      "Bat",
+      "L-screen or net",
+      "Bucket"
+    ],
+    "regression_notes": "Move closer and slow the toss, or go back to soft toss from the side for a round. The flight path is the added difficulty here, and it can be dialled right down.",
+    "progression_notes": "Vary the speed without warning so the hitter has to adjust, or add a take sign. From here the next step is live pitching or a machine."
+  },
+  {
+    "drill_id": "0e5e88b4-7b3c-4325-b658-179e638a8c24",
+    "drill_name": "One Hand Drill",
+    "source": "recovered from hidden duplicate 966c4b46 (One Hand Hitting Drill), whose description and cues were richer than this canonical row's; base of the one-hand family",
+    "description": "Each hand's job in the swing, isolated by taking the other one off the bat. The hitter uses a lighter or shorter bat and hits off a tee with the bottom hand only for a set, then the top hand only for a set. The bottom hand learns to pull the knob toward the ball; the top hand learns to drive through it with the palm facing up. Neither can hide behind the other, which is the point.",
+    "ai_coaching_notes": "A lighter bat is not optional — a full-size bat one-handed teaches a young hitter to sling it. Bottom hand: knob to the ball, elbow close. Top hand: palm up through contact, push it forward. The thing to watch for in both is the body stopping and the arm taking over; the rotation still has to happen, and a hitter who is arm-swinging will be visibly still from the waist down.",
+    "success_markers": [
+      "Bottom-hand swings pull the knob at the ball rather than casting the barrel out",
+      "Top-hand swings finish with the palm up and the ball driven, not slapped",
+      "Body rotates on both versions — no pure arm swings"
+    ],
+    "equipment_needed": [
+      "Batting tee",
+      "Lighter or shorter training bat",
+      "Baseballs or wiffle balls",
+      "Net"
+    ],
+    "practice_roles": [
+      "isolate",
+      "teach"
+    ],
+    "regression_notes": "Choke right up on a light bat and take slow half swings, or swing with no ball at all until the feel is there. One-handed hitting is genuinely hard for an eight-year-old and a heavy bat makes it pointless.",
+    "progression_notes": "Put both hands back on and see whether the path survives. Alternate a one-hand set with a two-hand set so the transfer happens in the same session."
+  },
+  {
+    "drill_id": "0997fc64-a8e8-44b1-995c-3aa1e0291a99",
+    "drill_name": "Baby Steps - Hip Load",
+    "source": "written from the existing description (progressive drill for teaching young hitters to load the hips) — replaces cues that were copied across the whole hitting category",
+    "description": "The hip load, taught in stages small enough for a beginner to feel. Stage one: from a normal stance, shift the weight onto the back leg and hold it, no bat movement at all. Stage two: add a small step forward and land with the weight still back. Stage three: add the swing. Ten repetitions at each stage before moving on, dry with no ball. The load is the part of the swing young hitters skip entirely, and it cannot be added later at full speed.",
+    "ai_coaching_notes": "Have them hold the loaded position for a count of two at stage one so they can feel where the weight is. 'Weight into the back hip, not back over your heel' — leaning backwards is the usual first attempt. The step lands with the weight still back; if the weight arrives with the foot, they have drifted rather than loaded. Do not move to stage three until stage two is boring.",
+    "success_markers": [
+      "Can hold the loaded position for two seconds without wobbling",
+      "Front foot lands before the weight moves forward",
+      "Back hip loads without the upper body leaning backwards"
+    ],
+    "equipment_needed": [
+      "Bat"
+    ],
+    "practice_roles": [
+      "teach",
+      "isolate"
+    ],
+    "regression_notes": "Stay at stage one for the whole session, holding the load with no bat at all. A six-year-old who can shift their weight onto the back leg on request has learned the thing that matters.",
+    "progression_notes": "Add a tee once stage three is comfortable, then soft toss, where the load has to happen on someone else's timing rather than their own."
+  },
+  {
+    "drill_id": "ba7e4b8c-ad36-45bd-9b63-b7b354b9d43d",
+    "drill_name": "Freeze at Extension Drill",
+    "source": "written from the existing description (freeze at extension to feel the follow-through position) — replaces cues that were copied across the whole hitting category",
+    "description": "A dry swing that stops at full extension and holds there. The hitter swings at half speed and freezes the moment the arms are fully extended out in front — before the wrists roll over and the bat wraps around the body. Held for a count of three, it shows both coach and hitter exactly where the barrel and hands finish, which is a position most young hitters swing through without ever feeling.",
+    "ai_coaching_notes": "Half speed, or the freeze is impossible. Look for both arms extended and the barrel still out in front of the body, not wrapped behind the shoulder. If they cannot hold it without falling forward, the swing is going around them rather than through the ball. Do a few with a ball on a tee afterwards so the position connects to actual contact.",
+    "success_markers": [
+      "Holds the extended position for three seconds without losing balance",
+      "Both arms extended with the barrel in front of the body, not wrapped",
+      "Can find the position without the coach placing them in it"
+    ],
+    "equipment_needed": [
+      "Bat",
+      "Batting tee (optional)"
+    ],
+    "practice_roles": [
+      "teach",
+      "isolate"
+    ],
+    "regression_notes": "Place them into the extension position by hand and let them feel it before trying to swing into it. Working backwards from the finish is easier than finding it from the start.",
+    "progression_notes": "Speed the swing up while keeping the finish, then hit off a tee and freeze after contact. The position has to survive a real swing to be worth anything."
+  },
+  {
+    "drill_id": "40eebd5c-d2ab-4245-92bc-5cf73e68ba87",
+    "drill_name": "Back Knee Down - Stay Centered",
+    "source": "written from the existing description, marker and recorded flaw (staying centered, drifting and losing balance) — replaces cues that were copied across the whole hitting category",
+    "description": "A balance check built into the swing. The hitter swings normally but with the instruction that the back knee drives down and inward toward the front foot rather than the whole body sliding forward. The difference is small to look at and large in effect: a hitter who rotates around a centred axis stays balanced and can adjust, while one who drifts forward is committed before the ball arrives.",
+    "ai_coaching_notes": "Watch the head, not the knee — a centred swing keeps the head in roughly the same place from start to finish, and a drifting one moves it toward the pitcher. 'Turn the back knee down, do not push it forward.' If they finish with all their weight on the front foot and the back foot dragged, they have drifted. Three sets of eight is enough; this is a feel drill.",
+    "reps_guidance": "3 sets of 8",
+    "success_markers": [
+      "Stays centered over the back side without drifting forward",
+      "Head finishes roughly where it started",
+      "Back foot pivots on the toe rather than being dragged forward"
+    ],
+    "equipment_needed": [
+      "Bat",
+      "Batting tee (optional)"
+    ],
+    "practice_roles": [
+      "isolate",
+      "repetition"
+    ],
+    "regression_notes": "Do it dry with no ball, or have them swing with the back foot against a bat laid on the ground so drifting is physically obvious.",
+    "progression_notes": "Add soft toss so the balance has to hold against a moving ball, then front toss with varied speeds — drifting shows up worst against anything slow."
+  },
+  {
+    "drill_id": "f1bf25fb-0167-4b61-b196-675b2ba14280",
+    "drill_name": "Don't Dump the Barrel",
+    "source": "written from the existing description and the recorded flaw it fixes (barrel dumping below the hands, back elbow dragging) — replaces cues that were copied across the whole hitting category",
+    "description": "A fix for the swing where the barrel drops below the hands at the start and the back elbow drags behind. The hitter takes slow swings while a coach watches the first six inches of the barrel's path — the only part that matters here. The barrel should stay above the hands as the swing begins and enter the zone from behind the ball, not from underneath it. Slow repetitions, then gradually faster, checking the same six inches each time.",
+    "ai_coaching_notes": "Only watch the start of the swing. Everything downstream of a dumped barrel is a symptom, and correcting the finish fixes nothing. 'Barrel above your hands as you start' is the cue. The back elbow should travel toward the ribs, not lag out behind the body. Go slowly enough that they can stop mid-swing when you say so, and check the position there.",
+    "success_markers": [
+      "Barrel stays above the hands through the first part of the swing",
+      "Back elbow moves toward the ribs rather than dragging behind",
+      "Fewer uppercut swings and pop-ups by the end of the session"
+    ],
+    "equipment_needed": [
+      "Bat",
+      "Batting tee",
+      "Baseballs"
+    ],
+    "practice_roles": [
+      "isolate",
+      "teach"
+    ],
+    "regression_notes": "Do it with no ball, at quarter speed, stopping on command. The path has to be findable slowly before it can be found at speed.",
+    "progression_notes": "Add a tee, then soft toss, then check whether the path holds against front toss. Pair it with the Shoulder Swings drill if the elbow is the root problem."
+  },
+  {
+    "drill_id": "5abc9df7-d4ad-40d3-b95e-2eb275e82710",
+    "drill_name": "PVC Posture Drill",
+    "source": "written from the existing description (PVC pipe for posture and shoulder tilt across pitch locations) — replaces cues that were copied across the whole hitting category",
+    "description": "A length of PVC pipe held across the shoulders shows a hitter what their posture is actually doing. From their stance, the hitter tilts and rotates as if swinging at a high pitch, then a middle pitch, then a low one. The pipe makes the shoulder angle visible: a high pitch needs a flatter shoulder line, a low pitch needs more tilt, and a hitter who uses the same posture for both is guessing on one of them.",
+    "ai_coaching_notes": "Call a pitch height and have them set the posture for it before they move at all. The pipe is a mirror, not a training aid — you are looking at the angle of its ends. The common fault is bending at the waist to reach a low pitch instead of tilting the shoulders and bending the knees. Do it in front of a fence or a wall so they can see themselves against a straight line.",
+    "success_markers": [
+      "Shoulder line flattens for high pitches and tilts for low ones",
+      "Tilt comes from the shoulders and knees, not from bending at the waist",
+      "Can set the posture for a called height without being adjusted"
+    ],
+    "equipment_needed": [
+      "PVC pipe or dowel rod",
+      "Bat"
+    ],
+    "practice_roles": [
+      "teach",
+      "isolate"
+    ],
+    "regression_notes": "Work only two heights — belt and knee — until the difference is clear. Three is too many distinctions for a first session.",
+    "progression_notes": "Swap the pipe for a bat and take dry swings at the called heights, then put a tee at each height and check whether the posture survives a real swing."
+  },
+  {
+    "drill_id": "31af2888-b541-479e-8a0f-78bcb528ea17",
+    "drill_name": "Load to Launch Drill",
+    "source": "written from the existing description (the transition from load to launch position, for power and timing) — replaces cues that were copied across the whole hitting category",
+    "description": "The handoff between loading and swinging, practised as its own movement. The hitter loads — weight into the back hip, hands back — and holds. On the coach's call they move to the launch position: front foot down, hands still back, front side closed, everything coiled and nothing yet swung. Hold that for a count, then swing. Separating the two makes it obvious that the hands stay back while the lower half starts, which is the sequence that produces power.",
+    "ai_coaching_notes": "The hold at launch is the whole drill — that is the position young hitters skip straight past. Look for the hands still back when the front foot lands. If the hands have gone with the stride, they have no sequence left and the swing is all arms. Call the transitions at varied intervals so they cannot anticipate, which starts building the timing adjustment too.",
+    "success_markers": [
+      "Hands are still back at the moment the front foot lands",
+      "Can hold the launch position for a count without collapsing forward",
+      "Front shoulder stays closed until the swing starts"
+    ],
+    "equipment_needed": [
+      "Bat",
+      "Batting tee (optional)"
+    ],
+    "practice_roles": [
+      "teach",
+      "isolate"
+    ],
+    "regression_notes": "Drop the swing entirely and work load-to-launch-and-hold. For a younger hitter, getting to the launch position at all is the session's work.",
+    "progression_notes": "Remove the hold so load and launch flow together, then add a tee and soft toss. Against front toss the same sequence has to happen on the feeder's timing rather than a call."
+  },
+  {
+    "drill_id": "9300e679-69a7-4757-b74d-172103654860",
+    "drill_name": "Tee Work — Ball Out In Front",
+    "source": "rewritten from video framing; the tee placement, extension intent and existing cues are unchanged",
+    "description": "Tee work with the tee deliberately moved forward, level with or just ahead of the hitter's front foot, so contact can only happen out in front of the body. Hitting the ball deep in the zone — level with the back foot or the middle of the stance — is what produces the weak ground ball to the right side that fills youth box scores. Moving the tee forward makes the correct contact point the only one available.",
+    "ai_coaching_notes": "It should feel like reaching out to the ball. That feeling is extension, and telling them to expect it stops them shortening up to compensate. The ball should leave with a snap rather than a thud — the sound is a reliable tell and players can hear their own. Three sets of ten, aiming at the middle of the net.",
+    "reps_guidance": "3 sets of 10",
+    "success_markers": [
+      "Makes contact out in front and drives line drives, not weak grounders",
+      "Arms are extended at contact rather than folded in",
+      "Ball comes off with a sharp sound rather than a dull one"
+    ],
+    "practice_roles": [
+      "isolate",
+      "progress"
+    ],
+    "regression_notes": "Move the tee back toward the middle of the stance and bring it forward gradually. A hitter missing the tee entirely has been asked for too much extension too soon.",
+    "progression_notes": "Alternate a forward tee with a normal one so the hitter adjusts, then take the extension into soft toss and front toss where the contact point has to be found on timing."
+  },
+  {
+    "drill_id": "252404f0-38c3-481f-a18b-f7ce0262903f",
+    "drill_name": "Stance & Athletic Position Drill",
+    "source": "description rewritten to remove the brand-led closing sentence; setup, cues and marker are unchanged",
+    "description": "Building a batting stance from the ground up, and the drill that should precede every other hitting station for a beginner. Feet a little wider than the shoulders, knees bent, weight on the balls of the feet, a slight forward lean from the hips creating an axis to rotate around, and the hands held with the knocking knuckles roughly lined up. The hitter sets up, the coach checks, they reset. Ten setups, twice, and no swinging at all.",
+    "ai_coaching_notes": "'Stand like you are about to jump' gets the athletic position faster than any list of body parts. The slight forward tilt is what gives them something to rotate around — a hitter standing straight up has no axis and will sway instead of turning. Check the grip every time; knuckles lined up is the one grip detail worth insisting on at this age. Relaxed, not rigid.",
+    "reps_guidance": "2 sets of 10 setups",
+    "success_markers": [
+      "Sets up athletic and balanced every time without a reminder",
+      "Weight is on the balls of the feet, not back on the heels",
+      "Grip has the knocking knuckles roughly aligned without being adjusted"
+    ],
+    "practice_roles": [
+      "teach"
+    ],
+    "regression_notes": "Set them into position physically and let them feel it, then have them find it themselves. For the youngest players, the jump cue alone is the whole drill.",
+    "progression_notes": "Add a load from the stance, then a dry swing, then a tee. The stance is only worth anything if it survives the first movement, so check it again once the swing is added."
+  },
+  {
+    "drill_id": "ba88a3cd-b2ae-430b-bd5e-d06c53f58838",
+    "drill_name": "High Tee Drill — Hitting Up in the Zone",
+    "source": "description rewritten to remove the brand-led opening; the tee height, backspin target and existing cues are unchanged",
+    "description": "The progression version of high tee work, where the standard is the shape of the batted ball rather than just making contact. The tee is set at the top of the strike zone and the hitter drives backspin line drives toward second base. Swinging down at a high pitch does not work and neither does swinging up at it; the barrel has to match the plane of the pitch, and the ball flight tells you immediately whether it did.",
+    "ai_coaching_notes": "Short and quick, not big and loopy — a high pitch punishes a long swing more than any other location. If the barrel feels like it is dragging behind the hands, the answer is faster hands rather than a shorter swing. Backspin toward second base is the target; a high fly ball means they got under it, a chopper means they came over the top.",
+    "success_markers": [
+      "Backspin line drives toward second base rather than fly balls",
+      "Swing stays short — hands beat the barrel to the zone",
+      "Consistent contact at the top of the zone across a full set"
+    ],
+    "practice_roles": [
+      "isolate",
+      "progress"
+    ],
+    "regression_notes": "Lower the tee toward the belt and rebuild the path there, then raise it. The base High Tee row is the station to go back to.",
+    "progression_notes": "Move to high front toss where the hitter has to judge the pitch as well as hit it, and mix in low pitches so the adjustment has to be made within a round."
+  },
+  {
+    "drill_id": "09efef50-4077-4e64-80cc-e7d31a8aaa23",
+    "drill_name": "One-Hand Tee Drill (Bottom Hand)",
+    "source": "markers and next steps written for the existing description, which already sets out the bottom-hand-only setup and the knob-to-ball path",
+    "success_markers": [
+      "Knob leads toward the ball rather than the barrel casting out first",
+      "Front elbow stays close to the body at the start of the swing",
+      "Makes solid contact off the tee without the barrel dropping under the ball"
+    ],
+    "practice_roles": [
+      "isolate",
+      "teach"
+    ],
+    "regression_notes": "Choke right up on a light or shortened bat and take half-speed swings. The lead arm is usually the weaker one, and a heavy bat turns this into a slinging drill.",
+    "progression_notes": "Switch to the top-hand version, then put both hands back on and check whether the shorter path survives. Alternating one-hand and two-hand sets within a round transfers it fastest."
+  },
+  {
+    "drill_id": "0ddcfd4a-2520-4d3a-ae98-b647bf07c49b",
+    "drill_name": "One-Hand Tee Drill (Top Hand)",
+    "source": "markers and next steps written for the existing description, which already sets out the top-hand-only setup and the palm-up drive",
+    "success_markers": [
+      "Palm stays up through contact rather than rolling over early",
+      "Ball is driven off the tee rather than slapped or pushed",
+      "Body still rotates — the swing is not purely the arm"
+    ],
+    "regression_notes": "Use a light or shortened bat and swing at half speed. If the barrel is dropping, the bat is too heavy for one hand at this age.",
+    "progression_notes": "Alternate with the bottom-hand version, then put both hands back on within the same round so the feel transfers while it is fresh."
+  },
+  {
+    "drill_id": "4fa59dec-86b0-46f7-bb31-f59382b1e9f4",
+    "drill_name": "Bounce Toss / Angled Toss Drill",
+    "source": "markers and next steps written for the existing description, which already sets out the angled bounce and the patience it demands",
+    "success_markers": [
+      "Waits for the ball to come up into the zone rather than lunging at the bounce",
+      "Head stays still through an unpredictable ball path",
+      "Solid contact on most tosses by the second round"
+    ],
+    "practice_roles": [
+      "progress",
+      "decision"
+    ],
+    "regression_notes": "Bounce from closer and at a consistent angle so the path is repeatable. The unpredictability is the difficulty, and it can be removed entirely to start.",
+    "progression_notes": "Vary the bounce angle and distance without warning, then move to front toss with genuine speed changes — the same patience is what beats a changeup."
+  },
+  {
+    "drill_id": "4148cfe0-4a27-4abc-a754-dcd5f2544f0e",
+    "drill_name": "Shoulder Swings — Stay Short to the Ball",
+    "source": "markers and next steps written for the existing description, which already sets out the tucked back elbow and the twenty slow swings",
+    "success_markers": [
+      "Back elbow stays tucked to the side through the start of the swing",
+      "Hands get to the zone before the barrel does",
+      "Swing visibly shortens across the twenty slow repetitions"
+    ],
+    "practice_roles": [
+      "isolate",
+      "teach"
+    ],
+    "regression_notes": "Have them hold the tucked position and move only a few inches, or place a glove under the back arm to hold it there. Feeling the position matters more than completing a swing.",
+    "progression_notes": "Add speed, then add a tee, then soft toss. The elbow slot is the thing to keep checking — it is the first thing to go once a ball is involved."
+  },
+  {
+    "drill_id": "f5a6bed9-86d9-4578-85f9-8449c0fc1e33",
+    "drill_name": "Two-Tee Drill — Contact at Different Heights",
+    "source": "markers and next steps written for the existing description, which already sets out the two tee heights and the ceiling rule",
+    "success_markers": [
+      "Hits the lower tee without clipping the upper one",
+      "Bat path flattens to match the ball rather than chopping down at it",
+      "Can repeat it across a full set without the upper tee being knocked"
+    ],
+    "practice_roles": [
+      "isolate",
+      "progress"
+    ],
+    "regression_notes": "Widen the gap between the two tees so there is more margin, or drop the upper tee entirely for a round and rebuild the path on the low ball alone.",
+    "progression_notes": "Narrow the gap, or swap which tee is live so the hitter has to adjust within a round. From here it goes into front toss where the pitch height varies."
+  },
+  {
+    "drill_id": "1c406241-97b4-425d-8f16-89ade2dbbc22",
+    "drill_name": "Bucket Drill — Stay in Your Legs",
+    "source": "markers and next steps written for the existing description, which already sets out the bucket, the stand-up and the knee bend to maintain",
+    "success_markers": [
+      "Knee bend at contact looks like the knee bend they had sitting down",
+      "Head stays at roughly the same height from load to finish",
+      "No popping tall through the swing across a full set"
+    ],
+    "practice_roles": [
+      "teach",
+      "isolate"
+    ],
+    "regression_notes": "Stay seated on the bucket and swing from there for a round. A seated swing is impossible to stand up out of, which makes the feel unmistakable.",
+    "progression_notes": "Remove the bucket and swing from the stance, then add soft toss. Standing up is the fault that returns fastest once a moving ball is involved."
+  },
+  {
+    "drill_id": "9e9405f3-80fb-4ad6-928c-e7749be5e0f6",
+    "drill_name": "PVC Pipe Hip Rotation Drill",
+    "source": "markers and next steps written for the existing description, which already sets out the pipe across the shoulders and the level-ends check",
+    "success_markers": [
+      "Both ends of the pipe stay level through the rotation",
+      "Rotation happens in place — no sway toward the pitcher",
+      "Head stays over the middle of the stance rather than drifting"
+    ],
+    "practice_roles": [
+      "teach",
+      "isolate"
+    ],
+    "regression_notes": "Rotate slowly through a smaller range, or have them stand against a fence so any sway is felt rather than described.",
+    "progression_notes": "Swap the pipe for a bat and take dry swings keeping the same axis, then add a tee. The axis is what every power cue in the category depends on."
+  },
+  {
+    "drill_id": "26332028-2d32-4f42-817e-c8628f2bdbcd",
+    "drill_name": "Catch and Crush Drill — Stay Closed",
+    "source": "markers and next steps written for the existing description, which already sets out the caught ball held over the tee and the separation it creates",
+    "success_markers": [
+      "Hips begin to open while the front shoulder is still closed",
+      "Hitter can feel and describe the tension across the middle before swinging",
+      "Harder contact than their normal tee swing in the same session"
+    ],
+    "practice_roles": [
+      "isolate",
+      "teach"
+    ],
+    "regression_notes": "Have them hold the position without a ball and simply feel the separation, or shorten the hold to a single beat. The coordination is genuinely hard under ten.",
+    "progression_notes": "Shorten the hold until it disappears into the normal swing, then check whether the separation survives soft toss and front toss."
+  },
+  {
+    "drill_id": "7bff401e-095e-447b-83e8-bc6cc750c85d",
+    "drill_name": "Barry Larkin / Walk-Through Power Drill",
+    "source": "markers and next steps written for the existing description, which already sets out the walking approach and the momentum it builds",
+    "success_markers": [
+      "Weight moves forward into the swing rather than staying on the back foot",
+      "Contact is noticeably harder than their static tee swing",
+      "Finishes balanced despite the walking start"
+    ],
+    "practice_roles": [
+      "isolate",
+      "progress"
+    ],
+    "regression_notes": "Take a single small step instead of a walk, or do it dry with no ball. The momentum is the lesson and it works at any size of step.",
+    "progression_notes": "Shrink the walk until it becomes an ordinary stride, and check whether the weight transfer stays. That transfer is the whole reason for the drill."
+  },
+  {
+    "drill_id": "a50f834a-2912-4b0d-9da2-e6856760b644",
+    "drill_name": "Frisbee Drill — Hip Rotation & Finish",
+    "source": "markers and next steps written for the existing description, which already sets out the frisbee throw from a batting stance and the flight as feedback",
+    "success_markers": [
+      "Frisbee flies toward centre field rather than sailing off to one side",
+      "Hips lead the arm rather than opening at the same time",
+      "Finishes facing the target instead of spinning away from it"
+    ],
+    "practice_roles": [
+      "teach",
+      "isolate"
+    ],
+    "regression_notes": "Throw from a standing position first, without the batting stance, until the release direction is controllable. A frisbee is an unfamiliar object for most players.",
+    "progression_notes": "Go straight from a set of frisbee throws to a set of tee swings while the rotation is fresh, and see whether the finish direction carries."
+  },
+  {
+    "drill_id": "ca7017e4-6fa1-4440-8d93-e08dd55eeaa8",
+    "drill_name": "Two-Strike Hitting Adjustment Drill",
+    "source": "markers and next steps written for the existing description, which already sets out the choke-up, wider stance and shorter stride",
+    "success_markers": [
+      "Chokes up and widens the stance without being reminded once a two-strike count is called",
+      "Puts the ball in play on most swings rather than swinging for power",
+      "Fouls off or takes pitches off the plate rather than chasing"
+    ],
+    "practice_roles": [
+      "teach",
+      "game_application"
+    ],
+    "regression_notes": "Practise just the physical adjustment — choke up, widen, shorten — off a tee with no count involved. The approach can be added once the setup is automatic.",
+    "progression_notes": "Call counts at random during live batting practice so the adjustment has to be made under real timing, and score contact rather than quality."
+  },
+  {
+    "drill_id": "6d491e2a-be0d-4c9a-94c4-6d66f6d6bfb8",
+    "drill_name": "The Track and Catch Drill — Head on the Ball",
+    "source": "markers and next steps written for the existing description, which already sets out the freeze at contact and the catch with the free hand",
+    "success_markers": [
+      "Catches the ball at the contact point on most attempts",
+      "Head stays down and still rather than pulling off toward the field",
+      "Can say where the ball was when they caught it"
+    ],
+    "practice_roles": [
+      "teach",
+      "isolate"
+    ],
+    "regression_notes": "Toss slower from closer, or have them simply track the ball to the contact point and call 'now' without catching. The eyes are the skill; the catch is the test.",
+    "progression_notes": "Take the same head position into soft toss and then front toss. Pulling the head off is the fault that returns the moment the ball speeds up."
+  },
+  {
+    "drill_id": "5381544c-f5e5-4e30-a9e8-fe049a090a07",
+    "drill_name": "Happy Gilmore / Walking Load Drill",
+    "source": "markers and next steps written for the existing description, which already sets out the step back and the exaggerated momentum",
+    "success_markers": [
+      "Momentum flows into the swing rather than the step and the swing being separate",
+      "Bat speed is visibly higher than their static swing",
+      "Finishes balanced despite the exaggerated start"
+    ],
+    "practice_roles": [
+      "isolate",
+      "progress"
+    ],
+    "regression_notes": "Make the step behind much smaller, or do it without a ball. The exaggeration is what makes it work, but not if they fall over.",
+    "progression_notes": "Shrink the movement toward a normal load and check what carries over. Tell them explicitly this is a feel drill, not a game swing, or it shows up in a game."
+  },
+  {
+    "drill_id": "7a2a344c-b2d7-4bf6-b0a2-e1dec8d835ab",
+    "drill_name": "Line Drive Pro / Visual Feedback Swing Drill",
+    "source": "markers and next steps written for the existing description, which already sets out the deflection feedback and what each direction means",
+    "success_markers": [
+      "Ball flies straight back off the bat (level path) on most swings",
+      "Hitter can name what their swing did from where the ball went",
+      "Fewer deflections to either side across consecutive sets"
+    ],
+    "reps_guidance": "3 sets of 8",
+    "practice_roles": [
+      "isolate",
+      "repetition"
+    ],
+    "regression_notes": "Use a tennis ball on a tee if no trainer is available, and swing at half speed. The feedback only helps if the swing is slow enough to adjust.",
+    "progression_notes": "Speed the swing up while keeping the straight-back flight, then take the same path into soft toss where the ball is moving."
+  },
+  {
+    "drill_id": "ac27e607-b52e-4865-8240-5a9b7795a410",
+    "drill_name": "The Swing Rail / Stay Inside the Ball Drill",
+    "source": "markers and next steps written for the existing description, which already sets out the connection aid and the elbow-to-body feel",
+    "success_markers": [
+      "Front elbow stays tucked — no flare-out at the start of the swing",
+      "Barrel enters the zone behind the hands rather than ahead of them",
+      "Connection holds for a full set of eight without a break"
+    ],
+    "practice_roles": [
+      "isolate",
+      "teach"
+    ],
+    "regression_notes": "Trap a glove or a folded towel between the arm and the side instead of a training aid, and swing at half speed.",
+    "progression_notes": "Remove the aid and see whether the connection holds, then add soft toss. Casting reappears fastest against a moving ball."
+  },
+  {
+    "drill_id": "55afb864-a8b0-496c-9b08-3e6805c7902d",
+    "drill_name": "Inside-Out Swing Drill (Fence Drill)",
+    "source": "markers and next steps written for the existing description, which already sets out the bat-length distance and the fence as feedback",
+    "success_markers": [
+      "Swings without hitting the fence and drives the ball the other way",
+      "Hands travel inside the ball path rather than around it",
+      "Can repeat it eight times without a fence strike"
+    ],
+    "reps_guidance": "3 sets of 8",
+    "regression_notes": "Stand slightly further from the fence and swing at half speed. Hitting the fence repeatedly is discouraging and teaches nothing beyond the first time.",
+    "progression_notes": "Move closer to the fence, then add a tee set on the inside part of the plate. The same path is what produces opposite-field contact in a game."
+  },
+  {
+    "drill_id": "ee6aa905-1e2c-4f96-8eff-4dc22fc01d4f",
+    "drill_name": "Mini Wiffle Ball & Skinny Bat Drill",
+    "source": "markers and next steps written for the existing description, which already sets out the small ball, narrow bat and the seven-in-ten target",
+    "success_markers": [
+      "Tracks the tiny ball all the way to contact and makes consistent contact",
+      "Head stays still — no early turn toward the field",
+      "Reaches seven clean contacts in ten by the end of a session"
+    ],
+    "reps_guidance": "3 rounds of 10",
+    "practice_roles": [
+      "isolate",
+      "competition"
+    ],
+    "regression_notes": "Use a slightly larger ball or a normal bat, one change at a time. Both changes at once makes it ordinary soft toss; one at a time keeps it hard and possible.",
+    "progression_notes": "Go straight to a regular ball and bat afterwards while the focus is still sharp — the transfer is the point and it fades within minutes."
+  },
+  {
+    "drill_id": "8f19ecd6-4892-46be-9f0c-b1aef17a86d6",
+    "drill_name": "Knee Drill (Rotational Load)",
+    "source": "markers and next steps written for the existing description, which already sets out the kneeling setup and the rotation it isolates",
+    "success_markers": [
+      "Rotation comes from the core and hips rather than the arms",
+      "Balance holds on the knees through the finish",
+      "Contact quality holds up despite the lower body being removed"
+    ],
+    "practice_roles": [
+      "isolate",
+      "teach"
+    ],
+    "regression_notes": "Kneel on a mat or soft grass and swing at half speed, or swing dry with no ball. Kneeling is uncomfortable enough to distract a young hitter from the movement.",
+    "progression_notes": "Stand up and take the same rotation into a normal swing in the same round, so the feel carries before it fades."
+  },
+  {
+    "drill_id": "769ab66e-93c9-41bb-8519-91bd3e0ab186",
+    "drill_name": "Oppo Tee & Toss — Stay Inside the Ball",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the outer-third tee and the bottom-hand reset",
+    "description": "Tee and toss work aimed at the outside pitch and the opposite field. The tee goes on the outer third of the plate and slightly deeper than usual, and the hitter drives the ball into the opposite gap. Rolling over — pulling a weak ground ball — means the barrel released early, and the fix is three one-armed bottom-hand swings before returning to full ones. Four sets of eight, and it plugs straight into situational batting practice where moving a runner requires exactly this swing.",
+    "reps_guidance": "4 sets of 8 swings on the outer-third tee",
+    "practice_roles": [
+      "isolate",
+      "game_application"
+    ],
+    "regression_notes": "Move the tee back toward the middle of the plate and rebuild the path there before pushing it outside again. Outer third with a deep setup is a hard ask for a young hitter.",
+    "progression_notes": "Move to front toss on the outside part of the plate, then into situational batting practice where the hitter has to choose the opposite-field swing themselves."
+  },
+  {
+    "drill_id": "40b34435-fd5f-4263-ae2f-b53083ce4531",
+    "drill_name": "Overload/Underload Bat Speed Progression",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the heavy-light-game sequence and the intent requirement",
+    "description": "Bat speed work using three bats in a fixed order: five swings with a heavier training bat, five with a lighter one, then five with the game bat. The heavy bat teaches the body to sequence under load, the light bat teaches it to move fast, and the game bat is where the two are supposed to meet. Three rounds, off a tee, with full intent on every single swing — a lazy overload swing trains slowness, which is the opposite of the point.",
+    "reps_guidance": "3 rounds: 5 heavy + 5 light + 5 game-bat swings",
+    "practice_roles": [
+      "isolate",
+      "progress"
+    ],
+    "regression_notes": "Drop the overload bat entirely and work light-bat-to-game-bat only. For younger players, swinging fast with a light bat is the whole useful half of this.",
+    "progression_notes": "Progress the overload weight slowly, staying within about twenty percent of the game bat, and measure with a sensor or phone video so the change is a number rather than a feeling."
+  },
+  {
+    "drill_id": "feb4908a-bcde-4744-9a56-010c49b01072",
+    "drill_name": "The Catch Drill — Track & Read Pitches",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the helmet, the glove and the scored calls",
+    "description": "Pitch recognition with the swing removed. The hitter stands in the box wearing a helmet, holding a glove instead of a bat, and catches the pitch — calling 'fastball' or 'change' as early as they can read it. Correct early calls score. Because there is no swing to get wrong, all the attention goes to the ball out of the hand, and it can be run free during a pitcher's bullpen by rotating hitters through the box.",
+    "reps_guidance": "2 rounds of 10 pitches, calls scored",
+    "practice_roles": [
+      "isolate",
+      "decision"
+    ],
+    "regression_notes": "Slow the pitching down, or drop to calling 'strike' and 'ball' instead of pitch type. Location is easier to read than spin and still worth training.",
+    "progression_notes": "Add a third pitch type, require the call earlier, or put a bat back in their hands with a take-only rule so the recognition has to survive the urge to swing."
+  },
+  {
+    "drill_id": "aeae3e6a-487e-4f74-874d-edfeb83d3446",
+    "drill_name": "The Move-'Em At-Bat — Advancing Runners",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the situation, the zone restriction and scoring execution over outcome",
+    "description": "Situational batting practice for one job: a runner on second, nobody out, and the hitter has to move him to third. Set a runner at second and pitch live. Only pitches middle-away get swung at, and the ball has to go to the right side — pulling a ground ball to shortstop is a failed rep even if it finds a hole. Six scenarios a round, two rounds. Execution is scored, not outcome, because the whole point is a hitter who can give himself up on purpose.",
+    "reps_guidance": "2 situational rounds of 6 at-bat scenarios per session",
+    "practice_roles": [
+      "game_application",
+      "decision"
+    ],
+    "regression_notes": "Run it off front toss with the feeder only throwing middle-away, so the hitter practises the swing before also having to judge the pitch.",
+    "progression_notes": "Mix in pitches the hitter must take, add a second situation such as a runner on third with one out, and let them state the plan before stepping in."
+  },
+  {
+    "drill_id": "6c655fff-6181-4b7b-b22b-e1401e2e1f27",
+    "drill_name": "Stay Back — Beat the Changeup",
+    "source": "description expanded into setup and execution from the existing cues, which already set out the varied-speed front toss and the stride-on-time rule",
+    "description": "What staying back actually means, drilled against pitches that punish not doing it. A feeder throws front toss and varies fast and slow without telling the hitter which is coming. The stride still lands on time for a fastball — that part does not change — but the hands wait. Three rounds of twelve mixed-speed swings. A hitter who solves this by striding late has not learned to stay back; they have learned to be late on everything.",
+    "reps_guidance": "3 rounds of 12 mixed-speed swings",
+    "practice_roles": [
+      "progress",
+      "decision"
+    ],
+    "regression_notes": "Announce the speed before each toss so the adjustment can be practised deliberately, then stop announcing. Bounce toss is a gentler introduction to an unpredictable ball path.",
+    "progression_notes": "Widen the speed gap, add a third speed, or move to live pitching with a pitcher who genuinely has an off-speed pitch."
+  },
+  {
+    "drill_id": "f35c8a06-d0e9-4a8b-ac8a-efffb204f026",
+    "drill_name": "Stride Pause to Stride Swing Drill",
+    "source": "written from the existing description, marker and recorded flaws (stride, timing, balance, lunging, no load)",
+    "description": "The stride, separated from the swing and then put back. The hitter strides and stops — front foot down, weight still back, hands still back — and holds that position for a count of two while the coach checks it. Then, on a second call, they swing. After a set of these the pause is removed and the stride flows straight into the swing. It makes a lunging hitter feel the difference between striding and falling forward, which is nearly impossible to explain at full speed.",
+    "ai_coaching_notes": "The hold is where the coaching happens. Look for the weight still on the back side when the front foot lands; if it has gone with the stride, they have lunged rather than strode. 'Land soft, stay back' is the cue. Vary how long you wait before calling the swing so they cannot anticipate it — that is where the timing adjustment starts.",
+    "success_markers": [
+      "Lands in a balanced stride and can hold it still before swinging",
+      "Weight stays back when the front foot lands",
+      "Stride goes toward the pitcher rather than opening out toward the dugout"
+    ],
+    "practice_roles": [
+      "teach",
+      "isolate"
+    ],
+    "regression_notes": "Hold the stride with no bat at all, or shorten the stride to a small toe tap. A hitter who cannot balance in the stride position is not going to swing from it.",
+    "progression_notes": "Remove the pause so the stride flows into the swing, then add soft toss and front toss where the stride has to be timed to someone else's release."
   }
 ]

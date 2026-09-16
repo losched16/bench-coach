@@ -228,6 +228,16 @@ async function main() {
       `${String(t.THIN).padStart(4)}   ${String(p).padStart(3)}/${inCat.length}`)
   }
 
+  if (PENDING) {
+    console.log('\n  not yet READY')
+    for (const d of rows) {
+      const t = instructionTier(d, ctx)
+      if (t === 'READY') continue
+      console.log(`    ${t.padEnd(7)} ${String(d.skill_category).padEnd(22)} ${d.drill_name}`)
+      console.log(`            ${d.id}  ${missingPieces(d, ctx).join('; ')}`)
+    }
+  }
+
   const actions = new Map<string, number>()
   for (const d of rows) {
     const a = editorialAction(d, richerDupe.get(d.id) || null, ctx).action
