@@ -294,5 +294,465 @@
     ],
     "regression_notes": "Drop to one line and one coach, and roll slower. The tempo is the point, but not at the cost of the fielding position falling apart.",
     "progression_notes": "Add a second ball in the air, vary the roll between each line, or put a team score on clean reps in a two-minute block."
+  },
+  {
+    "drill_id": "d6a3170b-ec74-4e4f-96df-64fba2aed225",
+    "drill_name": "Warm-Up Catch",
+    "source": "written from the existing description (pre-practice throwing warm-up) and its existing cue 'start close, work back'",
+    "description": "The throwing warm-up every practice starts with, run properly rather than as the five minutes before practice begins. Partners start about fifteen feet apart and throw easily, using full mechanics on every throw. After ten clean throws each they take three steps back, and repeat. Nobody throws hard until they have been through at least two distances. The arm is being prepared, so the reps are deliberate and the count is coached rather than left to the players.",
+    "ai_coaching_notes": "Walk the line while this happens — it is the best coaching time in the whole practice, because nothing else is going on. Full mechanics at fifteen feet means a step and a follow-through, not a flick of the wrist. 'Easy arm, good feet' is what you are looking for early. Call the moves back yourself; left alone, pairs go straight to maximum distance and maximum effort.",
+    "success_markers": [
+      "Steps toward the partner on every throw, even at the shortest distance",
+      "Throws arrive chest-high without the receiver moving their feet",
+      "Arm effort builds gradually — no maximum-effort throws in the first two distances"
+    ],
+    "equipment_needed": [
+      "Baseballs",
+      "Gloves"
+    ],
+    "practice_roles": [
+      "warmup"
+    ],
+    "regression_notes": "Stay at one distance for the whole warm-up with the youngest group. Distance is not the point; getting the arm moving with a step and a finish is.",
+    "progression_notes": "Add a third and fourth distance, then finish by coming back in for a set of quick, short, accurate throws so the arm is not left at long-toss effort going into practice."
+  },
+  {
+    "drill_id": "5b5b59e9-4906-4ba5-ad8b-1e9608041ef5",
+    "drill_name": "Partner Catch",
+    "source": "written from the existing description and cue (grip, step toward target, follow through)",
+    "description": "Plain partner catch, treated as a skill rather than as something to do while the coach sets up. Two players stand about twenty feet apart and throw back and forth, and every single throw gets the full sequence: find a four-seam grip, point the glove at the partner, step toward them, throw, finish. It is the most-used drill in youth baseball and the one most often run without any coaching attached, which is exactly why it is worth structuring.",
+    "ai_coaching_notes": "Pick one thing per round and coach only that — grip this round, the step next round, the finish after that. Trying to fix four things at once gets none of them. 'Chest height, every throw' gives the receiver something to judge. If a pair is chatting and lobbing, move them closer rather than telling them to concentrate; the shorter distance makes sloppiness visible.",
+    "success_markers": [
+      "Four-seam grip more often than not, found without looking at the hand",
+      "Front foot lands pointing at the partner",
+      "Throw arrives between the partner's shoulders and waist"
+    ],
+    "regression_notes": "Move to ten feet and throw underhand until the catch is reliable, then go back to overhand at the same distance. Fear of the ball is the usual reason a pair cannot do this, and distance makes it worse.",
+    "progression_notes": "Add distance, then put a count on it — ten clean catches in a row before anyone moves back. From here the same mechanics go into the Bullseye Challenge with a real target."
+  },
+  {
+    "drill_id": "9a6f58a3-0172-47e6-b159-8eb98306f5ca",
+    "drill_name": "Two Hand Catch",
+    "source": "written from the existing description and cue (catch with the glove, cover with the throwing hand)",
+    "description": "A short, single-purpose station for the habit that makes everything after it faster: catching with the glove and covering immediately with the throwing hand. Partners stand about fifteen feet apart and throw easy chest-high balls. The receiver catches and covers in one motion, then shows the ball in throwing position before throwing back. Any catch made one-handed does not count and is thrown again.",
+    "ai_coaching_notes": "Make the not-counting explicit before the first throw — the habit only forms if a one-handed catch costs something. 'Catch it, cover it, show me' gives the receiver three beats they can feel. Keep the throws easy and chest-high; a ball at the ankles genuinely cannot be caught with two hands, and asking for it teaches them the rule is arbitrary.",
+    "success_markers": [
+      "Throwing hand arrives at the glove as the ball does, not afterwards",
+      "Ball is shown in throwing position within a beat of the catch",
+      "No one-handed catches on balls between the shoulders and the waist"
+    ],
+    "practice_roles": [
+      "teach",
+      "repetition"
+    ],
+    "regression_notes": "Toss underhand from ten feet, or use a soft training ball. The two-hand habit is easiest to build when there is no reason to flinch.",
+    "progression_notes": "Throw to either side so the receiver has to move and still cover. From there the habit carries straight into the Groundball Transfer Catch and any infield work."
+  },
+  {
+    "drill_id": "e40632d7-5ffb-42e9-9652-bd9a49e68ff5",
+    "drill_name": "Quick Hands Drill",
+    "source": "written from the existing description and the recorded flaws it fixes (slow hands, fumbling)",
+    "description": "Catch-to-throw with everything else stripped out. Partners stand close — ten to twelve feet — and throw firm, chest-high balls back and forth as fast as they can while still catching cleanly. There is no step and no wind-up at this distance; the only thing that can be improved is how quickly the ball gets from the glove to the throwing hand and back out. Short rounds, because it stops being quick once the arm tires.",
+    "ai_coaching_notes": "Close enough that a wind-up is impossible is the whole setup — at twelve feet the drill coaches itself. 'One motion, no pause' is the cue. Watch where the exchange happens: in front of the chest is right, down at the belt is the habit you are breaking. Thirty seconds on, thirty seconds off, three times. Any longer and the throws get wild.",
+    "success_markers": [
+      "Ball leaves the glove and is released without a visible pause",
+      "Exchange happens in front of the chest rather than at the waist",
+      "Pair can complete twenty in a row without a drop"
+    ],
+    "practice_roles": [
+      "isolate",
+      "repetition"
+    ],
+    "regression_notes": "Slow it down and make the exchange deliberate — quality of the transfer first, speed second. A player fumbling at speed is practising fumbling.",
+    "progression_notes": "Count exchanges against a clock, or make it a race between pairs. Adding a small movement before the catch turns it into game-speed infield work."
+  },
+  {
+    "drill_id": "3cc99259-c968-4977-bd66-c168250a27b8",
+    "drill_name": "Wall Ball",
+    "source": "written from the existing description (solo throwing against a wall) and its base role in the wall-ball family",
+    "description": "Throwing practice for one player and a wall. The player stands about fifteen feet from a solid wall, throws with full mechanics, fields the rebound, and throws again. Because the wall returns the ball immediately, the rhythm is continuous and a player can get more throwing reps alone in five minutes than they get in a whole team catch session. This is the base version: throw, catch the rebound, throw again.",
+    "ai_coaching_notes": "Pick a spot on the wall and throw at that spot, not at the wall. The rebound comes back at roughly the height it was thrown, so a player throwing low is making their own drill harder — which is useful feedback if you point it out. 'Full mechanics every throw' needs repeating, because the temptation alone is to flick. Give them a target number rather than a time.",
+    "success_markers": [
+      "Hits the same spot on the wall on most throws",
+      "Steps toward the wall on every throw rather than throwing flat-footed",
+      "Can string together twenty throws without chasing a rebound"
+    ],
+    "equipment_needed": [
+      "Baseball or tennis ball",
+      "Solid wall",
+      "Glove"
+    ],
+    "regression_notes": "Move closer and use a tennis ball, which is softer on the rebound and more forgiving indoors. Throwing underhand at the wall still builds the rhythm.",
+    "progression_notes": "Move back, mark a smaller target, or field the rebound as a ground ball. The Selfies and Wall Ball Solo variants take this further with a rebounder and a rep count."
+  },
+  {
+    "drill_id": "3f2af696-fe22-4fb6-936f-fefe7d86681a",
+    "drill_name": "Long Toss",
+    "source": "written from the existing description and existing cue (start at 30 feet, build out slowly, let the ball arc); safety framing consistent with the Long Toss Progression row in the same family",
+    "description": "Arm strength built by throwing progressively further. Partners start at about thirty feet and throw easily. Every eight to ten clean throws they each take several steps back, until they reach the furthest distance they can throw with a good arc and no strain. This is the base version of the family — the distance ladder itself, without the structured pulldown phase that the full progression adds at the end.",
+    "ai_coaching_notes": "The arc is the safety valve: at maximum distance the ball should climb and come down, not be driven flat. A player throwing flat at distance is reaching past what their arm can do. Nobody moves back until the throws at the current distance are landing well. Stop the whole thing at the first mention of soreness — this is the drill in the library most capable of hurting somebody.",
+    "success_markers": [
+      "Throws carry with an arc at maximum distance rather than being thrown flat",
+      "Player uses a crow hop at the longer distances instead of throwing flat-footed",
+      "Comes back in feeling loose, with no arm soreness reported"
+    ],
+    "safety_notes": "Full warm-up before starting, and no long toss on a day the player has pitched. Stop immediately at any elbow or shoulder discomfort. Youth arms should not throw maximum effort at maximum distance.",
+    "practice_roles": [
+      "isolate",
+      "progress"
+    ],
+    "regression_notes": "Cap the distance well short of maximum and stay there. Distance is not the goal; throwing well at a comfortable distance is, and for most under-10 players that is sixty feet.",
+    "progression_notes": "Move to the full Long Toss Progression, which adds the structured pulldown set at the end to bring accuracy back after the distance work."
+  },
+  {
+    "drill_id": "4e1975e2-eb6b-49a8-9d29-0b9d0afd2f68",
+    "drill_name": "Simple Throwing Progressions",
+    "source": "written from the existing description (step-by-step progressions, stop over-complicating throwing mechanics)",
+    "description": "A deliberately short throwing sequence for a coach who does not want to teach eight things at once. Three steps, one session: grip the ball across four seams, point the glove at the target, step and throw. Partners work at twenty feet and do a set of ten throws at each step, adding the next one without dropping the last. The value is the restraint — a young player given three cues will use them, and a young player given eight will use none.",
+    "ai_coaching_notes": "Resist adding a fourth thing. If the throws are going sideways, it is almost always the step or the glove, and both are already in here. Say the three steps out loud as a group before each set so the players have the sequence themselves. When a throw goes wrong, ask which of the three they missed rather than telling them.",
+    "success_markers": [
+      "Player can name the three steps without being prompted",
+      "Four-seam grip appears without the coach asking for it",
+      "Throws are noticeably straighter by the third set"
+    ],
+    "practice_roles": [
+      "teach",
+      "repetition"
+    ],
+    "regression_notes": "Run one step for a whole session. Grip alone, for ten minutes, is a legitimate practice for a first-year player.",
+    "progression_notes": "Once the three hold up at twenty feet, take them to the Kneel-Down Throw to isolate the arm, or out to distance where they break down first."
+  },
+  {
+    "drill_id": "663dc298-e5f2-4ea8-9d6d-6812e652cf28",
+    "drill_name": "Fun Baseball Throwing Drill",
+    "source": "rewritten from video framing; kept the existing intent (competitive throwing game that builds accuracy and keeps young players engaged)",
+    "description": "A throwing accuracy game for players too young to enjoy repetition for its own sake. Set a bucket, a cone or a folded towel out at a throwable distance and split the group into two teams. Players take turns throwing at the target, one point for a hit, and the teams alternate. The competition supplies the focus that a coach otherwise has to nag for, and the throwing reps are identical to the ones nobody wants to do.",
+    "ai_coaching_notes": "Set the distance so that roughly one throw in three scores — much easier and it is boring, much harder and they stop trying. Keep the teams small so the wait between throws is short. The one thing worth coaching mid-game is 'step at it', because under competition the step is the first thing to disappear. Play to a low number and play twice.",
+    "success_markers": [
+      "Players still step toward the target when the score is close",
+      "Accuracy holds or improves across rounds rather than degrading",
+      "Everybody throws roughly the same number of times"
+    ],
+    "equipment_needed": [
+      "Baseballs",
+      "Gloves",
+      "Bucket, cone or towel as a target"
+    ],
+    "practice_roles": [
+      "competition",
+      "finish"
+    ],
+    "regression_notes": "Bring the target closer and make it bigger, or let each player throw twice per turn. For the youngest group, score any throw that reaches the target on the fly.",
+    "progression_notes": "Shrink the target, move it back, or require the throw to arrive on the fly. Adding a fielding step before the throw turns it into a full play."
+  },
+  {
+    "drill_id": "2ac95ee1-db4f-4ab1-b2ec-569a5419b6ef",
+    "drill_name": "Second Baseman Flip/Throw Combo",
+    "source": "rewritten from video framing; kept the existing intent (flip and throw combination for middle infielders)",
+    "description": "The two ways a middle infielder gets rid of the ball, practised back to back so the player learns to choose. Partners stand about fifteen feet apart. On the first rep the ball is delivered with an underhand flip — glove-hand side, firm, chest-high, no wrist flick. On the second it is a normal overhand throw. They alternate. Close to the bag it is a flip; anywhere else it is a throw, and the mistake worth drilling out is using the wrong one.",
+    "ai_coaching_notes": "A flip is a push, not a toss — the arm stays stiff and the ball does not spin much. Cue 'show him the ball' so the receiver picks it up early out of the hand. Fifteen feet is about the boundary: inside that, flip; outside, throw. Ask them which one they would use before each rep rather than telling them, so the decision gets practised alongside the mechanic.",
+    "success_markers": [
+      "Flip arrives chest-high and firm without arcing",
+      "Overhand throw uses a full step rather than a half-flick",
+      "Player picks the right delivery for the distance without being told"
+    ],
+    "equipment_needed": [
+      "Baseballs",
+      "Gloves"
+    ],
+    "practice_roles": [
+      "isolate",
+      "repetition"
+    ],
+    "regression_notes": "Drill the flip alone from ten feet until it is firm and flat. The overhand throw is already familiar; the flip is the one that needs the reps.",
+    "progression_notes": "Add the footwork at the bag, then work it into Double-Play Feeds and Turns where the flip has a real destination and a time pressure."
+  },
+  {
+    "drill_id": "09b8ebeb-a43d-40db-b1ae-eaa44e48f82c",
+    "drill_name": "EASY Baseball Catch Drill — First Catch Fundamentals",
+    "source": "rewritten from video framing; the two rules and the two-hand requirement are kept verbatim in substance from the existing description and cues",
+    "description": "The first catching lesson, built on one rule a six-year-old can hold onto: ball above the belly button, fingers up; ball below the belly button, fingers down. A partner or coach tosses easy balls from about fifteen feet, deliberately alternating high and low, and the receiver has to set the glove correctly before the ball arrives. Both hands, every catch. Get these two positions automatic and most beginner dropped balls stop happening.",
+    "ai_coaching_notes": "Call 'up' or 'down' as you release the ball for the first few rounds, then stop calling and let them read it. Set the glove BEFORE the ball arrives — a glove that turns over during the catch is the flaw being fixed. Use a soft training ball with anyone flinching; the rule cannot be learned by a player who is closing their eyes.",
+    "reps_guidance": "2 sets of 10 catches, alternating high and low",
+    "success_markers": [
+      "Glove is set fingers-up or fingers-down before the ball arrives",
+      "Throwing hand covers the ball immediately on every catch",
+      "Catches balls both above and below the waist without turning the head away"
+    ],
+    "practice_roles": [
+      "teach",
+      "repetition"
+    ],
+    "regression_notes": "Toss underhand from ten feet with a soft ball, and call the height every time. Split it further if needed — a whole round of high balls, then a whole round of low.",
+    "progression_notes": "Stop calling the height, then throw harder, then add balls to either side. From here the same glove positions go into Over-Under, which adds the underhand flip."
+  },
+  {
+    "drill_id": "69d859e5-5214-4b2d-b42f-07fcc56ff519",
+    "drill_name": "Throwing Progression for Youth Players — Knee, Hip, Full",
+    "source": "rewritten from video framing; the three phases are kept exactly as the existing description and cues set them out, with the 4-seam grip and target cues recovered from hidden duplicate 28d76619",
+    "description": "The whole throw, built in three phases so each piece can be fixed on its own. Phase one: both players kneel on the throwing-side knee, fifteen feet apart, and throw using only the arm and wrist — the legs cannot help. Phase two: stand with the feet wide and throw adding torso and hip rotation, still without striding. Phase three: the full throw with a step. Ten throws per phase, and nobody moves on until the phase before it looks right.",
+    "ai_coaching_notes": "Each phase adds exactly one thing, and the discipline is not letting a player skip ahead because the full throw is more fun. From the knees, look for the wrist snap and backspin. Standing wide, look for the chest turning to face the target. On the full throw, look for the step going at the target and the ball coming out over the top. Fingers across four seams throughout; point the glove at the target before every throw.",
+    "success_markers": [
+      "Throws with backspin from the knees rather than pushing the ball",
+      "Chest finishes facing the target in the wide-stance phase",
+      "Full throw keeps the arm action built in phases one and two rather than reverting"
+    ],
+    "equipment_needed": [
+      "Baseballs",
+      "Gloves"
+    ],
+    "practice_roles": [
+      "teach",
+      "progress"
+    ],
+    "regression_notes": "Spend the entire session in phase one. For a player whose arm action is the problem, the kneeling throw is the practice, not the warm-up to it.",
+    "progression_notes": "Add distance to the full-throw phase, then take the same three phases into a pre-practice warm-up so the sequence becomes routine rather than a drill."
+  },
+  {
+    "drill_id": "726384a7-dacf-440b-8b42-381843a01722",
+    "drill_name": "Over-Under — Two Ways to Throw and Catch",
+    "source": "markers and next steps written for the existing description, which already sets out the alternating overhand/underhand sequence",
+    "success_markers": [
+      "Glove turns fingers-down for the flip without being reminded",
+      "Underhand flip arrives flat and firm rather than looping",
+      "Pair keeps the alternation going without stopping to think about which is next"
+    ],
+    "practice_roles": [
+      "teach",
+      "repetition"
+    ],
+    "regression_notes": "Run a full round of overhand, then a full round of underhand, before alternating. Splitting the two removes the decision and leaves just the glove position.",
+    "progression_notes": "Stop announcing the order and let the thrower choose, so the receiver reads the delivery rather than expecting it. Adding a step to either side makes it a genuine infield exchange."
+  },
+  {
+    "drill_id": "3269f5db-7541-42a7-b085-0b209f0dd8a6",
+    "drill_name": "Bullseye Challenge — Throwing Accuracy Competition",
+    "source": "description rewritten to remove the brand-led opening; the target, the distance and the scoring are unchanged",
+    "description": "A throwing accuracy competition against a marked target at game-realistic distance. Set a strike-zone target, a bucket or a taped square on a fence, and have players throw at it from the distance they would actually throw in a game — shortstop to first, catcher to second, whatever fits the group. Points for hitting it. The competition supplies the intent that ordinary catch never asks for: nobody aims at a partner's chest the way they aim at a scored target.",
+    "success_markers": [
+      "Player names or looks at a specific spot before throwing rather than throwing at the whole target",
+      "Accuracy holds up as the score gets close",
+      "Mechanics stay intact under competition — the step does not disappear"
+    ],
+    "regression_notes": "Move the target closer and make it larger, and count throws that arrive on the fly anywhere near it. A target nobody hits stops being a competition after two rounds.",
+    "progression_notes": "Shrink the bullseye, extend the distance, or require a fielded ground ball before each throw so the accuracy has to survive the exchange."
+  },
+  {
+    "drill_id": "3a2f690d-095d-46ea-98e8-088a7a7ea7db",
+    "drill_name": "Throwing Accuracy Race — Competitive Catch Under Pressure",
+    "source": "markers and next steps written for the existing description, which already sets out the ten-in-a-row race and the reset rule",
+    "success_markers": [
+      "Pairs slow down rather than speed up as the count climbs",
+      "Throws stay chest-high through the pressure of a close race",
+      "A dropped ball is followed by a good throw, not a rushed one"
+    ],
+    "regression_notes": "Race to five instead of ten, and move the pairs closer. Resetting from nine is discouraging enough to end the drill for a young player.",
+    "progression_notes": "Race to fifteen, add distance, or require that every throw also be caught with two hands to count. Alternating overhand and flip throws makes the count much harder to hold."
+  },
+  {
+    "drill_id": "f1e620a8-1016-4097-b104-502ddcab967a",
+    "drill_name": "Selfies Solo Rebounder — Build Reps Without a Partner",
+    "source": "description rewritten to remove the brand-led opening; the rebounder setup and rep-count intent are unchanged",
+    "description": "Continuous throw-catch-throw against a rebounder net or wall, with no partner needed. The player throws, the net returns the ball, they catch it and throw again without resetting. It builds the catch-and-throw rhythm that every defensive position depends on, and because it needs one player and one net it is the drill that survives contact with a family's actual week — it works in a driveway between practices.",
+    "success_markers": [
+      "Strings together twenty-five throws without a drop or a chase",
+      "Grip is reset during the catch rather than after it",
+      "Mechanics at rep twenty-five look like mechanics at rep one"
+    ],
+    "regression_notes": "Move closer and use a tennis ball, and allow a pause between reps. The rhythm is the goal, but not at the cost of chasing the ball around the garden.",
+    "progression_notes": "Move back, aim at a marked spot on the net, or put a rep target on it — fifty in a row with full mechanics is a genuine milestone for a ten-year-old."
+  },
+  {
+    "drill_id": "d4efaaad-808d-4e4f-8539-9c56c5c1835a",
+    "drill_name": "Clean Up Crew — Fun Fielding-to-Throw Game",
+    "source": "description rewritten to remove the brand-led opening; the scattered balls, the bucket and the race are unchanged",
+    "description": "Scatter ten to twenty balls across the infield, put a large bucket or a marked zone in the middle, and the players' job is to get every ball into it as fast as possible. Each ball has to be fielded and thrown in, not carried. It is a race and it looks like tidying up, and underneath it is thirty fielding-to-throw repetitions in about four minutes, which is more than most practices manage in twenty.",
+    "success_markers": [
+      "Balls are thrown in rather than carried, even late in the race",
+      "Throws still arrive on the fly when players are hurrying",
+      "Every player finishes with a similar number of balls rather than one doing most of it"
+    ],
+    "regression_notes": "Fewer balls, a bigger target, and a shorter distance. Let the youngest players jog the ball halfway and throw from there.",
+    "progression_notes": "Spread the balls wider, shrink the bucket, or split into two teams with separate buckets so there is a direct opponent."
+  },
+  {
+    "drill_id": "a663b235-d115-4a52-a9d4-b33ba37e0e2a",
+    "drill_name": "Foul Line Throw — First Throw Introduction for Beginners",
+    "source": "description rewritten to remove the brand-led opening; the foul-line setup and the wiffle-to-baseball progression are unchanged",
+    "description": "The first throwing session of a beginner's season, with the hardest part removed. Players line up along the foul line and throw out into the outfield — nobody is catching, so there is nothing to miss and nothing to be embarrassed about. Start with wiffle balls, move to tennis balls, then baseballs as confidence allows. The only thing being taught is stepping toward where the ball is going, which is the motor pattern everything else is built on.",
+    "success_markers": [
+      "Front foot steps toward the outfield before the arm comes through",
+      "Arm finishes across the body rather than stopping at release",
+      "Player throws willingly and repeatedly without hesitating before each one"
+    ],
+    "practice_roles": [
+      "teach",
+      "warmup"
+    ],
+    "regression_notes": "Stay on wiffle balls for the whole session, and shorten it. A beginner who throws thirty wiffle balls happily has had a better first day than one who throws six baseballs nervously.",
+    "progression_notes": "Move to tennis balls, then baseballs, then add a partner at short distance. Foul Line Throw is the step before Partner Catch, not a replacement for it."
+  },
+  {
+    "drill_id": "d873c9db-09cd-406c-b53b-fbd6d5033185",
+    "drill_name": "Wall Ball Solo Drill — Partner-Free Mechanics Builder",
+    "source": "description rewritten to remove the brand-led opening; the wall setup and the fifty-rep mechanics target are unchanged",
+    "description": "Full throwing mechanics practised solo against a wall — the progression version of Wall Ball, where the standard is quality rather than rhythm. The player throws with a complete sequence every time, takes the rebound, resets the grip, and throws again. The target is fifty consecutive throws with mechanics that would survive a coach watching. It is the drill that separates players who improve between practices from players who only improve at them.",
+    "success_markers": [
+      "Full step and follow-through on every throw, including the fiftieth",
+      "Grip is found during the catch, not after a look at the hand",
+      "Hits the same spot on the wall consistently enough that the rebound is predictable"
+    ],
+    "practice_roles": [
+      "repetition",
+      "isolate"
+    ],
+    "regression_notes": "Drop the target to twenty throws and use a tennis ball. Fifty with broken mechanics is worse than twenty with good ones, and the number is the thing players chase.",
+    "progression_notes": "Mark a smaller target on the wall, move back, or field the rebound as a ground ball so the exchange is included in every rep."
+  },
+  {
+    "drill_id": "84930859-7689-4f1f-a9ba-5e71b4991af9",
+    "drill_name": "Quick Hands Quick Feet — Fast Transfer Drill",
+    "source": "markers and next steps written for the existing description, which already sets out the short-distance pairs and the timed transfer",
+    "success_markers": [
+      "Throwing hand is already moving to the glove as the ball arrives",
+      "No gather step between the catch and the release",
+      "Pair can beat their own count from the previous round"
+    ],
+    "regression_notes": "Slow the throws and let the exchange be deliberate. Speed built on a fumbled transfer is not speed, and at this distance the fumble is the only thing that can go wrong.",
+    "progression_notes": "Time it against a clock, add a step to either side before the catch, or take it to the bag as double-play footwork where the quick transfer has a destination."
+  },
+  {
+    "drill_id": "ce798b52-883f-4cf3-a6b8-311ef084a1be",
+    "drill_name": "Funnel Drill — Correct Arm Path Out of the Glove",
+    "source": "description rewritten to remove the brand-led opening; the down-then-up ball path is unchanged",
+    "description": "A fix for the single most common arm-path fault in youth throwing: the ball coming out of the glove sideways. The correct path funnels — as the hands separate, the ball travels DOWN toward the back hip, then arcs UP and over as the arm comes through. Partners work at short distance and throw slowly, watching each other's separation. It looks like an underhand swing that becomes an overhand throw, and it is the difference between a compact arm and a sore one.",
+    "success_markers": [
+      "Ball travels down toward the hip on separation rather than out to the side",
+      "Arm path stays compact — the hand does not swing wide of the body",
+      "Player can show the funnel slowly, without a ball, on request"
+    ],
+    "practice_roles": [
+      "isolate",
+      "teach"
+    ],
+    "regression_notes": "Do it with no ball at all, slowly, hands only, until the path is familiar. Then add a ball and keep the throws soft — speed hides the fault this drill exists to expose.",
+    "progression_notes": "Add normal throwing speed, then distance, and check whether the path holds. Pair it with the High Five Drill if the elbow is also dropping."
+  },
+  {
+    "drill_id": "6759598d-9bfc-47b2-91f1-31c77fc97cb5",
+    "drill_name": "Kneel-Down Throw — Isolating Upper Body and Wrist Snap",
+    "source": "description rewritten to remove the brand-led opening; the kneeling setup, distance and isolation intent are unchanged",
+    "description": "Throwing with the legs taken away, so the arm has nowhere to hide. Both players kneel on their throwing-side knee, fifteen to twenty feet apart, and throw. With no stride and no push off the back leg, every bit of the throw comes from the arm, wrist and torso — which makes this the fastest way to find and fix an arm-action fault without footwork getting in the way. It is also phase one of the three-phase throwing progression.",
+    "success_markers": [
+      "Ball comes out with backspin rather than wobbling or being pushed",
+      "Chest rotates to face the partner through the throw",
+      "Elbow stays at or above shoulder height at release"
+    ],
+    "practice_roles": [
+      "isolate",
+      "teach"
+    ],
+    "regression_notes": "Move closer and throw softer. If the ball is not reaching from the knees, the distance is wrong, not the player — fifteen feet is already short and ten is fine.",
+    "progression_notes": "Move to the wide-stance phase, adding hip rotation, then to the full throw with a stride. That is the Knee, Hip, Full progression in full."
+  },
+  {
+    "drill_id": "50087451-2665-4c78-b968-ca56e9ceec3b",
+    "drill_name": "Point-and-Go Glove Drill — Align Your Body to the Target",
+    "source": "markers and next steps written for the existing description, which already sets out the point-then-throw sequence",
+    "success_markers": [
+      "Glove elbow points at the target before the arm comes through",
+      "Chest finishes facing the target rather than falling off to the side",
+      "Throws are visibly straighter within a round, without any other change"
+    ],
+    "practice_roles": [
+      "teach",
+      "isolate"
+    ],
+    "regression_notes": "Have them point and hold for a count of one before throwing. Separating the point from the throw makes it obvious what the glove arm is for.",
+    "progression_notes": "Remove the pause so pointing and throwing become one motion, then add a fielded ground ball beforehand so the alignment has to happen on the move."
+  },
+  {
+    "drill_id": "012241e0-c2ce-4a32-b037-39f90bd35437",
+    "drill_name": "Extreme Catch — Progressive Distance Arm Builder",
+    "source": "description rewritten to remove the brand-led opening; the step-back rule and the competition are unchanged",
+    "description": "Partner catch turned into a distance competition. Every time both players catch cleanly, they each take one step back. Drop it and you stay where you are — or start again, depending on how competitive the group is. The pair that ends up furthest apart wins. It builds arm strength the way long toss does, but nobody has to be told to try, because the step back is the reward and it is immediate.",
+    "success_markers": [
+      "Players use a crow hop at the longer distances rather than throwing flat-footed",
+      "Throws carry with an arc instead of being driven flat as distance grows",
+      "Pairs stop and reset rather than throwing wildly to save a step"
+    ],
+    "practice_roles": [
+      "competition",
+      "progress"
+    ],
+    "safety_notes": "This is a maximum-effort throwing drill by design. Warm up fully first, cap the distance for younger arms, and do not run it on a day a player has pitched.",
+    "regression_notes": "Cap the number of steps back, or run it with tennis balls. The competition works just as well with a ceiling on distance, and the ceiling is what keeps arms safe.",
+    "progression_notes": "Raise or remove the cap for older players, or require the throw to be caught above the waist to count, which stops the last few steps becoming a lob contest."
+  },
+  {
+    "drill_id": "73f5fef2-af64-4577-998d-da854cebb0cf",
+    "drill_name": "Crow Hop — Arm Strength and Outfield Throwing",
+    "source": "description rewritten to remove the brand-led opening; the hop-plant-stride-throw footwork is unchanged",
+    "description": "The footwork an outfielder uses to put their whole body behind a long throw. After catching the ball the player hops onto the throwing-side foot, plants it, strides forward with the front foot, and throws — hop, plant, stride, throw. It converts a standing throw into a moving one, and for a player who has only ever thrown flat-footed it adds more distance in one session than a month of arm strength work.",
+    "success_markers": [
+      "Hop lands on the throwing-side foot, not the front foot",
+      "Body is moving toward the target at release rather than stopping to throw",
+      "Throw carries noticeably further than the same player's flat-footed throw"
+    ],
+    "practice_roles": [
+      "teach",
+      "progress"
+    ],
+    "regression_notes": "Walk through hop-plant-stride with no ball, then add a short throw. The sequence is the hard part; the distance takes care of itself once the feet are right.",
+    "progression_notes": "Add distance, then catch a thrown ball or a fly ball first so the hop starts from a real play rather than from a standstill."
+  },
+  {
+    "drill_id": "0200c065-9f6f-4a76-bd9a-22e46141a6ce",
+    "drill_name": "The Ankle Eye Drill — Footwork Foundation",
+    "source": "second and third markers and next steps written for the existing description; the ankle-eye cue itself is unchanged",
+    "success_markers": [
+      "Points the back-foot \"ankle eye\" and lands stepping right at the target",
+      "Shoulders line up on the target without the player thinking about shoulders",
+      "Throws stop drifting to the glove side within a round"
+    ],
+    "practice_roles": [
+      "teach",
+      "isolate"
+    ],
+    "regression_notes": "Set the feet for them and let them feel the position before throwing. Standing still and pointing, with no ball, is a legitimate first round.",
+    "progression_notes": "Add a fielded ground ball before the throw so the ankle eye has to be found on the move, then put a target on it for accuracy under a count."
+  },
+  {
+    "drill_id": "2b5adf22-f8b1-4cfe-87e9-fe7ec1a1957e",
+    "drill_name": "Long Toss Progression — Building Arm Strength Safely",
+    "source": "description rewritten to remove the brand-led opening; the 30-foot start, the arc requirement and the pulldown phase are unchanged",
+    "description": "Long toss with a structure that makes it safe for youth arms. Start at thirty feet throwing easily, and move back only when the throws at the current distance feel good and land well. At maximum distance the ball should arc, never be driven flat. The part most people skip is the end: five to ten throws walking the distance back in, which re-trains the accuracy that pure distance work costs. Distance out, accuracy back.",
+    "success_markers": [
+      "Ball arcs at maximum distance rather than being thrown flat",
+      "Player completes the pulldown phase instead of finishing at maximum distance",
+      "No arm soreness reported at the end or the following day"
+    ],
+    "practice_roles": [
+      "isolate",
+      "progress"
+    ],
+    "regression_notes": "Cut the maximum distance short and lengthen the pulldown. For a nine-year-old, ninety feet with a clean arc beats a hundred and fifty on the bounce.",
+    "progression_notes": "Extend the ladder for older players with a coach watching, but keep the pulldown proportional — the further out they go, the more throws it takes to bring the accuracy back."
+  },
+  {
+    "drill_id": "e4309ffb-fa02-4c6d-ac87-a6580e8c5bff",
+    "drill_name": "High Five Drill — Elbow Up Arm Path Correction",
+    "source": "markers and next steps written for the existing description, which already sets out the high-five position and the drop-elbow fault it fixes",
+    "success_markers": [
+      "Elbow reaches shoulder height before the arm comes forward",
+      "Ball comes out over the top rather than from the side",
+      "Throws stop tailing sideways within a round"
+    ],
+    "practice_roles": [
+      "teach",
+      "isolate"
+    ],
+    "regression_notes": "Have them hold the high-five position for a count before throwing, or physically place the arm once so they can feel the height. The position has to be familiar before it can be found at speed.",
+    "progression_notes": "Remove the pause and let the high five become part of the arm swing, then add distance — the dropped elbow usually comes back the moment the throw gets long."
   }
 ]
