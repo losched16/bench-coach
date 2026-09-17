@@ -2461,9 +2461,1220 @@ const OUTFIELD_DEVELOPMENT: PathwaySpec = {
   ],
 }
 
+
+// ── 5. PITCHING DEVELOPMENT ─────────────────────────────────────────────────
+
+const PITCHING_DEVELOPMENT: PathwaySpec = {
+  slug: 'pitching-development',
+  name: 'Pitching Development',
+  skillCategory: 'pitching',
+  summary:
+    'A delivery built from the ground up: an arm that is ready, a body that can ' +
+    'balance, a sequence that fires in order, and only then a second pitch.',
+  applicability:
+    'Every stage assumes the player can already throw — run Throwing Development ' +
+    'stages 1 to 4 first if the arm action itself is the problem. Stage 1 is not ' +
+    'optional at any age: it is the one that protects the arm, and it repeats every ' +
+    'session rather than being completed. No breaking balls anywhere in this ' +
+    'pathway, deliberately.',
+  minAge: 7,
+  maxAge: 14,
+  provenance: PROVENANCE,
+  stages: [
+    {
+      key: 'prepare-the-arm',
+      name: 'Prepare the arm',
+      objective: 'Warms up and recovers the same way every outing, without being told.',
+      whyItMatters:
+        'This is the only stage that never finishes. A youth pitcher who throws cold is ' +
+        'the injury this whole pathway is trying not to cause, and the habit forms at the ' +
+        'same time as the delivery or it never forms at all.',
+      masterySignals: [
+        'Whole body is moving before any arm work starts',
+        'Routine happens without being reminded',
+        'Throwing builds from short and easy to full distance rather than starting there',
+      ],
+      commonFailureModes: [
+        'Warming the shoulder on a cold body',
+        'Skipping the routine on the days it matters most — cold, late, or in a hurry',
+        'Finishing an outing with no recovery work at all',
+      ],
+      coachingEmphasis: 'Whole body before arm, every time.',
+      practicesMin: 1,
+      practicesMax: 2,
+      problems: ['cold-arm', 'arm-fatigue'],
+      drills: [
+        {
+          drill: 'Complete Pitching and Throwing Warm-Up Routine',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'The full sequence in order — body, then shoulder, then arm with a ball — and ' +
+            'the library is explicit that the progressive throwing at the end is part of ' +
+            'the routine rather than the practice that follows it.',
+        },
+        {
+          drill: 'Baseball Arm Stretches and Pre-Throwing Warm-Up',
+          role: 'regression',
+          rank: 1,
+          rationale:
+            'Five minutes, no equipment, no partner. A short routine that actually happens ' +
+            'is worth more than a complete one that gets skipped, which is the library\'s ' +
+            'own note on it.',
+        },
+        {
+          drill: 'Youth J-Band Routine — Pre-Throwing Activation',
+          role: 'reinforcement',
+          rank: 1,
+          rationale:
+            'Band activation before the arm is asked for effort. It is the cheapest ' +
+            'protection available and it belongs before a bullpen, not after one.',
+        },
+        {
+          drill: 'Post-Throwing Recovery Routine',
+          role: 'reinforcement',
+          rank: 2,
+          rationale:
+            'The fifteen minutes after the last pitch. Paired with the activation routine ' +
+            'it brackets the outing at both ends, which is how the library describes the ' +
+            'pair working.',
+        },
+        {
+          drill: '9-Exercise J-Band Strength Routine',
+          role: 'progression',
+          rank: 1,
+          rationale:
+            'Genuine strength work for the cuff, run on low-throwing days. It is what ' +
+            'eventually lets the pre-throwing routine be shortened.',
+        },
+      ],
+    },
+    {
+      key: 'balance-at-leg-lift',
+      name: 'Balance at the leg lift',
+      objective: 'Holds the top of the delivery still for two seconds without wobbling.',
+      whyItMatters:
+        'Everything after this happens on one leg. A pitcher who cannot balance at the top ' +
+        'is rushing to get off that leg, and every command problem downstream starts here.',
+      masterySignals: [
+        'Holds the balance point for two seconds without wobbling',
+        'Front foot hangs straight down rather than tucking behind the back knee',
+        'Eyes stay on the target throughout the hold',
+      ],
+      commonFailureModes: [
+        'Rushing through the top because the balance is not there',
+        'Tucking the front foot behind the knee, which locks the hip',
+        'Eyes dropping to the ground during the lift',
+      ],
+      practicesMin: 1,
+      practicesMax: 3,
+      problems: ['balance-leg-lift', 'rushing-delivery'],
+      drills: [
+        {
+          drill: 'Balance Point Drill — Leg Lift & Pause',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'The top of the delivery held still for two to three seconds, which turns a ' +
+            'position that flashes past into one a coach can actually see and correct.',
+        },
+        {
+          drill: 'Flamingo Balance Drill — Single-Leg Stability',
+          role: 'regression',
+          rank: 1,
+          rationale:
+            'Single-leg balance with no ball, no glove and no delivery attached. A pitcher ' +
+            'who cannot hold thirty seconds on one leg is not going to hold two at the top ' +
+            'of a leg lift.',
+        },
+      ],
+    },
+    {
+      key: 'delivery-in-parts',
+      name: 'The delivery, in parts',
+      objective: 'Can be stopped at any checkpoint of the motion and hold that position.',
+      whyItMatters:
+        'A delivery is four positions, and a young pitcher who only ever throws at full ' +
+        'speed has no way to find which one is wrong. This is the map the rest of the ' +
+        'pathway navigates with.',
+      masterySignals: [
+        'Stops balanced at each checkpoint instead of rushing through the motion',
+        'Can be stopped mid-delivery on command and hold the position',
+        'Full-speed delivery keeps the checkpoints rather than reverting',
+      ],
+      commonFailureModes: [
+        'Running the four positions together before any one of them is sound',
+        'Holding the checkpoints slowly and losing all four at full speed',
+        'Rushing, which is the fault that hides every other fault',
+      ],
+      practicesMin: 2,
+      practicesMax: 4,
+      problems: ['rushing-delivery', 'throwing-mechanics'],
+      drills: [
+        {
+          drill: '4-Part Windup Drill — Breaking Down the Delivery',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'Breaks the motion into four checkpoints and asks the pitcher to hold each ' +
+            'before joining them. It is the drill that makes every later stage diagnosable.',
+        },
+        {
+          drill: 'Balance Point Drill — Leg Lift & Pause',
+          role: 'regression',
+          rank: 1,
+          rationale:
+            'Checkpoint two on its own. When the four-part version falls apart it is ' +
+            'almost always here, and this is the single position to rebuild.',
+        },
+      ],
+    },
+    {
+      key: 'hip-lead',
+      name: 'Hip lead and separation',
+      objective: 'Moves the front hip toward the plate before the shoulders follow.',
+      whyItMatters:
+        'This is the single most useful correction in youth pitching. A shoulder that ' +
+        'arrives before the hip has thrown away the torque the legs just built, and no ' +
+        'amount of arm strength replaces it.',
+      masterySignals: [
+        'Front hip moves toward the plate before the front shoulder does',
+        'Can hold the separated position for a count without falling forward',
+        'Back leg stays loaded rather than the whole body drifting',
+      ],
+      commonFailureModes: [
+        'Hips and shoulders rotating together — no separation at all',
+        'Drifting the whole body forward instead of leading with the hip',
+        'Losing the front side, so the separation collapses before release',
+      ],
+      coachingEmphasis: 'Your hip goes first, your arm follows. Watch from the side, not behind.',
+      practicesMin: 2,
+      practicesMax: 5,
+      problems: ['no-hip-lead', 'lunging', 'flying-open'],
+      drills: [
+        {
+          drill: 'The Rocker Drill — Hip Lead & Weight Shift',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'The rocking start makes the hip lead easy to feel, and the library calls it ' +
+            'the single most useful correction available at this age.',
+        },
+        {
+          drill: 'Hip Lead Drill',
+          role: 'primary',
+          rank: 2,
+          rationale:
+            'Isolates the same sequence at the exact point it goes wrong — from the balance ' +
+            'point, hip first, shoulders held back — with a hold so the stretch is felt.',
+        },
+        {
+          drill: 'Square Hips / Hip Lock Drill — Hip-Shoulder Separation',
+          role: 'progression',
+          rank: 1,
+          rationale:
+            'Takes the same separation to front-foot landing and asks the hips to square ' +
+            'while the shoulder stays back. It needs the basic hip lead to exist first.',
+        },
+      ],
+    },
+    {
+      key: 'stride-and-landing',
+      name: 'Stride direction and landing',
+      objective: 'Lands the front foot in the same place, pointing the same way, every pitch.',
+      whyItMatters:
+        'Command is mostly a landing spot. A front foot that moves around cannot produce a ' +
+        'repeatable release point however good the arm is.',
+      masterySignals: [
+        'Front foot lands consistently just to the glove side of the line',
+        'Front foot lands heel first with the toes slightly closed',
+        'Pitcher checks their own landing spot without being asked',
+      ],
+      commonFailureModes: [
+        'Striding across the body, which sends everything arm side',
+        'Striding open, which lets the hips rotate early and drains the separation',
+        'A landing spot that changes from pitch to pitch, so nothing repeats',
+      ],
+      practicesMin: 2,
+      practicesMax: 4,
+      problems: ['inconsistent-stride', 'stepping-in-bucket', 'inaccurate-throws'],
+      drills: [
+        {
+          drill: 'Stride Direction Drill — Using a Chalk Line or Tape',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'A line on the ground turns stride direction from a coaching opinion into ' +
+            'feedback the pitcher can read themselves after every throw.',
+        },
+        {
+          drill: 'The Heel-Toe Drill — Front Foot Landing',
+          role: 'primary',
+          rank: 2,
+          rationale:
+            'The other half of the landing: which way the foot points. An open front foot ' +
+            'lets the hips go early, which undoes the previous stage.',
+        },
+      ],
+    },
+    {
+      key: 'front-side',
+      name: 'Front side control',
+      objective: 'Pulls the glove into the ribs so the chest drives at the target.',
+      whyItMatters:
+        'The glove arm is half the delivery and the half nobody coaches. A front side that ' +
+        'flies open is why a pitcher falls off to the side and loses the plate arm side.',
+      masterySignals: [
+        'Glove extends toward the target during the stride rather than flopping',
+        'Glove elbow pulls tight into the ribs as the shoulder rotates',
+        'Chest finishes facing the target instead of falling off to the side',
+      ],
+      commonFailureModes: [
+        'Glove arm flying out to the side like a wet noodle',
+        'Chest never reaching the target, so every pitch drifts arm side',
+        'Front side collapsing early, which kills the separation built two stages ago',
+      ],
+      practicesMin: 1,
+      practicesMax: 3,
+      problems: ['throwing-mechanics', 'no-hip-lead'],
+      drills: [
+        {
+          drill: 'Glove-Side Pull Drill — Front Side Control',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'The only drill in the library that coaches the glove arm as a thing with a ' +
+            'job, and its cue — glove in, chest forward — is the objective stated plainly.',
+        },
+        {
+          drill: 'Follow-Through Hold Drill — Finishing Strong',
+          role: 'assessment',
+          rank: 1,
+          rationale:
+            'A pitcher who cannot hold the finish with the chest over the front knee had a ' +
+            'front side that gave way. The held finish reads this stage without judging it ' +
+            'mid-delivery.',
+        },
+      ],
+    },
+    {
+      key: 'arm-action',
+      name: 'Arm action and wrist snap',
+      objective: 'Moves the arm loosely and snaps the wrist, producing tight backspin.',
+      whyItMatters:
+        'A tight arm loses velocity and takes the strain the muscles should be absorbing. ' +
+        'Looseness is trainable and is rarely trained.',
+      masterySignals: [
+        'Arm moves loosely rather than rigidly through the pull',
+        'Ball comes out with tight backspin rather than wobbling',
+        'Only the wrist moves on the isolated version — the shoulder stays quiet',
+      ],
+      commonFailureModes: [
+        'A stiff, braced arm that muscles the ball',
+        'Fingers coming off the side of the ball, producing a wobble',
+        'Short-arming — stopping the arm rather than letting it finish',
+      ],
+      practicesMin: 2,
+      practicesMax: 4,
+      problems: ['no-wrist-snap', 'short-arming', 'low-arm-slot', 'throwing-mechanics'],
+      drills: [
+        {
+          drill: 'The Lawnmower Drill — Arm Action & Wrist Snap',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'Teaches the loose arm through a motion a child already owns, which is why it ' +
+            'lands faster than any description of arm path does.',
+        },
+        {
+          drill: 'Wrist Snap Drill',
+          role: 'regression',
+          rank: 1,
+          rationale:
+            'The wrist alone, with a coach holding the elbow so the arm cannot join in. ' +
+            'When the spin is wrong this is where the fingers get fixed.',
+        },
+        {
+          drill: 'Kneel-Down (Wrist Snap) Drill — Release Point & Backspin',
+          role: 'reinforcement',
+          rank: 1,
+          rationale:
+            'Combines the wrist with the forearm from a kneeling position, so the spin has ' +
+            'to survive slightly more of the body being involved.',
+        },
+      ],
+    },
+    {
+      key: 'release-point',
+      name: 'Release point and extension',
+      objective: 'Releases the ball at the same point out front on every pitch.',
+      whyItMatters:
+        'A release point that moves is a strike zone that moves. This is the stage where a ' +
+        'delivery that is mechanically sound becomes a delivery that can be commanded.',
+      masterySignals: [
+        'Release point stays in the same place across a whole set',
+        'Full delivery is used, not a shortened arm action',
+        'Ball is released out in front rather than behind the landing foot',
+      ],
+      commonFailureModes: [
+        'Releasing early, which sends the ball high',
+        'Lunging to reach a target that is too far away',
+        'A release point that drifts across a bullpen as the arm tires',
+      ],
+      practicesMin: 2,
+      practicesMax: 5,
+      problems: ['inconsistent-release', 'barring-arm', 'short-arming'],
+      drills: [
+        {
+          drill: 'Towel Drill — Arm Speed & Release Point',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'A target at the expected release distance turns an invisible point in space ' +
+            'into something the pitcher either snaps or misses, with no arm strain.',
+        },
+        {
+          drill: 'Kneel-Down (Wrist Snap) Drill — Release Point & Backspin',
+          role: 'regression',
+          rank: 1,
+          rationale:
+            'Strips the delivery back to forearm and wrist when the release point will not ' +
+            'settle, which is usually the hand rather than the legs.',
+        },
+      ],
+    },
+    {
+      key: 'finish',
+      name: 'Finish and follow-through',
+      objective: 'Finishes balanced, decelerated, and ready to field.',
+      whyItMatters:
+        'The finish is where the arm slows down. A pitcher who cuts it short is asking the ' +
+        'shoulder to absorb what the whole body should — and they are also standing on the ' +
+        'mound unable to field the ball that was just hit at them.',
+      masterySignals: [
+        'Holds the finish for three seconds without stumbling',
+        'Chest finishes over the front knee with the throwing hand past the opposite hip',
+        'Ends in a position from which a ground ball could actually be fielded',
+      ],
+      commonFailureModes: [
+        'Falling off to the side, which is a front-side failure showing up late',
+        'Stopping the arm at release rather than letting it decelerate',
+        'Finishing upright and flat-footed, unable to field',
+      ],
+      practicesMin: 1,
+      practicesMax: 3,
+      problems: ['no-follow-through-throw', 'short-arming'],
+      drills: [
+        {
+          drill: 'Follow-Through Hold Drill — Finishing Strong',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'Holding the finish for three seconds checks deceleration, balance and fielding ' +
+            'readiness in one position, which is exactly what this stage is about.',
+        },
+        {
+          drill: 'Glove-Side Pull Drill — Front Side Control',
+          role: 'regression',
+          rank: 1,
+          rationale:
+            'A pitcher falling off the side is almost never finishing wrong; they are ' +
+            'losing the front side earlier. This is the cause rather than the symptom.',
+        },
+      ],
+    },
+    {
+      key: 'momentum-and-tempo',
+      name: 'Momentum and tempo',
+      objective: 'Moves down the mound with rhythm rather than from a standstill.',
+      whyItMatters:
+        'Once the pieces are in order, tempo is where the velocity is. It is deliberately ' +
+        'last of the mechanical stages: momentum added to a broken sequence just breaks it ' +
+        'faster.',
+      masterySignals: [
+        'Momentum flows into the delivery rather than the shuffle and the pitch being separate',
+        'Throws noticeably harder than from a dead stop',
+        'Lands under control despite the moving start',
+      ],
+      commonFailureModes: [
+        'Rushing rather than building rhythm — speed without sequence',
+        'Losing the balance point as soon as the body is moving',
+        'Treating a feel drill as a game delivery',
+      ],
+      practicesMin: 2,
+      practicesMax: 4,
+      problems: ['rushing-delivery', 'weak-throws'],
+      drills: [
+        {
+          drill: 'The Swing Shuffle Drill — Momentum & Rhythm',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'Builds momentum through a lateral shuffle before delivering, which is the ' +
+            'same energy transfer as a crow hop and the clearest way to feel what tempo ' +
+            'adds.',
+        },
+        {
+          drill: 'Balance Point Drill — Leg Lift & Pause',
+          role: 'regression',
+          rank: 1,
+          rationale:
+            'When momentum turns into rushing, the balance point is the thing that was ' +
+            'skipped. Going back to the hold is the fix, not slowing the shuffle.',
+        },
+      ],
+    },
+    {
+      key: 'second-pitch',
+      name: 'A second pitch',
+      objective: 'Throws a changeup for a strike with the same arm speed as the fastball.',
+      whyItMatters:
+        'A one-speed pitcher gets figured out by the second time through the order. The ' +
+        'changeup is the right second pitch at this age because the grip takes the speed ' +
+        'off rather than the arm or the wrist.',
+      masterySignals: [
+        'Arm speed looks the same as the fastball from the side',
+        'Throws it for a strike more often than not',
+        'Reaches for the grip without being told to',
+      ],
+      commonFailureModes: [
+        'Slowing the arm down, which a hitter reads instantly',
+        'Aiming it, so it never finds the zone',
+        'Reaching for a breaking ball instead, which this pathway does not teach',
+      ],
+      coachingEmphasis: 'Same arm, slower ball. Watch from the throwing shoulder, not from behind.',
+      practicesMin: 3,
+      practicesMax: 8,
+      problems: ['no-changeup'],
+      drills: [
+        {
+          drill: 'Changeup Catch Play',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'Builds the pitch inside ordinary catch — no mound, no radar, no hitter — which ' +
+            'is where a young arm can learn a grip without also managing an outing.',
+        },
+      ],
+      review:
+        'THIN. The library has one changeup drill and nothing else for a second pitch. That ' +
+        'is a defensible place to stop at this age — no breaking balls is a coaching ' +
+        'position, not an omission — but a coach wanting to progress the changeup onto the ' +
+        'mound has only the drill\'s own progression notes to work from.',
+    },
+  ],
+}
+
+// ── 6. CATCHING DEVELOPMENT ─────────────────────────────────────────────────
+
+const CATCHING_DEVELOPMENT: PathwaySpec = {
+  slug: 'catching-development',
+  name: 'Catching Development',
+  skillCategory: 'catching',
+  summary:
+    'A catcher built in the order the position is actually learned: receive first, ' +
+    'then keep the ball in front, then throw.',
+  applicability:
+    'The thinnest pathway in the library — six catching drills exist, and several stages ' +
+    'borrow from Throwing where the objective is genuinely the same skill. Gear is not ' +
+    'optional from stage 3 onwards. A player who cannot yet catch a thrown ball should run ' +
+    'Throwing Development stage 5 before any of this.',
+  minAge: 8,
+  maxAge: 16,
+  provenance: PROVENANCE,
+  stages: [
+    {
+      key: 'receiving-foundation',
+      name: 'Quiet glove and soft hands',
+      objective: 'Receives the ball moving toward the zone, with the glove quiet after the catch.',
+      whyItMatters:
+        'Everything a catcher is judged on starts here. A catcher who stabs turns strikes ' +
+        'into balls before any of the harder skills are even involved.',
+      masterySignals: [
+        'Glove is quiet after the catch instead of drifting',
+        'Catches low pitches without turning the glove over',
+        'Ball stops moving toward the zone edge, not out of it',
+      ],
+      commonFailureModes: [
+        'Stabbing at the pitch rather than receiving it',
+        'Hard hands — a locked elbow fighting the ball',
+        'The glove drifting out of the zone after the catch, which loses the strike',
+      ],
+      practicesMin: 2,
+      practicesMax: 4,
+      problems: ['catcher-receiving'],
+      drills: [
+        {
+          drill: 'Youth Receiving Foundations — Quiet Glove & Soft Hands',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'The first receiving progression in the library, and it starts bare-glove with ' +
+            'tennis balls — which is where soft hands are actually built.',
+        },
+        {
+          drill: 'Two Hand Catch',
+          role: 'regression',
+          rank: 1,
+          rationale:
+            'Filed under Throwing, and it is the step before a mitt: catch it, cover it, ' +
+            'show me. A catcher who has not built that habit has nothing to make quiet.',
+        },
+      ],
+      review:
+        'THIN. One genuine catching drill and one borrowed from Throwing. A coach running ' +
+        'this stage twice runs the same session twice.',
+    },
+    {
+      key: 'framing',
+      name: 'Framing and working the zone',
+      objective: 'Beats the ball to the spot and holds borderline pitches inside the zone.',
+      whyItMatters:
+        'A catcher who can receive is not yet a catcher who earns strikes. Getting the ' +
+        'glove there first is the difference, and it is a learnable habit rather than a gift.',
+      masterySignals: [
+        'Borderline pitches are caught and held in the zone',
+        'Glove beats the ball to the spot on edges',
+        'Umpire-view video shows the ball stuck rather than dragged',
+      ],
+      commonFailureModes: [
+        'Reacting to the pitch rather than arriving ahead of it',
+        'Dragging a borderline pitch back toward the middle, which advertises the miss',
+        'Working the middle of the zone, where framing changes nothing',
+      ],
+      practicesMin: 2,
+      practicesMax: 5,
+      problems: ['catcher-receiving'],
+      drills: [
+        {
+          drill: 'MLB-Style Receiving & Framing Circuit',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'Five stations built around beating the ball to the spot and sticking the ' +
+            'catch, which is this objective broken into parts a coach can run.',
+        },
+        {
+          drill: 'Youth Receiving Foundations — Quiet Glove & Soft Hands',
+          role: 'regression',
+          rank: 1,
+          rationale:
+            'The library names this as the foundation the framing circuit is built on, and ' +
+            'the place to return to when the glove is fighting the ball rather than early.',
+        },
+      ],
+    },
+    {
+      key: 'blocking-technique',
+      name: 'Blocking: the shape',
+      objective: 'Drops into a blocking shape that deadens the ball in front of the plate.',
+      whyItMatters:
+        'Blocking is a shape before it is a reaction. A catcher who has never felt the ' +
+        'position cannot find it with a ball already in the dirt.',
+      masterySignals: [
+        'Ball dies within a six-foot circle in front of the plate',
+        'Chin stays tucked — no flinch',
+        'Body beats the ball to the spot on lateral blocks',
+      ],
+      commonFailureModes: [
+        'Catching at the ball instead of blocking it',
+        'Chest upright, so the ball caroms away rather than dropping',
+        'Turning the head, which is a flinch and not a technique problem',
+      ],
+      coachingEmphasis: 'Round your shoulders, chin down, deaden it in front. Gear on, always.',
+      practicesMin: 2,
+      practicesMax: 4,
+      problems: ['catcher-blocking'],
+      drills: [
+        {
+          drill: 'Blocking the Right Way — Technique to Reaction Reps',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'Built from the shape outwards — placed balls, then rolled, then short-hopped — ' +
+            'which is the only order in which a young catcher learns to block rather than ' +
+            'to flinch.',
+        },
+      ],
+      review:
+        'THIN. One drill serves this stage. Its own three internal stages carry it, but a ' +
+        'coach has no alternative station to rotate to.',
+    },
+    {
+      key: 'blocking-reaction',
+      name: 'Blocking at game speed',
+      objective: 'Reads and blocks a ball in the dirt without pre-setting to a side.',
+      whyItMatters:
+        'A block that has been announced is a rehearsal. The skill is reading a ball nobody ' +
+        'told you about, and it is the one that saves runs.',
+      masterySignals: [
+        'Eight or more of ten random balls kept in front',
+        'Recovers to throwing position within one second',
+        'No flinch or head-turn at game velocity',
+      ],
+      commonFailureModes: [
+        'Pre-setting to a side and being wrong',
+        'Blocking it and then watching it, so the runner takes the base anyway',
+        'Reaction work layered on top of unsound technique',
+      ],
+      practicesMin: 2,
+      practicesMax: 5,
+      problems: ['catcher-blocking'],
+      drills: [
+        {
+          drill: 'Game-Speed Reaction Blocking',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'Random locations, nothing telegraphed, and a score per rep that separates ' +
+            'blocked-in-front from blocked-away — which is the distinction that matters.',
+        },
+        {
+          drill: 'Blocking the Right Way — Technique to Reaction Reps',
+          role: 'regression',
+          rank: 1,
+          rationale:
+            'The library is explicit that reaction work on top of unsound technique is the ' +
+            'wrong order, and names this as where to go back to.',
+        },
+      ],
+    },
+    {
+      key: 'throw-down',
+      name: 'The throw to second',
+      objective: 'Transfers during the footwork and delivers an accurate throw to the bag.',
+      whyItMatters:
+        'Pop time is footwork and exchange, not arm strength. A catcher who sets up to ' +
+        'throw has already lost the runner.',
+      masterySignals: [
+        'Transfer happens during footwork, not after',
+        'Throws arrive on the bag-side of second consistently',
+        'Pop time trends down week over week',
+      ],
+      commonFailureModes: [
+        'Catching, then standing, then throwing — three movements where there should be one',
+        'Thinking about the throw and forgetting the feet',
+        'Throwing across the body because the replace step never happened',
+      ],
+      practicesMin: 3,
+      practicesMax: 6,
+      problems: ['slow-transfer', 'inaccurate-throws'],
+      drills: [
+        {
+          drill: 'Catcher Throw-Down Footwork to Second',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'Three stages — dry, tossed, live — with every rep timed glove to glove, and ' +
+            'the cue that the feet start the throw. That is this objective exactly.',
+        },
+        {
+          drill: 'Quick Hands Quick Feet — Fast Transfer Drill',
+          role: 'regression',
+          rank: 1,
+          rationale:
+            'The exchange on its own, with the throwing hand already moving as the glove ' +
+            'closes. When pop time will not come down it is usually here rather than in the ' +
+            'feet.',
+        },
+        {
+          drill: 'The Ankle Eye Drill — Footwork Foundation',
+          role: 'reinforcement',
+          rank: 1,
+          rationale:
+            'Where the back foot points after receiving, which is what lines the shoulders ' +
+            'up. A catcher throwing arm side is usually failing this rather than the replace ' +
+            'step.',
+        },
+      ],
+    },
+    {
+      key: 'one-knee-setup',
+      name: 'The one-knee setup',
+      objective: 'Receives from one knee while staying able to block and throw.',
+      whyItMatters:
+        'It is where the modern position is going and it is a ceiling rather than a ' +
+        'starting point. A catcher who adopts it before the two-knee setup is consistent ' +
+        'loses blocking to gain framing.',
+      masterySignals: [
+        'Low strike is presented without dropping the glove head',
+        'Can still block and throw from one knee',
+        'Holds the bottom-zone strike at game velocity',
+      ],
+      commonFailureModes: [
+        'Adopting it too early, before two-knee receiving is consistent',
+        'A free leg positioned so no block is possible',
+        'Gaining the low strike and losing everything in the dirt',
+      ],
+      practicesMin: 2,
+      practicesMax: 5,
+      problems: ['catcher-receiving'],
+      drills: [
+        {
+          drill: 'One-Knee Receiving — Advanced Framing Setup',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'The library states the prerequisite itself — only after two-knee receiving is ' +
+            'consistent — and checks that the free leg still allows a block or a throw.',
+        },
+        {
+          drill: 'MLB-Style Receiving & Framing Circuit',
+          role: 'regression',
+          rank: 1,
+          rationale:
+            'The two-knee version of the same glove path. When the one-knee setup costs the ' +
+            'catcher their framing, this is the stance to rebuild it in.',
+        },
+      ],
+    },
+  ],
+}
+
+// ── 7. BASERUNNING DEVELOPMENT ──────────────────────────────────────────────
+
+const BASERUNNING_DEVELOPMENT: PathwaySpec = {
+  slug: 'baserunning-development',
+  name: 'Baserunning Development',
+  skillCategory: 'baserunning',
+  summary:
+    'Baserunning as a skill rather than a consequence of hitting: out of the box, ' +
+    'around the bases, into the bag, and then the reads that win an extra base.',
+  applicability:
+    'The one pathway every player on the roster uses in every game. Stages 1 to 5 are ' +
+    'universal; stages 6 onward assume a league that allows leads and steals — in a ' +
+    'no-lead league, run stages 8 and 9 and skip the rest.',
+  minAge: 6,
+  maxAge: 15,
+  provenance: PROVENANCE,
+  stages: [
+    {
+      key: 'out-of-the-box',
+      name: 'Out of the box',
+      objective: 'Moves toward first on contact, without watching the ball.',
+      whyItMatters:
+        'Youth players take hundreds of swings a week and attach running to almost none of ' +
+        'them. On a youth field a batted ball is nearly always still in play, and the ' +
+        'half-second spent watching it is the whole difference between safe and out.',
+      masterySignals: [
+        'First step is toward first, not back toward the plate',
+        'Bat placed down, clear of the path',
+        'Runs past the bag without slowing',
+      ],
+      commonFailureModes: [
+        'Watching the ball before moving',
+        'Throwing the bat, which is dangerous and costs a step',
+        'Slowing into the bag rather than running through it',
+      ],
+      coachingEmphasis: 'Drop it and go.',
+      practicesMin: 1,
+      practicesMax: 3,
+      problems: ['slow-first-step', 'base-awareness'],
+      drills: [
+        {
+          drill: 'Swing and Sprint',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'Attaches a full-effort run to every swing, which is the habit this stage is ' +
+            'about and the one a hitting station never builds.',
+        },
+        {
+          drill: 'Baseball Dynamic Stretches for Youth Players',
+          role: 'reinforcement',
+          rank: 1,
+          rationale:
+            'Sprinting from cold is how a young player pulls something. This is the moving ' +
+            'warm-up that belongs before any full-effort running stage.',
+        },
+      ],
+    },
+    {
+      key: 'through-or-around',
+      name: 'Through it or around it',
+      objective: 'Decides before the bag whether to run through first or round it.',
+      whyItMatters:
+        'A runner who rounds everything gives away outs at first; one who runs through ' +
+        'everything gives away second on a ball in the gap. It is one decision, made early, ' +
+        'and almost nobody teaches it.',
+      masterySignals: [
+        'Arcs out early on a ball to the outfield',
+        'Runs straight through on an infield ground ball',
+        'Looks at the ball rather than at the coach',
+      ],
+      commonFailureModes: [
+        'Deciding at the bag rather than before it',
+        'Rounding every ball, including the routine grounder',
+        'Watching the coach for the answer instead of reading the ball',
+      ],
+      practicesMin: 1,
+      practicesMax: 3,
+      problems: ['bad-base-turns', 'base-awareness'],
+      drills: [
+        {
+          drill: 'First Base Decision',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'Same start, two answers, and the runner has to pick one off the ball. It is ' +
+            'the only drill in the library that makes this a decision rather than a rule.',
+        },
+        {
+          drill: 'Swing and Sprint',
+          role: 'regression',
+          rank: 1,
+          rationale:
+            'Running through the bag at full effort, with no decision attached. The running ' +
+            'has to be automatic before the choosing is added.',
+        },
+      ],
+    },
+    {
+      key: 'turns-and-angles',
+      name: 'Turns and angles',
+      objective: 'Hits the inside corner of each base and stays low through the turn.',
+      whyItMatters:
+        'A player who runs wide and pops up tall at the bag loses more time at the turn ' +
+        'than they gain on the straight. Turns are technique, not speed.',
+      masterySignals: [
+        'Touches the inside corner of each base',
+        'Stays low through the turn instead of standing up',
+        'Round times improve or hold across the session rather than degrading',
+      ],
+      commonFailureModes: [
+        'Swinging wide, which adds distance to every turn',
+        'Standing tall at the bag and losing acceleration',
+        'Arms flailing rather than pumping',
+      ],
+      practicesMin: 2,
+      practicesMax: 4,
+      problems: ['bad-base-turns', 'slow-first-step'],
+      drills: [
+        {
+          drill: 'Base Running Athletic Circuit',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'Trains the turn itself — inside corner, low through the lean — with a clock, ' +
+            'so there is a number that improves rather than a coaching opinion.',
+        },
+        {
+          drill: 'Simple Base Running Drills for Youth Practice',
+          role: 'reinforcement',
+          rank: 1,
+          rationale:
+            'Three angled cones let three groups run turns at once, which is how a team ' +
+            'gets enough repetitions for the technique to stick.',
+        },
+      ],
+    },
+    {
+      key: 'sliding-basics',
+      name: 'Sliding: the shape',
+      objective: 'Slides on the seat in a figure-four with both hands up.',
+      whyItMatters:
+        'A player who cannot slide either avoids the bag or gets hurt at it. The shape is ' +
+        'learned somewhere soft or it is learned badly.',
+      masterySignals: [
+        'Slides on the seat or hip, not the knees',
+        'Hands stay up through the slide',
+        'Starts the slide at the marked distance without hesitating',
+      ],
+      commonFailureModes: [
+        'Landing on the knees, which is how sliding injuries happen',
+        'Hands down to break the fall, which is how wrists break',
+        'Slowing down before the slide, which is more dangerous than sliding fast',
+      ],
+      coachingEmphasis: 'Grass or a mat first, never dirt on day one. Sit into it, hands to the sky.',
+      practicesMin: 1,
+      practicesMax: 3,
+      problems: ['cant-slide'],
+      drills: [
+        {
+          drill: 'Bent-Leg Slide Basics — The Right Way to Slide',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'The first sliding lesson, taught on grass in socks from a walk. Its own note — ' +
+            'never move a player on who is still landing on their knees — is this stage\'s ' +
+            'gate.',
+        },
+        {
+          drill: 'Sliding Practice Stations',
+          role: 'reinforcement',
+          rank: 1,
+          rationale:
+            'Volume without dirt burn, which is the practical obstacle to sliding ever ' +
+            'being practised enough to become automatic.',
+        },
+      ],
+    },
+    {
+      key: 'pop-up-slide',
+      name: 'Sliding to advance',
+      objective: 'Finishes the slide on their feet and reads whether to take the next base.',
+      whyItMatters:
+        'A slide that ends flat on the ground cannot advance on an overthrow, which at ' +
+        'youth level is a regular free base.',
+      masterySignals: [
+        'Pops to standing without using hands',
+        'Eyes find the ball immediately after the slide',
+        'Advances confidently on overthrows in scrimmages',
+      ],
+      commonFailureModes: [
+        'Sliding to the bag rather than through it, which kills the momentum needed to pop up',
+        'Popping up but never looking for the ball',
+        'Attempting it before the basic slide is automatic',
+      ],
+      practicesMin: 2,
+      practicesMax: 4,
+      problems: ['cant-slide', 'base-awareness'],
+      drills: [
+        {
+          drill: 'Pop-Up Slide — Slide and Advance',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'Momentum through the bag onto the planted foot, with a simulated overthrow so ' +
+            'the advance read is trained at the same time as the slide.',
+        },
+        {
+          drill: 'Bent-Leg Slide Basics — The Right Way to Slide',
+          role: 'regression',
+          rank: 1,
+          rationale:
+            'The library is explicit that a runner still thinking about the slide cannot ' +
+            'also read a ball, and names the basic slide as where to go back to.',
+        },
+      ],
+    },
+    {
+      key: 'leads',
+      name: 'Leads',
+      objective: 'Takes a primary and a secondary lead timed to the pitch.',
+      whyItMatters:
+        'A secondary lead is free distance that needs no speed at all, and it is what makes ' +
+        'every read later in this pathway possible. A runner standing flat on the bag cannot ' +
+        'react to anything.',
+      masterySignals: [
+        'Secondary lead lands as the pitch crosses the plate',
+        'Momentum is moving toward the next base at contact',
+        'Takes a secondary lead on every pitch, not just the ones that matter',
+      ],
+      commonFailureModes: [
+        'No secondary lead at all, so every read starts from a standstill',
+        'Drifting too far and getting picked',
+        'Timing the shuffle to the release rather than to the pitch crossing',
+      ],
+      practicesMin: 2,
+      practicesMax: 4,
+      problems: ['base-stealing', 'base-awareness'],
+      drills: [
+        {
+          drill: 'Secondary Lead & Delayed Steal',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'Two pieces of baserunning that need no speed, with the two-shuffle secondary ' +
+            'timed to the pitch crossing the zone — the objective stated exactly.',
+        },
+        {
+          drill: 'Simple Base Running Drills for Youth Practice',
+          role: 'regression',
+          rank: 1,
+          rationale:
+            'Lead-offs at volume with three groups working at once, before any timing or ' +
+            'decision is layered on.',
+        },
+      ],
+    },
+    {
+      key: 'reading-the-pitcher',
+      name: 'Reading the pitcher',
+      objective: 'Breaks on the pitcher\'s first move toward home, not on a guess.',
+      whyItMatters:
+        'Stealing at this level is a read, not a sprint. The jump is worth more than the ' +
+        'speed, and the jump is coachable.',
+      masterySignals: [
+        'Breaks on first move, not on a guess',
+        'Crossover step gains ground toward second',
+        'Freezes correctly on pickoff moves',
+      ],
+      commonFailureModes: [
+        'Guessing and being picked off',
+        'A first step that goes up rather than toward the base',
+        'Watching the pitcher\'s arm instead of the tell being taught',
+      ],
+      practicesMin: 2,
+      practicesMax: 6,
+      problems: ['base-stealing'],
+      drills: [
+        {
+          drill: 'Steal Breaks — Reading the Pitcher & First Move',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'Practises the jump separately from the sprint, one pitcher tell at a time, ' +
+            'with every rep charted as good, late or picked.',
+        },
+        {
+          drill: 'Pro Base-Stealing Package — Leads, Reads & Jumps',
+          role: 'progression',
+          rank: 1,
+          rationale:
+            'The same read against a live pitcher from the stretch with real pickoff risk, ' +
+            'and a jump rate that becomes a number on a chart.',
+        },
+        {
+          drill: 'Secondary Lead & Delayed Steal',
+          role: 'regression',
+          rank: 1,
+          rationale:
+            'The delayed steal needs no read of the pitcher at all — it reads the catcher. ' +
+            'For a runner who cannot yet time a jump, it is the steal that still works.',
+        },
+      ],
+    },
+    {
+      key: 'tagging-up',
+      name: 'Tagging up',
+      objective: 'Leaves on the catch — not before it, not a beat after.',
+      whyItMatters:
+        'The universal youth error is watching the fielder\'s arm rather than their glove. ' +
+        'Moving the runner\'s eyes fixes the timing on its own.',
+      masterySignals: [
+        'Foot stays on the base until the ball is caught',
+        'Leaves within a stride of the catch',
+        'Freezes on a line drive without being told',
+      ],
+      commonFailureModes: [
+        'Leaving early and being doubled off',
+        'Waiting for the throw rather than the catch',
+        'Tagging on a line drive, which is the one time not to',
+      ],
+      coachingEmphasis: 'Leave on the catch, not on the throw.',
+      practicesMin: 1,
+      practicesMax: 3,
+      problems: ['base-awareness'],
+      drills: [
+        {
+          drill: 'Progressive Tag Up',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'Three rounds that move from being told to tag, to being told only that a ball ' +
+            'is up, to deciding — which is the progression from mechanics to judgement.',
+        },
+      ],
+      review:
+        'THIN. One drill serves this stage. Its own three rounds carry the progression, but ' +
+        'a coach has no second station to rotate a group through.',
+    },
+    {
+      key: 'reading-the-dirt',
+      name: 'Reading a ball in the dirt',
+      objective: 'Advances only when the ball actually gets past the catcher.',
+      whyItMatters:
+        'The runner who goes on every ball in the dirt gets thrown out on the ones that were ' +
+        'blocked. The read is the skill; the running is not.',
+      masterySignals: [
+        'Takes a secondary lead on every pitch',
+        'Goes only when the ball actually gets past',
+        'Commits fully once committed',
+      ],
+      commonFailureModes: [
+        'Reading the catcher\'s body instead of the ball',
+        'Going on any ball that touches the dirt',
+        'Half-committing, which is slower than not going at all',
+      ],
+      coachingEmphasis: 'Read the ball, not the catcher.',
+      practicesMin: 2,
+      practicesMax: 4,
+      problems: ['base-awareness', 'base-stealing'],
+      drills: [
+        {
+          drill: 'Wild Pitch Advance',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'Deliberately includes balls that stay in front, which are the repetitions worth ' +
+            'practising — the runner who goes on those is the one this stage is fixing.',
+        },
+        {
+          drill: 'Secondary Lead & Delayed Steal',
+          role: 'regression',
+          rank: 1,
+          rationale:
+            'A runner still standing on the bag cannot read anything in time. The secondary ' +
+            'lead is the prerequisite this stage depends on.',
+        },
+      ],
+    },
+    {
+      key: 'game-decisions',
+      name: 'Running the bases in a game',
+      objective: 'Makes the right call on every base without a coach telling them.',
+      whyItMatters:
+        'Every skill in this pathway becomes a decision under time pressure. A runner who ' +
+        'executes well and decides badly still makes the out.',
+      masterySignals: [
+        'Runners look up to find the coach rather than watching their feet',
+        'First three steps are explosive rather than a gradual build',
+        'Turns cut the inside corner instead of swinging wide, under game tempo',
+      ],
+      commonFailureModes: [
+        'Waiting to be told at every base',
+        'Making the right read too late for it to matter',
+        'Technique falling apart as soon as a decision is added',
+      ],
+      practicesMin: 2,
+      practicesMax: 6,
+      problems: ['base-awareness', 'bad-base-turns', 'slow-first-step'],
+      drills: [
+        {
+          drill: 'Base Running Circuit',
+          role: 'primary',
+          rank: 1,
+          rationale:
+            'A different decision at every base — a start, a break, an advance read, a ball ' +
+            'in the dirt — which is the only drill that rehearses the whole set together.',
+        },
+        {
+          drill: 'Progressive Tag Up',
+          role: 'reinforcement',
+          rank: 1,
+          rationale:
+            'The tag-up decision inside a game-like rep, where the runner is told only that ' +
+            'a ball is in the air.',
+        },
+        {
+          drill: 'Wild Pitch Advance',
+          role: 'reinforcement',
+          rank: 2,
+          rationale:
+            'The dirt-ball read under the same conditions, which is the other half of what a ' +
+            'runner on second is deciding.',
+        },
+        {
+          drill: 'First Base Decision',
+          role: 'game_application',
+          rank: 1,
+          rationale:
+            'The first decision of every at-bat, run live off a fungo so the read comes off ' +
+            'a real ball rather than a pointed direction.',
+        },
+      ],
+    },
+  ],
+}
+
 export const PATHWAYS: PathwaySpec[] = [
   BUILD_THE_SWING,
   INFIELD_FUNDAMENTALS,
   THROWING_DEVELOPMENT,
   OUTFIELD_DEVELOPMENT,
+  PITCHING_DEVELOPMENT,
+  CATCHING_DEVELOPMENT,
+  BASERUNNING_DEVELOPMENT,
 ]
+

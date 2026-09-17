@@ -2397,11 +2397,1235 @@ UPDATE public.development_pathway_stages s
    AND p.slug = 'outfield-development'
    AND prev.stage_number = s.stage_number - 1;
 
+-- ── Pitching Development ──────────────────────────────────────────────
+DELETE FROM public.development_pathways WHERE slug = 'pitching-development';
+
+INSERT INTO public.development_pathways
+  (slug, name, skill_category, summary, applicability, min_age, max_age, version, status, provenance)
+VALUES (
+  'pitching-development', 'Pitching Development', 'pitching',
+  'A delivery built from the ground up: an arm that is ready, a body that can balance, a sequence that fires in order, and only then a second pitch.',
+  'Every stage assumes the player can already throw — run Throwing Development stages 1 to 4 first if the arm action itself is the problem. Stage 1 is not optional at any age: it is the one that protects the arm, and it repeats every session rather than being completed. No breaking balls anywhere in this pathway, deliberately.',
+  7, 14, 1, 'published',
+  'Phase 2E, 2026-09-17. Sequence written against the 154 schedulable drills as they stood at migration 068, using each row''s description, coaching notes, success markers and regression/progression notes as evidence. Not derived from progression_level, category, age or video order.'
+);
+
+-- stage 1: Prepare the arm
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  1, 'prepare-the-arm', 'Prepare the arm',
+  'Warms up and recovers the same way every outing, without being told.',
+  'This is the only stage that never finishes. A youth pitcher who throws cold is the injury this whole pathway is trying not to cause, and the habit forms at the same time as the delivery or it never forms at all.',
+  ARRAY['Whole body is moving before any arm work starts', 'Routine happens without being reminded', 'Throwing builds from short and easy to full distance rather than starting there'],
+  ARRAY['Warming the shoulder on a cold body', 'Skipping the routine on the days it matters most — cold, late, or in a hurry', 'Finishing an outing with no recovery work at all'],
+  'Whole body before arm, every time.',
+  1, 2,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'pitching-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'dfa91c84-6ce8-4d03-9c5d-4252adc5fe3d', 'primary', 1,
+  'The full sequence in order — body, then shoulder, then arm with a ball — and the library is explicit that the progressive throwing at the end is part of the routine rather than the practice that follows it.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'prepare-the-arm';
+-- Complete Pitching and Throwing Warm-Up Routine
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '977c1fd1-12b0-42c6-8b8b-e3a90303e385', 'regression', 1,
+  'Five minutes, no equipment, no partner. A short routine that actually happens is worth more than a complete one that gets skipped, which is the library''s own note on it.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'prepare-the-arm';
+-- Baseball Arm Stretches and Pre-Throwing Warm-Up
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'ce379eeb-fa92-47f0-b41f-dd3831ebc5bc', 'reinforcement', 1,
+  'Band activation before the arm is asked for effort. It is the cheapest protection available and it belongs before a bullpen, not after one.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'prepare-the-arm';
+-- Youth J-Band Routine — Pre-Throwing Activation
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'b67499b8-314b-415f-a789-c0b90f1f9a3f', 'reinforcement', 2,
+  'The fifteen minutes after the last pitch. Paired with the activation routine it brackets the outing at both ends, which is how the library describes the pair working.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'prepare-the-arm';
+-- Post-Throwing Recovery Routine
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '9d95c228-0f42-487d-bfa0-164df2646c50', 'progression', 1,
+  'Genuine strength work for the cuff, run on low-throwing days. It is what eventually lets the pre-throwing routine be shortened.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'prepare-the-arm';
+-- 9-Exercise J-Band Strength Routine
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'cold-arm'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'prepare-the-arm';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'arm-fatigue'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'prepare-the-arm';
+
+-- stage 2: Balance at the leg lift
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  2, 'balance-at-leg-lift', 'Balance at the leg lift',
+  'Holds the top of the delivery still for two seconds without wobbling.',
+  'Everything after this happens on one leg. A pitcher who cannot balance at the top is rushing to get off that leg, and every command problem downstream starts here.',
+  ARRAY['Holds the balance point for two seconds without wobbling', 'Front foot hangs straight down rather than tucking behind the back knee', 'Eyes stay on the target throughout the hold'],
+  ARRAY['Rushing through the top because the balance is not there', 'Tucking the front foot behind the knee, which locks the hip', 'Eyes dropping to the ground during the lift'],
+  NULL,
+  1, 3,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'pitching-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'a54d536f-e4f0-4dd5-91d2-d007bd274250', 'primary', 1,
+  'The top of the delivery held still for two to three seconds, which turns a position that flashes past into one a coach can actually see and correct.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'balance-at-leg-lift';
+-- Balance Point Drill — Leg Lift & Pause
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'a559ea0e-7d73-4920-905f-ccb86e117f4e', 'regression', 1,
+  'Single-leg balance with no ball, no glove and no delivery attached. A pitcher who cannot hold thirty seconds on one leg is not going to hold two at the top of a leg lift.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'balance-at-leg-lift';
+-- Flamingo Balance Drill — Single-Leg Stability
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'balance-leg-lift'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'balance-at-leg-lift';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'rushing-delivery'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'balance-at-leg-lift';
+
+-- stage 3: The delivery, in parts
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  3, 'delivery-in-parts', 'The delivery, in parts',
+  'Can be stopped at any checkpoint of the motion and hold that position.',
+  'A delivery is four positions, and a young pitcher who only ever throws at full speed has no way to find which one is wrong. This is the map the rest of the pathway navigates with.',
+  ARRAY['Stops balanced at each checkpoint instead of rushing through the motion', 'Can be stopped mid-delivery on command and hold the position', 'Full-speed delivery keeps the checkpoints rather than reverting'],
+  ARRAY['Running the four positions together before any one of them is sound', 'Holding the checkpoints slowly and losing all four at full speed', 'Rushing, which is the fault that hides every other fault'],
+  NULL,
+  2, 4,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'pitching-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '253fee8d-d86f-497b-83db-44e622fb0a2d', 'primary', 1,
+  'Breaks the motion into four checkpoints and asks the pitcher to hold each before joining them. It is the drill that makes every later stage diagnosable.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'delivery-in-parts';
+-- 4-Part Windup Drill — Breaking Down the Delivery
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'a54d536f-e4f0-4dd5-91d2-d007bd274250', 'regression', 1,
+  'Checkpoint two on its own. When the four-part version falls apart it is almost always here, and this is the single position to rebuild.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'delivery-in-parts';
+-- Balance Point Drill — Leg Lift & Pause
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'rushing-delivery'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'delivery-in-parts';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'throwing-mechanics'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'delivery-in-parts';
+
+-- stage 4: Hip lead and separation
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  4, 'hip-lead', 'Hip lead and separation',
+  'Moves the front hip toward the plate before the shoulders follow.',
+  'This is the single most useful correction in youth pitching. A shoulder that arrives before the hip has thrown away the torque the legs just built, and no amount of arm strength replaces it.',
+  ARRAY['Front hip moves toward the plate before the front shoulder does', 'Can hold the separated position for a count without falling forward', 'Back leg stays loaded rather than the whole body drifting'],
+  ARRAY['Hips and shoulders rotating together — no separation at all', 'Drifting the whole body forward instead of leading with the hip', 'Losing the front side, so the separation collapses before release'],
+  'Your hip goes first, your arm follows. Watch from the side, not behind.',
+  2, 5,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'pitching-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '03eab7d0-7e67-4143-91e5-b8e4e783014a', 'primary', 1,
+  'The rocking start makes the hip lead easy to feel, and the library calls it the single most useful correction available at this age.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'hip-lead';
+-- The Rocker Drill — Hip Lead & Weight Shift
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'e5d28c39-30b0-48fd-9534-8a43cd8154db', 'primary', 2,
+  'Isolates the same sequence at the exact point it goes wrong — from the balance point, hip first, shoulders held back — with a hold so the stretch is felt.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'hip-lead';
+-- Hip Lead Drill
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'ffc26e2a-7801-42b7-b610-9a996527e638', 'progression', 1,
+  'Takes the same separation to front-foot landing and asks the hips to square while the shoulder stays back. It needs the basic hip lead to exist first.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'hip-lead';
+-- Square Hips / Hip Lock Drill — Hip-Shoulder Separation
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'no-hip-lead'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'hip-lead';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'lunging'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'hip-lead';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'flying-open'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'hip-lead';
+
+-- stage 5: Stride direction and landing
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  5, 'stride-and-landing', 'Stride direction and landing',
+  'Lands the front foot in the same place, pointing the same way, every pitch.',
+  'Command is mostly a landing spot. A front foot that moves around cannot produce a repeatable release point however good the arm is.',
+  ARRAY['Front foot lands consistently just to the glove side of the line', 'Front foot lands heel first with the toes slightly closed', 'Pitcher checks their own landing spot without being asked'],
+  ARRAY['Striding across the body, which sends everything arm side', 'Striding open, which lets the hips rotate early and drains the separation', 'A landing spot that changes from pitch to pitch, so nothing repeats'],
+  NULL,
+  2, 4,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'pitching-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'f47eba7c-bf41-4e1a-8a65-882f6fdcb0b1', 'primary', 1,
+  'A line on the ground turns stride direction from a coaching opinion into feedback the pitcher can read themselves after every throw.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'stride-and-landing';
+-- Stride Direction Drill — Using a Chalk Line or Tape
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'b22aa9c8-7cd1-4dc0-bba3-c66b03396e21', 'primary', 2,
+  'The other half of the landing: which way the foot points. An open front foot lets the hips go early, which undoes the previous stage.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'stride-and-landing';
+-- The Heel-Toe Drill — Front Foot Landing
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'inconsistent-stride'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'stride-and-landing';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'stepping-in-bucket'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'stride-and-landing';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'inaccurate-throws'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'stride-and-landing';
+
+-- stage 6: Front side control
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  6, 'front-side', 'Front side control',
+  'Pulls the glove into the ribs so the chest drives at the target.',
+  'The glove arm is half the delivery and the half nobody coaches. A front side that flies open is why a pitcher falls off to the side and loses the plate arm side.',
+  ARRAY['Glove extends toward the target during the stride rather than flopping', 'Glove elbow pulls tight into the ribs as the shoulder rotates', 'Chest finishes facing the target instead of falling off to the side'],
+  ARRAY['Glove arm flying out to the side like a wet noodle', 'Chest never reaching the target, so every pitch drifts arm side', 'Front side collapsing early, which kills the separation built two stages ago'],
+  NULL,
+  1, 3,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'pitching-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'b1c3653c-82a0-446e-a9cb-0dd5ebf09864', 'primary', 1,
+  'The only drill in the library that coaches the glove arm as a thing with a job, and its cue — glove in, chest forward — is the objective stated plainly.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'front-side';
+-- Glove-Side Pull Drill — Front Side Control
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '41ff62cc-fb54-4266-8d0c-083a1c341161', 'assessment', 1,
+  'A pitcher who cannot hold the finish with the chest over the front knee had a front side that gave way. The held finish reads this stage without judging it mid-delivery.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'front-side';
+-- Follow-Through Hold Drill — Finishing Strong
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'throwing-mechanics'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'front-side';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'no-hip-lead'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'front-side';
+
+-- stage 7: Arm action and wrist snap
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  7, 'arm-action', 'Arm action and wrist snap',
+  'Moves the arm loosely and snaps the wrist, producing tight backspin.',
+  'A tight arm loses velocity and takes the strain the muscles should be absorbing. Looseness is trainable and is rarely trained.',
+  ARRAY['Arm moves loosely rather than rigidly through the pull', 'Ball comes out with tight backspin rather than wobbling', 'Only the wrist moves on the isolated version — the shoulder stays quiet'],
+  ARRAY['A stiff, braced arm that muscles the ball', 'Fingers coming off the side of the ball, producing a wobble', 'Short-arming — stopping the arm rather than letting it finish'],
+  NULL,
+  2, 4,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'pitching-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '25b42f9f-7769-47ac-ad0e-f9140091660e', 'primary', 1,
+  'Teaches the loose arm through a motion a child already owns, which is why it lands faster than any description of arm path does.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'arm-action';
+-- The Lawnmower Drill — Arm Action & Wrist Snap
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '77722605-74bc-44b8-9581-fdd1c7d9a4d3', 'regression', 1,
+  'The wrist alone, with a coach holding the elbow so the arm cannot join in. When the spin is wrong this is where the fingers get fixed.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'arm-action';
+-- Wrist Snap Drill
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '94124e82-c8f2-411b-9daa-f0a1a176663e', 'reinforcement', 1,
+  'Combines the wrist with the forearm from a kneeling position, so the spin has to survive slightly more of the body being involved.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'arm-action';
+-- Kneel-Down (Wrist Snap) Drill — Release Point & Backspin
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'no-wrist-snap'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'arm-action';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'short-arming'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'arm-action';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'low-arm-slot'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'arm-action';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'throwing-mechanics'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'arm-action';
+
+-- stage 8: Release point and extension
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  8, 'release-point', 'Release point and extension',
+  'Releases the ball at the same point out front on every pitch.',
+  'A release point that moves is a strike zone that moves. This is the stage where a delivery that is mechanically sound becomes a delivery that can be commanded.',
+  ARRAY['Release point stays in the same place across a whole set', 'Full delivery is used, not a shortened arm action', 'Ball is released out in front rather than behind the landing foot'],
+  ARRAY['Releasing early, which sends the ball high', 'Lunging to reach a target that is too far away', 'A release point that drifts across a bullpen as the arm tires'],
+  NULL,
+  2, 5,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'pitching-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '93cf7e08-9bd0-48c3-a344-26e092c651e7', 'primary', 1,
+  'A target at the expected release distance turns an invisible point in space into something the pitcher either snaps or misses, with no arm strain.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'release-point';
+-- Towel Drill — Arm Speed & Release Point
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '94124e82-c8f2-411b-9daa-f0a1a176663e', 'regression', 1,
+  'Strips the delivery back to forearm and wrist when the release point will not settle, which is usually the hand rather than the legs.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'release-point';
+-- Kneel-Down (Wrist Snap) Drill — Release Point & Backspin
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'inconsistent-release'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'release-point';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'barring-arm'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'release-point';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'short-arming'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'release-point';
+
+-- stage 9: Finish and follow-through
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  9, 'finish', 'Finish and follow-through',
+  'Finishes balanced, decelerated, and ready to field.',
+  'The finish is where the arm slows down. A pitcher who cuts it short is asking the shoulder to absorb what the whole body should — and they are also standing on the mound unable to field the ball that was just hit at them.',
+  ARRAY['Holds the finish for three seconds without stumbling', 'Chest finishes over the front knee with the throwing hand past the opposite hip', 'Ends in a position from which a ground ball could actually be fielded'],
+  ARRAY['Falling off to the side, which is a front-side failure showing up late', 'Stopping the arm at release rather than letting it decelerate', 'Finishing upright and flat-footed, unable to field'],
+  NULL,
+  1, 3,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'pitching-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '41ff62cc-fb54-4266-8d0c-083a1c341161', 'primary', 1,
+  'Holding the finish for three seconds checks deceleration, balance and fielding readiness in one position, which is exactly what this stage is about.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'finish';
+-- Follow-Through Hold Drill — Finishing Strong
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'b1c3653c-82a0-446e-a9cb-0dd5ebf09864', 'regression', 1,
+  'A pitcher falling off the side is almost never finishing wrong; they are losing the front side earlier. This is the cause rather than the symptom.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'finish';
+-- Glove-Side Pull Drill — Front Side Control
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'no-follow-through-throw'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'finish';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'short-arming'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'finish';
+
+-- stage 10: Momentum and tempo
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  10, 'momentum-and-tempo', 'Momentum and tempo',
+  'Moves down the mound with rhythm rather than from a standstill.',
+  'Once the pieces are in order, tempo is where the velocity is. It is deliberately last of the mechanical stages: momentum added to a broken sequence just breaks it faster.',
+  ARRAY['Momentum flows into the delivery rather than the shuffle and the pitch being separate', 'Throws noticeably harder than from a dead stop', 'Lands under control despite the moving start'],
+  ARRAY['Rushing rather than building rhythm — speed without sequence', 'Losing the balance point as soon as the body is moving', 'Treating a feel drill as a game delivery'],
+  NULL,
+  2, 4,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'pitching-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'cf56cda8-d397-4ed7-873b-560b78d6473e', 'primary', 1,
+  'Builds momentum through a lateral shuffle before delivering, which is the same energy transfer as a crow hop and the clearest way to feel what tempo adds.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'momentum-and-tempo';
+-- The Swing Shuffle Drill — Momentum & Rhythm
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'a54d536f-e4f0-4dd5-91d2-d007bd274250', 'regression', 1,
+  'When momentum turns into rushing, the balance point is the thing that was skipped. Going back to the hold is the fix, not slowing the shuffle.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'momentum-and-tempo';
+-- Balance Point Drill — Leg Lift & Pause
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'rushing-delivery'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'momentum-and-tempo';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'weak-throws'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'momentum-and-tempo';
+
+-- stage 11: A second pitch
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  11, 'second-pitch', 'A second pitch',
+  'Throws a changeup for a strike with the same arm speed as the fastball.',
+  'A one-speed pitcher gets figured out by the second time through the order. The changeup is the right second pitch at this age because the grip takes the speed off rather than the arm or the wrist.',
+  ARRAY['Arm speed looks the same as the fastball from the side', 'Throws it for a strike more often than not', 'Reaches for the grip without being told to'],
+  ARRAY['Slowing the arm down, which a hitter reads instantly', 'Aiming it, so it never finds the zone', 'Reaching for a breaking ball instead, which this pathway does not teach'],
+  'Same arm, slower ball. Watch from the throwing shoulder, not from behind.',
+  3, 8,
+  'THIN. The library has one changeup drill and nothing else for a second pitch. That is a defensible place to stop at this age — no breaking balls is a coaching position, not an omission — but a coach wanting to progress the changeup onto the mound has only the drill''s own progression notes to work from.'
+FROM public.development_pathways p WHERE p.slug = 'pitching-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'fbbf59c6-6024-5692-9db9-6a0257139f65', 'primary', 1,
+  'Builds the pitch inside ordinary catch — no mound, no radar, no hitter — which is where a young arm can learn a grip without also managing an outing.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'second-pitch';
+-- Changeup Catch Play
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'no-changeup'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'pitching-development' AND s.stage_key = 'second-pitch';
+
+-- prerequisites: each stage requires the one before it
+UPDATE public.development_pathway_stages s
+   SET prerequisite_stage_id = prev.id
+  FROM public.development_pathway_stages prev, public.development_pathways p
+ WHERE s.pathway_id = p.id AND prev.pathway_id = p.id
+   AND p.slug = 'pitching-development'
+   AND prev.stage_number = s.stage_number - 1;
+
+-- ── Catching Development ──────────────────────────────────────────────
+DELETE FROM public.development_pathways WHERE slug = 'catching-development';
+
+INSERT INTO public.development_pathways
+  (slug, name, skill_category, summary, applicability, min_age, max_age, version, status, provenance)
+VALUES (
+  'catching-development', 'Catching Development', 'catching',
+  'A catcher built in the order the position is actually learned: receive first, then keep the ball in front, then throw.',
+  'The thinnest pathway in the library — six catching drills exist, and several stages borrow from Throwing where the objective is genuinely the same skill. Gear is not optional from stage 3 onwards. A player who cannot yet catch a thrown ball should run Throwing Development stage 5 before any of this.',
+  8, 16, 1, 'published',
+  'Phase 2E, 2026-09-17. Sequence written against the 154 schedulable drills as they stood at migration 068, using each row''s description, coaching notes, success markers and regression/progression notes as evidence. Not derived from progression_level, category, age or video order.'
+);
+
+-- stage 1: Quiet glove and soft hands
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  1, 'receiving-foundation', 'Quiet glove and soft hands',
+  'Receives the ball moving toward the zone, with the glove quiet after the catch.',
+  'Everything a catcher is judged on starts here. A catcher who stabs turns strikes into balls before any of the harder skills are even involved.',
+  ARRAY['Glove is quiet after the catch instead of drifting', 'Catches low pitches without turning the glove over', 'Ball stops moving toward the zone edge, not out of it'],
+  ARRAY['Stabbing at the pitch rather than receiving it', 'Hard hands — a locked elbow fighting the ball', 'The glove drifting out of the zone after the catch, which loses the strike'],
+  NULL,
+  2, 4,
+  'THIN. One genuine catching drill and one borrowed from Throwing. A coach running this stage twice runs the same session twice.'
+FROM public.development_pathways p WHERE p.slug = 'catching-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'e7bd95b6-d491-49e2-a383-7fc381e7b0ce', 'primary', 1,
+  'The first receiving progression in the library, and it starts bare-glove with tennis balls — which is where soft hands are actually built.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'catching-development' AND s.stage_key = 'receiving-foundation';
+-- Youth Receiving Foundations — Quiet Glove & Soft Hands
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '9a6f58a3-0172-47e6-b159-8eb98306f5ca', 'regression', 1,
+  'Filed under Throwing, and it is the step before a mitt: catch it, cover it, show me. A catcher who has not built that habit has nothing to make quiet.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'catching-development' AND s.stage_key = 'receiving-foundation';
+-- Two Hand Catch
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'catcher-receiving'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'catching-development' AND s.stage_key = 'receiving-foundation';
+
+-- stage 2: Framing and working the zone
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  2, 'framing', 'Framing and working the zone',
+  'Beats the ball to the spot and holds borderline pitches inside the zone.',
+  'A catcher who can receive is not yet a catcher who earns strikes. Getting the glove there first is the difference, and it is a learnable habit rather than a gift.',
+  ARRAY['Borderline pitches are caught and held in the zone', 'Glove beats the ball to the spot on edges', 'Umpire-view video shows the ball stuck rather than dragged'],
+  ARRAY['Reacting to the pitch rather than arriving ahead of it', 'Dragging a borderline pitch back toward the middle, which advertises the miss', 'Working the middle of the zone, where framing changes nothing'],
+  NULL,
+  2, 5,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'catching-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '5f398d5c-6377-4119-b5b7-99b81f4b8028', 'primary', 1,
+  'Five stations built around beating the ball to the spot and sticking the catch, which is this objective broken into parts a coach can run.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'catching-development' AND s.stage_key = 'framing';
+-- MLB-Style Receiving & Framing Circuit
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'e7bd95b6-d491-49e2-a383-7fc381e7b0ce', 'regression', 1,
+  'The library names this as the foundation the framing circuit is built on, and the place to return to when the glove is fighting the ball rather than early.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'catching-development' AND s.stage_key = 'framing';
+-- Youth Receiving Foundations — Quiet Glove & Soft Hands
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'catcher-receiving'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'catching-development' AND s.stage_key = 'framing';
+
+-- stage 3: Blocking: the shape
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  3, 'blocking-technique', 'Blocking: the shape',
+  'Drops into a blocking shape that deadens the ball in front of the plate.',
+  'Blocking is a shape before it is a reaction. A catcher who has never felt the position cannot find it with a ball already in the dirt.',
+  ARRAY['Ball dies within a six-foot circle in front of the plate', 'Chin stays tucked — no flinch', 'Body beats the ball to the spot on lateral blocks'],
+  ARRAY['Catching at the ball instead of blocking it', 'Chest upright, so the ball caroms away rather than dropping', 'Turning the head, which is a flinch and not a technique problem'],
+  'Round your shoulders, chin down, deaden it in front. Gear on, always.',
+  2, 4,
+  'THIN. One drill serves this stage. Its own three internal stages carry it, but a coach has no alternative station to rotate to.'
+FROM public.development_pathways p WHERE p.slug = 'catching-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'babe5481-655c-4c2e-9985-2465937c1067', 'primary', 1,
+  'Built from the shape outwards — placed balls, then rolled, then short-hopped — which is the only order in which a young catcher learns to block rather than to flinch.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'catching-development' AND s.stage_key = 'blocking-technique';
+-- Blocking the Right Way — Technique to Reaction Reps
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'catcher-blocking'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'catching-development' AND s.stage_key = 'blocking-technique';
+
+-- stage 4: Blocking at game speed
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  4, 'blocking-reaction', 'Blocking at game speed',
+  'Reads and blocks a ball in the dirt without pre-setting to a side.',
+  'A block that has been announced is a rehearsal. The skill is reading a ball nobody told you about, and it is the one that saves runs.',
+  ARRAY['Eight or more of ten random balls kept in front', 'Recovers to throwing position within one second', 'No flinch or head-turn at game velocity'],
+  ARRAY['Pre-setting to a side and being wrong', 'Blocking it and then watching it, so the runner takes the base anyway', 'Reaction work layered on top of unsound technique'],
+  NULL,
+  2, 5,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'catching-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '808e703f-d60e-4a0b-8cbd-845bcb4cc1bb', 'primary', 1,
+  'Random locations, nothing telegraphed, and a score per rep that separates blocked-in-front from blocked-away — which is the distinction that matters.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'catching-development' AND s.stage_key = 'blocking-reaction';
+-- Game-Speed Reaction Blocking
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'babe5481-655c-4c2e-9985-2465937c1067', 'regression', 1,
+  'The library is explicit that reaction work on top of unsound technique is the wrong order, and names this as where to go back to.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'catching-development' AND s.stage_key = 'blocking-reaction';
+-- Blocking the Right Way — Technique to Reaction Reps
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'catcher-blocking'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'catching-development' AND s.stage_key = 'blocking-reaction';
+
+-- stage 5: The throw to second
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  5, 'throw-down', 'The throw to second',
+  'Transfers during the footwork and delivers an accurate throw to the bag.',
+  'Pop time is footwork and exchange, not arm strength. A catcher who sets up to throw has already lost the runner.',
+  ARRAY['Transfer happens during footwork, not after', 'Throws arrive on the bag-side of second consistently', 'Pop time trends down week over week'],
+  ARRAY['Catching, then standing, then throwing — three movements where there should be one', 'Thinking about the throw and forgetting the feet', 'Throwing across the body because the replace step never happened'],
+  NULL,
+  3, 6,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'catching-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '367642e8-dfd4-4988-90e5-f2c4d10b3401', 'primary', 1,
+  'Three stages — dry, tossed, live — with every rep timed glove to glove, and the cue that the feet start the throw. That is this objective exactly.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'catching-development' AND s.stage_key = 'throw-down';
+-- Catcher Throw-Down Footwork to Second
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '84930859-7689-4f1f-a9ba-5e71b4991af9', 'regression', 1,
+  'The exchange on its own, with the throwing hand already moving as the glove closes. When pop time will not come down it is usually here rather than in the feet.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'catching-development' AND s.stage_key = 'throw-down';
+-- Quick Hands Quick Feet — Fast Transfer Drill
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '0200c065-9f6f-4a76-bd9a-22e46141a6ce', 'reinforcement', 1,
+  'Where the back foot points after receiving, which is what lines the shoulders up. A catcher throwing arm side is usually failing this rather than the replace step.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'catching-development' AND s.stage_key = 'throw-down';
+-- The Ankle Eye Drill — Footwork Foundation
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'slow-transfer'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'catching-development' AND s.stage_key = 'throw-down';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'inaccurate-throws'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'catching-development' AND s.stage_key = 'throw-down';
+
+-- stage 6: The one-knee setup
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  6, 'one-knee-setup', 'The one-knee setup',
+  'Receives from one knee while staying able to block and throw.',
+  'It is where the modern position is going and it is a ceiling rather than a starting point. A catcher who adopts it before the two-knee setup is consistent loses blocking to gain framing.',
+  ARRAY['Low strike is presented without dropping the glove head', 'Can still block and throw from one knee', 'Holds the bottom-zone strike at game velocity'],
+  ARRAY['Adopting it too early, before two-knee receiving is consistent', 'A free leg positioned so no block is possible', 'Gaining the low strike and losing everything in the dirt'],
+  NULL,
+  2, 5,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'catching-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '478cb186-6370-494d-b94a-47136344ccd8', 'primary', 1,
+  'The library states the prerequisite itself — only after two-knee receiving is consistent — and checks that the free leg still allows a block or a throw.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'catching-development' AND s.stage_key = 'one-knee-setup';
+-- One-Knee Receiving — Advanced Framing Setup
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '5f398d5c-6377-4119-b5b7-99b81f4b8028', 'regression', 1,
+  'The two-knee version of the same glove path. When the one-knee setup costs the catcher their framing, this is the stance to rebuild it in.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'catching-development' AND s.stage_key = 'one-knee-setup';
+-- MLB-Style Receiving & Framing Circuit
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'catcher-receiving'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'catching-development' AND s.stage_key = 'one-knee-setup';
+
+-- prerequisites: each stage requires the one before it
+UPDATE public.development_pathway_stages s
+   SET prerequisite_stage_id = prev.id
+  FROM public.development_pathway_stages prev, public.development_pathways p
+ WHERE s.pathway_id = p.id AND prev.pathway_id = p.id
+   AND p.slug = 'catching-development'
+   AND prev.stage_number = s.stage_number - 1;
+
+-- ── Baserunning Development ───────────────────────────────────────────
+DELETE FROM public.development_pathways WHERE slug = 'baserunning-development';
+
+INSERT INTO public.development_pathways
+  (slug, name, skill_category, summary, applicability, min_age, max_age, version, status, provenance)
+VALUES (
+  'baserunning-development', 'Baserunning Development', 'baserunning',
+  'Baserunning as a skill rather than a consequence of hitting: out of the box, around the bases, into the bag, and then the reads that win an extra base.',
+  'The one pathway every player on the roster uses in every game. Stages 1 to 5 are universal; stages 6 onward assume a league that allows leads and steals — in a no-lead league, run stages 8 and 9 and skip the rest.',
+  6, 15, 1, 'published',
+  'Phase 2E, 2026-09-17. Sequence written against the 154 schedulable drills as they stood at migration 068, using each row''s description, coaching notes, success markers and regression/progression notes as evidence. Not derived from progression_level, category, age or video order.'
+);
+
+-- stage 1: Out of the box
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  1, 'out-of-the-box', 'Out of the box',
+  'Moves toward first on contact, without watching the ball.',
+  'Youth players take hundreds of swings a week and attach running to almost none of them. On a youth field a batted ball is nearly always still in play, and the half-second spent watching it is the whole difference between safe and out.',
+  ARRAY['First step is toward first, not back toward the plate', 'Bat placed down, clear of the path', 'Runs past the bag without slowing'],
+  ARRAY['Watching the ball before moving', 'Throwing the bat, which is dangerous and costs a step', 'Slowing into the bag rather than running through it'],
+  'Drop it and go.',
+  1, 3,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'baserunning-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'd358d3cd-7da8-5baf-9843-3fe2a81a6773', 'primary', 1,
+  'Attaches a full-effort run to every swing, which is the habit this stage is about and the one a hitting station never builds.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'out-of-the-box';
+-- Swing and Sprint
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'b194ff1d-f857-47d5-911c-0bab06c6e6bc', 'reinforcement', 1,
+  'Sprinting from cold is how a young player pulls something. This is the moving warm-up that belongs before any full-effort running stage.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'out-of-the-box';
+-- Baseball Dynamic Stretches for Youth Players
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'slow-first-step'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'out-of-the-box';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'base-awareness'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'out-of-the-box';
+
+-- stage 2: Through it or around it
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  2, 'through-or-around', 'Through it or around it',
+  'Decides before the bag whether to run through first or round it.',
+  'A runner who rounds everything gives away outs at first; one who runs through everything gives away second on a ball in the gap. It is one decision, made early, and almost nobody teaches it.',
+  ARRAY['Arcs out early on a ball to the outfield', 'Runs straight through on an infield ground ball', 'Looks at the ball rather than at the coach'],
+  ARRAY['Deciding at the bag rather than before it', 'Rounding every ball, including the routine grounder', 'Watching the coach for the answer instead of reading the ball'],
+  NULL,
+  1, 3,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'baserunning-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '92366675-97a6-5d04-b3b6-5a2909ce858f', 'primary', 1,
+  'Same start, two answers, and the runner has to pick one off the ball. It is the only drill in the library that makes this a decision rather than a rule.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'through-or-around';
+-- First Base Decision
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'd358d3cd-7da8-5baf-9843-3fe2a81a6773', 'regression', 1,
+  'Running through the bag at full effort, with no decision attached. The running has to be automatic before the choosing is added.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'through-or-around';
+-- Swing and Sprint
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'bad-base-turns'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'through-or-around';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'base-awareness'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'through-or-around';
+
+-- stage 3: Turns and angles
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  3, 'turns-and-angles', 'Turns and angles',
+  'Hits the inside corner of each base and stays low through the turn.',
+  'A player who runs wide and pops up tall at the bag loses more time at the turn than they gain on the straight. Turns are technique, not speed.',
+  ARRAY['Touches the inside corner of each base', 'Stays low through the turn instead of standing up', 'Round times improve or hold across the session rather than degrading'],
+  ARRAY['Swinging wide, which adds distance to every turn', 'Standing tall at the bag and losing acceleration', 'Arms flailing rather than pumping'],
+  NULL,
+  2, 4,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'baserunning-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '32d3b75f-3d94-4048-b1e1-26a3d87e9449', 'primary', 1,
+  'Trains the turn itself — inside corner, low through the lean — with a clock, so there is a number that improves rather than a coaching opinion.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'turns-and-angles';
+-- Base Running Athletic Circuit
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '35a5e10e-9713-4887-ad07-030b421db06f', 'reinforcement', 1,
+  'Three angled cones let three groups run turns at once, which is how a team gets enough repetitions for the technique to stick.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'turns-and-angles';
+-- Simple Base Running Drills for Youth Practice
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'bad-base-turns'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'turns-and-angles';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'slow-first-step'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'turns-and-angles';
+
+-- stage 4: Sliding: the shape
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  4, 'sliding-basics', 'Sliding: the shape',
+  'Slides on the seat in a figure-four with both hands up.',
+  'A player who cannot slide either avoids the bag or gets hurt at it. The shape is learned somewhere soft or it is learned badly.',
+  ARRAY['Slides on the seat or hip, not the knees', 'Hands stay up through the slide', 'Starts the slide at the marked distance without hesitating'],
+  ARRAY['Landing on the knees, which is how sliding injuries happen', 'Hands down to break the fall, which is how wrists break', 'Slowing down before the slide, which is more dangerous than sliding fast'],
+  'Grass or a mat first, never dirt on day one. Sit into it, hands to the sky.',
+  1, 3,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'baserunning-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'b610bf25-fbc7-46e3-9c8a-16e07224bf70', 'primary', 1,
+  'The first sliding lesson, taught on grass in socks from a walk. Its own note — never move a player on who is still landing on their knees — is this stage''s gate.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'sliding-basics';
+-- Bent-Leg Slide Basics — The Right Way to Slide
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '282be624-51e9-4a06-ab37-7646b0a3da8b', 'reinforcement', 1,
+  'Volume without dirt burn, which is the practical obstacle to sliding ever being practised enough to become automatic.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'sliding-basics';
+-- Sliding Practice Stations
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'cant-slide'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'sliding-basics';
+
+-- stage 5: Sliding to advance
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  5, 'pop-up-slide', 'Sliding to advance',
+  'Finishes the slide on their feet and reads whether to take the next base.',
+  'A slide that ends flat on the ground cannot advance on an overthrow, which at youth level is a regular free base.',
+  ARRAY['Pops to standing without using hands', 'Eyes find the ball immediately after the slide', 'Advances confidently on overthrows in scrimmages'],
+  ARRAY['Sliding to the bag rather than through it, which kills the momentum needed to pop up', 'Popping up but never looking for the ball', 'Attempting it before the basic slide is automatic'],
+  NULL,
+  2, 4,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'baserunning-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '9335a346-33a3-4bd1-b65c-2664f9c7fcfb', 'primary', 1,
+  'Momentum through the bag onto the planted foot, with a simulated overthrow so the advance read is trained at the same time as the slide.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'pop-up-slide';
+-- Pop-Up Slide — Slide and Advance
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'b610bf25-fbc7-46e3-9c8a-16e07224bf70', 'regression', 1,
+  'The library is explicit that a runner still thinking about the slide cannot also read a ball, and names the basic slide as where to go back to.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'pop-up-slide';
+-- Bent-Leg Slide Basics — The Right Way to Slide
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'cant-slide'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'pop-up-slide';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'base-awareness'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'pop-up-slide';
+
+-- stage 6: Leads
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  6, 'leads', 'Leads',
+  'Takes a primary and a secondary lead timed to the pitch.',
+  'A secondary lead is free distance that needs no speed at all, and it is what makes every read later in this pathway possible. A runner standing flat on the bag cannot react to anything.',
+  ARRAY['Secondary lead lands as the pitch crosses the plate', 'Momentum is moving toward the next base at contact', 'Takes a secondary lead on every pitch, not just the ones that matter'],
+  ARRAY['No secondary lead at all, so every read starts from a standstill', 'Drifting too far and getting picked', 'Timing the shuffle to the release rather than to the pitch crossing'],
+  NULL,
+  2, 4,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'baserunning-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'b9bb75c7-9ed0-47ee-9d11-2de953510027', 'primary', 1,
+  'Two pieces of baserunning that need no speed, with the two-shuffle secondary timed to the pitch crossing the zone — the objective stated exactly.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'leads';
+-- Secondary Lead & Delayed Steal
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '35a5e10e-9713-4887-ad07-030b421db06f', 'regression', 1,
+  'Lead-offs at volume with three groups working at once, before any timing or decision is layered on.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'leads';
+-- Simple Base Running Drills for Youth Practice
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'base-stealing'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'leads';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'base-awareness'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'leads';
+
+-- stage 7: Reading the pitcher
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  7, 'reading-the-pitcher', 'Reading the pitcher',
+  'Breaks on the pitcher''s first move toward home, not on a guess.',
+  'Stealing at this level is a read, not a sprint. The jump is worth more than the speed, and the jump is coachable.',
+  ARRAY['Breaks on first move, not on a guess', 'Crossover step gains ground toward second', 'Freezes correctly on pickoff moves'],
+  ARRAY['Guessing and being picked off', 'A first step that goes up rather than toward the base', 'Watching the pitcher''s arm instead of the tell being taught'],
+  NULL,
+  2, 6,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'baserunning-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'f9d5d796-ce11-4964-bc70-a3ce5f8a607f', 'primary', 1,
+  'Practises the jump separately from the sprint, one pitcher tell at a time, with every rep charted as good, late or picked.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'reading-the-pitcher';
+-- Steal Breaks — Reading the Pitcher & First Move
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '4106c25c-beeb-4d11-b1aa-eb9aa85978ae', 'progression', 1,
+  'The same read against a live pitcher from the stretch with real pickoff risk, and a jump rate that becomes a number on a chart.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'reading-the-pitcher';
+-- Pro Base-Stealing Package — Leads, Reads & Jumps
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'b9bb75c7-9ed0-47ee-9d11-2de953510027', 'regression', 1,
+  'The delayed steal needs no read of the pitcher at all — it reads the catcher. For a runner who cannot yet time a jump, it is the steal that still works.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'reading-the-pitcher';
+-- Secondary Lead & Delayed Steal
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'base-stealing'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'reading-the-pitcher';
+
+-- stage 8: Tagging up
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  8, 'tagging-up', 'Tagging up',
+  'Leaves on the catch — not before it, not a beat after.',
+  'The universal youth error is watching the fielder''s arm rather than their glove. Moving the runner''s eyes fixes the timing on its own.',
+  ARRAY['Foot stays on the base until the ball is caught', 'Leaves within a stride of the catch', 'Freezes on a line drive without being told'],
+  ARRAY['Leaving early and being doubled off', 'Waiting for the throw rather than the catch', 'Tagging on a line drive, which is the one time not to'],
+  'Leave on the catch, not on the throw.',
+  1, 3,
+  'THIN. One drill serves this stage. Its own three rounds carry the progression, but a coach has no second station to rotate a group through.'
+FROM public.development_pathways p WHERE p.slug = 'baserunning-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '3e15ab9d-f443-5a82-87df-8c4cc418c2e6', 'primary', 1,
+  'Three rounds that move from being told to tag, to being told only that a ball is up, to deciding — which is the progression from mechanics to judgement.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'tagging-up';
+-- Progressive Tag Up
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'base-awareness'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'tagging-up';
+
+-- stage 9: Reading a ball in the dirt
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  9, 'reading-the-dirt', 'Reading a ball in the dirt',
+  'Advances only when the ball actually gets past the catcher.',
+  'The runner who goes on every ball in the dirt gets thrown out on the ones that were blocked. The read is the skill; the running is not.',
+  ARRAY['Takes a secondary lead on every pitch', 'Goes only when the ball actually gets past', 'Commits fully once committed'],
+  ARRAY['Reading the catcher''s body instead of the ball', 'Going on any ball that touches the dirt', 'Half-committing, which is slower than not going at all'],
+  'Read the ball, not the catcher.',
+  2, 4,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'baserunning-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '3f65e53c-eebc-511c-89a9-23e519dffba0', 'primary', 1,
+  'Deliberately includes balls that stay in front, which are the repetitions worth practising — the runner who goes on those is the one this stage is fixing.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'reading-the-dirt';
+-- Wild Pitch Advance
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'b9bb75c7-9ed0-47ee-9d11-2de953510027', 'regression', 1,
+  'A runner still standing on the bag cannot read anything in time. The secondary lead is the prerequisite this stage depends on.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'reading-the-dirt';
+-- Secondary Lead & Delayed Steal
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'base-awareness'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'reading-the-dirt';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'base-stealing'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'reading-the-dirt';
+
+-- stage 10: Running the bases in a game
+INSERT INTO public.development_pathway_stages
+  (pathway_id, stage_number, stage_key, name, objective, why_it_matters,
+   mastery_signals, common_failure_modes, coaching_emphasis,
+   estimated_practices_min, estimated_practices_max, notes)
+SELECT p.id,
+  10, 'game-decisions', 'Running the bases in a game',
+  'Makes the right call on every base without a coach telling them.',
+  'Every skill in this pathway becomes a decision under time pressure. A runner who executes well and decides badly still makes the out.',
+  ARRAY['Runners look up to find the coach rather than watching their feet', 'First three steps are explosive rather than a gradual build', 'Turns cut the inside corner instead of swinging wide, under game tempo'],
+  ARRAY['Waiting to be told at every base', 'Making the right read too late for it to matter', 'Technique falling apart as soon as a decision is added'],
+  NULL,
+  2, 6,
+  NULL
+FROM public.development_pathways p WHERE p.slug = 'baserunning-development';
+
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, 'ecf4c61b-0b8b-49bd-bbe5-697d42991d79', 'primary', 1,
+  'A different decision at every base — a start, a break, an advance read, a ball in the dirt — which is the only drill that rehearses the whole set together.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'game-decisions';
+-- Base Running Circuit
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '3e15ab9d-f443-5a82-87df-8c4cc418c2e6', 'reinforcement', 1,
+  'The tag-up decision inside a game-like rep, where the runner is told only that a ball is in the air.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'game-decisions';
+-- Progressive Tag Up
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '3f65e53c-eebc-511c-89a9-23e519dffba0', 'reinforcement', 2,
+  'The dirt-ball read under the same conditions, which is the other half of what a runner on second is deciding.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'game-decisions';
+-- Wild Pitch Advance
+INSERT INTO public.development_pathway_stage_drills (stage_id, drill_id, role, rank, rationale)
+SELECT s.id, '92366675-97a6-5d04-b3b6-5a2909ce858f', 'game_application', 1,
+  'The first decision of every at-bat, run live off a fungo so the read comes off a real ball rather than a pointed direction.'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'game-decisions';
+-- First Base Decision
+
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'base-awareness'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'game-decisions';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'bad-base-turns'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'game-decisions';
+INSERT INTO public.development_pathway_stage_problems (stage_id, problem_slug)
+SELECT s.id, 'slow-first-step'
+FROM public.development_pathway_stages s
+JOIN public.development_pathways p ON p.id = s.pathway_id
+WHERE p.slug = 'baserunning-development' AND s.stage_key = 'game-decisions';
+
+-- prerequisites: each stage requires the one before it
+UPDATE public.development_pathway_stages s
+   SET prerequisite_stage_id = prev.id
+  FROM public.development_pathway_stages prev, public.development_pathways p
+ WHERE s.pathway_id = p.id AND prev.pathway_id = p.id
+   AND p.slug = 'baserunning-development'
+   AND prev.stage_number = s.stage_number - 1;
+
 -- ---------------------------------------------------------------------------
 -- Verification
 -- ---------------------------------------------------------------------------
--- Expect 4 pathways, 43 stages, 152 stage-drill links,
--- 91 stage-problem links, and the drill library unchanged.
+-- Expect 7 pathways, 70 stages, 212 stage-drill links,
+-- 142 stage-problem links, and the drill library unchanged.
 SELECT
   (SELECT count(*) FROM public.development_pathways)                  AS pathways,
   (SELECT count(*) FROM public.development_pathway_stages)            AS stages,
