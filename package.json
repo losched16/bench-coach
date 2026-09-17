@@ -99,7 +99,9 @@
     "emit:pathways": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/emit-pathways.ts",
     "audit:pathways": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/emit-pathways.ts --audit",
     "test:migration-070": "bash scripts/test-migration-070.sh",
+    "test:migration-071": "bash scripts/test-migration-071.sh",
     "test:pathways": "npx --yes tsx --tsconfig tsconfig.json scripts/test-pathways.ts",
+    "verify:071": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-071.ts",
     "verify:pathways-prod": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-pathways-production.ts"
   },
   "dependencies": {
