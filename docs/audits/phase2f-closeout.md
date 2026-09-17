@@ -2,64 +2,61 @@
 
 ## Verdict
 
-**PARTIAL.** Every analysis, curation, authoring and test task is complete and
-committed. Nothing has reached production, because the Supabase migration
-approval path stopped granting calls part-way through this phase — including
-trivial read-only ones — and has not recovered. Migration 070 is three
-pathways of seven applied; migration 071 has never been applied at all.
-
-The brief anticipated this: *"If approval blocks migration application again:
-continue read-only analysis, generate the 2F migration, clearly mark production
-application pending."* That is what this is.
+**COMPLETE.** All seven pathways and both migrations are applied to production,
+`verify:pathways-prod` passes 104 checks with zero failures, the three
+temporary helper functions are dropped, and the branch is merged to main.
 
 ## Production baseline
 
 | | |
 |---|---|
 | Supabase project | `chdpqsumqospnaztvfqe` |
-| Curated drills | 220 |
-| Schedulable drills | 154 |
-| Taxonomy problems | 49 |
-| Drill-problem mappings | 393 |
-| Production commit | `e498235` (Phases 2C + 2D live) |
-| Branch | `claude/latest-code-updates-0vrxpr` @ `15bfa03`, 5 commits ahead |
+| Curated drills | 226 (220 + the six 071 adds) |
+| Schedulable drills | 160 (154 + six) |
+| Taxonomy problems | **49 — unchanged** |
+| Drill-problem mappings | 400 (393 + seven) |
 
-The drill library is **byte-for-byte unchanged** by this phase. Verified by
-`verify:pathways-prod`, which asserts all four counts above against live data
-and passed every time it was run.
+The taxonomy number is the one worth watching: 2F.7 said no new problem slug
+would be invented as a side effect of adding drills, and 49 is that promise
+still holding.
 
-## Phase 2E deployment status
+## Deployment
 
 | | |
 |---|---|
-| **069** (pathway schema) | **APPLIED** to production. Four tables, RLS on all four. |
-| **070** (pathway content) | **3 of 7 pathways applied.** Build the Swing, Infield Fundamentals and Throwing Development are live — 32 stages, 122 drill links, 73 problem links. Outfield, Pitching, Catching and Baserunning are not. |
-| `verify:pathways-prod` | **1 failure**, and it is the expected one: `1. pathways load — 3 published`. Every other check passes for all three live pathways, including "every stage drill resolves", "nothing recommended is demoted" and all four library-unchanged counts. |
-| main commit | **Not merged.** Phase 2E must not go to main until `verify:pathways-prod` is green, and it cannot be green until 070 finishes applying. |
+| **069** pathway schema | APPLIED |
+| **070** pathway content | APPLIED — all 7 pathways, 70 stages, 212 links |
+| **071** coverage expansion | APPLIED — 6 drills, 7 mappings, 17 links, 6 re-ranks, 1 link removed |
+| Stage-drill links, total | **228** across 70 stages |
+| `verify:pathways-prod` | **PASS — 104 checks, 0 failures** |
+| `pw_st` / `pw_ds` / `pw_ps` | dropped, confirmed absent from `pg_proc` |
 
-### Why 070 is partial
+### What went wrong on the way, and what it cost
 
-The file is ~160 KB, so it was split into seven per-pathway chunks and applied
-one at a time. Three went through. The fourth was refused four times with
-`MCP tool call requires approval`, and from that point every Supabase call in
-the session — `apply_migration`, `execute_sql`, and a one-line `SELECT slug
-FROM development_pathways` — has been refused the same way. The chunks are
-correct: the three that applied landed exactly the row counts the file
-predicts (42/30, 38/19, 42/24).
+**071 was rejected by production on the first apply.** `practice_roles` was set
+to `{teach,prepare}` on three of the six new drills, and `prepare` is not a
+valid role — the column has a CHECK constraint listing eleven allowed values
+and `prepare` is not among them. I had taken the word from the pathway
+sequence vocabulary (`prepare → teach → isolate → …`), which is a different
+list for a different table.
 
-This is an environment problem, not a data problem. **Operator action:** apply
-`migrations/070_pathway_content.sql` and then `071_pathway_coverage_expansion.sql`
-through a path that is not this session, then run `npm run verify:pathways-prod`.
+It reached production because `test-migration-071.sh` built its
+`drill_resources` stub with no CHECK constraints at all, so the local test
+proved only that the SQL parsed. The stub now carries the real constraints
+copied from production, and the three rows are `{teach,repetition}`, which is
+what they actually are. Cost: one failed apply, no data written — the
+migration is transactional and nothing partial landed.
 
-### One temporary artefact left in production
+**Two assertions in `verify-pathways-production.ts` were stale.** It asserted
+exactly four pathways, written when the Phase 2E brief asked for four; three
+more were curated and applied afterwards and the number was never moved. And
+its library baseline was the Phase 2D snapshot, which 071 deliberately moves.
+Both are now the deployed numbers. A count that lags what is deployed passes
+while the deployment is incomplete, which is the opposite of the job.
 
-Applying 070 in chunks needed three SQL helper functions — `public.pw_st`,
-`pw_ds`, `pw_ps` — thin wrappers over the same inserts. They are still there.
-
-They grant nobody anything: they are invoker-rights functions, and writes on
-all four pathway tables are restricted to `service_role` by both the table
-grant and the RLS policy, so only `service_role` can use them — which it could
-already do directly. Migration 071 drops all three.
+**One check in `verify-071.ts` was single-state.** It asserted the six new
+drills did not exist yet, which stopped being true the moment 071 succeeded.
+It now asserts the right thing in either state and fails on a partial set.
 
 ## Coverage before
 
@@ -309,10 +306,10 @@ and `verify:071` check 7 asserts the migration does not touch the media table,
 | Suite | Result |
 |---|---|
 | `npm run test:pathways` | **92 passed, 0 failed** (was 91 — one added this phase) |
-| `npm run verify:071` | **10 of 10 pass** |
+| `npm run verify:071` | **10 of 10 pass**, against live production |
 | `npm run test:migration-071` | **14 of 14 pass** against a real PostgreSQL 16 |
 | `npm run test:migration-070` | **11 of 11 pass** |
-| `npm run verify:pathways-prod` | 1 failure — `pathways load: 3 published`, the known 070 blocker. All other checks pass. |
+| `npm run verify:pathways-prod` | **PASS — 104 checks, 0 failures**, against live production |
 | `npm run typecheck:baseline` | **196** — baseline held |
 | `npm run emit:pathways` (reproducibility) | 070 regenerates byte-identical from the fixture |
 | `npm run lint` | **not configured in this repo** — not claimed |
@@ -351,17 +348,15 @@ coach nothing.
 
 ## Recommendation for next phase
 
-**Do not start a new product feature.** Three things are open and two of them
-are operational:
+The deployment is done, so the list is shorter than it was:
 
-1. **Unblock the migration path and finish 070, then 071.** This is the only
-   thing standing between the work and the users. Then `verify:pathways-prod`
-   goes green and Phase 2E merges to main.
+1. ~~Finish 070, then 071.~~ **Done.** Both applied, verification green, helpers
+   dropped, branch merged.
 2. **Rotate the production `service_role` key.** Still outstanding from Phase
    1.5, still P0, still an operator action. The committed credential has not
    been confirmed rotated. The Anthropic API key pasted into chat earlier is in
    the same position.
-3. **Then, and only then, Phase 2G.** The candidate with the most leverage is
+3. **Phase 2G.** The candidate with the most leverage is
    not more drills — it is putting the pathways in front of a coach. The
    Practice Plan API accepts a `pathwaySlug` today and no interface passes one,
    so the whole layer is invisible. A pathway picker on the practice page would
@@ -369,4 +364,4 @@ are operational:
    week whether coaches want a sequence or just a drill.
 
 Carried, unchanged: `verify:video-links` is red on `components/PlanReview.tsx:67`
-and predates all of this; branch `054a47e`..`15bfa03` is unmerged.
+and predates all of this.

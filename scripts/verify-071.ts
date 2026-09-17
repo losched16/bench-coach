@@ -54,8 +54,24 @@ async function main() {
 
   const added = newRowIds(sql)
   check('1. 071 adds exactly six new drill rows', added.length === 6, `${added.length}`)
-  check('2. none of the six already exists in the library',
-    added.every(id => !byId.has(id)), added.filter(id => byId.has(id)).join(' ') || 'all new')
+  // This check has two correct answers depending on whether 071 has been
+  // applied, and it has to mean something in both. Before: none of the six is
+  // in the library, so the migration is not about to collide with anything.
+  // After: all six are there, approved, curated activities. What is never
+  // right is a partial set, which would mean the insert went in halfway.
+  const present = added.filter(id => byId.has(id))
+  const applied = present.length === added.length
+  if (present.length === 0) {
+    check('2. 071 not yet applied — none of the six exists', true, 'all new, no collision')
+  } else {
+    const wellFormed = present.filter(id => {
+      const d = byId.get(id)
+      return d.status === 'approved' && d.resource_kind === 'activity' && !d.created_by_coach_id
+    })
+    check('2. 071 applied — all six are in the library as curated activities',
+      applied && wellFormed.length === added.length,
+      `${present.length}/${added.length} present, ${wellFormed.length} well-formed`)
+  }
 
   // Every drill id 071 attaches or re-ranks, other than the six it creates.
   const referenced = new Set<string>()

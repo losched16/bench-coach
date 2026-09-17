@@ -89,7 +89,33 @@ CREATE TABLE public.drill_resources (
   rep_density text, idle_time_risk text, engagement_level text, competition_style text,
   instruction_complexity text, throwing_load text, physical_intensity text,
   mixed_skill_friendly boolean, resource_kind text, status text, source text,
-  created_by_coach_id uuid);
+  created_by_coach_id uuid,
+  -- The real CHECK constraints, copied from production. Without them this stub
+  -- accepts anything and the test proves only that the SQL parses. 071 shipped
+  -- practice_roles = {teach,prepare} past a constraint-free stub and was
+  -- rejected by production on the first apply; 'prepare' is a pathway sequence
+  -- step, not a drill role, and the two vocabularies are not the same list.
+  CONSTRAINT dr_practice_roles CHECK (practice_roles IS NULL OR practice_roles <@ ARRAY[
+    'warmup','teach','isolate','repetition','progress','decision','competition',
+    'game_application','team_execution','assessment','finish']),
+  CONSTRAINT dr_activity_format CHECK (activity_format IS NULL OR activity_format = ANY
+    ('{individual,partner,small_group,station,full_team,game}'::text[])),
+  CONSTRAINT dr_competition_level CHECK (competition_level = ANY (ARRAY['rec','travel','both'])),
+  CONSTRAINT dr_competition_style CHECK (competition_style IS NULL OR competition_style = ANY
+    ('{none,scored,head_to_head,team_vs_team,game}'::text[])),
+  CONSTRAINT dr_engagement CHECK (engagement_level IS NULL OR engagement_level = ANY ('{low,medium,high}'::text[])),
+  CONSTRAINT dr_idle CHECK (idle_time_risk IS NULL OR idle_time_risk = ANY ('{low,medium,high}'::text[])),
+  CONSTRAINT dr_instruction CHECK (instruction_complexity IS NULL OR instruction_complexity = ANY ('{low,medium,high}'::text[])),
+  CONSTRAINT dr_intensity CHECK (physical_intensity IS NULL OR physical_intensity = ANY ('{low,medium,high}'::text[])),
+  CONSTRAINT dr_rep_density CHECK (rep_density IS NULL OR rep_density = ANY ('{low,medium,high}'::text[])),
+  CONSTRAINT dr_throwing_load CHECK (throwing_load IS NULL OR throwing_load = ANY ('{none,low,medium,high}'::text[])),
+  CONSTRAINT dr_resource_kind CHECK (resource_kind IS NULL OR resource_kind = ANY
+    (ARRAY['activity','practice_unit','source_collection','teaching_content'])),
+  CONSTRAINT dr_status CHECK (status = ANY (ARRAY['approved','pending_review','rejected'])),
+  CONSTRAINT dr_player_counts CHECK (
+    (min_players IS NULL OR min_players >= 1) AND (max_players IS NULL OR max_players >= 1) AND
+    (ideal_group_size IS NULL OR ideal_group_size >= 1) AND (min_coaches IS NULL OR min_coaches >= 0) AND
+    (min_players IS NULL OR max_players IS NULL OR max_players >= min_players)));
 CREATE TABLE public.problem_taxonomy (slug text PRIMARY KEY, label text);
 CREATE TABLE public.drill_problem_map (
   drill_id uuid, problem_slug text, sort_order int, curated boolean,
@@ -101,7 +127,7 @@ SQL
 { grep -oE "SELECT s\.id, '[0-9a-f-]{36}'" "$MIG70" | grep -oE "[0-9a-f-]{36}"
   grep -oE "'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'" "$MIG71" | tr -d "'"
 } | sort -u \
-  | sed -E "s/(.*)/INSERT INTO public.drill_resources(id, drill_name) VALUES ('\1', 'seeded') ON CONFLICT DO NOTHING;/" \
+  | sed -E "s/(.*)/INSERT INTO public.drill_resources(id, drill_name, competition_level, status) VALUES ('\1', 'seeded', 'both', 'approved') ON CONFLICT DO NOTHING;/" \
   | PSQL -v ON_ERROR_STOP=1 -q
 
 { grep -oE "^SELECT s\.id, '[a-z][a-z0-9-]*'$" "$MIG70" | grep -oE "'[a-z][a-z0-9-]*'" | tr -d "'"

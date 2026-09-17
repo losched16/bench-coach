@@ -21,9 +21,17 @@ import {
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// The library as Phase 2D left it. If any of these move, something wrote to the
-// drill library — which nothing in Phase 2E is allowed to do.
-const EXPECTED = { curated: 220, schedulable: 154, problems: 49, mappings: 393 }
+// The library as Phase 2F left it. If any of these move, something wrote to the
+// drill library outside a migration, which nothing is allowed to do.
+//
+// Phase 2D left 220/154/49/393 and Phase 2E moved none of it. Migration 071
+// deliberately added six canonical drills and seven taxonomy mappings, so the
+// first, second and fourth numbers moved by exactly that and no more.
+//
+// The third number did not move, and that is the one worth watching: 2F.7 said
+// no new problem slug would be invented as a side effect of adding drills, and
+// 49 is that promise still holding.
+const EXPECTED = { curated: 226, schedulable: 160, problems: 49, mappings: 400 }
 
 let failures = 0
 function check(label: string, ok: boolean, evidence: string) {
@@ -61,7 +69,11 @@ async function main() {
     process.exit(failures > 0 ? 1 : 0)
   }
 
-  check('1. pathways load', pathways.length === 4, `${pathways.length} published`)
+  // Seven, not four. The Phase 2E brief asked for four pathways first and this
+  // number was written then; three more were curated and applied afterwards and
+  // the assertion was never moved. A count that lags what is deployed passes
+  // while the deployment is incomplete, which is the opposite of the job.
+  check('1. pathways load', pathways.length === 7, `${pathways.length} published`)
 
   let totalStages = 0
   let totalLinks = 0
