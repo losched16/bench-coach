@@ -11,6 +11,7 @@ import { visibleDrillsSafe, schedulableDrillsSafe, favoriteDrillIds, drillMenuLi
 import { reusableBlock } from '@/lib/practicePlan'
 import { describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
 import { retrieveDrills } from '@/lib/drillRetrieval'
+import { loadPathway, getPathwayPracticeRecommendation } from '@/lib/developmentPathways'
 import { constraintsFromText, ageFromText } from '@/lib/drillConstraints'
 import { MIN_STATION_GROUP } from '@/lib/stationPlanner'
 import {
@@ -54,6 +55,10 @@ export async function POST(request: NextRequest) {
       // one back, and an empty equipment list means "assume the usual kit"
       // rather than "they have nothing".
       objective, equipmentAvailable,
+      // Phase 2E. Both optional and both absent by default: with no
+      // pathwaySlug the pathway block below never runs and this route behaves
+      // exactly as it did before pathways existed.
+      pathwaySlug, pathwayStage,
       // How many adults will be there. Optional, and absence is not a
       // constraint: a blank field means "unknown", which leaves every
       // coach-dependent drill eligible. It is only when a coach tells us
@@ -417,11 +422,90 @@ export async function POST(request: NextRequest) {
         `if a block would leave players idle at this headcount, change the block.`
     }
 
+    // ── the pathway pilot (Phase 2E) ─────────────────────────────────────────
+    //
+    // A coach may say "we are working Build the Swing, stage 4". When they do,
+    // the pathway layer names the stage objective and the drills that serve it,
+    // and that goes into the prompt as a strong preference.
+    //
+    // ENTIRELY OPTIONAL, AND THAT IS THE POINT. With no pathwaySlug this block
+    // does not run, nothing is queried, and `drillPreference` is built exactly
+    // as it was before Phase 2E. A plan generated without a pathway is
+    // byte-for-byte the same request it always was.
+    //
+    // It recommends rather than decides: the drills go in as a preference and
+    // the objective as context. The model still builds the practice, and
+    // everything else in this route — focus areas, favorites, station maths,
+    // the roster — still applies.
+    let pathwayNote = ''
+    let pathwaySummary: any = null
+    if (typeof pathwaySlug === 'string' && pathwaySlug.trim()) {
+      try {
+        const loaded = await loadPathway(supabaseAdmin, pathwaySlug.trim())
+        if (loaded) {
+          const rec = getPathwayPracticeRecommendation({
+            pathway: loaded,
+            currentStage: Number(pathwayStage) || 1,
+            // The pool already assembled above, so the pathway cannot reach a
+            // drill this request would not otherwise have been allowed to see.
+            pool: (drillResources || []) as any[],
+            durationMinutes: null,
+            playerCount: typicalAttendance || roster.length || null,
+            coachCount: coachesPresent || null,
+            equipment: Array.isArray(equipmentAvailable) && equipmentAvailable.length
+              ? equipmentAvailable : null,
+          })
+          if (rec) {
+            pathwaySummary = {
+              pathway: rec.pathway.name,
+              stage: `${rec.stage.number} of ${rec.stage.total} — ${rec.stage.name}`,
+              objective: rec.stage.objective,
+              drills: rec.recommended.map(r => r.drillName),
+              masterySignals: rec.stage.masterySignals,
+              nextStage: rec.nextStage?.name ?? null,
+              warnings: rec.warnings,
+            }
+            pathwayNote =
+              `\n\nTHIS TEAM IS WORKING A DEVELOPMENT PATHWAY: ${rec.pathway.name}, ` +
+              `stage ${rec.stage.number} of ${rec.stage.total} — ${rec.stage.name}.\n` +
+              `The objective of this stage is: ${rec.stage.objective}\n` +
+              (rec.stage.whyItMatters ? `Why it matters: ${rec.stage.whyItMatters}\n` : '') +
+              (rec.recommended.length
+                ? `\nThese drills serve that objective, in teaching order:\n` +
+                  rec.recommended.map(r =>
+                    `- "${r.drillName}" (${r.step}) — ${r.rationale}`).join('\n') +
+                  `\n\nBuild the pathway work out of these and keep them in this order. ` +
+                  `They are a sequence, not a menu: the teaching drill comes before the ` +
+                  `repetition drill, which comes before the game-transfer one.\n`
+                : '\nNo drill in this library can serve that stage under these constraints, ' +
+                  'so build the practice normally and say so in the coach notes.\n') +
+              (rec.stage.masterySignals.length
+                ? `\nWhat tells the coach this stage has landed: ` +
+                  rec.stage.masterySignals.join('; ') +
+                  `. Put that in the coach notes so they know what to watch for.\n`
+                : '') +
+              (rec.stage.commonFailureModes.length
+                ? `What it looks like when it is not landing: ` +
+                  rec.stage.commonFailureModes.join('; ') + `.\n`
+                : '') +
+              `\nThis is ONE part of the practice, not the whole of it. The focus ` +
+              `areas, the warm-up and the rest of the session still apply.`
+          }
+        }
+      } catch (e: any) {
+        // A pathway that fails to load costs the coach the pathway section and
+        // nothing else. The same rule the media and taxonomy layers follow.
+        console.error('Practice plan: pathway load failed:', e?.message)
+      }
+    }
+
     // Favorites and the coach's own drills, said once so the model knows what
     // the marks in the menu mean.
     let drillPreference = (drillResources || []).some((d: any) =>
       favorites.has(d.id) || d.created_by_coach_id
     ) ? DRILL_PREFERENCE_NOTE : ''
+
+    drillPreference += pathwayNote
 
     // Said last so it is the strongest thing in the section. A coach who ticked
     // a drill has made a decision, and a plan that quietly drops it has
@@ -589,6 +673,13 @@ export async function POST(request: NextRequest) {
         // with no data, killed it, and the coach got a 504 with no idea why.
         // Whatever else changes here, something must be written immediately.
         send({ type: 'progress', stage: isRefine ? 'rebuilding' : 'designing' })
+
+        // Phase 2E pilot. Sent only when a pathway was asked for, so a client
+        // that knows nothing about pathways sees exactly the stream it always
+        // saw. It carries WHY these drills were chosen — the stage, the
+        // objective, the mastery signals and the next stage — because a
+        // recommendation a coach cannot interrogate is one they cannot trust.
+        if (pathwaySummary) send({ type: 'pathway', pathway: pathwaySummary })
 
         try {
           // Phase 1: the shape. Small output, so it lands in seconds, and the
