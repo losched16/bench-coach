@@ -349,6 +349,24 @@ check('17. a stage with one option repeats it and says so', (() => {
   const b = planPracticeBlock(thin, 1, 3, POOL, {}, 1)
   return b.length === 3 && b.slice(1).some(x => /repeated/.test(x.note))
 })())
+// Regression: the used-drill set is cleared at a stage boundary so the new
+// stage leads with its own primary. That must not let the plan hand a coach a
+// drill they already ran and call it "All new drills for this stage."
+check('17. a drill returning in a later stage is named, not silently repeated', (() => {
+  const shared: LoadedPathway = {
+    ...PATHWAY,
+    stages: [stage(1, 'first', { estimated_practices_min: 1 }), stage(2, 'second', {})],
+    linksByStage: new Map([
+      ['s-first', [link('s-first', 'd-tee', 'primary')]],
+      ['s-second', [link('s-second', 'd-tee', 'primary')]],
+    ]),
+    problemsByStage: new Map(),
+  }
+  const b = planPracticeBlock(shared, 1, 2, POOL, {}, 1)
+  const ids = b.flatMap(x => x.drills.map(d => d.drillId))
+  const repeatedSomething = new Set(ids).size < ids.length
+  return repeatedSomething && /Already run earlier in this block/.test(b[1].note)
+})())
 check('17. a block advances through stages rather than parking',
   new Set(planPracticeBlock(PATHWAY, 1, 6, POOL, {}, 1).map(b => b.stageNumber)).size > 1)
 check('17. a block never advances past the final stage',

@@ -642,6 +642,20 @@ export interface PracticeBlockEntry {
   note: string
 }
 
+// What to tell the coach about repetition in one practice. A drill that comes
+// back from an earlier stage is named, because "you already did this one" is
+// the useful sentence and silence would be a lie.
+function noteFor(repeatedInStage: number, options: number, fromEarlier: string[]): string {
+  const parts: string[] = []
+  if (repeatedInStage > 0) {
+    parts.push(`${repeatedInStage} drill(s) repeated — this stage has ${options} option(s) in total.`)
+  }
+  if (fromEarlier.length > 0) {
+    parts.push(`Already run earlier in this block, and repeated on purpose: ${fromEarlier.join(', ')}.`)
+  }
+  return parts.length === 0 ? 'All new drills for this stage.' : parts.join(' ')
+}
+
 export function planPracticeBlock(
   p: LoadedPathway,
   startStage: number,
@@ -658,7 +672,12 @@ export function planPracticeBlock(
   // with no estimate gets one practice rather than a guess.
   let stageIndex = Math.max(0, Math.min(stages.length - 1, (startStage || 1) - 1))
   let usedInStage = 0
+  // Two sets, on purpose. usedDrills is cleared at a stage boundary so the new
+  // stage still leads with its own primary drill. usedInBlock is never cleared,
+  // because a coach who has already run a drill this block has run it, whatever
+  // stage it was filed under — and the note has to say so.
   const usedDrills = new Set<string>()
+  const usedInBlock = new Set<string>()
 
   for (let i = 1; i <= practices; i++) {
     const stage = stages[stageIndex]
@@ -682,6 +701,8 @@ export function planPracticeBlock(
     for (const c of picked) usedDrills.add(c.drill.id)
 
     const repeated = picked.filter(c => fresh.indexOf(c) < 0).length
+    const seenEarlier = picked.filter(c => usedInBlock.has(c.drill.id))
+    for (const c of picked) usedInBlock.add(c.drill.id)
     out.push({
       practice: i,
       stageNumber: stage.stage_number,
@@ -691,9 +712,7 @@ export function planPracticeBlock(
         drillId: c.drill.id, drillName: String(c.drill.drill_name || ''),
         role: c.role, step: c.step,
       })),
-      note: repeated === 0
-        ? 'All new drills for this stage.'
-        : `${repeated} drill(s) repeated — this stage has ${candidates.length} option(s) in total.`,
+      note: noteFor(repeated, candidates.length, seenEarlier.map(c => String(c.drill.drill_name || ''))),
     })
 
     usedInStage++
