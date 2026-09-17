@@ -504,6 +504,64 @@ function readCsv(file: string): Array<Record<string, string>> {
 
 const q = (v: string) => `"${String(v ?? '').replace(/"/g, '""')}"`
 
+// The six proposed rows, as a sheet somebody can sit down and reject line by
+// line. The teaching job and the duplication argument come from the audit
+// above; the rest is read out of migration 071, so the sheet describes the row
+// that would actually be inserted rather than the row that was proposed.
+function emitReview() {
+  const mig = path.join(ROOT, 'migrations', '071_pathway_coverage_expansion.sql')
+  if (!fs.existsSync(mig)) { console.log('  (071 not written yet — no review sheet)'); return }
+  const sql = fs.readFileSync(mig, 'utf8')
+  const block = sql.split('ON CONFLICT (id) DO NOTHING')[0]
+
+  // id, name, category, primary_skill are the first four values of each tuple.
+  const rows: Array<Record<string, string>> = []
+  const re = /^\('([0-9a-f-]{36})','((?:[^']|'')*)','((?:[^']|'')*)','((?:[^']|'')*)'/gm
+  let m: RegExpExecArray | null
+  while ((m = re.exec(block))) {
+    rows.push({ id: m[1], name: m[2].replace(/''/g, "'"), category: m[3], skill: m[4] })
+  }
+
+  const attach = new Map<string, { pathway: string; stage: string; role: string }>()
+  const aRe = /\('([a-z0-9-]+)','([a-z0-9-]+)','([0-9a-f-]{36})','(\w+)',\d+,/g
+  while ((m = aRe.exec(sql))) attach.set(m[3], { pathway: m[1], stage: m[2], role: m[4] })
+
+  const mapped = new Map<string, string[]>()
+  const mBlock = sql.split('drill_problem_map')[1]?.split('ON CONFLICT')[0] || ''
+  const mRe = /\('([0-9a-f-]{36})','([a-z0-9-]+)',\d+,true\)/g
+  while ((m = mRe.exec(mBlock))) mapped.set(m[1], (mapped.get(m[1]) || []).concat([m[2]]))
+
+  const head = ['drill_id', 'drill_name', 'skill_category', 'primary_skill',
+    'pathway_slug', 'stage_key', 'stage_role', 'problem_slugs',
+    'teaching_job', 'why_not_a_duplicate', 'confidence',
+    'runnable_with_no_video', 'has_safety_note', 'reviewer_decision']
+  const lines = [head.join(',')]
+
+  for (const r of rows) {
+    const j = JUDGEMENTS.find(x => x.proposed_activity_name.replace(/''/g, "'") === r.name)
+    const a = attach.get(r.id)
+    // Bounded to this tuple. An unbounded slice runs into the next row and
+    // reports its NULL safety note as this one's.
+    const start = block.indexOf(`('${r.id}'`)
+    const nextAt = block.indexOf("\n('", start + 1)
+    const tuple = block.slice(start, nextAt < 0 ? undefined : nextAt)
+    lines.push([
+      r.id, r.name, r.category, r.skill,
+      a?.pathway || '', a?.stage || '', a?.role || '',
+      (mapped.get(r.id) || []).join(' '),
+      j?.teaching_job_missing || '', j?.evidence_basis || '', j?.confidence || '',
+      // Every row in this library must work with no video. None of the six
+      // references one, and this reads the row rather than trusting that.
+      /youtube|video|watch the clip/i.test(tuple) ? 'NO — references video' : 'yes',
+      /,NULL,ARRAY\['/.test(tuple) ? 'no' : 'yes',
+      '',
+    ].map(q).join(','))
+  }
+  const out = path.join(ROOT, 'docs', 'audits', 'new-canonical-review.csv')
+  fs.writeFileSync(out, lines.join('\n') + '\n')
+  console.log(`  ${rows.length} proposed rows → ${path.relative(ROOT, out)}`)
+}
+
 function main() {
   const sql = fs.readFileSync(SQL, 'utf8')
   const { drills, probs, stageKey } = parseAttachments(sql)
@@ -557,6 +615,7 @@ function main() {
   }
 
   fs.writeFileSync(OUT, out.join('\n') + '\n')
+  emitReview()
   const adds = JUDGEMENTS.filter(j => j.editorial_decision === 'ADD_CANONICAL')
   const attach = JUDGEMENTS.filter(j => j.editorial_decision === 'MATCH_EXISTING')
   console.log(`${needed.length} THIN/GAP stages audited → ${path.relative(ROOT, OUT)}`)
