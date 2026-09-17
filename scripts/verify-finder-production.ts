@@ -76,8 +76,8 @@ async function main() {
   if (!rows) { console.log('\nFAIL — nothing else can be checked.\n'); process.exit(1) }
 
   const drills = (rows as DrillRecord[]).filter(d => isSchedulable(d))
-  const media = groupByDrill(mediaRows as DrillMedia[])
-  const shares = sharedVideoCounts(mediaRows as DrillMedia[])
+  const media = groupByDrill(mediaRows as unknown as DrillMedia[])
+  const shares = sharedVideoCounts(mediaRows as unknown as DrillMedia[])
   const index = buildFinderIndex(tax as any[], map as any[])
 
   check('all four reads inside a sensible page load', elapsed < 8000, `${elapsed}ms for four queries`)
@@ -156,8 +156,8 @@ async function main() {
   // Guard the future: the day somebody curates a timestamp, this flips and the
   // check above starts meaning something different. Say so rather than letting
   // a silent 0 keep passing.
-  const verified = (mediaRows as DrillMedia[] || []).filter(m => m.verification_status === 'verified').length
-  const stamped = (mediaRows as DrillMedia[] || []).filter(m => m.start_seconds != null).length
+  const verified = (mediaRows as unknown as DrillMedia[] || []).filter(m => m.verification_status === 'verified').length
+  const stamped = (mediaRows as unknown as DrillMedia[] || []).filter(m => m.start_seconds != null).length
   check('the media baseline is unchanged', verified === 0 && stamped === 0,
     `${verified} verified, ${stamped} stamped — if these move, re-read the media labels`)
 

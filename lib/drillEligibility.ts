@@ -42,6 +42,13 @@ function asArray(v: unknown): string[] {
   return []
 }
 
+// ── the roster and the calendar ─────────────────────────────────────────────
+//
+// Moved here from lib/drillRetrieval alongside the three above, for the same
+// reason: the pathway service asks the same questions and must not import the
+// Anthropic SDK to do it. Same rule throughout — an unknown value never
+// excludes.
+
 /**
  * Indoor/outdoor. `Both` and `Indoor/Outdoor` satisfy either request.
  *
@@ -65,8 +72,26 @@ export function environmentEligible(d: DrillRecord, want?: 'indoor' | 'outdoor' 
   return v.includes('indoor')
 }
 
+// Every value production actually holds, plus the ones it plausibly could.
+//
+// 'full field' was missing, and it is the commonest large value in the library:
+// 18 of the 154 schedulable drills carry "Full Field" or "Full field", and an
+// unrecognised value falls through the "unknown passes" branch. So a coach who
+// said they had a small space was still being offered the Base Running Circuit
+// and the Pro Base-Stealing Package — by the practice planner, by the Drill
+// Finder's space filter, and by anything else built on this.
+//
+// The lesson is the generous default, not the missing row: "unknown passes" is
+// the right rule for a genuinely unknown value and a silent trapdoor for a
+// value the table simply forgot. Hence the coverage test in
+// scripts/test-pathways.ts, which asserts against the values production holds
+// rather than against this table.
 const SPACE_RANK: Record<string, number> = {
-  small: 1, medium: 2, 'medium-large': 3, large: 3, 'outfield/large': 4, outfield: 4, field: 4,
+  small: 1,
+  medium: 2,
+  'medium-large': 3, large: 3,
+  'full field': 4, 'full-field': 4, full: 4,
+  'outfield/large': 4, outfield: 4, field: 4,
 }
 
 /** A drill needing more room than the coach has is out. Unknown space passes. */
@@ -95,4 +120,46 @@ export function equipmentEligible(d: DrillRecord, have?: string[] | null): boole
     n.includes('none') || n === 'no equipment' ||
     got.some(g => g.includes(n) || n.includes(g))
   )
+}
+/**
+ * Age eligibility.
+ *
+ * Both bounds are populated on 206/206 production rows, so this is a real
+ * filter rather than a nominal one — but it still only runs when an age is
+ * known, and a drill missing a bound is never excluded by it.
+ */
+export function ageEligible(d: DrillRecord, playerAge?: number | null): boolean {
+  if (playerAge == null) return true
+  const min = d.min_age, max = d.max_age
+  if (min == null || max == null) return true
+  return playerAge >= min && playerAge <= max
+}
+
+/**
+ * Enough players for the activity, and not too many.
+ *
+ * HARD, but only when both sides are known. A drill that never declared a
+ * minimum is eligible for any group; a session that never declared a headcount
+ * gates nothing. 206 rows currently declare nothing, so this is inert until
+ * calibration data arrives — which is the correct order to build it in.
+ */
+export function playerCountEligible(d: DrillRecord, expected?: number | null): boolean {
+  if (expected == null || !Number.isFinite(expected)) return true
+  if (typeof d.min_players === 'number' && expected < d.min_players) return false
+  // max_players is a station-sizing hint more than a hard ceiling — a drill
+  // built for 4 can be run by 12 in three groups — so it does not exclude.
+  return true
+}
+
+/**
+ * Enough adults.
+ *
+ * The sharpest of these gates, and the one the brief is most concerned with. A
+ * single coach cannot run three simultaneous coach-fed stations, and a plan
+ * that says otherwise is not a plan.
+ */
+export function coachCountEligible(d: DrillRecord, coaches?: number | null): boolean {
+  if (coaches == null || !Number.isFinite(coaches)) return true
+  if (typeof d.min_coaches === 'number' && coaches < d.min_coaches) return false
+  return true
 }

@@ -46,8 +46,14 @@ import { Diagnosis, TaxonomyRow, diagnose, loadTaxonomy, ageCaveats } from '@/li
 // Finder can import them in the browser without dragging the Anthropic SDK in
 // behind them. Re-exported so every existing caller of this module is
 // unaffected, and so there stays exactly one copy of the rules.
-import { environmentEligible, spaceEligible, equipmentEligible } from '@/lib/drillEligibility'
-export { environmentEligible, spaceEligible, equipmentEligible }
+import {
+  environmentEligible, spaceEligible, equipmentEligible,
+  ageEligible, playerCountEligible, coachCountEligible,
+} from '@/lib/drillEligibility'
+export {
+  environmentEligible, spaceEligible, equipmentEligible,
+  ageEligible, playerCountEligible, coachCountEligible,
+}
 
 // ---------------------------------------------------------------------------
 // Inputs and outputs
@@ -205,19 +211,6 @@ function asArray(v: unknown): string[] {
   return []
 }
 
-/**
- * Age eligibility.
- *
- * Both bounds are populated on 206/206 production rows, so this is a real
- * filter rather than a nominal one — but it still only runs when an age is
- * known, and a drill missing a bound is never excluded by it.
- */
-export function ageEligible(d: DrillRecord, playerAge?: number | null): boolean {
-  if (playerAge == null) return true
-  const min = d.min_age, max = d.max_age
-  if (min == null || max == null) return true
-  return playerAge >= min && playerAge <= max
-}
 
 /**
  * Whether a drill's rec/travel scoping excludes it for this team.
@@ -305,34 +298,7 @@ export function skillAffinity(d: DrillRecord, want?: string | null): number {
 // Can this actually be run today?
 // ---------------------------------------------------------------------------
 
-/**
- * Enough players for the activity, and not too many.
- *
- * HARD, but only when both sides are known. A drill that never declared a
- * minimum is eligible for any group; a session that never declared a headcount
- * gates nothing. 206 rows currently declare nothing, so this is inert until
- * calibration data arrives — which is the correct order to build it in.
- */
-export function playerCountEligible(d: DrillRecord, expected?: number | null): boolean {
-  if (expected == null || !Number.isFinite(expected)) return true
-  if (typeof d.min_players === 'number' && expected < d.min_players) return false
-  // max_players is a station-sizing hint more than a hard ceiling — a drill
-  // built for 4 can be run by 12 in three groups — so it does not exclude.
-  return true
-}
 
-/**
- * Enough adults.
- *
- * The sharpest of these gates, and the one the brief is most concerned with. A
- * single coach cannot run three simultaneous coach-fed stations, and a plan
- * that says otherwise is not a plan.
- */
-export function coachCountEligible(d: DrillRecord, coaches?: number | null): boolean {
-  if (coaches == null || !Number.isFinite(coaches)) return true
-  if (typeof d.min_coaches === 'number' && coaches < d.min_coaches) return false
-  return true
-}
 
 /** Soft: how far the group size is from what the activity is built for. */
 export function groupSizeAffinity(d: DrillRecord, groupSize?: number | null): number {
