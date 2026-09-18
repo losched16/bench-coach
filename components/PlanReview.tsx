@@ -275,6 +275,16 @@ interface Props {
    */
   onOverviewChange?: (patch: Record<string, any>) => void
   /**
+   * Why this practice is focused the way it is, when the coach built it from a
+   * development pathway (Phase 2G). Optional and absent by default — a plan
+   * built without a pathway renders exactly as it did before, with no empty
+   * card and no placeholder.
+   *
+   * Read-only. It describes the request that produced this plan, so editing it
+   * here would make it disagree with what was actually built.
+   */
+  pathwayContext?: React.ReactNode
+  /**
    * The practice's own settings: how long it is and when it starts. These
    * live outside the blocks — on the page's form for a draft, on the row for
    * a saved plan — so the caller decides where a change goes.
@@ -298,6 +308,7 @@ export function PlanReview({
   genError, drillResources = [], coachId = null, favorites, onFavoritesChanged, footer,
   onOverviewChange, onSettingsChange,
   drills = [], drillsLoading = false, focusAreas = [],
+  pathwayContext,
 }: Props) {
   const blocks: any[] = draft?.blocks || []
   // -1 is the overview. It is a rail row rather than a banner above the blocks
@@ -701,6 +712,11 @@ export function PlanReview({
         <div className="flex-1 overflow-y-auto min-h-0">
           {selected === -1 ? (
             <div className="p-5 space-y-4 max-w-3xl">
+              {/* The development focus this practice was built around, when
+                  there was one. First in the overview because it is the answer
+                  to "why does this practice look like this", which is the
+                  question a coach asks before they read the blocks. */}
+              {pathwayContext}
               {/* The overview is what the sheet prints above the blocks. It
                   can be edited by hand when the caller allows it, with the
                   same toggle a block has and the same undo. */}

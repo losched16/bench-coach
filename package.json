@@ -90,6 +90,7 @@
     "test:drill-finder": "npx --yes tsx --tsconfig tsconfig.json scripts/test-drill-finder.ts",
     "audit:finder-search": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/audit-finder-search.ts",
     "fixture:finder-harness": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/build-finder-harness-fixture.ts",
+    "accept:pathway-ui": "node scripts/acceptance-pathway-ui.mjs",
     "acceptance:finder": "node scripts/acceptance-drill-finder.mjs",
     "verify:finder-prod": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-finder-production.ts",
     "index:library": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/library-index.ts",
@@ -100,8 +101,10 @@
     "audit:pathways": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/emit-pathways.ts --audit",
     "test:migration-070": "bash scripts/test-migration-070.sh",
     "test:migration-071": "bash scripts/test-migration-071.sh",
+    "test:pathway-ui": "npx --yes tsx --tsconfig tsconfig.json scripts/test-pathway-ui.ts",
     "test:pathways": "npx --yes tsx --tsconfig tsconfig.json scripts/test-pathways.ts",
     "verify:071": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-071.ts",
+    "verify:pathway-ui-prod": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-pathway-ui-prod.ts",
     "verify:pathways-prod": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-pathways-production.ts"
   },
   "dependencies": {

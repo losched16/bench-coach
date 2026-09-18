@@ -196,6 +196,31 @@ check('15. a drill with no min_coaches is never excluded by coaches',
 check('15. indoor excludes an outdoor-only drill', !feasible(FRONT, { environment: 'indoor' }))
 check('15. indoor keeps a Both drill', feasible(TEE, { environment: 'indoor' }))
 check('15. a small space excludes a full-field drill', !feasible(GAME, { space: 'small' }))
+// Phase 2G.6, at the level 2G actually exposes.
+//
+// The predicate tests above prove feasible() is right about a full-field drill.
+// This proves the STAGE cannot smuggle one past it: 'd-game' is linked to the
+// game stage as its primary, and a coach with a small space must still not be
+// offered it. Belonging to the chosen pathway stage is not a reason to hand a
+// coach a drill their field cannot hold.
+const gameStageSmall = stageCandidates(PATHWAY, S3, POOL, { space: 'small' })
+check('2G.6. a pathway stage does not override the space constraint',
+  gameStageSmall.every(c => c.drill.id !== 'd-game'),
+  gameStageSmall.map(c => c.drill.id).join(', ') || 'no candidates')
+// Note the asymmetry, which is pre-existing and correct: a DRILL may require
+// 'Full Field', but the largest space a COACH can declare is 'large'. So the
+// positive case is the unconstrained one — with no space stated, nothing is
+// excluded for space, which is the "unknown stays unknown" rule.
+check('2G.6. the same stage does offer the full-field drill when space is unstated',
+  stageCandidates(PATHWAY, S3, POOL, {}).some(c => c.drill.id === 'd-game'))
+// And the recommendation the route actually builds, not just the candidate list.
+const smallRec = getPathwayPracticeRecommendation({
+  pathway: PATHWAY, currentStage: 3, pool: POOL, space: 'small',
+})
+check('2G.6. nothing recommended for a small space needs a full field',
+  !smallRec || smallRec.recommended.every(r => r.drillId !== 'd-game'),
+  (smallRec?.recommended || []).map(r => r.drillName).join(', ') || 'nothing recommended')
+
 check('15. equipment the coach lacks excludes', !feasible(TEE, { equipment: ['Gloves'] }))
 check('15. equipment the coach has keeps', feasible(TEE, { equipment: ['Tee', 'Baseballs'] }))
 
@@ -431,3 +456,13 @@ check('21. a stage with no drills yields a warning, not an exception', (() => {
   console.log('  24. zero drill rows deleted          npm run verify:pathways-prod')
   console.log('')
 })()
+
+// Guard against the assertion above passing for the wrong reason: if `space`
+// were not a real input, the small-space recommendation would be identical to
+// the unconstrained one and the check would prove nothing.
+const openRec = getPathwayPracticeRecommendation({
+  pathway: PATHWAY, currentStage: 3, pool: POOL,
+})
+check('2G.6. the space input genuinely changes the recommendation',
+  !!openRec && openRec.recommended.some(r => r.drillId === 'd-game'),
+  `unconstrained recommendation: ${(openRec?.recommended || []).map(r => r.drillName).join(', ') || 'none'}`)

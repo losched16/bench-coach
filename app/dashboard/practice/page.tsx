@@ -8,7 +8,13 @@ import { formatDate } from '@/lib/utils'
 import Link from 'next/link'
 import { DrillVideo, DrillVideoLookup } from '@/components/DrillVideo'
 import { useDrillResources } from '@/lib/useDrillResources'
-import { usePageView } from '@/lib/tracking'
+import { usePageView, useTracker } from '@/lib/tracking'
+import { PathwayPicker, PathwayContextCard } from '@/components/pathwayPicker/PathwayPicker'
+import type { PathwayContext, LoadState } from '@/components/pathwayPicker/PathwayPicker'
+import { loadPathways, loadPathway, orderedStages } from '@/lib/developmentPathways'
+import type { LoadedPathway } from '@/lib/developmentPathways'
+import { toOption, focusForPathway, resolveStageNumber } from '@/lib/pathwayUi'
+import type { PathwayOption } from '@/lib/pathwayUi'
 import { TemplateGallery } from '@/components/TemplateGallery'
 import { TeamOnly } from '@/components/TeamOnly'
 import { todayStr } from '@/lib/entries'
@@ -120,6 +126,22 @@ function PracticeContent() {
   // it is the default on purpose — a solo coach gets a different practice, and
   // guessing which one they are is worse than planning for the usual case.
   const [coachCount, setCoachCount] = useState<number | null>(null)
+
+  // ── development pathway (Phase 2G) ────────────────────────────────────────
+  //
+  // Every one of these is null/empty by default, and stays that way unless the
+  // coach picks a pathway. A practice built without touching this section sends
+  // exactly the request it sent before Phase 2G existed.
+  const [pathwayOptions, setPathwayOptions] = useState<PathwayOption[]>([])
+  const [pathwayState, setPathwayState] = useState<LoadState>('idle')
+  const [pathwaySlug, setPathwaySlug] = useState<string | null>(null)
+  const [pathwayLoaded, setPathwayLoaded] = useState<LoadedPathway | null>(null)
+  const [pathwayStageState, setPathwayStageState] = useState<LoadState>('idle')
+  const [pathwayStage, setPathwayStage] = useState<number | null>(null)
+  // The summary the route streams back on a pathway-guided build. The route
+  // has sent this since Phase 2E; until now the page dropped it on the floor.
+  const [pathwayContext, setPathwayContext] = useState<PathwayContext | null>(null)
+  const track = useTracker()
   // The plan before it is committed. Generating straight into the database
   // meant the first version was the only version — a coach who wanted one
   // thing changed had to delete it and start over.
@@ -214,6 +236,17 @@ function PracticeContent() {
   // it, and the builder opens with all of it filled in. Nothing generates
   // until the coach presses the button: they see what was understood first.
   const [fromChatAnswer, setFromChatAnswer] = useState<string | null>(null)
+
+  // Pathways load the first time the generate modal opens, not on page load:
+  // the common visit to this page is reading a saved plan, which needs none of
+  // it. Loaded once and kept — published pathways do not change mid-session.
+  useEffect(() => {
+    if (!showPlanModal || draft) return
+    if (pathwayState === 'idle') {
+      track('pathway_picker_opened')
+      loadPathwayList()
+    }
+  }, [showPlanModal, draft]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const prompt = searchParams.get('prompt')
@@ -473,6 +506,59 @@ function PracticeContent() {
     confirmSwap(newBlock)
   }
 
+  // Published pathways, loaded once the coach opens the generate modal rather
+  // than on page load — the plan list is the common case and does not need them.
+  const loadPathwayList = async () => {
+    setPathwayState('loading')
+    try {
+      const rows = await loadPathways(supabase)
+      // loadPathways swallows a missing table and returns []. That is right for
+      // the planner, which must survive a database without migration 069, but
+      // here an empty list and a failed load say different things to a coach,
+      // so the stage counts come from a second read that is allowed to throw.
+      const { data, error } = await supabase
+        .from('development_pathway_stages').select('pathway_id')
+      if (error) throw error
+      const counts = new Map<string, number>()
+      for (const s of (data || []) as any[]) {
+        counts.set(s.pathway_id, (counts.get(s.pathway_id) || 0) + 1)
+      }
+      setPathwayOptions(rows.map(p => toOption(p, counts.get(p.id) || 0)))
+      setPathwayState('ready')
+    } catch (e) {
+      console.error('Pathways failed to load:', e)
+      setPathwayState('error')
+    }
+  }
+
+  const choosePathway = async (slug: string | null) => {
+    setPathwaySlug(slug)
+    setPathwayLoaded(null)
+    setPathwayStage(null)
+    if (!slug) { setPathwayStageState('idle'); return }
+
+    setPathwayStageState('loading')
+    try {
+      const loaded = await loadPathway(supabase, slug)
+      if (!loaded) throw new Error('pathway not found')
+      setPathwayLoaded(loaded)
+      const first = orderedStages(loaded)[0]?.stage_number ?? null
+      setPathwayStage(first)
+      setPathwayStageState('ready')
+
+      // Picking a pathway answers "what are we working on", so the form should
+      // not ask again. Added, never substituted: a focus the coach chose stays.
+      const implied = focusForPathway(slug, loaded.pathway.skill_category)
+      if (implied && FOCUS_OPTIONS.includes(implied)) {
+        setFocusAreas(prev =>
+          prev.includes(implied) || prev.length >= 5 ? prev : [...prev, implied])
+      }
+    } catch (e) {
+      console.error('Pathway stages failed to load:', e)
+      setPathwayStageState('error')
+    }
+  }
+
   const toggleFocus = (focus: string) => {
     setFocusAreas(prev =>
       prev.includes(focus) ? prev.filter(f => f !== focus) : [...prev, focus]
@@ -485,6 +571,26 @@ function PracticeContent() {
     setGenerating(true)
     setBlocksWritten(0)
     setGenError(null)
+    // Cleared every time, or a rebuild after clearing the pathway would keep
+    // showing the focus card from the build before it.
+    setPathwayContext(null)
+
+    if (pathwaySlug) {
+      const s = orderedStages(pathwayLoaded).find(x => x.stage_number === pathwayStage)
+      track('pathway_practice_generated', {
+        pathway_slug: pathwaySlug,
+        stage_number: pathwayStage,
+        stage_key: s?.stage_key,
+        // How much the library holds for this stage. The number, not our word
+        // for the number — "THIN" is an audit label and does not belong here.
+        stage_drill_count: s ? (pathwayLoaded?.linksByStage.get(s.id) || []).length : 0,
+        duration,
+        // No player-count field exists on this form — the route derives
+        // attendance from the roster. Recording null would imply we asked.
+        coach_count: coachCount ?? null,
+        age_group: teamAgeGroup,
+      })
+    }
 
     try {
       const response = await fetch('/api/practice-plan', {
@@ -515,6 +621,13 @@ function PracticeContent() {
           // On a rebuild, what they already read. Blocks that survive the
           // change keep the exact wording rather than being written again.
           previousBlocks: constraintsOverride ? (draft?.blocks || []) : undefined,
+          // Phase 2G. Both undefined unless the coach picked a pathway, and
+          // JSON.stringify drops an undefined field entirely — so a plan built
+          // without a pathway sends the same bytes it always did. The test
+          // asserts the serialized body rather than the object, because that
+          // is the thing the route actually receives.
+          pathwaySlug: pathwaySlug || undefined,
+          pathwayStage: pathwaySlug ? (pathwayStage ?? undefined) : undefined,
         }),
       })
 
@@ -566,6 +679,10 @@ function PracticeContent() {
             })
             setBlocksWritten(n => n + 1)
           }
+
+          // The pathway summary the route has streamed since Phase 2E. Coach-
+          // facing already — no ids, no ranks, no internal curation status.
+          if (msg.type === 'pathway') setPathwayContext(msg.pathway || null)
 
           if (msg.type === 'plan') data = msg.plan
         }
@@ -1260,6 +1377,9 @@ function PracticeContent() {
             }
           }}
           onClose={() => { setShowPlanModal(false); setDraft(null); setGenError(null) }}
+          // Null unless this plan was built from a pathway, in which case the
+          // card renders the summary the route streamed back.
+          pathwayContext={<PathwayContextCard context={pathwayContext} />}
           duration={duration}
           timeLabels={timeLabelsFor({ blocks: draft.blocks || [] }, startTime || null)}
           coverage={coverageFor({ ...draft, blocks: draft.blocks || [] }, focusAreas, drillResources)}
@@ -1443,6 +1563,24 @@ function PracticeContent() {
                 </p>
               </div>
 
+
+              {/* Phase 2G. Above the focus chips on purpose: the pathway says
+                  what the team is DEVELOPING, the chips say what tonight
+                  COVERS. Two questions, asked in that order, kept visibly
+                  apart. Entirely optional — skip it and the practice builds
+                  exactly as it did before pathways existed. */}
+              <PathwayPicker
+                pathways={pathwayOptions}
+                state={pathwayState}
+                onRetry={() => { pathwaySlug ? choosePathway(pathwaySlug) : loadPathwayList() }}
+                selectedSlug={pathwaySlug}
+                loaded={pathwayLoaded}
+                stageState={pathwayStageState}
+                stageNumber={pathwayStage}
+                onSelectPathway={choosePathway}
+                onSelectStage={setPathwayStage}
+                onTrack={track}
+              />
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
