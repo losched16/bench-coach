@@ -28,6 +28,7 @@ feature events at all. The events below are the first.
 
 | Event | Fires when | Where |
 |---|---|---|
+| `practice_generated` | **every** generation, pathway or not | `app/dashboard/practice/page.tsx` |
 | `pathway_picker_opened` | the Generate Practice modal opens for the first time in a session | `app/dashboard/practice/page.tsx` |
 | `pathway_selected` | a coach taps a pathway | `PathwayPicker` |
 | `pathway_stage_selected` | a coach moves stage — previous, next, or the jump menu | `PathwayPicker` |
@@ -40,12 +41,29 @@ feature events at all. The events below are the first.
 
 | Event | Properties |
 |---|---|
+| `practice_generated` | `used_pathway`, `pathway_slug`, `is_refine`, `duration`, `focus_count`, `coach_count`, `age_group` |
 | `pathway_picker_opened` | — |
 | `pathway_selected` | `pathway_slug`, `stage_count` |
 | `pathway_stage_selected` | `pathway_slug`, `stage_number`, `stage_key`, `via` (`previous` / `next` / `jump`) |
 | `pathway_cleared` | `pathway_slug` |
 | `pathway_practice_generated` | `pathway_slug`, `stage_number`, `stage_key`, `stage_drill_count`, `duration`, `coach_count`, `age_group` |
 | retry events | `pathway_slug` where one is selected |
+
+### Why `practice_generated` exists
+
+The first question this phase has to answer is *what share of practice
+generations use a pathway*, and `pathway_practice_generated` alone cannot
+answer it — it is a numerator with no denominator. `practice_generated` fires
+on every generation and carries `used_pathway`, which makes the share
+computable. `is_refine` separates a rebuild from a first build so a coach who
+refines three times does not read as four practices.
+
+This was missing when Phase 2G was first merged and was added before the
+deploy was observed, because an unmeasurable headline metric is worse than no
+metric — it looks like it is being tracked.
+
+The queries that answer this and the sequence-vs-filter question are in
+`docs/audits/phase2g-observation-queries.sql`.
 
 ## What is deliberately not recorded
 

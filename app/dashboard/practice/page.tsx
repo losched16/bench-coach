@@ -575,6 +575,21 @@ function PracticeContent() {
     // showing the focus card from the build before it.
     setPathwayContext(null)
 
+    // Every generation, pathway or not. Without this there is no denominator:
+    // "what share of practices are built from a pathway" is the first question
+    // Phase 2G exists to answer, and pathway_practice_generated alone cannot
+    // answer it. isRefine separates a rebuild from a first build, so a coach
+    // who refines three times does not read as four practices.
+    track('practice_generated', {
+      used_pathway: !!pathwaySlug,
+      pathway_slug: pathwaySlug || null,
+      is_refine: !!constraintsOverride,
+      duration,
+      focus_count: focusAreas.length,
+      coach_count: coachCount ?? null,
+      age_group: teamAgeGroup,
+    })
+
     if (pathwaySlug) {
       const s = orderedStages(pathwayLoaded).find(x => x.stage_number === pathwayStage)
       track('pathway_practice_generated', {
