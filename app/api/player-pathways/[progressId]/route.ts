@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js'
 import { authorizeProgress, authzResponse } from '@/lib/authz'
 import { loadPathway, orderedStages, getPathwayPracticeRecommendation } from '@/lib/developmentPathways'
 import { visibleDrills } from '@/lib/drills'
+import { loadMediaFor, loadAllMedia, mediaForDrill, sharedVideoCounts, sharedCountFor } from '@/lib/drillMedia'
+import { describeMedia } from '@/lib/drillFinder'
 import { migrationHintFor } from '@/lib/migrationHints'
 
 export const dynamic = 'force-dynamic'
@@ -72,8 +74,35 @@ export async function GET(
           currentStage: stage.stage_number,
           pool: (pool || []) as any[],
         })
-        drills = (rec?.recommended || []).map(d => {
+        const recommended = rec?.recommended || []
+
+        // MEDIA, THROUGH THE EXISTING SYSTEM AND NOTHING ELSE.
+        //
+        // No URL is constructed here and no timestamp is invented. lib/drillMedia
+        // reads drill_media_resources, falls back to the legacy youtube_* columns
+        // for drills the backfill never touched, drops anything 'rejected', and
+        // ranks verified above unverified. That is the same path Player Reports,
+        // the practice sheet and the Drill Finder take, so a coach cannot be
+        // shown one thing here and another there.
+        //
+        // loadAllMedia pulls the whole table (~219 rows) because "is this a
+        // compilation?" is not a property of one drill's row — it is a property
+        // of the table. Without it this surface would have to either guess or
+        // promise, and describeMedia is what turns the answer into words that
+        // do not overclaim: a shared video with no timestamp is offered as
+        // "Source video · covers N drills from this library", never as
+        // "watch this drill".
+        const [mediaByDrill, allMedia] = await Promise.all([
+          loadMediaFor(supabaseAdmin, recommended.map(d => d.drillId)),
+          loadAllMedia(supabaseAdmin),
+        ])
+        const shareCounts = sharedVideoCounts(allMedia)
+
+        drills = recommended.map(d => {
           const full = byId.get(d.drillId) || {}
+          const playable = mediaForDrill(
+            { ...full, id: d.drillId } as any, mediaByDrill.get(d.drillId))
+
           return {
             id: d.drillId,
             drill_name: d.drillName,
@@ -83,11 +112,29 @@ export async function GET(
             est_duration_minutes: d.estimatedMinutes,
             equipment_needed: full.equipment_needed ?? null,
             space_required: full.space_required ?? null,
+            indoor_outdoor: full.indoor_outdoor ?? null,
+            requires_partner: full.requires_partner ?? null,
+            min_players: full.min_players ?? null,
+            ideal_group_size: full.ideal_group_size ?? null,
+            age_range: full.age_range ?? null,
+            difficulty_level: full.difficulty_level ?? null,
             reps_guidance: full.reps_guidance ?? null,
+            // The four fields that make a drill runnable by a coach who has
+            // never seen it, and which this page was fetching and throwing away.
             description: full.description ?? null,
             ai_coaching_notes: full.ai_coaching_notes ?? null,
+            regression_notes: full.regression_notes ?? null,
+            progression_notes: full.progression_notes ?? null,
             success_markers: full.success_markers ?? null,
+            common_flaws_fixed: full.common_flaws_fixed ?? null,
             safety_notes: full.safety_notes ?? null,
+            media: playable.map(m => ({
+              ...m,
+              // Computed server-side so the client cannot accidentally render a
+              // compilation as though it were a demonstration of this drill.
+              presentation: describeMedia(m, sharedCountFor(m, shareCounts)),
+              shared_with: sharedCountFor(m, shareCounts),
+            })),
           }
         })
       }

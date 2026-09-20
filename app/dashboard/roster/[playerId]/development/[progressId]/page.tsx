@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useMemo, useState, Suspense } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import {
-  ArrowLeft, Loader2, Check, ChevronRight, ChevronLeft, CheckCircle2,
-  Gauge, ClipboardList, Dumbbell, X, CalendarPlus,
+  ArrowLeft, Loader2, Check, ChevronRight, ChevronLeft, ChevronDown, ChevronUp,
+  CheckCircle2, Gauge, ClipboardList, Dumbbell, X, CalendarPlus,
+  AlertTriangle, Play, ExternalLink,
 } from 'lucide-react'
+import { DrillVideo } from '@/components/DrillVideo'
 import { usePageView, useTracker } from '@/lib/tracking'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { useRole } from '@/lib/useRole'
@@ -55,14 +57,43 @@ interface Detail {
   player: { id: string; name: string } | null
   events: PlayerPathwayEvent[]
   pathway: { slug: string; name: string; skill_category: string | null; stages: PathwayStage[] } | null
-  drills: Array<{
-    id: string; drill_name: string; role: string; rationale: string
-    est_duration_minutes: number | null; equipment_needed: string[] | null
-    space_required: string | null; reps_guidance: string | null
-    description: string | null; ai_coaching_notes: string | null
-    success_markers: string[] | null; safety_notes: string | null
-  }>
+  drills: StageDrill[]
   stageMissing: boolean
+}
+
+interface StageDrill {
+  id: string
+  drill_name: string
+  role: string
+  rationale: string
+  est_duration_minutes: number | null
+  equipment_needed: string[] | null
+  space_required: string | null
+  indoor_outdoor: string | null
+  requires_partner: boolean | null
+  min_players: number | null
+  ideal_group_size: number | null
+  age_range: string | null
+  difficulty_level: string | null
+  reps_guidance: string | null
+  description: string | null
+  ai_coaching_notes: string | null
+  regression_notes: string | null
+  progression_notes: string | null
+  success_markers: string[] | null
+  common_flaws_fixed: string[] | null
+  safety_notes: string | null
+  media: Array<{
+    media_type: string
+    url: string
+    title: string | null
+    source_name: string | null
+    thumbnail_url: string | null
+    start_seconds: number | null
+    verification_status: string
+    presentation: { label: string; note: string | null }
+    shared_with: number
+  }>
 }
 
 function DevelopmentPlanContent() {
@@ -391,29 +422,7 @@ function DevelopmentPlanContent() {
             ) : (
               <div className="divide-y divide-gray-100">
                 {detail.drills.map(d => (
-                  <div key={`${d.id}-${d.role}`} className="p-4">
-                    <div className="flex items-start justify-between gap-3 flex-wrap">
-                      <span className="font-medium text-gray-900">{d.drill_name}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
-                        ROLE_CHIP[d.role] || 'bg-gray-100 text-gray-600'}`}>
-                        {ROLE_LABEL[d.role] || d.role}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1 leading-snug">{d.rationale}</p>
-                    <p className="text-xs text-gray-500 mt-2">
-                      {[
-                        d.reps_guidance,
-                        d.est_duration_minutes ? `${d.est_duration_minutes} min` : null,
-                        d.space_required,
-                        d.equipment_needed?.length ? d.equipment_needed.join(', ') : null,
-                      ].filter(Boolean).join(' · ')}
-                    </p>
-                    {d.safety_notes && (
-                      <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 mt-2">
-                        {d.safety_notes}
-                      </p>
-                    )}
-                  </div>
+                  <DrillCard key={`${d.id}-${d.role}`} drill={d} />
                 ))}
               </div>
             )}
@@ -595,6 +604,222 @@ function DevelopmentPlanContent() {
 }
 
 // ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * One drill, collapsed to what a coach scanning needs and expandable to what a
+ * coach RUNNING it needs.
+ *
+ * Collapsed by default, because this stage can hold six drills and six full
+ * instruction blocks is a wall of text nobody reads at a field. Open one and it
+ * is the whole drill: how to run it, what to say, what good looks like, what to
+ * do if it is too hard or too easy, and the video if one exists.
+ *
+ * Every field here was already being fetched by the API and thrown away. The
+ * library has had these instructions since Phase 2C — all 226 curated rows
+ * carry them — and this page was rendering a one-line rationale on top of them.
+ */
+function DrillCard({ drill: d }: { drill: StageDrill }) {
+  const [open, setOpen] = useState(false)
+
+  const meta = [
+    d.reps_guidance,
+    d.est_duration_minutes ? `${d.est_duration_minutes} min` : null,
+    d.space_required,
+    d.requires_partner ? 'Needs a partner' : null,
+    d.equipment_needed?.length ? d.equipment_needed.join(', ') : null,
+  ].filter(Boolean).join(' · ')
+
+  return (
+    <div className="p-4">
+      <button
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        className="w-full text-left group"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-medium text-gray-900 group-hover:text-red-700">
+                {d.drill_name}
+              </span>
+              <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
+                ROLE_CHIP[d.role] || 'bg-gray-100 text-gray-600'}`}>
+                {ROLE_LABEL[d.role] || d.role}
+              </span>
+            </div>
+            <p className="text-sm text-gray-600 mt-1 leading-snug">{d.rationale}</p>
+            {meta && <p className="text-xs text-gray-500 mt-2">{meta}</p>}
+          </div>
+          <span className="flex-shrink-0 text-gray-400 mt-0.5">
+            {open ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+          </span>
+        </div>
+        {!open && (
+          <span className="text-xs text-red-600 mt-2 inline-block">
+            How to run it{d.media.length > 0 ? ' · video' : ''}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="mt-4 space-y-4 border-t border-gray-100 pt-4">
+          {d.description && (
+            <Section title="How to run it">
+              <p className="whitespace-pre-wrap leading-relaxed">{d.description}</p>
+            </Section>
+          )}
+
+          {d.ai_coaching_notes && (
+            <Section title="Coaching it">
+              <p className="whitespace-pre-wrap leading-relaxed">{d.ai_coaching_notes}</p>
+            </Section>
+          )}
+
+          {(d.reps_guidance || d.est_duration_minutes) && (
+            <Section title="How much">
+              <p>
+                {d.reps_guidance}
+                {d.reps_guidance && d.est_duration_minutes ? ' · ' : ''}
+                {d.est_duration_minutes ? `about ${d.est_duration_minutes} minutes` : ''}
+              </p>
+            </Section>
+          )}
+
+          {d.success_markers?.length ? (
+            <Section title="What good looks like">
+              <ul className="space-y-1">
+                {d.success_markers.map(s => (
+                  <li key={s} className="flex gap-2">
+                    <Check size={15} className="text-green-600 flex-shrink-0 mt-0.5" />
+                    <span>{s}</span>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          ) : null}
+
+          {d.common_flaws_fixed?.length ? (
+            <Section title="What usually goes wrong">
+              <ul className="space-y-1">
+                {d.common_flaws_fixed.map(s => (
+                  <li key={s} className="flex gap-2">
+                    <span className="text-gray-300">—</span><span>{s}</span>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          ) : null}
+
+          {(d.regression_notes || d.progression_notes) && (
+            <div className="grid sm:grid-cols-2 gap-4">
+              {d.regression_notes && (
+                <Section title="If they are not there yet">
+                  <p className="leading-relaxed">{d.regression_notes}</p>
+                </Section>
+              )}
+              {d.progression_notes && (
+                <Section title="Once it holds">
+                  <p className="leading-relaxed">{d.progression_notes}</p>
+                </Section>
+              )}
+            </div>
+          )}
+
+          {d.safety_notes && (
+            <div className="flex gap-2 text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" />
+              <p className="leading-relaxed">{d.safety_notes}</p>
+            </div>
+          )}
+
+          <DrillMediaLinks drill={d} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{title}</p>
+      <div className="text-sm text-gray-700">{children}</div>
+    </div>
+  )
+}
+
+/**
+ * The video, when there is one — and an honest sentence when there is not.
+ *
+ * NOTHING HERE DECIDES WHAT A VIDEO IS. The label comes from describeMedia on
+ * the server, which is the same function the Drill Finder uses, and it is
+ * careful in a way that matters: a video shared across several drills with no
+ * timestamp is offered as "Source video — covers N drills from this library,
+ * this one is somewhere inside it", never as "watch this drill". A coach who
+ * taps that link and lands at 0:00 of a twelve-minute compilation was told
+ * that would happen.
+ *
+ * Only verified media carries a timestamp in its label, because having a number
+ * and somebody having checked it are different things.
+ */
+function DrillMediaLinks({ drill: d }: { drill: StageDrill }) {
+  const primary = d.media[0]
+  const rest = d.media.slice(1)
+
+  if (!primary) {
+    return (
+      <p className="text-sm text-gray-500 border-t border-gray-100 pt-3">
+        No video for this one yet. The instructions above are written to be run
+        without one.
+      </p>
+    )
+  }
+
+  return (
+    <div className="border-t border-gray-100 pt-4 space-y-3">
+      {primary.media_type === 'youtube' ? (
+        <DrillVideo
+          drillName={d.drill_name}
+          youtubeUrl={primary.url}
+          thumbnailUrl={primary.thumbnail_url || undefined}
+          channel={primary.source_name || undefined}
+          startSeconds={primary.start_seconds ?? undefined}
+          compact
+        />
+      ) : (
+        <MediaLink media={primary} />
+      )}
+
+      <p className="text-xs text-gray-500">
+        <span className="font-medium text-gray-700">{primary.presentation.label}</span>
+        {primary.presentation.note ? ` · ${primary.presentation.note}` : ''}
+        {primary.verification_status !== 'verified' && (
+          <span className="block mt-0.5">
+            Not checked by us against this drill yet — read the instructions above first.
+          </span>
+        )}
+      </p>
+
+      {rest.map(m => <MediaLink key={m.url} media={m} />)}
+    </div>
+  )
+}
+
+function MediaLink({ media: m }: { media: StageDrill['media'][number] }) {
+  return (
+    <a
+      href={m.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 text-sm text-red-600 hover:text-red-700"
+    >
+      <Play size={14} className="flex-shrink-0" />
+      <span>{m.presentation.label}</span>
+      {m.presentation.note && <span className="text-gray-500 text-xs">· {m.presentation.note}</span>}
+      <ExternalLink size={13} className="flex-shrink-0 text-gray-400" />
+    </a>
+  )
+}
 
 function Measurements({ summaries }: { summaries: MeasurementSummary[] }) {
   const any = summaries.some(s => s.latest !== null)

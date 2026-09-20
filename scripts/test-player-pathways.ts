@@ -293,6 +293,42 @@ eq('and only the recorded ones count as recorded', measurementsRecorded(all), 2)
 eq('a metric type that does not exist yet is skipped, not faked',
   summariseSpeedMeasurements([sprint], []).length, 1)
 
+// ── the media contract this page leans on ───────────────────────────────────
+//
+// The development plan page shows a video when one exists, and every word
+// around it comes from describeMedia. That function is tested thoroughly in
+// test-drill-finder; these assert the specific promises THIS surface depends
+// on, so a change to it that quietly turned "somewhere inside a compilation"
+// into "watch this drill" fails here as well as there.
+//
+// The state of the library makes this concrete: of the 44 drill slots in the
+// speed pathway, 10 carry a video and NONE of those is verified.
+
+import { describeMedia } from '../lib/drillFinder'
+import type { PlayableMedia } from '../lib/drillMedia'
+
+const media = (over: Partial<PlayableMedia> = {}): PlayableMedia => ({
+  media_type: 'youtube', url: 'https://www.youtube.com/watch?v=abc', title: null,
+  source_name: null, thumbnail_url: null, start_seconds: null,
+  verification_status: 'unverified', legacy: false, ...over,
+} as PlayableMedia)
+
+check('an unverified video is never offered as a demonstration of the drill',
+  describeMedia(media(), 1).label === 'Supporting video')
+check('a verified, timestamped video may be — and says where to jump to',
+  /^Jump to the drill \(/.test(describeMedia(
+    media({ verification_status: 'verified', start_seconds: 252 }), 1).label))
+check('a TIMESTAMP ALONE does not earn the claim — somebody has to have checked it',
+  describeMedia(media({ start_seconds: 252 }), 1).label === 'Supporting video')
+check('a video covering several drills is called a source, not a drill video',
+  describeMedia(media(), 10).label === 'Source video')
+check('and says how many, so a coach landing at 0:00 was warned',
+  /10 drills/.test(describeMedia(media(), 10).note || ''))
+check('a shared video outranks verification in how it is described',
+  describeMedia(media({ verification_status: 'verified' }), 10).label === 'Source video')
+check('an article is never described as something to watch',
+  describeMedia(media({ media_type: 'article' }), 1).label === 'Read the article')
+
 // ── report ──────────────────────────────────────────────────────────────────
 
 console.log(`\n${passed} passed, ${failures.length} failed`)
