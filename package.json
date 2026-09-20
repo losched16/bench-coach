@@ -105,7 +105,9 @@
     "test:pathways": "npx --yes tsx --tsconfig tsconfig.json scripts/test-pathways.ts",
     "verify:071": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-071.ts",
     "verify:pathway-ui-prod": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-pathway-ui-prod.ts",
-    "verify:pathways-prod": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-pathways-production.ts"
+    "verify:pathways-prod": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-pathways-production.ts",
+    "emit:speed-pathway": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/emit-speed-pathway.ts",
+    "test:migration-2h": "bash scripts/test-migration-2h.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",
