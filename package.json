@@ -109,7 +109,8 @@
     "emit:speed-pathway": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/emit-speed-pathway.ts",
     "test:migration-2h": "bash scripts/test-migration-2h.sh",
     "test:player-pathways": "npx --yes tsx --tsconfig tsconfig.json scripts/test-player-pathways.ts",
-    "verify:player-pathways-prod": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-player-pathways-prod.ts"
+    "verify:player-pathways-prod": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-player-pathways-prod.ts",
+    "verify:speed-drills": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-speed-drills.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",
