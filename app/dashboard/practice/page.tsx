@@ -282,6 +282,38 @@ function PracticeContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
+  // Arriving from a player's development plan: open the builder with that
+  // pathway and stage already chosen.
+  //
+  // SUGGESTED, NOT FORCED. This preselects the picker and stops — the coach
+  // still presses Generate, can change the stage, and can clear the pathway
+  // entirely. One player's plan must not silently become the whole team's
+  // practice, which is why this sets the same state a tap on the picker would
+  // and adds nothing else.
+  //
+  // choosePathway() is reused rather than reimplemented: it loads the stages,
+  // adds the implied focus chip and handles the failure states, and a second
+  // copy of that here would be a second way for the two to disagree.
+  const [pathwayPreset, setPathwayPreset] = useState<string | null>(null)
+  useEffect(() => {
+    const slug = searchParams.get('pathway')
+    if (!slug || pathwayPreset === slug) return
+    setPathwayPreset(slug)
+    setShowPlanModal(true)
+
+    let cancelled = false
+    ;(async () => {
+      await choosePathway(slug)
+      if (cancelled) return
+      // The stage the coach's player is actually on. Applied after
+      // choosePathway, which lands on stage 1 by default.
+      const n = parseInt(searchParams.get('stage') || '', 10)
+      if (Number.isFinite(n) && n >= 1) setPathwayStage(n)
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, pathwayPreset])
+
   // WHAT THE COACH ALREADY WROTE
   //
   // "Anything specific?" has always been sent to the model. The numbers beside
