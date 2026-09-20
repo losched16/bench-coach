@@ -3,12 +3,13 @@
 import { useEffect, useState, useRef, Suspense } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
-import { ArrowLeft, User, Plus, Trash2, Pencil, StickyNote, Target, TrendingUp, Calendar, BookOpen, Gauge, FileText } from 'lucide-react'
+import { ArrowLeft, User, Plus, Trash2, Pencil, StickyNote, Target, TrendingUp, Calendar, BookOpen, Gauge, FileText, Route as RouteIcon } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { usePageView } from '@/lib/tracking'
 import { PlayerMetrics } from '@/components/PlayerMetrics'
 import { PlayerHistory } from '@/components/PlayerHistory'
 import { PlayerReports } from '@/components/PlayerReports'
+import { PlayerDevelopment } from '@/components/PlayerDevelopment'
 import { useRole } from '@/lib/useRole'
 import { readSnapshot } from '@/lib/rosterArchive'
 
@@ -120,7 +121,8 @@ function PlayerDetailContent() {
   const teamId = searchParams.get('teamId')
   const supabase = createSupabaseComponentClient()
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'measurements' | 'journal' | 'reports'>('overview')
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'development' | 'measurements' | 'journal' | 'reports'>('overview')
 
   // Writing a development report is a 'decide' action — see the comment in
   // app/api/player-reports/route.ts. A contributor keeping the book may read
@@ -288,6 +290,9 @@ function PlayerDetailContent() {
           <button onClick={() => setActiveTab('overview')} className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'overview' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
             <div className="flex items-center space-x-2"><User size={18} /><span>Overview</span></div>
           </button>
+          <button onClick={() => setActiveTab('development')} className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'development' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            <div className="flex items-center space-x-2"><RouteIcon size={18} /><span>Development</span></div>
+          </button>
           <button onClick={() => setActiveTab('measurements')} className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'measurements' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
             <div className="flex items-center space-x-2"><Gauge size={18} /><span>Measurements</span></div>
           </button>
@@ -299,6 +304,17 @@ function PlayerDetailContent() {
           </button>
         </nav>
       </div>
+
+      {activeTab === 'development' && (
+        <PlayerDevelopment
+          playerId={playerId as string}
+          teamId={teamId}
+          playerName={player?.name || 'this player'}
+          // Starting a plan and advancing a player are 'decide' — the same line
+          // player_reports draws, and the same one migration 072's RLS enforces.
+          canDecide={allowed('decide')}
+        />
+      )}
 
       {activeTab === 'measurements' && (
         <PlayerMetrics
