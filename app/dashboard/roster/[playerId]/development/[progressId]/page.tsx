@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowLeft, Loader2, Check, ChevronRight, ChevronLeft, ChevronDown, ChevronUp,
   CheckCircle2, Gauge, ClipboardList, Dumbbell, X, CalendarPlus,
-  AlertTriangle, Play, ExternalLink,
+  AlertTriangle, Play, ExternalLink, Map as MapIcon,
 } from 'lucide-react'
 import { DrillVideo } from '@/components/DrillVideo'
 import { usePageView, useTracker } from '@/lib/tracking'
@@ -16,6 +16,7 @@ import {
   PlayerPathwayProgress, PlayerPathwayEvent, coachDecisions, sessionCounts,
   checkedSignals, describeEvent, describeDuration, daysSince,
   summariseSpeedMeasurements, formatChange, MeasurementSummary, staleStageMessage,
+  planOutline, practiceRange, PlanOutline, OutlineStage,
 } from '@/lib/playerPathways'
 import type { MetricType, MetricReading } from '@/lib/metrics'
 import { formatValue } from '@/lib/metrics'
@@ -56,7 +57,13 @@ interface Detail {
   }
   player: { id: string; name: string } | null
   events: PlayerPathwayEvent[]
-  pathway: { slug: string; name: string; skill_category: string | null; stages: PathwayStage[] } | null
+  pathway: {
+    slug: string
+    name: string
+    skill_category: string | null
+    stages: PathwayStage[]
+    drillCounts?: Record<string, number>
+  } | null
   drills: StageDrill[]
   stageMissing: boolean
 }
@@ -189,6 +196,14 @@ function DevelopmentPlanContent() {
   const speed = useMemo<MeasurementSummary[]>(
     () => summariseSpeedMeasurements(types, readings),
     [types, readings])
+
+  const outline = useMemo(
+    () => planOutline(
+      loaded, detail?.progress || null, detail?.events,
+      detail?.pathway?.drillCounts
+        ? new Map(Object.entries(detail.pathway.drillCounts))
+        : null),
+    [loaded, detail])
 
   const stageName = useCallback(
     (key: string | null) => detail?.pathway?.stages.find(s => s.stage_key === key)?.name || 'a stage',
@@ -428,6 +443,9 @@ function DevelopmentPlanContent() {
             )}
           </div>
 
+          {/* the whole plan */}
+          {outline && <PlanMap outline={outline} />}
+
           {/* measurements */}
           <div className="bg-white rounded-lg shadow">
             <div className="p-6 border-b border-gray-200 flex items-center justify-between gap-3 flex-wrap">
@@ -604,6 +622,162 @@ function DevelopmentPlanContent() {
 }
 
 // ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * The whole pathway, so a coach can see what is coming.
+ *
+ * ESTIMATES ARE IN PRACTICES AND NEVER IN DATES. The curriculum says "3-5
+ * practices"; nothing in this product records how often a team practises, so
+ * converting that to weeks would be inventing a cadence and converting it to a
+ * date would be inventing a schedule — on a layer whose entire position is that
+ * a coach advances a player when they are ready and not on a timer.
+ *
+ * Where there is history, history wins. A stage already run reports the
+ * sessions actually logged and the day they moved on, because those are facts
+ * and the estimate is a guess. The ranges only describe the road ahead.
+ */
+function PlanMap({ outline }: { outline: PlanOutline }) {
+  const [open, setOpen] = useState(false)
+  const current = outline.stages[outline.currentIndex]
+
+  // Collapsed, it answers "where am I and what is next" in one line. That is
+  // the question most of the time; the full map is for planning a month.
+  const next = outline.stages[outline.currentIndex + 1]
+
+  return (
+    <div className="bg-white rounded-lg shadow">
+      <button
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        className="w-full p-6 text-left flex items-start justify-between gap-3"
+      >
+        <div className="min-w-0">
+          <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+            <MapIcon size={18} className="text-gray-500" />
+            The whole plan
+          </h3>
+          <p className="text-sm text-gray-600 mt-1">
+            {outline.isCompleted
+              ? `All ${outline.total} stages complete · ${outline.sessionsSoFar} sessions recorded`
+              : next
+                ? `Stage ${outline.currentIndex + 1} of ${outline.total} · next up is ${next.stage.name}`
+                : `Stage ${outline.currentIndex + 1} of ${outline.total} · this is the last one`}
+          </p>
+          {!outline.isCompleted && outline.remainingMax > 0 && (
+            <p className="text-xs text-gray-500 mt-1">
+              Roughly {outline.remainingMin}–{outline.remainingMax} more practices from here,
+              if he moves through one stage at a time.
+            </p>
+          )}
+        </div>
+        <span className="flex-shrink-0 text-gray-400 mt-0.5">
+          {open ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+        </span>
+      </button>
+
+      {open && (
+        <div className="border-t border-gray-100">
+          <ol className="divide-y divide-gray-50">
+            {outline.stages.map((o, i) => (
+              <PlanMapStage key={o.stage.stage_key} outline={o} index={i} />
+            ))}
+          </ol>
+
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+            <p className="text-xs text-gray-600 leading-relaxed">
+              <strong className="text-gray-800">
+                About {outline.totalMin}–{outline.totalMax} practices end to end.
+              </strong>{' '}
+              That is a range because it is one. The numbers are what a stage
+              usually takes, not a schedule — you advance him when he shows you
+              the signals, however many practices that turns out to be. Nothing
+              here moves on its own.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PlanMapStage({ outline: o, index }: { outline: OutlineStage; index: number }) {
+  const [open, setOpen] = useState(false)
+  const est = practiceRange(o.practicesMin, o.practicesMax)
+
+  const dot =
+    o.state === 'current'
+      ? <span className="w-6 h-6 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center">{index + 1}</span>
+      : o.state === 'visited'
+        ? <span className="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center"><Check size={14} /></span>
+        : <span className="w-6 h-6 rounded-full border border-gray-300 text-gray-400 text-xs flex items-center justify-center">{index + 1}</span>
+
+  return (
+    <li className={o.state === 'current' ? 'bg-red-50/40' : ''}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        aria-expanded={open}
+        className="w-full px-6 py-3 text-left flex items-start gap-3 hover:bg-gray-50"
+      >
+        <span className="flex-shrink-0 mt-0.5">{dot}</span>
+        <span className="min-w-0 flex-1">
+          <span className={`block font-medium ${
+            o.state === 'ahead' ? 'text-gray-600' : 'text-gray-900'}`}>
+            {o.stage.name}
+          </span>
+          <span className="block text-xs text-gray-500 mt-0.5">
+            {/* Facts for the past, estimates only for the future. */}
+            {o.state === 'visited' && (
+              <>
+                {o.sessions === 0 ? 'No sessions recorded' :
+                  `${o.sessions} session${o.sessions === 1 ? '' : 's'}`}
+                {o.leftOn ? ` · moved on ${o.leftOn}` : ''}
+              </>
+            )}
+            {o.state === 'current' && (
+              <>
+                {o.sessions === 0 ? 'No sessions here yet' :
+                  `${o.sessions} session${o.sessions === 1 ? '' : 's'} here`}
+                {est ? ` · usually ${est}` : ''}
+              </>
+            )}
+            {o.state === 'ahead' && (
+              <>
+                {est || 'No estimate'}
+                {o.drillCount != null ? ` · ${o.drillCount} drill${o.drillCount === 1 ? '' : 's'}` : ''}
+              </>
+            )}
+          </span>
+        </span>
+        <span className="flex-shrink-0 text-gray-300 mt-1">
+          {open ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+        </span>
+      </button>
+
+      {open && (
+        <div className="px-6 pb-4 pl-[3.75rem] space-y-3">
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Working on</p>
+            <p className="text-sm text-gray-700 mt-0.5">{o.stage.objective}</p>
+          </div>
+          {o.stage.mastery_signals?.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                What good looks like
+              </p>
+              <ul className="space-y-1">
+                {o.stage.mastery_signals.map(s => (
+                  <li key={s} className="text-sm text-gray-600 flex gap-2">
+                    <span className="text-gray-300">—</span><span>{s}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </li>
+  )
+}
 
 /**
  * One drill, collapsed to what a coach scanning needs and expandable to what a

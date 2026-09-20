@@ -150,6 +150,13 @@ export async function GET(
             name: pathway.pathway.name,
             skill_category: pathway.pathway.skill_category,
             stages: orderedStages(pathway),
+            // How many drills each stage offers, keyed by stage_key, so the
+            // plan overview can say what is coming without a second request
+            // per stage. Already in memory — loadPathway fetched every link.
+            drillCounts: orderedStages(pathway).reduce((acc, s) => {
+              acc[s.stage_key] = (pathway.linksByStage.get(s.id) || []).length
+              return acc
+            }, {} as Record<string, number>),
           }
         : null,
       drills,

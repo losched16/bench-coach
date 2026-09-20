@@ -18,7 +18,7 @@ import {
   resolveStage, coachDecisions, validateMove, sessionCounts, checkedSignals,
   daysSince, describeDuration, describeEvent, summariseMeasurement,
   summariseSpeedMeasurements, formatChange, measurementsRecorded,
-  staleStageMessage, SPEED_METRIC_SLUGS,
+  staleStageMessage, SPEED_METRIC_SLUGS, planOutline, practiceRange,
   PlayerPathwayProgress, PlayerPathwayEvent,
 } from '../lib/playerPathways'
 import type { LoadedPathway, PathwayStage, Pathway } from '../lib/developmentPathways'
@@ -292,6 +292,98 @@ eq('in the order the pathway asks for them',
 eq('and only the recorded ones count as recorded', measurementsRecorded(all), 2)
 eq('a metric type that does not exist yet is skipped, not faked',
   summariseSpeedMeasurements([sprint], []).length, 1)
+
+// ── the plan overview ───────────────────────────────────────────────────────
+//
+// "What is coming up and when." The second half is where this can go wrong:
+// the only unit available is PRACTICES, because nothing records how often a
+// team practises. These assert that estimates stay estimates, that real
+// history beats them wherever it exists, and that a regression does not make
+// the map lie about where the player has been.
+
+const withEst = (n: number, key: string, name: string, min: number, max: number): PathwayStage => ({
+  ...stage(n, key, name), estimated_practices_min: min, estimated_practices_max: max,
+} as any)
+
+const PE: LoadedPathway = {
+  ...P,
+  stages: [
+    withEst(1, 'baseline-and-mechanics', 'Baseline', 2, 4),
+    withEst(2, 'acceleration-position', 'Acceleration', 2, 4),
+    withEst(3, 'first-step-explosion', 'First Step', 3, 5),
+  ],
+}
+
+const journey: PlayerPathwayEvent[] = [
+  ev({ event_type: 'enrolled', stage_key: 'baseline-and-mechanics', occurred_on: '2026-01-05', created_at: '2026-01-05T00:00:00Z' }),
+  ev({ stage_key: 'baseline-and-mechanics', created_at: '2026-01-06T00:00:00Z' }),
+  ev({ stage_key: 'baseline-and-mechanics', created_at: '2026-01-13T00:00:00Z' }),
+  ev({ event_type: 'advanced', from_stage_key: 'baseline-and-mechanics', to_stage_key: 'acceleration-position',
+      stage_key: 'acceleration-position', occurred_on: '2026-01-20', created_at: '2026-01-20T00:00:00Z' }),
+  ev({ stage_key: 'acceleration-position', created_at: '2026-01-27T00:00:00Z' }),
+]
+
+const O = planOutline(PE, progress(), journey)!
+eq('the outline covers every stage', O.total, 3)
+eq('and knows which one they are on', O.currentIndex, 1)
+eq('a stage already run is marked visited', O.stages[0].state, 'visited')
+eq('the stage they are on is marked current', O.stages[1].state, 'current')
+eq('a stage not yet reached is marked ahead', O.stages[2].state, 'ahead')
+
+// Facts for the past.
+eq('a past stage reports the sessions ACTUALLY logged there', O.stages[0].sessions, 2)
+eq('and the real day they moved on', O.stages[0].leftOn, '2026-01-20')
+eq('the current stage reports its own sessions', O.stages[1].sessions, 1)
+eq('and when they arrived', O.stages[1].arrivedOn, '2026-01-20')
+eq('a stage never visited has no history to report',
+  [O.stages[2].sessions, O.stages[2].leftOn, O.stages[2].arrivedOn], [0, null, null])
+eq('sessions across the whole plan are counted once', O.sessionsSoFar, 3)
+
+// Estimates for the future, and only for the future.
+eq('the whole plan totals its stage estimates', [O.totalMin, O.totalMax], [7, 13])
+eq('REMAINING counts from where they stand, not from stage 1',
+  [O.remainingMin, O.remainingMax], [5, 9])
+eq('a completed plan has nothing remaining',
+  (() => { const c = planOutline(PE, progress({ status: 'completed', completed_at: 'x' }), journey)!
+    return [c.remainingMin, c.remainingMax] })(), [0, 0])
+check('a completed plan says so', planOutline(PE, progress({ status: 'completed', completed_at: 'x' }), journey)!.isCompleted)
+
+// THE REGRESSION CASE. A player sent back to stage 1 has still BEEN to stage 2,
+// and a map that called it "ahead" would be telling the coach they had never
+// run it.
+const afterRegress = [...journey, ev({
+  event_type: 'regressed', from_stage_key: 'acceleration-position',
+  to_stage_key: 'baseline-and-mechanics', stage_key: 'baseline-and-mechanics',
+  occurred_on: '2026-02-03', created_at: '2026-02-03T00:00:00Z' })]
+const R = planOutline(PE, progress({ current_stage_key: 'baseline-and-mechanics', current_stage_number: 1 }), afterRegress)!
+eq('after a regression the player is back on stage 1', R.currentIndex, 0)
+eq('and stage 1 is current, not merely visited', R.stages[0].state, 'current')
+eq('STAGE 2 IS STILL MARKED VISITED — they have run it', R.stages[1].state, 'visited')
+eq('and the day they left it is the regression date', R.stages[1].leftOn, '2026-02-03')
+eq('remaining counts the whole road again from stage 1',
+  [R.remainingMin, R.remainingMax], [7, 13])
+
+eq('no pathway has no outline', planOutline(null, progress(), journey), null)
+eq('a pathway with no stages has no outline',
+  planOutline({ ...PE, stages: [] }, progress(), journey), null)
+const noEvents = planOutline(PE, progress(), [])!
+eq('with no events recorded nothing is claimed about the past',
+  noEvents.stages.map(s => s.sessions), [0, 0, 0])
+eq('but the current stage is still known from the enrollment row',
+  noEvents.stages[1].state, 'current')
+
+const counts = new Map([['first-step-explosion', 4]])
+eq('drill counts are carried through when the caller has them',
+  planOutline(PE, progress(), journey, counts)!.stages[2].drillCount, 4)
+eq('and are null rather than zero when it does not',
+  planOutline(PE, progress(), journey)!.stages[2].drillCount, null)
+
+eq('a range reads as a range', practiceRange(3, 5), '3–5 practices')
+eq('a single number does not pretend to be one', practiceRange(4, 4), '4 practices')
+eq('one practice is singular', practiceRange(1, 1), '1 practice')
+eq('a stage with no estimate says nothing at all', practiceRange(null, null), '')
+check('NOTHING in the outline is expressed as a date or a week',
+  !/week|month|day|date/i.test(practiceRange(3, 5)))
 
 // ── the media contract this page leans on ───────────────────────────────────
 //

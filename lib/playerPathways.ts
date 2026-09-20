@@ -294,6 +294,153 @@ export function describeEvent(e: PlayerPathwayEvent, stageName?: (key: string | 
 }
 
 // ───────────────────────────────────────────────────────────────────────────
+// The whole plan, at a glance
+// ───────────────────────────────────────────────────────────────────────────
+//
+// "What is coming up, and when." The second half is the careful one.
+//
+// THE ONLY UNIT THIS SYSTEM HONESTLY HAS IS PRACTICES, NOT DATES.
+// development_pathway_stages carries estimated_practices_min/max and nothing
+// anywhere records how often a team practises. Turning "3-5 practices" into
+// "about two weeks" would be inventing a cadence, and turning it into a date
+// would be inventing a schedule — on a layer whose whole position is that a
+// coach advances a player when they are ready, never on a timer. So estimates
+// stay in practices, and the only real dates shown are ones that already
+// happened.
+//
+// Where there IS history, history wins. A stage the player has actually been
+// through reports the sessions they logged and the day they moved on, because
+// that is a fact and the estimate is a guess.
+
+export type StageProgressState = 'visited' | 'current' | 'ahead'
+
+export interface OutlineStage {
+  stage: PathwayStage
+  state: StageProgressState
+  /** Sessions logged while on this stage. Real, not estimated. */
+  sessions: number
+  /** The day the coach moved off this stage, when they have. */
+  leftOn: string | null
+  /** The day the player first arrived here. */
+  arrivedOn: string | null
+  /** From the curriculum. Null when the stage does not say. */
+  practicesMin: number | null
+  practicesMax: number | null
+  /** How many drills the stage offers, when the caller knows. */
+  drillCount: number | null
+}
+
+export interface PlanOutline {
+  stages: OutlineStage[]
+  currentIndex: number
+  total: number
+  /** Practices for the whole pathway, end to end. */
+  totalMin: number
+  totalMax: number
+  /** Practices from the current stage to the end, current stage included. */
+  remainingMin: number
+  remainingMax: number
+  /** Every session the coach has logged on this plan. */
+  sessionsSoFar: number
+  isCompleted: boolean
+}
+
+export function planOutline(
+  pathway: LoadedPathway | null | undefined,
+  progress: PlayerPathwayProgress | null | undefined,
+  events: PlayerPathwayEvent[] | null | undefined,
+  drillCounts?: Map<string, number> | null
+): PlanOutline | null {
+  if (!pathway) return null
+  const stages = orderedStages(pathway)
+  if (stages.length === 0) return null
+
+  const evs = events || []
+  const currentKey = progress?.current_stage_key ?? null
+  const currentIndex = stages.findIndex(s => s.stage_key === currentKey)
+  const completed = progress?.status === 'completed'
+
+  // Which stages the player has actually set foot on. Derived from events
+  // rather than from the stage number, because a regression means a player can
+  // have visited stage 5 while standing on stage 4 — and an outline that called
+  // stage 5 "ahead" would be telling the coach they had never run it.
+  const visited = new Set<string>()
+  for (const e of evs) {
+    if (e.stage_key) visited.add(e.stage_key)
+    if (e.from_stage_key) visited.add(e.from_stage_key)
+    if (e.to_stage_key) visited.add(e.to_stage_key)
+  }
+
+  const sessionsByStage = new Map<string, number>()
+  for (const e of evs) {
+    if (e.event_type !== 'session_logged' || !e.stage_key) continue
+    sessionsByStage.set(e.stage_key, (sessionsByStage.get(e.stage_key) || 0) + 1)
+  }
+
+  // Oldest first, so "first arrival" and "most recent departure" both read the
+  // right way round however the caller sorted them.
+  const chron = evs.slice().sort((a, b) => (a.created_at < b.created_at ? -1 : 1))
+  const arrived = new Map<string, string>()
+  const left = new Map<string, string>()
+  for (const e of chron) {
+    if (e.event_type === 'enrolled' && e.stage_key && !arrived.has(e.stage_key)) {
+      arrived.set(e.stage_key, e.occurred_on)
+    }
+    if (e.event_type === 'advanced' || e.event_type === 'regressed') {
+      if (e.from_stage_key) left.set(e.from_stage_key, e.occurred_on)
+      if (e.to_stage_key && !arrived.has(e.to_stage_key)) arrived.set(e.to_stage_key, e.occurred_on)
+    }
+  }
+
+  const outline: OutlineStage[] = stages.map((s, i) => {
+    const isCurrent = !completed && s.stage_key === currentKey
+    const state: StageProgressState = isCurrent
+      ? 'current'
+      : visited.has(s.stage_key) || (completed && currentIndex >= 0 && i <= currentIndex)
+        ? 'visited'
+        : 'ahead'
+    return {
+      stage: s,
+      state,
+      sessions: sessionsByStage.get(s.stage_key) || 0,
+      leftOn: left.get(s.stage_key) ?? null,
+      arrivedOn: arrived.get(s.stage_key) ?? null,
+      practicesMin: (s as any).estimated_practices_min ?? null,
+      practicesMax: (s as any).estimated_practices_max ?? null,
+      drillCount: drillCounts?.get(s.stage_key) ?? null,
+    }
+  })
+
+  const sum = (list: OutlineStage[], key: 'practicesMin' | 'practicesMax') =>
+    list.reduce((n, o) => n + (o[key] ?? 0), 0)
+
+  // From where they stand, not from stage 1. A coach on stage 8 wants to know
+  // what is left, and counting the stages already behind them would be an
+  // answer to a question nobody asked.
+  const from = currentIndex >= 0 ? outline.slice(currentIndex) : outline
+
+  return {
+    stages: outline,
+    currentIndex,
+    total: stages.length,
+    totalMin: sum(outline, 'practicesMin'),
+    totalMax: sum(outline, 'practicesMax'),
+    remainingMin: completed ? 0 : sum(from, 'practicesMin'),
+    remainingMax: completed ? 0 : sum(from, 'practicesMax'),
+    sessionsSoFar: evs.filter(e => e.event_type === 'session_logged').length,
+    isCompleted: completed,
+  }
+}
+
+/** "3–5 practices" / "4 practices" / "" when the stage does not say. */
+export function practiceRange(min: number | null, max: number | null): string {
+  if (min == null && max == null) return ''
+  if (min != null && max != null && min !== max) return `${min}–${max} practices`
+  const n = (min ?? max) as number
+  return `${n} practice${n === 1 ? '' : 's'}`
+}
+
+// ───────────────────────────────────────────────────────────────────────────
 // Measurements
 // ───────────────────────────────────────────────────────────────────────────
 //
