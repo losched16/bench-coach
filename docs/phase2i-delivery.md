@@ -146,8 +146,10 @@ Reported separately from code completion, as the release rules require.
   `dpl_6Psgxew7yxYLDgTwgtXUiKp3bfEh`, state READY. That is the build that
   shipped the help content — **and the build in which the practice page does
   not render.**
-- **This closeout** is on `main` and awaiting its Vercel build. The
-  practice-page fix is the reason to watch it land.
+- **This closeout:** commit `82a9b95`, Vercel deployment
+  `dpl_H6quRyrwDdJr61mKgswG5tmEUVv9`, target production, state **READY**. The
+  practice-page fix is live. That the build deployed is verified; that the
+  practice builder now renders in production is not — see section 2.
 - **No migration is required.** `076_user_ui_prefs` was already applied. This
   closeout adds no schema changes.
 
