@@ -72,7 +72,7 @@ export function PositionEligibility({ teamId, players, gameId, gameLabel, onRevi
       // A missing override table is a migration away, not a broken screen —
       // the team settings still work and still show.
       if (/game_position_eligibility/.test(String(e?.message || ''))) {
-        setError('Run migration 031 to set eligibility for a single game. Your team settings below still work.')
+        setError('Per-game eligibility is not switched on for your account yet. Your team settings below still work.')
       }
     } finally {
       setLoading(false)

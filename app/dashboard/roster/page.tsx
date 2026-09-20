@@ -10,6 +10,7 @@ import { usePageView } from '@/lib/tracking'
 import { PositionEligibility } from '@/components/PositionEligibility'
 import { useRole } from '@/lib/useRole'
 import { rosterSnapshot, readSnapshot, restoreRow, restoreEligibility } from '@/lib/rosterArchive'
+import { FEATURE_UNAVAILABLE } from '@/lib/migrationHints'
 
 interface Player {
   id: string
@@ -172,7 +173,7 @@ function RosterPageContent() {
       console.error('Error archiving player:', error)
       setArchiveError(
         /team_player_archive/.test(String(error?.message || ''))
-          ? 'The roster archive is not set up yet — run migration 061_roster_archive.sql.'
+          ? FEATURE_UNAVAILABLE
           : 'Could not archive this player. Nothing has been changed.'
       )
     } finally {

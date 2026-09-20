@@ -12,6 +12,7 @@ import { SupersedeConfirm, Superseding } from '@/components/SupersedeConfirm'
 import { PrescriptionSections } from '@/components/PrescriptionSections'
 import { splitSections, META_SENTINEL } from '@/lib/analysis'
 import { thumbnailUrl, watchUrl } from '@/lib/drillVideo'
+import { FEATURE_UNAVAILABLE } from '@/lib/migrationHints'
 
 interface Problem { slug: string; label: string; skill_category: string | null }
 
@@ -221,8 +222,7 @@ function PrescribeContent() {
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3">
           <AlertCircle className="text-amber-600 flex-shrink-0" size={20} />
           <div className="text-sm text-amber-800">
-            The prescription engine isn&apos;t set up yet. Apply the SQL files in{' '}
-            <code className="bg-amber-100 px-1 rounded">/migrations</code> in your Supabase SQL editor, then refresh.
+            {FEATURE_UNAVAILABLE}
           </div>
         </div>
       )}

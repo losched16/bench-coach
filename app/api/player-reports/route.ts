@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { authorizeTeam, authzResponse } from '@/lib/authz'
 import { isReportType } from '@/lib/playerReports'
 import { buildContext, playerIsOnTeam } from '@/lib/playerReportStore'
-import { migrationHintFor } from '@/lib/migrationHints'
+import { migrationHintFor, FEATURE_UNAVAILABLE } from '@/lib/migrationHints'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       reports: [],
       needsMigration: true,
-      migrationMessage: hint?.message || 'Player reports are not set up on this database yet.',
+      migrationMessage: hint?.message || FEATURE_UNAVAILABLE,
     })
   }
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { CalendarDays, Loader2, RefreshCw, AlertCircle, ChevronDown } from 'lucide-react'
 import { AnalysisProse } from './AnalysisProse'
 import { splitSections } from '@/lib/analysis'
+import { FEATURE_UNAVAILABLE } from '@/lib/migrationHints'
 import { ActionPlan, PlanSession } from './ActionPlan'
 
 // The three-week plan for one player.
@@ -46,7 +47,7 @@ export function DevelopmentPlan({ prescriptionId, coachId, subjectName , areaLab
         setGeneratedAt(d.plan?.generated_at || null)
         setSessions(Array.isArray(d.plan?.sessions) ? d.plan.sessions : [])
         setStale(!!d.stale)
-        if (d.needsMigration) setMigrationMessage(d.migrationMessage || 'Run the migrations in /migrations.')
+        if (d.needsMigration) setMigrationMessage(d.migrationMessage || FEATURE_UNAVAILABLE)
       })
       .catch(() => {})
       .finally(() => !cancelled && setLoading(false))

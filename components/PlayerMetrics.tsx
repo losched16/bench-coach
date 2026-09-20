@@ -8,6 +8,7 @@ import {
   MetricType, MetricReading, groupIntoSessions, computeTrend, formatValue,
   MIN_SESSIONS_FOR_TREND,
 } from '@/lib/metrics'
+import { FEATURE_UNAVAILABLE } from '@/lib/migrationHints'
 
 // Tracking a number over time.
 //
@@ -174,8 +175,7 @@ export function PlayerMetrics({ coachId, playerId, playerName, teamId }: Props) 
   if (needsMigration) {
     return (
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
-        Run <code className="bg-amber-100 px-1 rounded">migrations/019_metrics.sql</code> in your Supabase
-        SQL editor to start tracking measurements.
+        {FEATURE_UNAVAILABLE}
       </div>
     )
   }

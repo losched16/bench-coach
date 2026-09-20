@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { authorizeTeam, authzResponse } from '@/lib/authz'
 import { loadPathway, orderedStages } from '@/lib/developmentPathways'
-import { migrationHintFor } from '@/lib/migrationHints'
+import { migrationHintFor, FEATURE_UNAVAILABLE } from '@/lib/migrationHints'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request.
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       pathways: [],
       needsMigration: true,
-      migrationMessage: hint?.message || 'Development plans are not set up on this database yet.',
+      migrationMessage: hint?.message || FEATURE_UNAVAILABLE,
     })
   }
 }

@@ -18,6 +18,8 @@ import {
 } from '../lib/helpContent'
 import { primaryActionFor, articleHref } from '../lib/helpRoutes'
 import { readFileSync } from 'fs'
+import { execSync } from 'child_process'
+import { FEATURE_UNAVAILABLE } from '../lib/migrationHints'
 
 let passed = 0
 const failures: string[] = []
@@ -190,6 +192,45 @@ eq('an unknown id resolves to nothing', guideById('nope'), null)
 eq('null resolves to nothing', guideById(null), null)
 check('every related link resolves to a real guide',
   HELP_GUIDES.every(g => g.related.every(r => guideById(r) !== null)))
+
+// ── no repair instructions anywhere a coach can see ─────────────────────────
+//
+// The registry was already checked for this above. The rest of the product was
+// not, and it was worse: eleven coach-facing banners said things like "Run
+// migrations/019_metrics.sql in your Supabase SQL editor, then refresh."
+// A volunteer coach cannot do that, should never be asked to, and reads it as
+// the app being broken. They all go through FEATURE_UNAVAILABLE now.
+//
+// /app/admin is exempt. Those pages are for whoever runs the thing, and naming
+// the file there is the point.
+
+const uiFiles = execSync(
+  `find app components -name '*.tsx' -not -path 'app/admin/*'`,
+  { cwd: __dirname + '/..', encoding: 'utf8' }
+).trim().split('\n').filter(Boolean)
+
+const offenders: string[] = []
+for (const rel of uiFiles) {
+  // An index loop, not .entries(): this repo compiles to ES5.
+  const lines = readFileSync(__dirname + '/../' + rel, 'utf8').split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    // Only JSX text and string literals — a comment explaining the rule is fine.
+    if (/^\s*(\/\/|\*|\/\*)/.test(line)) continue
+    if (/migrations\/\d|Supabase SQL editor|Run migration/i.test(line)) {
+      offenders.push(`${rel}:${i + 1}  ${line.trim().slice(0, 70)}`)
+    }
+  }
+}
+check('no coach-facing screen tells anyone to run a migration',
+  offenders.length === 0, offenders.join('\n    '))
+
+check('and there is one shared sentence for a feature that is not switched on',
+  /not switched on/.test(FEATURE_UNAVAILABLE) &&
+  !/migration|supabase|SQL|database/i.test(FEATURE_UNAVAILABLE),
+  FEATURE_UNAVAILABLE)
+check('which tells the coach their work is safe, because that is their first question',
+  /Nothing you have saved is affected/.test(FEATURE_UNAVAILABLE))
 
 // ── report ──────────────────────────────────────────────────────────────────
 

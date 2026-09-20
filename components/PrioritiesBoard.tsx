@@ -15,6 +15,7 @@ import { DevelopmentPlan } from './DevelopmentPlan'
 import { splitSections } from '@/lib/analysis'
 import { focusAreaRank, focusAreaLabel, focusAreaChip, practiceFocusFor } from '@/lib/focusAreas'
 import { VERDICT_SENTINEL, visibleMarkdown, AdherenceRead, DueState, Verdict, VerdictStatus } from '@/lib/checkin'
+import { FEATURE_UNAVAILABLE } from '@/lib/migrationHints'
 
 interface OpenPrescription {
   id: string
@@ -481,10 +482,7 @@ export function PrioritiesBoard({ teamId, focusId = null }: Props) {
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3">
           <AlertCircle className="text-amber-600 flex-shrink-0" size={20} />
           <div className="text-sm text-amber-800">
-            {migrationMessage
-              ? migrationMessage
-              : <>Your database is missing something this page needs. The files in{' '}
-                 <code className="bg-amber-100 px-1 rounded">/migrations</code> are safe to re-run.</>}
+            {migrationMessage || FEATURE_UNAVAILABLE}
           </div>
         </div>
       )}

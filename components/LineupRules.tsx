@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Lock, Loader2, AlertCircle, ChevronDown, Check } from 'lucide-react'
+import { FEATURE_UNAVAILABLE } from '@/lib/migrationHints'
 
 // The rules the solver is not allowed to optimise away.
 //
@@ -41,7 +42,7 @@ export function LineupRules({ teamId, onChanged }: Props) {
       const d = await res.json()
       setPlayers(d.players || [])
       setMinInningsAll(d.team?.minInningsAll == null ? '' : String(d.team.minInningsAll))
-      if (d.needsMigration) setMigrationMessage(d.migrationMessage || 'Run migration 027.')
+      if (d.needsMigration) setMigrationMessage(d.migrationMessage || FEATURE_UNAVAILABLE)
     } catch {
       /* no rules is a valid state */
     } finally {

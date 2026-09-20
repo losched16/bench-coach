@@ -5,6 +5,7 @@ import { Loader2, Sparkles, RefreshCw, FileText, AlertCircle, Clock , Copy, Chec
 import { AnalysisProse } from '@/components/AnalysisProse'
 import { splitSections, reportToHtml, reportToPlainText } from '@/lib/analysis'
 import { SCOUT_META_SENTINEL } from '@/lib/scouting'
+import { FEATURE_UNAVAILABLE } from '@/lib/migrationHints'
 
 // The standing read on one opponent.
 //
@@ -168,8 +169,7 @@ export function OpponentAnalysis({
   if (needsMigration) {
     return (
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
-        Run <code className="bg-amber-100 px-1 rounded">migrations/017_scouting_analysis.sql</code> in your
-        Supabase SQL editor to turn scouting entries into a standing report.
+        {FEATURE_UNAVAILABLE}
       </div>
     )
   }

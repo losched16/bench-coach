@@ -7,6 +7,7 @@ import {
   Plus, Minus, Loader2, X, Users, Shield, Check, AlertTriangle, Clock, Trash2,
 } from 'lucide-react'
 import { usePageView, useTracker } from '@/lib/tracking'
+import { FEATURE_UNAVAILABLE } from '@/lib/migrationHints'
 
 // The pitch counter, with no game attached.
 //
@@ -459,8 +460,7 @@ function CountContent() {
 
       {needsMigration && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
-          Run <code className="bg-amber-100 px-1 rounded">migrations/016_game_notes_and_quick_counts.sql</code> in
-          your Supabase SQL editor, then refresh.
+          {FEATURE_UNAVAILABLE}
         </div>
       )}
 

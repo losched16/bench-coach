@@ -112,7 +112,10 @@
     "verify:player-pathways-prod": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-player-pathways-prod.ts",
     "verify:speed-drills": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-speed-drills.ts",
     "test:help-content": "npx --yes tsx --tsconfig tsconfig.json scripts/test-help-content.ts",
-    "test:migration-076": "bash scripts/test-migration-076.sh"
+    "test:migration-076": "bash scripts/test-migration-076.sh",
+    "test:onboarding": "npx --yes tsx --tsconfig tsconfig.json scripts/test-onboarding.ts",
+    "test:hook-order": "npx --yes tsx --tsconfig tsconfig.json scripts/test-hook-order.ts",
+    "test:browser": "bash scripts/browser/run.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

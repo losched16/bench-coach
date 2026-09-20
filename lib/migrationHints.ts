@@ -86,9 +86,34 @@ export interface MigrationHint {
   what: string | null
   // The name Postgres couldn't resolve
   missing: string | null
-  // Ready to show. Always says something useful, even when unmapped.
+  /**
+   * WHAT THE COACH SEES. No file names, no SQL editor, no table names.
+   *
+   * A volunteer coach cannot run a migration and should never be asked to. The
+   * earlier version of this field told them to "Run
+   * migrations/072_player_pathway_progress.sql in the Supabase SQL editor,
+   * then refresh" — an instruction that is addressed to an operator, reads as
+   * the app being broken, and names internal files to somebody who has no
+   * business seeing them. Twenty-five API routes hand this straight to a
+   * browser, so this is the only place it needed fixing.
+   */
   message: string
+  /**
+   * The same diagnosis, for the server log and for whoever runs this thing.
+   * Never returned to a browser.
+   */
+  operatorMessage: string
 }
+
+/**
+ * What a coach is told when a feature's storage is not in place.
+ *
+ * It says the three things that are actually true and useful to them: it is
+ * not their fault, their data is fine, and somebody else has to fix it.
+ */
+export const FEATURE_UNAVAILABLE =
+  'This part of BenchCoach is not switched on for your account yet. ' +
+  'Nothing you have saved is affected. Whoever set up your team can turn it on.'
 
 // Postgres: 42P01 undefined_table, 42703 undefined_column, 42883 undefined_function
 const SCHEMA_ERROR_CODES = new Set(['42P01', '42703', '42883', 'PGRST204', 'PGRST205'])
@@ -118,9 +143,10 @@ export function migrationHintFor(error: any): MigrationHint | null {
       file: hit.file,
       what: hit.what,
       missing,
-      message:
-        `Your database is missing ${hit.what}${missing ? ` (${missing})` : ''}. ` +
-        `Run migrations/${hit.file} in the Supabase SQL editor, then refresh.`,
+      message: FEATURE_UNAVAILABLE,
+      operatorMessage:
+        `Missing ${hit.what}${missing ? ` (${missing})` : ''}. ` +
+        `Run migrations/${hit.file} in the Supabase SQL editor.`,
     }
   }
 
@@ -128,8 +154,9 @@ export function migrationHintFor(error: any): MigrationHint | null {
     file: null,
     what: null,
     missing,
-    message: missing
-      ? `Your database is missing "${missing}". Check the files in /migrations for the one that adds it — they're safe to re-run.`
-      : `The database rejected that query: ${error.message || 'unknown error'}. The files in /migrations are safe to re-run.`,
+    message: FEATURE_UNAVAILABLE,
+    operatorMessage: missing
+      ? `Missing "${missing}". Check /migrations for the file that adds it — they are safe to re-run.`
+      : `The database rejected the query: ${error.message || 'unknown error'}. The files in /migrations are safe to re-run.`,
   }
 }

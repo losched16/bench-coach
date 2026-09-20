@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { migrationHintFor } from '@/lib/migrationHints'
+import { migrationHintFor, FEATURE_UNAVAILABLE } from '@/lib/migrationHints'
 import { guard } from '@/lib/authz'
 
 // Never prerendered. This route reads the session cookie to decide who is
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       players: [],
       needsMigration: !!hint,
-      migrationMessage: hint?.message || 'Run migration 032_opponent_lineup.sql.',
+      migrationMessage: hint?.message || FEATURE_UNAVAILABLE,
     })
   }
 }

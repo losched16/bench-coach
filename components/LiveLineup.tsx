@@ -5,6 +5,7 @@ import {
   Users, Loader2, AlertCircle, AlertTriangle, ArrowRightLeft, Lock, Send, Sparkles,
 } from 'lucide-react'
 import { SUB_RULES, SubRuleSet } from '@/lib/substitutions'
+import { FEATURE_UNAVAILABLE } from '@/lib/migrationHints'
 
 // The lineup during the game: who is in, who can come in, and what a swap
 // costs before you make it.
@@ -63,7 +64,7 @@ export function LiveLineup({ gameId, inning, teamId }: Props) {
       setPlayers(d.players || [])
       setRules(d.rules || 'starter_reentry')
       setHouseRules(d.houseRules || '')
-      if (d.needsMigration) setMigrationMessage(d.migrationMessage || 'Run migration 028.')
+      if (d.needsMigration) setMigrationMessage(d.migrationMessage || FEATURE_UNAVAILABLE)
     } catch {
       /* the rest of the game screen still works */
     } finally {

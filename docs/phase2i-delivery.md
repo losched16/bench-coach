@@ -1,257 +1,225 @@
 # Phase 2I — Onboarding and Contextual Help: Delivery Report
 
-Commit `7691c97` · branch `main` · production deployment `dpl_6Psgxew7yxYLDgTwgtXUiKp3bfEh` — **READY**
+Supersedes the first version of this report, which was written before any of it
+had been opened in a browser. Two of its claims were wrong and are corrected
+below.
 
 ---
 
-## 1. What was implemented
+## The short version
 
-**A single help content registry.** `lib/helpContent.ts` holds all eleven product
-guides as data. Every guide carries a purpose, a one-line summary, the
-capability and team it requires, numbered steps, a worked example, a
-problems/fixes list, what a coach should see when it worked, and what to do
-next. Nothing is generated at runtime — the brief prohibits AI-written product
-instructions, and there is no model call anywhere in this feature.
+The closeout found that **the practice builder had not rendered for anyone
+since 2026-09-16.** A `useEffect` sat below an early return in
+`app/dashboard/practice/page.tsx`, so React aborted the page on its second
+render. Four days, the core screen of the product, and nothing in the repo
+could see it: every suite here is a pure-function test, `next build` compiles
+it happily, and eslint is not configured.
 
-**A content validator that runs as a test.** `contentProblems()` refuses to let
-the registry ship with an unresolvable "related" link, a guide with no steps, a
-guide with no problems section, an orphaned guide, a URL, a route path, an email
-address, an implementation term (`migration`, `RLS`, `schema`, `supabase`,
-`jsonb`), or a claim that every drill has a video.
-
-**Contextual guidance components.** `components/help/ModuleHelp.tsx` provides:
-- `ModuleHelp` — a first-use card plus a persistent "How to use this" button
-- `FirstUseCard` — three steps maximum, dismissible per guide per user
-- `HelpPanel` — a `role="dialog"` slide-over with `aria-modal`, a focus trap,
-  Escape-to-close, focus restoration, and a real `<button>` backdrop
-- `GuideBody` — one renderer shared by the panel and the Help Center article, so
-  the two can never drift
-- `RelatedGuides` — cross-links resolved through `guideById`, never raw slugs
-
-**A rebuilt Help Center.** `app/dashboard/help/page.tsx` is now organised by what
-a coach is trying to do, searches bodies and synonyms rather than titles, and
-deep-links articles at `?article=<id>` through `router.push` so browser back
-works and a link is shareable.
-
-**A first-practice checklist.** `components/help/FirstPracticeChecklist.tsx`
-measures its own completion from `team_players` and `practice_plans` row counts.
-Opening a page ticks nothing. Pressing Generate ticks nothing. Pressing "Use this
-plan" ticks the final step because that is the press that writes the row. There
-is no "mark as done" button, per the brief's prohibition on a meaningless extra
-click. It is resumable across sessions and skippable, and it is hidden entirely
-from anyone who already has a saved plan, anyone who cannot create plans, and
-anyone who skipped it.
-
-**Per-user UI preferences.** `lib/useUiPref.ts` over the new `user_ui_prefs`
-table, used for help-card dismissals and checklist state.
+It took twelve minutes of a real browser to find. That is the headline, not the
+help content.
 
 ---
 
-## 2. Screens and workflows changed
+## 1. Implemented and tested
 
-| Surface | Change |
-|---|---|
-| `app/dashboard/page.tsx` | First-practice checklist; dashboard `ModuleHelp` |
-| `app/dashboard/practice/page.tsx` | `ModuleHelp` for practice plans; now reads `useRole` |
-| `app/dashboard/roster/page.tsx` | `ModuleHelp` for roster and import |
-| `components/PlayerDevelopment.tsx` | `ModuleHelp` with `suppressCard` when the player has no plans, so the card does not stack on the empty state |
-| `app/dashboard/help/page.tsx` | Rewritten — task index, body search, deep-linked articles, coaching resources separated, explicit "no support inbox" notice |
+Everything in this section has a test that fails if it regresses. "Browser"
+means real Chromium against the real app; "unit" means a pure-function suite.
 
-**Workflows changed:** none. No button was moved, renamed, or removed. Every
-change is additive guidance on top of existing flows.
+### Fixed in this closeout
 
----
+| What was wrong | What it did to a coach | Test |
+|---|---|---|
+| **A hook below an early return** in the practice page | The practice builder rendered nothing at all, since 2026-09-16 | `test:hook-order` scans all 120 component files; verified against the known-bad file |
+| **Supabase count errors were ignored.** `{ count, error }` was destructured for `count` alone, and Supabase returns errors rather than throwing | A failed roster query read as "no players", so an established coach got a first-run checklist — and `onboarding_started` fired at them, quietly poisoning the only number that says whether onboarding works | unit + browser (`A FAILED ROSTER COUNT HIDES THE CHECKLIST`) |
+| **No guard on stale responses.** Counts for one team could be applied after switching to another | Team A's saved plan could mark team B complete | unit (`a slow team-A response cannot mark team B complete`) |
+| **`useUiPref` kept state across account changes** | On a shared phone, an assistant coach inherited the head coach's dismissals from React state — the exact leak `user_ui_prefs` RLS exists to prevent, reintroduced above the database | browser (`ANOTHER ACCOUNT'S DISMISSAL IS NOT INHERITED`) |
+| **`useUiPref` merged patches off React state** | Two patches in one tick, and the second silently dropped the first | rewritten to merge off a ref and serialise writes per key |
+| **`articleHref` dropped `playerId`** | A coach reading about development plans from Charlie's profile, following one related link, landed back on the roster with Charlie to find again | unit + browser (`THE PLAYER IS ALREADY IN THE RELATED LINK`, `AND SURVIVES THE HOP`) |
+| **Dismissing onboarding was a one-way door** | No way back to the checklist, ever | browser (`REOPENING BRINGS IT BACK`, `the original completion timestamp is untouched`) |
+| **Eleven screens told coaches to run migrations**, e.g. "Run `migrations/019_metrics.sql` in your Supabase SQL editor" | A volunteer was handed an instruction they cannot perform, naming internal files, that reads as the app being broken | `test:help-content` now scans every non-admin `.tsx` |
 
-## 3. How guide content and preferences are maintained
+On the last one: `migrationHintFor()` now returns a coach-facing `message` and a
+separate `operatorMessage` for the server log. One change fixed all 25 API
+routes that hand it to a browser. `/app/admin` is deliberately exempt — naming
+the file there is the point.
 
-**Content** lives in `lib/helpContent.ts` as typed data. To add a guide: append a
-`HelpGuide` object, give it at least one task, and run `npm run
-test:help-content`. The test will reject it if it is orphaned, unlinked,
-stepless, problemless, or says something the validator forbids.
+### Verified in a real browser — 56 checks
 
-**The labels are checked against the code.** `scripts/test-help-content.ts` reads
-`app/dashboard/practice/page.tsx`, `app/dashboard/roster/page.tsx` and
-`app/dashboard/chat/page.tsx` as text, extracts every quoted control name out of
-the prose, and asserts each one appears in the component that renders it. If
-somebody renames "Use this plan", the test fails and the guide gets corrected
-instead of quietly lying to a coach standing on a field.
+`npm run test:browser` brings up a fixture Supabase, a dev server pointed at
+it, and drives Chromium. **Authentication is not bypassed:** each case signs in
+through the real login page and gets a real session cookie written by the real
+Supabase client; the real middleware decides whether the dashboard renders.
 
-**Coaching advice is separate.** `lib/coachingResources.tsx` holds the
-opinion-about-eight-year-olds content, lifted verbatim from the old Help Center,
-and renders in its own labelled section. Product instructions are checked against
-the code; coaching advice is somebody's judgement. Presenting them as the same
-kind of thing was one of the old page's problems.
+- **Focus and keyboard.** Focus moves into the panel; Tab is trapped through 30
+  presses and Shift+Tab backwards; Escape closes it; focus returns to the
+  control that opened it.
+- **The page behind survives.** Every heading node is marked, the panel opens
+  and closes, and every mark is still there — React did not remount the page,
+  so nothing held in it was lost.
+- **Dismissal round-trips.** Skip, reload, still gone. Reopen from Help, it is
+  back. Dismiss a first-use card, the "How to use this" button remains.
+- **The checklist under five conditions:** no roster, existing plans, a
+  restricted role, a failed roster count, a failed plan count.
+- **Deep links and history.** `?article=` opens directly; related links carry
+  the player; back and forward both work and keep the context.
+- **Layout at 375px, 430px and 1440px** — no sideways scroll, the panel fits,
+  and nothing inside it is clipped. Screenshots in `docs/audits/`.
 
-**Preferences** are rows in `user_ui_prefs`, keyed `(user_id, key)`. Keys are
-`help.dismissed.<guideId>` and `onboarding.first-practice`. Every read and write
-swallows its own errors — a preference failure must never block a page.
+### What in that is mocked, and therefore not integration-tested
 
----
+Stated plainly because the distinction matters: **Supabase is a fixture**
+(`scripts/browser/fixture-supabase.mjs`, in-memory), **`/api/me` is stubbed**
+per case to choose a role, and **`/api/entitlements` is stubbed to a paid
+tier**. So these results are statements about the app's own behaviour, and
+none of them is a statement about production data, production RLS, production
+auth, or billing.
 
-## 4. Migrations and configuration
-
-**`migrations/076_user_ui_prefs.sql` — applied to production.**
-
-```
-user_ui_prefs(user_id uuid, key text, value jsonb, updated_at timestamptz)
-  primary key (user_id, key)
-  check (length(key) between 1 and 120)
-  check (length(value::text) <= 4000)
-```
-
-RLS is `user_id = auth.uid()` on all four verbs, with both `USING` and `WITH
-CHECK` on UPDATE. No anon grant.
-
-`coach_preferences` was deliberately **not** reused. It is the AI Memory store —
-its rows are surfaced to the coach on the AI Memory page, so writing
-`help.dismissed.roster` into it would have shown an implementation flag as if it
-were something the coach told the product to remember. It is also keyed on
-`coach_id`, which invited staff do not have.
-
-**No configuration changes.** No new environment variables, no third-party
-onboarding service, no new dependencies.
-
----
-
-## 5. Checks run and results
+### Test results
 
 | Check | Result |
 |---|---|
-| `npm run test:help-content` | **63 passed, 0 failed** |
-| `scripts/test-migration-076.sh` (real Postgres) | **12 passed**, including cross-user isolation and "AI Memory is untouched" |
-| `npm run test:player-pathways` | 140 passed |
-| `npm run test:pathways` | 96 passed |
-| `npm run test:pathway-ui` | 60 passed |
-| `npm run test:drill-finder` | 114 passed |
-| `npm run verify:authz` | 68 routes clean |
-| `npm run typecheck:baseline` | **196** — unchanged from baseline |
-| `npm run build` | compiled successfully |
+| `test:browser` | **56 passed, 0 failed** |
+| `test:help-content` | 66 passed, 0 failed |
+| `test:onboarding` | 54 passed, 0 failed |
+| `test:hook-order` | 120 files scanned, 0 problems |
+| `test:player-pathways` | 140 passed |
+| `test:pathways` | 96 passed |
+| `test:pathway-ui` | 60 passed |
+| `test:drill-finder` | 114 passed |
+| `verify:authz` | 68 routes clean |
+| `test-migration-076.sh` | 12 passed on real Postgres |
+| `npx next build` | compiled successfully |
 
-`npm run lint` is not configured in this repository and was not run.
+**Typecheck: 196 errors, unchanged from the recorded baseline.**
 
-Notable assertions inside the 63:
-- the practice guide names "Use this plan" and never tells a coach to press Save
-- the skill-development guide names the real CoachAI button "Make this the priority"
-- nothing in any guide claims every drill has a video, and the drill guide says
-  the opposite because most do not
-- no email address and no URL appears anywhere in the prose
-- "screenshot", "photo", "print", "clipboard", "stages", "parents", "pitch count"
-  and "batting order" each find the right guide, and none of those words appears
-  in any title — that is the old search's exact failure mode
-- a contributor reading the practice guide is told in words that a head coach
-  creates plans, and the guide stays fully readable to them
+That is not a clean typecheck and the previous report let it read as one. The
+repo carries 196 pre-existing type errors and ships with
+`typescript.ignoreBuildErrors: true`; `typecheck:baseline` only asserts that
+this change added none. During the closeout the number moved to 197 and then
+to 5 — the 5 was a broken import that made `tsc` abort early, which is worth
+recording because a *falling* error count was the symptom of something worse.
+Both were mine and both are fixed.
 
----
-
-## 6. Screenshots and preview evidence
-
-**None. Nothing in this release has been verified in a browser.**
-
-This environment's network policy returns 403 CONNECT for `mybenchcoach.com` and
-`*.vercel.app`, and the production aliases sit behind Vercel SSO. Authenticated
-testing is not available here, so, per the brief: everything above is
-**code-level verification** — tests, a real Postgres RLS run, a typecheck and a
-production build. The following are **untested live behaviour** and are not
-claimed to work:
-
-- the help panel trapping focus in a real browser
-- Escape closing the panel and focus returning to the trigger
-- the checklist rendering and ticking against live production data
-- deep-linked articles and browser-back in a real address bar
-- layout at 375px, 430px and 1440px
-- whether any of the prose reads well to a coach
+`npm run lint` is not configured in this repository and was not run. The rule
+that would have caught the practice-page crash — `react-hooks/rules-of-hooks` —
+is precisely the rule nobody was running, which is why `test:hook-order` now
+exists as a standalone scanner.
 
 ---
 
-## 7. Known limitations
+## 2. Implemented but unverified
 
-1. **Playbooks has a page but no navigation.** `/dashboard/playbooks` is a real,
-   1,019-line feature that is not in the sidebar. Its guide says so plainly
-   rather than directing anyone to a menu entry that is not there, and it
-   deliberately offers no primary action button — putting Playbooks in the
-   sidebar is a product decision, not a help-content fix. **This is open.**
-2. **There is no support destination anywhere in the product.** The Help Center
-   says so in as many words rather than inventing an address. **This is open.**
-3. Contextual `ModuleHelp` is mounted on four surfaces. The other nine modules
-   have articles in the Help Center but no in-product entry point yet — that is
-   section 9 below.
-4. Help content is English-only and not localised.
-5. The checklist reads two row counts on dashboard load. On a failed count it
-   assumes the coach is established and shows nothing, which is the safe
-   direction but means a transient error hides the checklist for that load.
-6. Analytics carries `guide_id`, `module`, `entry_point` and `step` only — no
-   player names, coach notes, screenshots, chat text, or raw help queries, per
-   §7 of the brief. The search box therefore cannot tell you what coaches
-   searched for and found nothing.
+- **Nothing has been run against production.** Every browser result above used
+  a fixture backend. Production data, production RLS and real auth are
+  untested by this work.
+- **Nothing has been read by a coach.** Whether the prose is actually useful is
+  not something a test can answer.
+- **Screen readers.** The panel has `role="dialog"`, `aria-modal`, an
+  `aria-labelledby` heading and a reachable backdrop button, and focus order is
+  verified — but no screen reader was run.
+- **Real devices.** Viewports were emulated in Chromium. No physical phone,
+  no Safari, no Firefox.
+- **The seven guides with no in-product entry point** are readable in the Help
+  Center and were checked there, but their contextual placement does not exist
+  yet, so it cannot have been verified.
+- **`onboarding_reopened`** is emitted by the new Help Center control and
+  asserted in the browser suite, but nothing downstream consumes it yet.
 
----
+### Corrections to the first report
 
-## 8. Branch, commit, deployment
-
-- Branch: `main` (merged from `claude/latest-code-updates-0vrxpr`)
-- Commit: `7691c97` — "Tell coaches how the product works, in the product"
-- 16 files, +2,804 / −615
-- No pull request was opened — this went to `main` under the standing
-  authorisation to merge and deploy.
-- **Deployment status, reported separately from code completion:** Vercel
-  deployment `dpl_6Psgxew7yxYLDgTwgtXUiKp3bfEh` for `7691c97`, target
-  production, state **READY**. That the build deployed is verified; that the
-  feature works in a browser is not.
+- It said contextual help was mounted on four surfaces and "the other nine
+  modules" had none. **There are 11 guides and 4 mounts, so 7 are
+  Help-Centre-only**, not nine.
+- It listed `/dashboard/player-reports` and `/league` as surfaces to mount help
+  on. **Neither is an index page.** `player-reports` exists only as
+  `[reportId]`; reports are reached from a player profile. The league admin
+  surface is `/league-admin`; `/league` is only an invite link. Section 4 uses
+  the real routes, all of which were checked against the filesystem.
 
 ---
 
-## 9. Next implementation phase — the remaining modules
+## 3. Deployment status
 
-The pattern is now fixed and cheap to repeat: add a `HelpGuide` to the registry,
-mount `ModuleHelp` on the surface, add the label assertions to
-`test-help-content.ts`. Each module below is ordered by how often a coach hits it
-and how badly it fails without guidance.
+Reported separately from code completion, as the release rules require.
 
-### Tier 1 — a coach meets these in their first week
+- **Already in production:** commit `7691c97`, Vercel deployment
+  `dpl_6Psgxew7yxYLDgTwgtXUiKp3bfEh`, state READY. That is the build that
+  shipped the help content — **and the build in which the practice page does
+  not render.**
+- **This closeout** is on `main` and awaiting its Vercel build. The
+  practice-page fix is the reason to watch it land.
+- **No migration is required.** `076_user_ui_prefs` was already applied. This
+  closeout adds no schema changes.
 
-| Module | Route | Work |
-|---|---|---|
-| **CoachAI** | `/dashboard/chat` | Guide exists; mount `ModuleHelp`. Needs the priority-vs-development-plan distinction stated on the surface itself, not just in the article. |
-| **Drill Library** | `/dashboard/drills` | Guide exists; mount `ModuleHelp`. Must lead with the fact that most drills have no video — this is where a coach discovers it. |
-| **Game Day** | `/dashboard/game` | Guide exists; mount `ModuleHelp`. |
-| **Lineups** | `/dashboard/lineup` | **New guide.** Currently only reachable through the game-day guide's synonyms. Needs its own article: fairness rules, position eligibility, what the generator will and will not do. |
-| **Pitch Counter** | `/dashboard/count` | **New guide.** Highest consequence of any module — pitch limits are a safety rule, not a preference. The guide must state what the product enforces and what it merely displays, and must not imply it enforces a league rule it does not know. |
+---
 
-### Tier 2 — used regularly once a season is underway
+## 4. Remaining product decisions
 
-| Module | Route | Work |
-|---|---|---|
-| **Reports** | `/dashboard/player-reports` | Guide exists; mount `ModuleHelp`. |
-| **Notes** | `/dashboard/notes` | Guide exists; mount `ModuleHelp`. |
-| **Stats** | `/dashboard/stats` | **New guide.** Needs to say plainly what is computed from logged games versus entered by hand. |
-| **Scouting** | `/dashboard/scouting` | **New guide**, and the most constrained one to write. The article must reflect the product's existing rules: no cross-account aggregation, and no player-level narrative about opposing children beyond observable baseball facts. Write it so a coach understands those are deliberate, not missing features. |
+Both are yours, not mine, and neither was made here.
 
-### Tier 3 — configuration and administration
+1. **Playbooks navigation.** `/dashboard/playbooks` is a real 1,019-line
+   feature with no sidebar entry. Its guide says so plainly and deliberately
+   offers no action button. Access is unchanged by this closeout. The decision
+   is whether it belongs in the sidebar or stays a deep-linked feature.
+2. **A support destination.** There is none, anywhere in the product. The Help
+   Center now says only that — the previous copy told coaches that telling
+   whoever set up their team was "the fastest fix", which described a channel
+   that does not exist. **This is a configuration decision awaiting you:** an
+   inbox, a form, or a documented escalation path. Once one exists it goes in
+   the Help footer and the empty search state. Until then search recovery is a
+   "Clear the search" button and the task index, both of which work.
 
-| Module | Route | Work |
-|---|---|---|
-| **AI Memory** | `/dashboard/memory` | **New guide.** The one module where a coach genuinely cannot predict behaviour from the UI: what gets remembered, what it changes, how to remove something. |
-| **Staff** | `/dashboard/team` | **New guide.** Roles and what each can do. This is where the capability vocabulary becomes visible to a coach, so the words must match what the role selector says. |
-| **League** | `/league` | **New guide.** Scope carefully — league admins do not gain player-level access by sponsorship. The guide must not imply otherwise. |
-| **Account** | `/dashboard/profile`, `/dashboard/settings` | **New guide.** Billing, team switching, sign-out. |
+---
 
-### Carried into that phase as decisions, not tasks
+## 5. Recommended next rollout
 
-- **Playbooks navigation** — put it in the sidebar, or leave it as a deep-linked
-  feature and say so. Until this is decided the guide stays as written.
-- **A support destination** — an inbox, a form, or a documented "ask your league
-  admin" path. Once one exists it goes in the Help Center footer and the "nothing
-  matches your search" empty state, both of which are currently dead ends.
+Five modules, in this order. Each is: add a `HelpGuide`, mount `ModuleHelp`,
+add the quoted-label assertions, extend the browser suite.
 
-### Standing rules for every module above
+| # | Module | Route (verified) | Note |
+|---|---|---|---|
+| 1 | **Pitch Counter** | `/dashboard/count` | Highest consequence. See below. |
+| 2 | **CoachAI** | `/dashboard/chat` | Guide written; needs the priority-vs-development-plan distinction on the surface itself |
+| 3 | **Drill Library** | `/dashboard/drills` | Guide written; must lead with the fact that most drills have no video, since this is where a coach finds out |
+| 4 | **Game Day** | `/dashboard/game` | Guide written; mount only |
+| 5 | **Lineup Builder** | `/dashboard/lineup` | New guide. Currently reachable only through the game-day guide's synonyms |
 
-Carried forward from this release and not to be relaxed:
+### Pitch Counter guidance — what it may and may not say
 
-- No AI-generated product instructions at runtime.
-- No invented buttons, workflows, capabilities, video links, or support
-  destinations. Every quoted control gets an assertion against the component that
-  renders it.
-- No migrations, no implementation terminology, and no administrative repair
-  instructions in coach-facing guidance.
-- Opening a page is not completion.
-- Telemetry carries ids and modules only.
+I read `app/dashboard/count/page.tsx` before writing this. Verified behaviour:
+
+- A rule set (sanctioning body + age group) is **optional** and chosen by the
+  coach when they start a count.
+- With one chosen, the screen shows the `daily_max` for that rule set, warns
+  within 10 pitches of it, and flags going over.
+- With none chosen, there is no limit shown at all.
+- The count **accumulates per player per date**, so a day's total stays one
+  number across sessions. Reopening a finished count keeps adding to the same
+  day.
+- **It never blocks.** There is no disabled button, no confirmation, no stop.
+  A coach can count past the daily max and the app will let them.
+
+So the guide must say: *it tells you where this pitcher stands against the rule
+set you picked, and it does not stop you.* It must **not** say the product
+enforces a limit, knows your league's rules, or keeps anyone legal. It does not
+enforce anything, and a coach who believes BenchCoach is counting against their
+league's limit when no rule set is selected has been told something dangerous
+about a child's arm. If the rule sets in the database do not match a coach's
+league, the guide should say to check with their league rather than implying
+the list is authoritative.
+
+---
+
+## 6. Files
+
+New: `lib/onboarding.ts`, `scripts/test-onboarding.ts`,
+`scripts/test-hook-order.ts`, `scripts/browser/{fixture-supabase.mjs,
+help.spec.mjs,run.sh}`, three screenshots in `docs/audits/`.
+
+Changed: `app/dashboard/practice/page.tsx` (the crash),
+`lib/{useUiPref,helpRoutes,migrationHints}.ts`,
+`components/help/FirstPracticeChecklist.tsx`, `app/dashboard/help/page.tsx`,
+`scripts/test-help-content.ts`, and eleven files whose banners told coaches to
+run migrations.
+
+New scripts: `test:onboarding`, `test:hook-order`, `test:browser`.

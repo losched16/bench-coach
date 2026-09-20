@@ -1,10 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Check, X, ChevronRight, Rocket } from 'lucide-react'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { useUiPref, ONBOARDING_PREF_KEY } from '@/lib/useUiPref'
+import { checklistDecision, ChecklistFacts, LoadStatus } from '@/lib/onboarding'
 import { useTracker } from '@/lib/tracking'
 
 // "Create your first practice", for a coach who has just signed up.
@@ -24,6 +25,20 @@ import { useTracker } from '@/lib/tracking'
 // that no meaningless extra click should exist to satisfy a checklist — so
 // there is no "mark as done" button anywhere in here.
 //
+// AN UNANSWERED QUESTION IS NOT AN ANSWER OF NO.
+//
+// Supabase reports a failed count by RETURNING an error, not by throwing, so a
+// try/catch around these calls catches almost nothing that actually goes wrong.
+// A count that comes back `{ count: null, error: {...} }` destructured for
+// `count` alone reads as zero rows — which is indistinguishable, here, from a
+// brand new coach. That would show an established coach an onboarding
+// checklist and, worse, fire onboarding_started at them.
+//
+// So the load below has three outcomes, not two: answered, unavailable, and
+// still going. Only `answered` renders anything or reports anything. Both
+// errors are checked explicitly, and a request that resolves after the coach
+// has switched teams is dropped rather than applied to the wrong team.
+//
 // WHO NEVER SEES THIS
 //
 //   * anyone who already has a saved plan — they are not a new user, whatever
@@ -32,6 +47,12 @@ import { useTracker } from '@/lib/tracking'
 //     whose middle step they are not allowed to perform would be worse than
 //     showing them nothing.
 //   * anyone who skipped it
+//   * anyone whose roster and plan counts could not be read
+//
+// ...unless they asked for it back from the Help Center, which sets
+// `reopenedAt`. A coach who reopens it sees the true state of their own data,
+// including "already done" — reopening never invents completion, and because
+// `completedAt` is preserved across a reopen it never reports completion twice.
 //
 // A ROSTER IS NOT REQUIRED TO FINISH. The practice builder works without one,
 // so the roster step is marked optional rather than blocking. Inventing a
@@ -44,83 +65,97 @@ interface Props {
   canCreatePlans: boolean
 }
 
-interface Progress {
-  hasTeam: boolean
-  hasRoster: boolean
-  hasPlan: boolean
-  loaded: boolean
+const PENDING: ChecklistFacts = {
+  status: 'loading' as LoadStatus, teamId: null, hasRoster: false, hasPlan: false,
 }
 
 export function FirstPracticeChecklist({ teamId, canCreatePlans }: Props) {
   const supabase = createSupabaseComponentClient()
   const track = useTracker()
   const { value, ready, set } = useUiPref(ONBOARDING_PREF_KEY)
-  const [p, setP] = useState<Progress>({
-    hasTeam: false, hasRoster: false, hasPlan: false, loaded: false,
-  })
-
-  const skipped = !!value?.skipped
-  const started = !!value?.startedAt
+  const [p, setP] = useState<ChecklistFacts>(PENDING)
+  const seq = useRef(0)
 
   const load = useCallback(async () => {
-    if (!teamId) { setP(s => ({ ...s, loaded: true })); return }
+    const mine = ++seq.current
+    if (!teamId) {
+      setP({ status: 'unavailable', teamId: null, hasRoster: false, hasPlan: false })
+      return
+    }
+    setP(PENDING)
+
+    let players: { count: number | null; error: unknown }
+    let plans: { count: number | null; error: unknown }
     try {
-      const [{ count: players }, { count: plans }] = await Promise.all([
+      const [a, b] = await Promise.all([
         supabase.from('team_players').select('id', { count: 'exact', head: true })
           .eq('team_id', teamId),
         supabase.from('practice_plans').select('id', { count: 'exact', head: true })
           .eq('team_id', teamId),
       ])
-      setP({
-        hasTeam: true,
-        hasRoster: (players || 0) > 0,
-        hasPlan: (plans || 0) > 0,
-        loaded: true,
-      })
-    } catch {
-      // A failed count must not block the dashboard. Treat it as "nothing to
-      // show" rather than guessing the coach is new.
-      setP({ hasTeam: !!teamId, hasRoster: true, hasPlan: true, loaded: true })
+      players = { count: a.count, error: a.error }
+      plans = { count: b.count, error: b.error }
+    } catch (e) {
+      // The client threw outright — offline, aborted, a bad URL.
+      players = { count: null, error: e }
+      plans = { count: null, error: e }
     }
+
+    // The coach moved on while this was in flight. Their new team's request is
+    // already running; this answer describes somewhere else.
+    if (mine !== seq.current) return
+
+    // THE CHECK THAT WAS MISSING. An error, or a null count on a successful
+    // response, means we do not know — and not knowing must not be rendered as
+    // a zero.
+    if (players.error || plans.error || players.count === null || plans.count === null) {
+      setP({ status: 'unavailable', teamId, hasRoster: false, hasPlan: false })
+      return
+    }
+
+    setP({
+      status: 'answered',
+      teamId,
+      hasRoster: players.count > 0,
+      hasPlan: plans.count > 0,
+    })
   }, [teamId, supabase])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+    return () => { seq.current++ }
+  }, [load])
+
+  // Every "should this show" and "should this report" rule lives in
+  // lib/onboarding.ts and is covered by scripts/test-onboarding.ts.
+  const d = checklistDecision({
+    facts: p, teamId, canCreatePlans, pref: value, prefReady: ready,
+  })
 
   // Fires once, when a genuinely new coach first sees it.
   useEffect(() => {
-    if (!ready || !p.loaded || skipped || started) return
-    if (p.hasPlan || !canCreatePlans) return
+    if (!d.trackStarted) return
     track('onboarding_started', { checklist: 'first-practice' })
     set({ startedAt: new Date().toISOString() })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, p.loaded, skipped, started, p.hasPlan, canCreatePlans])
+  }, [d.trackStarted])
 
   // Completion is a fact about the database, so it is announced when it
   // becomes true rather than when a button is pressed.
   useEffect(() => {
-    if (!ready || !p.loaded || !p.hasPlan) return
-    if (value?.completedAt) return
-    if (!started) return
+    if (!d.trackCompleted) return
     track('onboarding_completed', { checklist: 'first-practice' })
     set({ completedAt: new Date().toISOString() })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, p.loaded, p.hasPlan, started, value?.completedAt])
+  }, [d.trackCompleted])
 
-  if (!ready || !p.loaded) return null
-  if (skipped) return null
-  // Already has a plan and was never mid-checklist: an existing coach, not a
-  // new one. Nothing to show them.
-  if (p.hasPlan && !started) return null
-  // Finished it in an earlier session.
-  if (p.hasPlan && value?.completedAt && !value?.keepOpen) return null
-  if (!canCreatePlans) return null
-  if (!teamId) return null
+  if (!d.visible) return null
 
   const steps = [
     {
       key: 'team',
       label: 'Your team is set up',
-      done: p.hasTeam,
+      done: true,
       href: null as string | null,
       cta: null as string | null,
     },
@@ -143,11 +178,14 @@ export function FirstPracticeChecklist({ teamId, canCreatePlans }: Props) {
     },
   ]
 
-  const complete = p.hasPlan
+  const complete = d.complete
   const next = steps.find(s => !s.done && s.href)
 
   return (
-    <div className="bg-white border border-red-200 rounded-lg shadow-sm overflow-hidden">
+    <div
+      data-testid="first-practice-checklist"
+      className="bg-white border border-red-200 rounded-lg shadow-sm overflow-hidden"
+    >
       <div className="p-4 flex items-start justify-between gap-3">
         <div className="flex items-start gap-2.5 min-w-0">
           <Rocket size={18} className="text-red-600 flex-shrink-0 mt-0.5" />
@@ -220,8 +258,7 @@ export function FirstPracticeChecklist({ teamId, canCreatePlans }: Props) {
       {!complete && next && (
         <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
           <p className="text-xs text-gray-500">
-            Nothing here ticks itself when you open a page — a step is done when the
-            work is actually saved.
+            A step is ticked when the work is saved, so you can leave and come back.
           </p>
         </div>
       )}

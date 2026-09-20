@@ -6,6 +6,7 @@ import { COACH_VOICE } from '@/lib/coachVoice'
 import { resolveFocusArea, focusAreaLabel } from '@/lib/focusAreas'
 import { textFrom } from '@/lib/claudeText'
 import { commitPrescription } from '@/lib/prescriptions'
+import { FEATURE_UNAVAILABLE } from '@/lib/migrationHints'
 import { guard, requireSession } from '@/lib/authz'
 import { visibleDrills, schedulableDrills } from '@/lib/drills'
 import { diagnose, TaxonomyRow, TAXONOMY_FIELDS } from '@/lib/drillDiagnosis'
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
     if (taxErr || !taxonomy || taxonomy.length === 0) {
       return NextResponse.json({
         needsMigration: true,
-        error: 'The prescription tables are not set up yet. Apply the migrations in /migrations, then try again.',
+        error: FEATURE_UNAVAILABLE,
       }, { status: 503 })
     }
     const tax = taxonomy as TaxonomyRow[]

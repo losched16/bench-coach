@@ -4,7 +4,7 @@ import {
   GameState, Bases, EMPTY_BASES, Half, StoredEvent, Runner,
   advanceIfHalfOver, weAreBatting, boxScore,
 } from '@/lib/scorebook'
-import { migrationHintFor } from '@/lib/migrationHints'
+import { migrationHintFor, FEATURE_UNAVAILABLE } from '@/lib/migrationHints'
 import { guard } from '@/lib/authz'
 
 // Never prerendered. This route reads the session cookie to decide who is
@@ -203,7 +203,7 @@ export async function GET(request: NextRequest) {
       isHome: true, state: { inning: 1, half: 'top', outs: 0, bases: EMPTY_BASES, awayRuns: 0, homeRuns: 0 },
       weBatting: false, order: [], dueUpIndex: 0, opponentSlot: 1, opponentNames: {},
       events: [], box: { batting: [], pitching: [], lineScore: [], awayRuns: 0, homeRuns: 0 },
-      needsMigration: !!hint, migrationMessage: hint?.message || 'Run migration 030_scorebook.sql.',
+      needsMigration: !!hint, migrationMessage: hint?.message || FEATURE_UNAVAILABLE,
     })
   }
 }

@@ -200,6 +200,22 @@ function PracticeContent() {
   const [handoffDrillId] = useState<string | null>(() => searchParams.get('drill'))
   const handoffApplied = useRef(false)
 
+  // Tick the handed-over drill once, when the library has confirmed it exists.
+  //
+  // THIS MUST STAY ABOVE THE `if (loading)` RETURN BELOW. It lived under it
+  // from 2026-09-16 until a browser run caught it, and the effect of that is
+  // not subtle: the first render returns early and never reaches this hook,
+  // the second render does, and React aborts the whole page with "Rendered
+  // more hooks than during the previous render." The practice builder did not
+  // render at all. Nothing in the test suite could see it, because nothing in
+  // the test suite rendered a component.
+  useEffect(() => {
+    if (handoffApplied.current || !handoffDrillId) return
+    if (!(drillResources as any[]).some(d => d.id === handoffDrillId)) return
+    handoffApplied.current = true
+    setPickedDrills(prev => new Set(prev).add(handoffDrillId))
+  }, [drillResources, handoffDrillId])
+
   const FOCUS_OPTIONS = [
     'throwing',
     'catching',
@@ -1009,14 +1025,6 @@ function PracticeContent() {
     .filter(d => d.id && (favorites.has(d.id) || d.id === handoffDrillId))
     .sort((a, b) => (a.skill_category || '').localeCompare(b.skill_category || '')
       || a.drill_name.localeCompare(b.drill_name))
-
-  // Tick the handed-over drill once, when the library has confirmed it exists.
-  useEffect(() => {
-    if (handoffApplied.current || !handoffDrillId) return
-    if (!(drillResources as any[]).some(d => d.id === handoffDrillId)) return
-    handoffApplied.current = true
-    setPickedDrills(prev => new Set(prev).add(handoffDrillId))
-  }, [drillResources, handoffDrillId])
 
   const dismissRecap = async (planId: string) => {
     setDismissing(planId)

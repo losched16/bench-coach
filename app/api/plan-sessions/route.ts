@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { guard, authorizeCoach } from '@/lib/authz'
-import { migrationHintFor } from '@/lib/migrationHints'
+import { migrationHintFor, FEATURE_UNAVAILABLE } from '@/lib/migrationHints'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request.
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       done: [],
       needsMigration: !!hint,
-      migrationMessage: hint?.message || 'Run migration 035_plan_sessions.sql.',
+      migrationMessage: hint?.message || FEATURE_UNAVAILABLE,
     })
   }
 }
