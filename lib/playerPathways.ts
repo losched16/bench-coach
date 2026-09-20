@@ -25,7 +25,7 @@ import { MetricType, MetricReading, MetricDirection } from './metrics'
 export type ProgressStatus = 'active' | 'paused' | 'completed'
 
 export type PathwayEventType =
-  | 'enrolled' | 'session_logged' | 'mastery_recorded'
+  | 'enrolled' | 'session_logged' | 'mastery_recorded' | 'note'
   | 'advanced' | 'regressed' | 'completed' | 'paused' | 'resumed'
 
 export interface PlayerPathwayProgress {
@@ -156,13 +156,16 @@ export function coachDecisions(
  * enough to get past it — so the route asks this and the button asks that, and
  * this one is the one that counts.
  */
-export type MoveKind = 'advance' | 'regress' | 'complete' | 'pause' | 'resume'
+export type MoveKind = 'advance' | 'regress' | 'complete' | 'pause' | 'resume' | 'jump'
 
 export function validateMove(
   pathway: LoadedPathway | null | undefined,
   progress: PlayerPathwayProgress | null | undefined,
   kind: MoveKind,
-  /** For advance/regress: the stage the caller believes they are moving to. */
+  /**
+   * For advance/regress: the stage the caller believes they are moving to, used
+   * as a staleness check. For 'jump': the stage they are moving to, required.
+   */
   toStageKey?: string | null
 ): { ok: true; stage: PathwayStage | null } | { ok: false; error: string } {
   if (!progress) return { ok: false, error: 'No enrollment to change' }
@@ -178,6 +181,27 @@ export function validateMove(
   if (kind === 'pause') {
     if (progress.status === 'paused') return { ok: false, error: 'That plan is already paused' }
     return { ok: true, stage: null }
+  }
+
+  // JUMPING TO ANY STAGE.
+  //
+  // The plan is a course, not a gate: a coach may put a player on whichever
+  // stage matches where they actually are, without walking them through every
+  // stage in between. A kid who arrives mid-season already able to accelerate
+  // does not need four practices of being told he is on stage 1.
+  //
+  // Still bounded by the pathway. The target must be a real stage of THIS
+  // pathway, which is the only rule that was ever load-bearing — the one-at-a-
+  // time restriction was a UI convention, not a safety property.
+  if (kind === 'jump') {
+    const key = (toStageKey || '').trim()
+    if (!key) return { ok: false, error: 'No stage was named' }
+    const target = stageByKey(pathway, key)
+    if (!target) return { ok: false, error: 'That stage is not part of this plan' }
+    if (key === progress.current_stage_key) {
+      return { ok: false, error: 'They are already on that stage' }
+    }
+    return { ok: true, stage: target }
   }
 
   const d = coachDecisions(pathway, progress)
@@ -253,6 +277,35 @@ export function checkedSignals(
   return new Set(Array.isArray(signals) ? signals.filter((s: any) => typeof s === 'string') : [])
 }
 
+/**
+ * The notes written against one stage, newest first.
+ *
+ * Stage-scoped on purpose. "The pogo rhythm fell apart today" is about stage 4
+ * of this plan, and a flat list of notes on the player would lose the only
+ * context that makes it findable when the coach comes back to that stage.
+ */
+export function notesForStage(
+  events: PlayerPathwayEvent[] | null | undefined,
+  stageKey: string | null | undefined
+): PlayerPathwayEvent[] {
+  if (!stageKey) return []
+  return (events || [])
+    .filter(e => e.event_type === 'note' && e.stage_key === stageKey && !!e.note)
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+}
+
+/** How many notes exist per stage, for the plan map. */
+export function noteCounts(
+  events: PlayerPathwayEvent[] | null | undefined
+): Map<string, number> {
+  const out = new Map<string, number>()
+  for (const e of events || []) {
+    if (e.event_type !== 'note' || !e.stage_key || !e.note) continue
+    out.set(e.stage_key, (out.get(e.stage_key) || 0) + 1)
+  }
+  return out
+}
+
 /** Whole days since a timestamp. Used for "how long have they been here". */
 export function daysSince(iso: string | null | undefined, now = new Date()): number | null {
   if (!iso) return null
@@ -284,7 +337,8 @@ export function describeEvent(e: PlayerPathwayEvent, stageName?: (key: string | 
       const n = Array.isArray(e.detail?.signals) ? e.detail.signals.length : 0
       return `Recorded what ${n === 1 ? 'one signal' : `${n} signals`} looked like at ${name(e.stage_key)}`
     }
-    case 'advanced': return `Advanced from ${name(e.from_stage_key)} to ${name(e.to_stage_key)}`
+    case 'note': return `Note on ${name(e.stage_key)}`
+    case 'advanced': return `Moved from ${name(e.from_stage_key)} to ${name(e.to_stage_key)}`
     case 'regressed': return `Went back from ${name(e.from_stage_key)} to ${name(e.to_stage_key)}`
     case 'completed': return 'Completed the plan'
     case 'paused': return 'Paused the plan'
@@ -328,6 +382,8 @@ export interface OutlineStage {
   practicesMax: number | null
   /** How many drills the stage offers, when the caller knows. */
   drillCount: number | null
+  /** Notes written against this stage. */
+  notes: number
 }
 
 export interface PlanOutline {
@@ -392,6 +448,8 @@ export function planOutline(
     }
   }
 
+  const notes = noteCounts(evs)
+
   const outline: OutlineStage[] = stages.map((s, i) => {
     const isCurrent = !completed && s.stage_key === currentKey
     const state: StageProgressState = isCurrent
@@ -408,6 +466,7 @@ export function planOutline(
       practicesMin: (s as any).estimated_practices_min ?? null,
       practicesMax: (s as any).estimated_practices_max ?? null,
       drillCount: drillCounts?.get(s.stage_key) ?? null,
+      notes: notes.get(s.stage_key) || 0,
     }
   })
 

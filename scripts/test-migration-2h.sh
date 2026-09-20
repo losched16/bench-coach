@@ -40,11 +40,12 @@ M71="$ROOT/migrations/071_pathway_coverage_expansion.sql"
 M72="$ROOT/migrations/072_player_pathway_progress.sql"
 M73="$ROOT/migrations/073_speed_metric_presets.sql"
 M74="$ROOT/migrations/074_speed_agility_pathway.sql"
+M75="$ROOT/migrations/075_pathway_notes.sql"
 WORK=$(mktemp -d /tmp/bc-pg2h-XXXXXX)
 PORT=${PGPORT_TEST:-55472}
 SOCK="$WORK/sock"
 
-for f in "$M72" "$M73" "$M74"; do
+for f in "$M72" "$M73" "$M74" "$M75"; do
   [ -f "$f" ] || { echo "SKIP: $f not written yet." >&2; exit 0; }
 done
 
@@ -245,11 +246,11 @@ NAMED_BEFORE=$(Q "SELECT count(*) FROM drill_resources WHERE drill_name <> 'stub
 # ---------------------------------------------------------------------------
 # 1. the three migrations apply
 # ---------------------------------------------------------------------------
-for f in "$M72" "$M73" "$M74"; do
+for f in "$M72" "$M73" "$M74" "$M75"; do
   PSQL -v ON_ERROR_STOP=1 -q -f "$f" > "$WORK/$(basename "$f").log" 2>&1 \
     || { echo "--- $(basename "$f") ---"; tail -20 "$WORK/$(basename "$f").log"; fail "$(basename "$f") did not apply"; }
 done
-pass "072, 073 and 074 apply cleanly"
+pass "072, 073, 074 and 075 apply cleanly"
 
 # ---------------------------------------------------------------------------
 # 2. idempotence
@@ -260,10 +261,10 @@ SNAP="SELECT (SELECT count(*) FROM drill_resources) || '/' ||
              (SELECT count(*) FROM development_pathway_stages) || '/' ||
              (SELECT count(*) FROM development_pathway_stage_drills)"
 BEFORE=$(Q "$SNAP")
-for f in "$M72" "$M73" "$M74"; do
+for f in "$M72" "$M73" "$M74" "$M75"; do
   PSQL -v ON_ERROR_STOP=1 -q -f "$f" > /dev/null 2>&1 || fail "re-running $(basename "$f") failed"
 done
-eq "re-running all three changes nothing" "$(Q "$SNAP")" "$BEFORE"
+eq "re-running all four changes nothing" "$(Q "$SNAP")" "$BEFORE"
 
 # ---------------------------------------------------------------------------
 # Fixtures: two teams, four people.
@@ -495,6 +496,42 @@ eq "no new drill carries a URL in any text field" \
    "$(Q "SELECT count(*) FROM drill_resources WHERE skill_category='Athletic Development'
          AND source='benchcoach_original'
          AND (description ~* 'https?://' OR ai_coaching_notes ~* 'https?://')")" "0"
+
+# ---------------------------------------------------------------------------
+# 21-24. notes (075)
+# ---------------------------------------------------------------------------
+PSQL -q -c "INSERT INTO player_pathway_events (progress_id, team_id, event_type, stage_key, note)
+            VALUES ('$PROG','$TEAM_A','note','acceleration-position','Hips sagging on the wall drive.')" >/dev/null \
+  || fail "a note event was rejected"
+pass "a note may be recorded against a stage"
+
+eq "a contributor MAY write a note — it is a record, not a decision" \
+   "$(ASX 33333333-3333-3333-3333-333333333333 "INSERT INTO player_pathway_events
+      (progress_id, team_id, event_type, stage_key, note)
+      VALUES ('$PROG','$TEAM_A','note','acceleration-position','seen it')")" "yes"
+eq "a viewer may NOT write a note" \
+   "$(ASX 44444444-4444-4444-4444-444444444444 "INSERT INTO player_pathway_events
+      (progress_id, team_id, event_type, stage_key, note)
+      VALUES ('$PROG','$TEAM_A','note','acceleration-position','nope')")" "no"
+eq "an outside coach may NOT write a note" \
+   "$(ASX 55555555-5555-5555-5555-555555555555 "INSERT INTO player_pathway_events
+      (progress_id, team_id, event_type, stage_key, note)
+      VALUES ('$PROG','$TEAM_A','note','acceleration-position','nope')")" "no"
+
+# A widened constraint that stopped constraining would be worse than the gate
+# it replaced.
+if PSQL -q -c "INSERT INTO player_pathway_events (progress_id, team_id, event_type)
+               VALUES ('$PROG','$TEAM_A','whatever_i_like')" >/dev/null 2>&1; then
+  fail "the event_type constraint accepts anything now"
+fi
+pass "an invented event type is still rejected"
+
+# A note may be filed against a stage the player is not standing on — that is
+# the point of a browsable plan.
+PSQL -q -c "INSERT INTO player_pathway_events (progress_id, team_id, event_type, stage_key, note)
+            VALUES ('$PROG','$TEAM_A','note','game-speed-and-retest','read ahead')" >/dev/null \
+  || fail "a note against a stage the player has not reached was rejected"
+pass "a note may be filed against a stage the player has not reached"
 
 echo ""
 echo "All checks passed."

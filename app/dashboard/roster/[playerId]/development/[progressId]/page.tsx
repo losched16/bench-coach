@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowLeft, Loader2, Check, ChevronRight, ChevronLeft, ChevronDown, ChevronUp,
   CheckCircle2, Gauge, ClipboardList, Dumbbell, X, CalendarPlus,
-  AlertTriangle, Play, ExternalLink, Map as MapIcon,
+  AlertTriangle, Play, ExternalLink, Map as MapIcon, StickyNote, Eye,
 } from 'lucide-react'
 import { DrillVideo } from '@/components/DrillVideo'
 import { usePageView, useTracker } from '@/lib/tracking'
@@ -16,7 +16,7 @@ import {
   PlayerPathwayProgress, PlayerPathwayEvent, coachDecisions, sessionCounts,
   checkedSignals, describeEvent, describeDuration, daysSince,
   summariseSpeedMeasurements, formatChange, MeasurementSummary, staleStageMessage,
-  planOutline, practiceRange, PlanOutline, OutlineStage,
+  planOutline, practiceRange, PlanOutline, OutlineStage, notesForStage,
 } from '@/lib/playerPathways'
 import type { MetricType, MetricReading } from '@/lib/metrics'
 import { formatValue } from '@/lib/metrics'
@@ -64,15 +64,14 @@ interface Detail {
     stages: PathwayStage[]
     drillCounts?: Record<string, number>
   } | null
-  drills: StageDrill[]
+  drillPool: Record<string, StageDrill>
+  stageDrills: Record<string, Array<{ id: string; role: string; step: string; rationale: string }>>
   stageMissing: boolean
 }
 
 interface StageDrill {
   id: string
   drill_name: string
-  role: string
-  rationale: string
   est_duration_minutes: number | null
   equipment_needed: string[] | null
   space_required: string | null
@@ -126,9 +125,18 @@ function DevelopmentPlanContent() {
   const [types, setTypes] = useState<MetricType[]>([])
   const [readings, setReadings] = useState<MetricReading[]>([])
 
+  // THE STAGE BEING LOOKED AT, WHICH IS NOT ALWAYS THE STAGE HE IS ON.
+  //
+  // The plan is a course. A coach can open stage 7 while the player stands on
+  // stage 3, read the whole thing, and decide from that whether to move him.
+  // Null means "wherever he actually is", so the page lands on his stage and
+  // follows him when he moves.
+  const [viewingKey, setViewingKey] = useState<string | null>(null)
+
   const [showSession, setShowSession] = useState(false)
+  const [showNote, setShowNote] = useState(false)
   const [showAssessment, setShowAssessment] = useState(false)
-  const [confirm, setConfirm] = useState<null | { kind: 'advance' | 'regress' | 'complete'; label: string; body: string }>(null)
+  const [confirm, setConfirm] = useState<null | { kind: 'advance' | 'regress' | 'complete' | 'jump'; toStageKey?: string; label: string; body: string }>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -177,9 +185,23 @@ function DevelopmentPlanContent() {
     }
   }, [detail])
 
-  const stage = useMemo(
-    () => detail?.pathway?.stages.find(s => s.stage_key === detail.progress.current_stage_key) || null,
-    [detail])
+  // The stage on screen. Defaults to where the player is, and falls back there
+  // if a viewed key stops resolving — a coach browsing stage 9 when the pathway
+  // is re-curated should land somewhere real, not on an empty page.
+  const currentKey = detail?.progress.current_stage_key ?? null
+  const stage = useMemo(() => {
+    const stages = detail?.pathway?.stages || []
+    return stages.find(s => s.stage_key === (viewingKey ?? currentKey))
+      || stages.find(s => s.stage_key === currentKey)
+      || null
+  }, [detail, viewingKey, currentKey])
+
+  const viewedKey = stage?.stage_key ?? null
+  const isViewingCurrent = viewedKey != null && viewedKey === currentKey
+  const allStages = detail?.pathway?.stages || []
+  const idx = allStages.findIndex(s => s.stage_key === viewedKey)
+  const currentStage = allStages.find(s => s.stage_key === currentKey) || null
+  const currentStageNumber = currentStage?.stage_number ?? null
 
   const decisions = useMemo(
     () => coachDecisions(loaded, detail?.progress || null),
@@ -189,9 +211,33 @@ function DevelopmentPlanContent() {
     () => sessionCounts(detail?.events, detail?.progress.current_stage_key),
     [detail])
 
+  // Observations belong to the stage being looked at. A coach reading ahead who
+  // ticks "he can already do this" on stage 6 means stage 6, and filing it
+  // against stage 3 because that is where he officially stands would put it
+  // where nobody looks for it.
   const checked = useMemo(
-    () => checkedSignals(detail?.events, detail?.progress.current_stage_key),
-    [detail])
+    () => checkedSignals(detail?.events, viewedKey),
+    [detail, viewedKey])
+
+  const stageNotes = useMemo(
+    () => notesForStage(detail?.events, viewedKey),
+    [detail, viewedKey])
+
+  // Sessions logged at the stage being READ, which is not the same number as
+  // sessions at the stage he is on once a coach starts browsing.
+  const viewedSessions = useMemo(
+    () => sessionCounts(detail?.events, viewedKey).atCurrentStage,
+    [detail, viewedKey])
+
+  const viewedDrills = useMemo<Array<StageDrill & { role: string; rationale: string; step: string }>>(() => {
+    if (!detail || !viewedKey) return []
+    return (detail.stageDrills?.[viewedKey] || [])
+      .map(ref => {
+        const full = detail.drillPool?.[ref.id]
+        return full ? { ...full, role: ref.role, rationale: ref.rationale, step: ref.step } : null
+      })
+      .filter(Boolean) as Array<StageDrill & { role: string; rationale: string; step: string }>
+  }, [detail, viewedKey])
 
   const speed = useMemo<MeasurementSummary[]>(
     () => summariseSpeedMeasurements(types, readings),
@@ -230,21 +276,33 @@ function DevelopmentPlanContent() {
     }
   }
 
-  const move = async (kind: 'advance' | 'regress' | 'complete') => {
+  const move = async (kind: 'advance' | 'regress' | 'complete' | 'jump', toStageKey?: string) => {
     const target = kind === 'advance' ? decisions.advance : kind === 'regress' ? decisions.regress : null
-    const ok = await act(kind, target ? { toStageKey: target.stage.stage_key } : {})
+    const landing = kind === 'jump'
+      ? allStages.find(s => s.stage_key === toStageKey) || null
+      : target?.stage || null
+    const ok = await act(kind, kind === 'jump'
+      ? { toStageKey }
+      : target ? { toStageKey: target.stage.stage_key } : {})
     if (ok) {
+      const forward = (landing?.stage_number ?? 0) >= (currentStageNumber ?? 0)
       track(
-        kind === 'advance' ? 'player_pathway_stage_advanced'
-          : kind === 'regress' ? 'player_pathway_stage_regressed'
-            : 'player_pathway_completed',
+        kind === 'complete' ? 'player_pathway_completed'
+          : kind === 'advance' || (kind === 'jump' && forward)
+            ? 'player_pathway_stage_advanced'
+            : 'player_pathway_stage_regressed',
         {
           pathway_slug: detail?.pathway?.slug || null,
           pathway_version: detail?.progress.pathway_version ?? null,
-          stage_number: target?.stage.stage_number ?? detail?.progress.current_stage_number ?? null,
-          stage_key: target?.stage.stage_key ?? detail?.progress.current_stage_key ?? null,
+          stage_number: landing?.stage_number ?? detail?.progress.current_stage_number ?? null,
+          stage_key: landing?.stage_key ?? detail?.progress.current_stage_key ?? null,
+          // Distinguishes a deliberate jump from a one-step move, so the
+          // question "do coaches use the sequence" stays answerable.
+          via: kind === 'jump' ? 'jump' : 'step',
           source_surface: 'development_plan',
         })
+      // Follow the player rather than stranding the reader on the old stage.
+      setViewingKey(null)
     }
     setConfirm(null)
   }
@@ -253,7 +311,7 @@ function DevelopmentPlanContent() {
     if (!canRecord || !stage) return
     const next = new Set(checked)
     if (next.has(signal)) next.delete(signal); else next.add(signal)
-    await act('mastery', { signals: Array.from(next) })
+    await act('mastery', { signals: Array.from(next), stageKey: viewedKey })
   }
 
   if (loading) {
@@ -316,10 +374,67 @@ function DevelopmentPlanContent() {
         <>
           {/* the stage */}
           <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-sm font-medium text-red-600">
-              Stage {stage.stage_number}{total ? ` of ${total}` : ''}
-            </p>
-            <h2 className="text-xl font-bold text-gray-900 mt-0.5">{stage.name}</h2>
+            {/* Stepping through the plan. Nothing is locked — a coach may read
+                any stage at any time, which is the whole point of the change
+                from a gated curriculum to a course. */}
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <button
+                onClick={() => { const p = allStages[idx - 1]; if (p) setViewingKey(p.stage_key) }}
+                disabled={idx <= 0}
+                className="p-2 -ml-2 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                aria-label="Previous stage"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <p className="text-sm font-medium text-red-600">
+                Stage {stage.stage_number}{total ? ` of ${total}` : ''}
+              </p>
+              <button
+                onClick={() => { const n = allStages[idx + 1]; if (n) setViewingKey(n.stage_key) }}
+                disabled={idx < 0 || idx >= allStages.length - 1}
+                className="p-2 -mr-2 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                aria-label="Next stage"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+
+            <h2 className="text-xl font-bold text-gray-900">{stage.name}</h2>
+
+            {/* Looking somewhere other than where he is. Said plainly, with the
+                way back, so nobody mistakes browsing for progress. */}
+            {!isViewingCurrent && (
+              <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2.5 text-sm text-blue-900">
+                <p>
+                  You are reading {currentStageNumber != null && stage.stage_number > currentStageNumber
+                    ? 'ahead' : 'back over'}. {playerName} is on{' '}
+                  <strong>Stage {currentStageNumber ?? '?'}{currentStage ? ` — ${currentStage.name}` : ''}</strong>.
+                </p>
+                <div className="flex flex-wrap gap-3 mt-2">
+                  <button
+                    onClick={() => setViewingKey(null)}
+                    className="font-medium underline underline-offset-2"
+                  >
+                    Back to his stage
+                  </button>
+                  {canDecide && !isCompleted && (
+                    <button
+                      onClick={() => setConfirm({
+                        kind: 'jump',
+                        toStageKey: stage.stage_key,
+                        label: `Work on Stage ${stage.stage_number} instead`,
+                        body: `${playerName} moves to Stage ${stage.stage_number} — ${stage.name}. ` +
+                          `${stage.objective} This is recorded the same way as any other move, ` +
+                          `and his history is kept.`,
+                      })}
+                      className="font-medium underline underline-offset-2"
+                    >
+                      Work on this stage instead
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="mt-4 space-y-4">
               <div>
@@ -340,13 +455,14 @@ function DevelopmentPlanContent() {
             </div>
 
             <p className="text-xs text-gray-500 mt-5 pt-4 border-t border-gray-100">
-              On this stage since {describeDuration(daysSince(detail.progress.stage_started_at))}
+              {isViewingCurrent && (
+                <>On this stage since {describeDuration(daysSince(detail.progress.stage_started_at))}{' · '}</>
+              )}
+              {viewedSessions === 0
+                ? 'No sessions recorded at this stage'
+                : `${viewedSessions} session${viewedSessions === 1 ? '' : 's'} at this stage`}
               {' · '}
-              {sessions.atCurrentStage === 0
-                ? 'no sessions recorded at this stage'
-                : `${sessions.atCurrentStage} session${sessions.atCurrentStage === 1 ? '' : 's'} at this stage`}
-              {' · '}
-              {sessions.total} in total
+              {sessions.total} across the plan
             </p>
           </div>
 
@@ -429,22 +545,67 @@ function DevelopmentPlanContent() {
               )}
             </div>
 
-            {detail.drills.length === 0 ? (
+            {viewedDrills.length === 0 ? (
               <p className="p-6 text-sm text-gray-600">
                 No drills are attached to this stage yet. The written guidance above still
                 describes what to work on.
               </p>
             ) : (
               <div className="divide-y divide-gray-100">
-                {detail.drills.map(d => (
+                {viewedDrills.map(d => (
                   <DrillCard key={`${d.id}-${d.role}`} drill={d} />
                 ))}
               </div>
             )}
           </div>
 
+          {/* notes on this stage */}
+          <div className="bg-white rounded-lg shadow">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between gap-3 flex-wrap">
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                <StickyNote size={18} className="text-yellow-600" />
+                Notes on this stage
+                {stageNotes.length > 0 && (
+                  <span className="text-sm font-normal text-gray-500">({stageNotes.length})</span>
+                )}
+              </h3>
+              {canRecord && !isCompleted && (
+                <button
+                  onClick={() => setShowNote(true)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
+                >
+                  Add a note
+                </button>
+              )}
+            </div>
+            {stageNotes.length === 0 ? (
+              <p className="p-6 text-sm text-gray-600">
+                Nothing written down for {stage.name} yet. Notes here stay with this
+                stage, so what you saw last time is in front of you when you come back to it.
+              </p>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {stageNotes.map(n => (
+                  <div key={n.id} className="px-6 py-3">
+                    <p className="text-sm text-gray-800 whitespace-pre-wrap">{n.note}</p>
+                    <p className="text-xs text-gray-500 mt-1">{n.occurred_on}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* the whole plan */}
-          {outline && <PlanMap outline={outline} />}
+          {outline && (
+            <PlanMap
+              outline={outline}
+              viewedKey={viewedKey}
+              onSelect={key => {
+                setViewingKey(key)
+                if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+            />
+          )}
 
           {/* measurements */}
           <div className="bg-white rounded-lg shadow">
@@ -465,8 +626,10 @@ function DevelopmentPlanContent() {
             <Measurements summaries={speed} />
           </div>
 
-          {/* the decision */}
-          {!isCompleted && (
+          {/* the decision — about the stage he is ON, so only shown there.
+              While browsing another stage the banner above offers the move
+              that actually makes sense: put him on the stage being read. */}
+          {!isCompleted && isViewingCurrent && (
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="font-semibold text-gray-900 mb-1">Is he ready for the next thing?</h3>
               <p className="text-sm text-gray-500 mb-4">
@@ -567,18 +730,18 @@ function DevelopmentPlanContent() {
           body={confirm.body}
           busy={busy}
           onCancel={() => setConfirm(null)}
-          onConfirm={() => move(confirm.kind)}
+          onConfirm={() => move(confirm.kind, confirm.toStageKey)}
         />
       )}
 
       {showSession && stage && (
         <SessionDialog
           stageName={stage.name}
-          drills={detail.drills}
+          drills={viewedDrills}
           busy={busy}
           onCancel={() => setShowSession(false)}
           onSave={async (payload) => {
-            const ok = await act('session', payload)
+            const ok = await act('session', { ...payload, stageKey: viewedKey })
             if (ok) {
               track('player_pathway_session_logged', {
                 pathway_slug: detail.pathway?.slug || null,
@@ -588,6 +751,27 @@ function DevelopmentPlanContent() {
                 source_surface: 'development_plan',
               })
               setShowSession(false)
+            }
+          }}
+        />
+      )}
+
+      {showNote && stage && (
+        <NoteDialog
+          stageName={stage.name}
+          busy={busy}
+          onCancel={() => setShowNote(false)}
+          onSave={async (payload) => {
+            const ok = await act('note', { ...payload, stageKey: viewedKey })
+            if (ok) {
+              track('player_pathway_note_added', {
+                pathway_slug: detail.pathway?.slug || null,
+                pathway_version: detail.progress.pathway_version,
+                stage_number: stage.stage_number,
+                stage_key: stage.stage_key,
+                source_surface: 'development_plan',
+              })
+              setShowNote(false)
             }
           }}
         />
@@ -636,7 +820,13 @@ function DevelopmentPlanContent() {
  * sessions actually logged and the day they moved on, because those are facts
  * and the estimate is a guess. The ranges only describe the road ahead.
  */
-function PlanMap({ outline }: { outline: PlanOutline }) {
+function PlanMap({
+  outline, viewedKey, onSelect,
+}: {
+  outline: PlanOutline
+  viewedKey: string | null
+  onSelect: (stageKey: string) => void
+}) {
   const [open, setOpen] = useState(false)
   const current = outline.stages[outline.currentIndex]
 
@@ -679,7 +869,13 @@ function PlanMap({ outline }: { outline: PlanOutline }) {
         <div className="border-t border-gray-100">
           <ol className="divide-y divide-gray-50">
             {outline.stages.map((o, i) => (
-              <PlanMapStage key={o.stage.stage_key} outline={o} index={i} />
+              <PlanMapStage
+                key={o.stage.stage_key}
+                outline={o}
+                index={i}
+                isViewed={o.stage.stage_key === viewedKey}
+                onSelect={onSelect}
+              />
             ))}
           </ol>
 
@@ -700,7 +896,14 @@ function PlanMap({ outline }: { outline: PlanOutline }) {
   )
 }
 
-function PlanMapStage({ outline: o, index }: { outline: OutlineStage; index: number }) {
+function PlanMapStage({
+  outline: o, index, isViewed, onSelect,
+}: {
+  outline: OutlineStage
+  index: number
+  isViewed: boolean
+  onSelect: (stageKey: string) => void
+}) {
   const [open, setOpen] = useState(false)
   const est = practiceRange(o.practicesMin, o.practicesMax)
 
@@ -713,10 +916,11 @@ function PlanMapStage({ outline: o, index }: { outline: OutlineStage; index: num
 
   return (
     <li className={o.state === 'current' ? 'bg-red-50/40' : ''}>
+      <div className={`w-full px-6 py-3 flex items-start gap-3 hover:bg-gray-50 ${
+        isViewed ? 'ring-1 ring-inset ring-red-200' : ''}`}>
       <button
-        onClick={() => setOpen(v => !v)}
-        aria-expanded={open}
-        className="w-full px-6 py-3 text-left flex items-start gap-3 hover:bg-gray-50"
+        onClick={() => onSelect(o.stage.stage_key)}
+        className="flex-1 text-left flex items-start gap-3 min-w-0"
       >
         <span className="flex-shrink-0 mt-0.5">{dot}</span>
         <span className="min-w-0 flex-1">
@@ -746,12 +950,19 @@ function PlanMapStage({ outline: o, index }: { outline: OutlineStage; index: num
                 {o.drillCount != null ? ` · ${o.drillCount} drill${o.drillCount === 1 ? '' : 's'}` : ''}
               </>
             )}
+            {o.notes > 0 ? ` · ${o.notes} note${o.notes === 1 ? '' : 's'}` : ''}
           </span>
         </span>
-        <span className="flex-shrink-0 text-gray-300 mt-1">
-          {open ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-        </span>
       </button>
+      <button
+        onClick={() => setOpen(v => !v)}
+        aria-expanded={open}
+        aria-label={open ? 'Hide stage detail' : 'Show stage detail'}
+        className="flex-shrink-0 text-gray-400 mt-0.5 p-1 rounded hover:bg-gray-100"
+      >
+        {open ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+      </button>
+      </div>
 
       {open && (
         <div className="px-6 pb-4 pl-[3.75rem] space-y-3">
@@ -792,7 +1003,9 @@ function PlanMapStage({ outline: o, index }: { outline: OutlineStage; index: num
  * library has had these instructions since Phase 2C — all 226 curated rows
  * carry them — and this page was rendering a one-line rationale on top of them.
  */
-function DrillCard({ drill: d }: { drill: StageDrill }) {
+type ViewDrill = StageDrill & { role: string; rationale: string; step: string }
+
+function DrillCard({ drill: d }: { drill: ViewDrill }) {
   const [open, setOpen] = useState(false)
 
   const meta = [
@@ -936,7 +1149,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
  * Only verified media carries a timestamp in its label, because having a number
  * and somebody having checked it are different things.
  */
-function DrillMediaLinks({ drill: d }: { drill: StageDrill }) {
+function DrillMediaLinks({ drill: d }: { drill: ViewDrill }) {
   const primary = d.media[0]
   const rest = d.media.slice(1)
 
@@ -1159,6 +1372,48 @@ function SessionDialog({
           })}
           className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">
           {busy ? 'Saving...' : 'Save'}
+        </button>
+      </div>
+    </Shell>
+  )
+}
+
+function NoteDialog({
+  stageName, busy, onCancel, onSave,
+}: {
+  stageName: string
+  busy: boolean
+  onCancel: () => void
+  onSave: (payload: Record<string, any>) => void
+}) {
+  const [note, setNote] = useState('')
+  const [on, setOn] = useState(() => new Date().toISOString().slice(0, 10))
+
+  return (
+    <Shell title="Add a note" onClose={onCancel}>
+      <p className="text-sm text-gray-600 mb-4">{stageName}</p>
+
+      <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+      <input type="date" value={on} onChange={e => setOn(e.target.value)}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4" />
+
+      <label className="block text-sm font-medium text-gray-700 mb-1">What did you see?</label>
+      <textarea value={note} onChange={e => setNote(e.target.value)} rows={5} autoFocus
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+        placeholder="Anything worth remembering next time you run this stage." />
+      <p className="text-xs text-gray-500 mt-1">
+        Stays with this stage. Only your coaching staff can see it.
+      </p>
+
+      <div className="flex gap-3 mt-6">
+        <button onClick={onCancel} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+          Cancel
+        </button>
+        <button
+          disabled={busy || !note.trim()}
+          onClick={() => onSave({ note: note.trim(), occurredOn: on })}
+          className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">
+          {busy ? 'Saving...' : 'Save note'}
         </button>
       </div>
     </Shell>

@@ -19,6 +19,7 @@ import {
   daysSince, describeDuration, describeEvent, summariseMeasurement,
   summariseSpeedMeasurements, formatChange, measurementsRecorded,
   staleStageMessage, SPEED_METRIC_SLUGS, planOutline, practiceRange,
+  notesForStage, noteCounts,
   PlayerPathwayProgress, PlayerPathwayEvent,
 } from '../lib/playerPathways'
 import type { LoadedPathway, PathwayStage, Pathway } from '../lib/developmentPathways'
@@ -193,10 +194,14 @@ eq('a month reads in weeks', describeDuration(30), '4 weeks ago')
 eq('a season reads in months', describeDuration(120), '4 months ago')
 
 const name = (k: string | null) => P.stages.find(s => s.stage_key === k)?.name || 'a stage'
-check('an advance reads as a movement between two named stages',
+// "Moved", not "Advanced". A forward jump of four stages is recorded as an
+// 'advanced' event — the timeline's question is which direction a child went —
+// and "Advanced from stage 1 to stage 5" reads like five stages of work that
+// never happened. "Moved" is true of both.
+check('a forward move reads as a movement between two named stages',
   describeEvent(ev({ event_type: 'advanced', from_stage_key: 'baseline-and-mechanics',
     to_stage_key: 'acceleration-position' }), name) ===
-  'Advanced from Baseline & Running Mechanics to Acceleration Position')
+  'Moved from Baseline & Running Mechanics to Acceleration Position')
 check('a session with minutes says so',
   /for 25 minutes/.test(describeEvent(ev({ detail: { minutes: 25 } }), name)))
 check('a session without minutes does not invent any',
@@ -293,6 +298,63 @@ eq('and only the recorded ones count as recorded', measurementsRecorded(all), 2)
 eq('a metric type that does not exist yet is skipped, not faked',
   summariseSpeedMeasurements([sprint], []).length, 1)
 
+// ── jumping to any stage ────────────────────────────────────────────────────
+//
+// The plan stopped being a gated curriculum and became a course: a coach can
+// put a player on whichever stage matches where they actually are. What is
+// still enforced is that the stage BELONGS to the pathway — the one-at-a-time
+// rule was a UI convention, this one is the safety property.
+
+check('a coach may jump forward past several stages',
+  validateMove(P, progress({ current_stage_key: 'baseline-and-mechanics' }), 'jump', 'first-step-explosion').ok)
+check('and back past several stages',
+  validateMove(P, progress({ current_stage_key: 'first-step-explosion' }), 'jump', 'baseline-and-mechanics').ok)
+eq('a jump lands on the stage that was named',
+  (validateMove(P, progress(), 'jump', 'first-step-explosion') as any).stage.stage_key,
+  'first-step-explosion')
+check('A STAGE FROM ANOTHER PATHWAY IS STILL REFUSED',
+  !validateMove(P, progress(), 'jump', 'some-other-pathways-stage').ok)
+check('and so is a jump with no stage named',
+  !validateMove(P, progress(), 'jump', null).ok &&
+  !validateMove(P, progress(), 'jump', '   ').ok)
+check('jumping to the stage they are already on is refused rather than recorded',
+  !validateMove(P, progress(), 'jump', 'acceleration-position').ok)
+check('a completed plan cannot be jumped around',
+  !validateMove(P, progress({ status: 'completed', completed_at: 'x' }), 'jump', 'first-step-explosion').ok)
+
+// ── notes ───────────────────────────────────────────────────────────────────
+
+const noted: PlayerPathwayEvent[] = [
+  ev({ event_type: 'note', stage_key: 'acceleration-position', note: 'Hips still sagging on the wall drive.',
+       created_at: '2026-02-01T00:00:00Z' }),
+  ev({ event_type: 'note', stage_key: 'acceleration-position', note: 'Better today.',
+       created_at: '2026-02-08T00:00:00Z' }),
+  ev({ event_type: 'note', stage_key: 'first-step-explosion', note: 'Read ahead — he can nearly do this already.',
+       created_at: '2026-02-09T00:00:00Z' }),
+  ev({ event_type: 'note', stage_key: 'acceleration-position', note: null }),
+  ev({ stage_key: 'acceleration-position', note: 'a session note, not a standalone one' }),
+]
+
+eq('notes are scoped to their stage', notesForStage(noted, 'acceleration-position').length, 2)
+eq('newest first, so the last thing seen is the first thing read',
+  notesForStage(noted, 'acceleration-position')[0].note, 'Better today.')
+eq('a note against a stage the player has not reached is kept there',
+  notesForStage(noted, 'first-step-explosion').length, 1)
+eq('an empty note is not a note', notesForStage(noted, 'acceleration-position')
+  .filter(n => !n.note).length, 0)
+eq('a session that happens to carry a note is not a note event',
+  notesForStage(noted, 'acceleration-position').every(n => n.event_type === 'note'), true)
+eq('no stage asked for yields nothing', notesForStage(noted, null).length, 0)
+eq('note counts are per stage',
+  [noteCounts(noted).get('acceleration-position'), noteCounts(noted).get('first-step-explosion')],
+  [2, 1])
+eq('a stage with no notes is absent rather than zero',
+  noteCounts(noted).has('baseline-and-mechanics'), false)
+check('a note renders as a sentence naming its stage',
+  describeEvent(ev({ event_type: 'note', stage_key: 'acceleration-position' }),
+    k => P.stages.find(s => s.stage_key === k)?.name || 'a stage')
+    === 'Note on Acceleration Position')
+
 // ── the plan overview ───────────────────────────────────────────────────────
 //
 // "What is coming up and when." The second half is where this can go wrong:
@@ -373,6 +435,13 @@ eq('but the current stage is still known from the enrollment row',
   noEvents.stages[1].state, 'current')
 
 const counts = new Map([['first-step-explosion', 4]])
+eq('the outline carries note counts per stage',
+  planOutline(PE, progress(), [...journey,
+    ev({ event_type: 'note', stage_key: 'first-step-explosion', note: 'read ahead' })])!
+    .stages[2].notes, 1)
+eq('a stage with no notes reports zero',
+  planOutline(PE, progress(), journey)!.stages[2].notes, 0)
+
 eq('drill counts are carried through when the caller has them',
   planOutline(PE, progress(), journey, counts)!.stages[2].drillCount, 4)
 eq('and are null rather than zero when it does not',

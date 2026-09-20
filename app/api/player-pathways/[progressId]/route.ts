@@ -51,92 +51,103 @@ export async function GET(
     const slug = (row as any).pathway?.slug
     const pathway = slug ? await loadPathway(supabaseAdmin, slug) : null
 
-    // This stage's drills, through the SAME recommender the practice planner
-    // uses. Not a second recommendation system — the brief forbids one, and a
-    // player page that ranked drills differently from the practice plan would
-    // be the product disagreeing with itself in front of a coach.
-    let drills: any[] = []
+    // EVERY stage's drills, not just the one the player is standing on.
+    //
+    // The plan is a course, not a gate. A coach reading ahead to decide whether
+    // a kid is ready for stage 6, or a parent helper who wants to see where
+    // this is going, should not have to advance a child to find out what is in
+    // it. Nothing here is hidden behind progress.
+    //
+    // Sent as a drill POOL plus per-stage references rather than a drill object
+    // per slot: the speed pathway has 44 slots pointing at 33 distinct drills,
+    // and the instruction text is long enough that duplicating it would be the
+    // difference between a page that loads at a field and one that does not.
+    //
+    // Still the SAME recommender the practice planner uses, once per stage. Not
+    // a second recommendation system — a player page that ranked drills
+    // differently from the practice plan would be the product disagreeing with
+    // itself in front of a coach.
+    let drillPool: Record<string, any> = {}
+    let stageDrills: Record<string, Array<{ id: string; role: string; step: string; rationale: string }>> = {}
     let stageMissing = false
+
     if (pathway) {
       const stages = orderedStages(pathway)
-      const stage = stages.find(s => s.stage_key === (row as any).current_stage_key)
-      if (!stage) {
-        stageMissing = true
-      } else {
-        const { data: pool } = await visibleDrills(supabaseAdmin, null, '*')
-        const byId = new Map(((pool || []) as any[]).map(d => [d.id, d]))
-        // No feasibility constraints passed. A player page is not a practice
-        // being built today — the coach is reading what this stage is FOR, and
-        // narrowing it by a field size nobody has entered would hide drills for
-        // no reason. The practice planner applies those when it schedules.
-        const rec = getPathwayPracticeRecommendation({
-          pathway,
-          currentStage: stage.stage_number,
-          pool: (pool || []) as any[],
-        })
-        const recommended = rec?.recommended || []
+      stageMissing = !stages.some(s => s.stage_key === (row as any).current_stage_key)
 
-        // MEDIA, THROUGH THE EXISTING SYSTEM AND NOTHING ELSE.
-        //
-        // No URL is constructed here and no timestamp is invented. lib/drillMedia
-        // reads drill_media_resources, falls back to the legacy youtube_* columns
-        // for drills the backfill never touched, drops anything 'rejected', and
-        // ranks verified above unverified. That is the same path Player Reports,
-        // the practice sheet and the Drill Finder take, so a coach cannot be
-        // shown one thing here and another there.
-        //
-        // loadAllMedia pulls the whole table (~219 rows) because "is this a
-        // compilation?" is not a property of one drill's row — it is a property
-        // of the table. Without it this surface would have to either guess or
-        // promise, and describeMedia is what turns the answer into words that
-        // do not overclaim: a shared video with no timestamp is offered as
-        // "Source video · covers N drills from this library", never as
-        // "watch this drill".
-        const [mediaByDrill, allMedia] = await Promise.all([
-          loadMediaFor(supabaseAdmin, recommended.map(d => d.drillId)),
-          loadAllMedia(supabaseAdmin),
-        ])
-        const shareCounts = sharedVideoCounts(allMedia)
+      const { data: pool } = await visibleDrills(supabaseAdmin, null, '*')
+      const byId = new Map(((pool || []) as any[]).map(d => [d.id, d]))
 
-        drills = recommended.map(d => {
-          const full = byId.get(d.drillId) || {}
-          const playable = mediaForDrill(
-            { ...full, id: d.drillId } as any, mediaByDrill.get(d.drillId))
+      // One pass per stage, over one in-memory pool. No feasibility constraints
+      // are passed: a player page is not a practice being built today, and
+      // narrowing by a field size nobody has entered would hide drills for no
+      // reason. The practice planner applies those when it schedules.
+      const perStage = stages.map(s => ({
+        stage: s,
+        recommended: getPathwayPracticeRecommendation({
+          pathway, currentStage: s.stage_number, pool: (pool || []) as any[],
+        })?.recommended || [],
+      }))
 
-          return {
-            id: d.drillId,
-            drill_name: d.drillName,
-            role: d.role,
-            step: d.step,
-            rationale: d.rationale,
-            est_duration_minutes: d.estimatedMinutes,
-            equipment_needed: full.equipment_needed ?? null,
-            space_required: full.space_required ?? null,
-            indoor_outdoor: full.indoor_outdoor ?? null,
-            requires_partner: full.requires_partner ?? null,
-            min_players: full.min_players ?? null,
-            ideal_group_size: full.ideal_group_size ?? null,
-            age_range: full.age_range ?? null,
-            difficulty_level: full.difficulty_level ?? null,
-            reps_guidance: full.reps_guidance ?? null,
-            // The four fields that make a drill runnable by a coach who has
-            // never seen it, and which this page was fetching and throwing away.
-            description: full.description ?? null,
-            ai_coaching_notes: full.ai_coaching_notes ?? null,
-            regression_notes: full.regression_notes ?? null,
-            progression_notes: full.progression_notes ?? null,
-            success_markers: full.success_markers ?? null,
-            common_flaws_fixed: full.common_flaws_fixed ?? null,
-            safety_notes: full.safety_notes ?? null,
-            media: playable.map(m => ({
-              ...m,
-              // Computed server-side so the client cannot accidentally render a
-              // compilation as though it were a demonstration of this drill.
-              presentation: describeMedia(m, sharedCountFor(m, shareCounts)),
-              shared_with: sharedCountFor(m, shareCounts),
-            })),
-          }
-        })
+      const needed = Array.from(new Set(perStage.flatMap(p => p.recommended.map(d => d.drillId))))
+
+      // MEDIA, THROUGH THE EXISTING SYSTEM AND NOTHING ELSE.
+      //
+      // No URL is constructed here and no timestamp is invented. lib/drillMedia
+      // reads drill_media_resources, falls back to the legacy youtube_* columns
+      // for drills the backfill never touched, drops anything 'rejected', and
+      // ranks verified above unverified — the same path Player Reports, the
+      // practice sheet and the Drill Finder take, so a coach cannot be shown
+      // one thing here and another there.
+      //
+      // loadAllMedia pulls the whole table because "is this a compilation?" is
+      // not a property of one drill's row, it is a property of the table.
+      // describeMedia then turns the answer into words that do not overclaim.
+      const [mediaByDrill, allMedia] = await Promise.all([
+        loadMediaFor(supabaseAdmin, needed),
+        loadAllMedia(supabaseAdmin),
+      ])
+      const shareCounts = sharedVideoCounts(allMedia)
+
+      for (const id of needed) {
+        const full = byId.get(id) || {}
+        const playable = mediaForDrill({ ...full, id } as any, mediaByDrill.get(id))
+        drillPool[id] = {
+          id,
+          drill_name: full.drill_name ?? null,
+          est_duration_minutes: full.est_duration_minutes ?? null,
+          equipment_needed: full.equipment_needed ?? null,
+          space_required: full.space_required ?? null,
+          indoor_outdoor: full.indoor_outdoor ?? null,
+          requires_partner: full.requires_partner ?? null,
+          min_players: full.min_players ?? null,
+          ideal_group_size: full.ideal_group_size ?? null,
+          age_range: full.age_range ?? null,
+          difficulty_level: full.difficulty_level ?? null,
+          reps_guidance: full.reps_guidance ?? null,
+          // The fields that make a drill runnable by a coach who has never
+          // seen it, and which this page was fetching and throwing away.
+          description: full.description ?? null,
+          ai_coaching_notes: full.ai_coaching_notes ?? null,
+          regression_notes: full.regression_notes ?? null,
+          progression_notes: full.progression_notes ?? null,
+          success_markers: full.success_markers ?? null,
+          common_flaws_fixed: full.common_flaws_fixed ?? null,
+          safety_notes: full.safety_notes ?? null,
+          media: playable.map(m => ({
+            ...m,
+            // Computed server-side so the client cannot accidentally render a
+            // compilation as though it were a demonstration of this drill.
+            presentation: describeMedia(m, sharedCountFor(m, shareCounts)),
+            shared_with: sharedCountFor(m, shareCounts),
+          })),
+        }
+      }
+
+      for (const { stage, recommended } of perStage) {
+        stageDrills[stage.stage_key] = recommended.map(d => ({
+          id: d.drillId, role: d.role, step: d.step, rationale: d.rationale,
+        }))
       }
     }
 
@@ -159,7 +170,8 @@ export async function GET(
             }, {} as Record<string, number>),
           }
         : null,
-      drills,
+      drillPool,
+      stageDrills,
       stageMissing,
     })
   } catch (error: any) {

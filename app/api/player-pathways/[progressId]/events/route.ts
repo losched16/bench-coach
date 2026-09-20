@@ -14,8 +14,10 @@ export const dynamic = 'force-dynamic'
 //
 //   session   a coach recorded that work happened        'record'  contributor
 //   mastery   a coach recorded what they observed        'record'  contributor
+//   note      a coach wrote something down               'record'  contributor
 //   advance   a coach decided the player is ready        'decide'  admin
 //   regress   a coach decided to go back                 'decide'  admin
+//   jump      a coach put them on a specific stage       'decide'  admin
 //   complete  a coach decided the plan is finished       'decide'  admin
 //   pause     a coach decided to stop for now            'decide'  admin
 //   resume    a coach decided to pick it back up         'decide'  admin
@@ -35,13 +37,20 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-type Kind = 'session' | 'mastery' | MoveKind
+type Kind = 'session' | 'mastery' | 'note' | MoveKind
 
 const NEEDS: Record<Kind, Capability> = {
   session: 'record',
   mastery: 'record',
+  // A note is an observation written down, which is the definition of
+  // 'record'. A parent helper keeping the book may write "the pogo rhythm fell
+  // apart today"; they still may not decide the kid moves to stage 5.
+  note: 'record',
   advance: 'decide',
   regress: 'decide',
+  // Putting a player on an arbitrary stage is the same kind of act as
+  // advancing them one — it changes what the team works on with that child.
+  jump: 'decide',
   complete: 'decide',
   pause: 'decide',
   resume: 'decide',
@@ -82,10 +91,47 @@ export async function POST(
     const progress = row as unknown as PlayerPathwayProgress
 
     // ── a record of what happened ────────────────────────────────────────
-    if (kind === 'session' || kind === 'mastery') {
+    if (kind === 'session' || kind === 'mastery' || kind === 'note') {
       if (progress.status === 'completed') {
         return NextResponse.json(
           { error: 'That plan is complete. Start it again to record new work.' }, { status: 400 })
+      }
+
+      // WHICH STAGE THIS IS ABOUT.
+      //
+      // Not necessarily the one the player is on. The plan is browsable, so a
+      // coach reading ahead to stage 6 may well want to note "he can already
+      // do this" against stage 6 — and filing that on stage 3 because that is
+      // where he officially stands would put the observation where nobody will
+      // look for it. Validated against the pathway so it cannot be arbitrary.
+      const askedStage = clean(body?.stageKey, 200)
+      const slug = (row as any).pathway?.slug
+      const pathway = slug ? await loadPathway(supabaseAdmin, slug) : null
+      const stages = pathway ? orderedStages(pathway) : []
+
+      if (askedStage && !stages.some(s => s.stage_key === askedStage)) {
+        return NextResponse.json({ error: 'That stage is not part of this plan' }, { status: 400 })
+      }
+      const stageKey = askedStage || progress.current_stage_key
+      const target = stages.find(s => s.stage_key === stageKey) || null
+      const stageNumber = target?.stage_number ?? progress.current_stage_number
+
+      if (kind === 'note') {
+        const text = clean(body?.note)
+        if (!text) return NextResponse.json({ error: 'A note needs some text' }, { status: 400 })
+
+        const { error } = await supabaseAdmin.from('player_pathway_events').insert({
+          progress_id: params.progressId,
+          team_id: progress.team_id,
+          event_type: 'note',
+          stage_key: stageKey,
+          stage_number: stageNumber,
+          note: text,
+          actor_user_id: actor.userId,
+          ...(clean(body?.occurredOn, 10) ? { occurred_on: clean(body?.occurredOn, 10) } : {}),
+        })
+        if (error) throw error
+        return NextResponse.json({ recorded: true })
       }
 
       const detail: Record<string, any> = {}
@@ -103,12 +149,7 @@ export async function POST(
         // that is not currently one of that stage's signals is dropped rather
         // than stored, so the history cannot fill up with strings the pathway
         // never offered.
-        const slug = (row as any).pathway?.slug
-        const pathway = slug ? await loadPathway(supabaseAdmin, slug) : null
-        const stage = pathway
-          ? orderedStages(pathway).find(s => s.stage_key === progress.current_stage_key)
-          : null
-        const canonical = new Set(stage?.mastery_signals || [])
+        const canonical = new Set(target?.mastery_signals || [])
         const sent = Array.isArray(body?.signals) ? body.signals : []
         detail.signals = sent.filter((s: any) => typeof s === 'string' && canonical.has(s))
       }
@@ -117,8 +158,8 @@ export async function POST(
         progress_id: params.progressId,
         team_id: progress.team_id,       // replaced by the trigger regardless
         event_type: kind === 'session' ? 'session_logged' : 'mastery_recorded',
-        stage_key: progress.current_stage_key,
-        stage_number: progress.current_stage_number,
+        stage_key: stageKey,
+        stage_number: stageNumber,
         detail,
         note: clean(body?.note),
         actor_user_id: actor.userId,
@@ -130,13 +171,13 @@ export async function POST(
     }
 
     // ── a decision about what happens next ───────────────────────────────
-    const slug = (row as any).pathway?.slug
-    const pathway = slug ? await loadPathway(supabaseAdmin, slug) : null
+    const moveSlug = (row as any).pathway?.slug
+    const movePathway = moveSlug ? await loadPathway(supabaseAdmin, moveSlug) : null
 
     // The same guard the page renders its buttons from. Run again here because
     // a hidden button is not a rule — a stale tab or a replayed request is
     // enough to get past one.
-    const verdict = validateMove(pathway, progress, kind, clean(body?.toStageKey, 200))
+    const verdict = validateMove(movePathway, progress, kind, clean(body?.toStageKey, 200))
     if (!verdict.ok) return NextResponse.json({ error: verdict.error }, { status: 409 })
 
     const now = new Date().toISOString()
@@ -150,18 +191,33 @@ export async function POST(
       actor_user_id: actor.userId,
     }
 
-    if (kind === 'advance' || kind === 'regress') {
+    if (kind === 'advance' || kind === 'regress' || kind === 'jump') {
       const to = verdict.stage!
+
+      // A JUMP IS STILL A MOVE, AND THE HISTORY SAYS WHICH WAY IT WENT.
+      //
+      // There is no 'jumped' event type and there should not be: the question
+      // the timeline answers is "did this child go forward or back", and that
+      // is the same question whether they moved one stage or four. So the
+      // direction is worked out from the stage numbers and recorded as an
+      // ordinary advance or regression, with from/to naming both ends. That
+      // also means planOutline and every existing reader understand it without
+      // knowing this feature exists.
+      const from = progress.current_stage_number ?? 0
+      const forward = (to.stage_number ?? 0) >= from
+
       update = {
         current_stage_key: to.stage_key,
         current_stage_number: to.stage_number,
-        // Reset on both directions: "how long on this stage" is about the
-        // stage they are on now, and a regression starts that clock again.
+        // Reset in every direction: "how long on this stage" is about the
+        // stage they are on now, and going back starts that clock again.
         stage_started_at: now,
       }
       event = {
         ...event,
-        event_type: kind === 'advance' ? 'advanced' : 'regressed',
+        event_type: kind === 'jump'
+          ? (forward ? 'advanced' : 'regressed')
+          : kind === 'advance' ? 'advanced' : 'regressed',
         from_stage_key: progress.current_stage_key,
         to_stage_key: to.stage_key,
         // The stage they LANDED on, so the timeline and the session counts
