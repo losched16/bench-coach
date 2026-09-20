@@ -404,6 +404,46 @@ export async function authorizeReport(
   return { ...actor, teamId, report: report as any }
 }
 
+/**
+ * Same again, for a player's development plan.
+ *
+ * Exists for the same two reasons authorizeReport does.
+ *
+ * First, the team must come from the ROW and not from the request. A caller who
+ * sent their own teamId beside somebody else's progressId would otherwise be
+ * checked against a team they genuinely administer while reading a row that
+ * belongs to another one.
+ *
+ * Second, and less obvious: asking WHO before asking ABOUT WHAT. Looking the
+ * plan up first would answer an anonymous caller "not found" for a made-up id
+ * and "sign in" for a real one, which is an existence check on development
+ * plans that needs no account. The ids are unguessable so the leak is small,
+ * but this is a child's development record and it should not confirm its own
+ * existence to someone with no session.
+ */
+export async function authorizeProgress(
+  progressId: string | null | undefined,
+  capability: Capability
+): Promise<Actor & {
+  teamId: string
+  progress: { id: string; team_id: string; player_id: string; status: string }
+}> {
+  if (!progressId) throw new AuthzError('Missing progressId', 400)
+
+  if (!(await currentUserId())) throw new AuthzError('You need to be signed in', 401)
+
+  const { data: progress } = await supabaseAdmin
+    .from('player_pathway_progress')
+    .select('id, team_id, player_id, status')
+    .eq('id', progressId)
+    .maybeSingle()
+  if (!progress) throw new AuthzError('Not found', 404)
+
+  const teamId = (progress as any).team_id as string
+  const actor = await authorizeTeam(teamId, capability)
+  return { ...actor, teamId, progress: progress as any }
+}
+
 // ── The one-line guard ─────────────────────────────────
 
 async function idsFrom(request: Request): Promise<Record<string, string | null>> {

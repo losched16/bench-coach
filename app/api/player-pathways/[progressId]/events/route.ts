@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { authorizeTeam, authzResponse, Capability } from '@/lib/authz'
+import { authorizeProgress, authzResponse, Capability } from '@/lib/authz'
 import { loadPathway, orderedStages } from '@/lib/developmentPathways'
 import { validateMove, MoveKind, PlayerPathwayProgress } from '@/lib/playerPathways'
 import { migrationHintFor } from '@/lib/migrationHints'
@@ -54,22 +54,23 @@ const clean = (v: unknown, max = MAX_NOTE): string | null => {
   return s ? s : null
 }
 
+// The capability is chosen by the ACTION — see NEEDS above — and the team comes
+// from the enrollment ROW rather than from the request, because a caller passing
+// their own teamId beside someone else's progressId would otherwise be checked
+// against a team they really do administer. authorizeProgress does both, and is
+// the first thing this handler does.
 export async function POST(
   request: NextRequest,
   { params }: { params: { progressId: string } }
 ) {
   let body: any = {}
   try { body = await request.json() } catch { /* handled below */ }
-
   const kind = String(body?.kind || '') as Kind
-  if (!(kind in NEEDS)) {
-    return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
-  }
+  if (!(kind in NEEDS)) return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
 
   try {
-    // The team comes from the ROW, never from the request. A caller passing
-    // their own teamId beside someone else's progressId would otherwise be
-    // checked against a team they really do administer.
+    const actor = await authorizeProgress(params.progressId, NEEDS[kind])
+
     const { data: row, error: rowErr } = await supabaseAdmin
       .from('player_pathway_progress')
       .select('*, pathway:development_pathways(slug, name)')
@@ -79,7 +80,6 @@ export async function POST(
     if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     const progress = row as unknown as PlayerPathwayProgress
-    const actor = await authorizeTeam((row as any).team_id, NEEDS[kind])
 
     // ── a record of what happened ────────────────────────────────────────
     if (kind === 'session' || kind === 'mastery') {

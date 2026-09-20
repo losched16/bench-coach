@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { authorizeTeam, authzResponse } from '@/lib/authz'
+import { authorizeProgress, authzResponse } from '@/lib/authz'
 import { loadPathway, orderedStages, getPathwayPracticeRecommendation } from '@/lib/developmentPathways'
 import { visibleDrills } from '@/lib/drills'
 import { migrationHintFor } from '@/lib/migrationHints'
@@ -24,16 +24,19 @@ export async function GET(
   { params }: { params: { progressId: string } }
 ) {
   try {
+    // Resolves the plan, checks the caller is signed in BEFORE looking it up,
+    // and authorizes against the team on the ROW rather than anything the
+    // request supplied. 404 rather than 403 throughout, so a probe cannot use
+    // the status code as an existence check.
+    await authorizeProgress(params.progressId, 'read')
+
     const { data: row, error } = await supabaseAdmin
       .from('player_pathway_progress')
       .select('*, pathway:development_pathways(slug, name, skill_category, summary, applicability, version)')
       .eq('id', params.progressId)
       .maybeSingle()
     if (error) throw error
-    // 404 rather than 403: a 403 confirms the id belongs to a real plan.
     if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-
-    await authorizeTeam((row as any).team_id, 'read')
 
     const [{ data: player }, { data: events }] = await Promise.all([
       supabaseAdmin.from('players').select('id, name').eq('id', (row as any).player_id).maybeSingle(),
@@ -128,11 +131,7 @@ export async function DELETE(
   { params }: { params: { progressId: string } }
 ) {
   try {
-    const { data: row } = await supabaseAdmin
-      .from('player_pathway_progress').select('team_id').eq('id', params.progressId).maybeSingle()
-    if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-
-    await authorizeTeam((row as any).team_id, 'decide')
+    await authorizeProgress(params.progressId, 'decide')
 
     const { error } = await supabaseAdmin
       .from('player_pathway_progress').delete().eq('id', params.progressId)

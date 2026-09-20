@@ -49,7 +49,7 @@ const EXEMPT = {
 const GUARDS = [
   'guard(', 'requireSession(', 'requireAdmin(', 'authorizeTeam(',
   'authorizeGame(', 'authorizeCoach(', 'authorizeThread(',
-  'authorizeReport(',
+  'authorizeReport(', 'authorizeProgress(',
   'guardLeague(', 'requireLeagueRole(',
 ]
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
