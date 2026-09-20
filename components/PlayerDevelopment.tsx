@@ -7,6 +7,7 @@ import { useTracker } from '@/lib/tracking'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { loadPathways } from '@/lib/developmentPathways'
 import { describeDuration, daysSince } from '@/lib/playerPathways'
+import { ModuleHelp } from '@/components/help/ModuleHelp'
 
 // The Development section of a player profile.
 //
@@ -150,6 +151,17 @@ export function PlayerDevelopment({ playerId, teamId, playerName, canDecide }: P
           {error}
         </div>
       )}
+
+      {/* suppressCard because the empty state below already explains what a
+          development plan is, in better words than a generic card would. Only
+          the "How to use this" button shows, so the two do not stack. */}
+      <ModuleHelp
+        module="player-development"
+        ctx={{ teamId, playerId }}
+        hasTeam={!!teamId}
+        can={(c) => (c === 'decide' ? canDecide : true)}
+        suppressCard={active.length === 0}
+      />
 
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">

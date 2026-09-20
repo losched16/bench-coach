@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, Suspense } from 'react'
+import { ModuleHelp } from '@/components/help/ModuleHelp'
 import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { Plus, User, Trash2, ChevronRight, StickyNote, Upload, Camera, Check, X, Loader2, Archive, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react'
@@ -417,6 +418,13 @@ function RosterPageContent() {
 
   return (
     <div className="space-y-6">
+      <ModuleHelp
+        module="roster"
+        ctx={{ teamId }}
+        hasTeam={!!teamId}
+        can={allowed}
+      />
+
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Roster</h2>
         <div className="flex items-center space-x-2">

@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { ModuleHelp } from '@/components/help/ModuleHelp'
+import { useRole } from '@/lib/useRole'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { Plus, Clock, ChevronDown, ChevronUp, Trash2, Pencil, Sparkles, ClipboardCheck, RefreshCw, Search, X, FileText, AlertCircle, Check, Printer } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
@@ -183,6 +185,9 @@ function PracticeContent() {
 
   const searchParams = useSearchParams()
   const teamId = searchParams.get('teamId')
+  // Building plans is 'decide'. Read here so the help can say who can do it
+  // rather than offering a button that will fail.
+  const { can: allowed } = useRole(teamId)
   const supabase = createSupabaseComponentClient()
   const { drills: drillResources, findDrill } = useDrillResources()
 
@@ -1032,6 +1037,16 @@ function PracticeContent() {
 
   return (
     <div className="space-y-6">
+      {/* Guidance above the module it describes, not floating over it. The
+          first-use card explains the outcome; after it is dismissed a
+          "How to use this" button stays in the same place. */}
+      <ModuleHelp
+        module="practice-plans"
+        ctx={{ teamId }}
+        hasTeam={!!teamId}
+        can={allowed}
+      />
+
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Practice Plans</h2>
         

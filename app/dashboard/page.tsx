@@ -1,6 +1,9 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
+import { ModuleHelp } from '@/components/help/ModuleHelp'
+import { FirstPracticeChecklist } from '@/components/help/FirstPracticeChecklist'
+import { useRole } from '@/lib/useRole'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import Link from 'next/link'
@@ -23,6 +26,7 @@ function DashboardContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const teamId = searchParams.get('teamId')
+  const { can } = useRole(teamId)
   // Redirected here from the old /dashboard/checkin deep links.
   const focusId = searchParams.get('prescriptionId')
   const supabase = createSupabaseComponentClient()
@@ -108,6 +112,17 @@ function DashboardContent() {
 
   return (
     <div className="space-y-6 sm:space-y-8">
+      {/* Shown only to a coach who has no saved plan AND may create one.
+          Completion is read from practice_plans, not from a button. */}
+      <FirstPracticeChecklist teamId={data.team.id} canCreatePlans={can('decide')} />
+
+      <ModuleHelp
+        module="skill-development"
+        ctx={{ teamId: data.team.id }}
+        hasTeam
+        can={can}
+      />
+
       <div>
         <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
           {data.team.name}
