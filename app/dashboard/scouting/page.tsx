@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import { createSupabaseComponentClient } from '@/lib/supabase'
+import { ModuleHelp } from '@/components/help/ModuleHelp'
+import { useRole } from '@/lib/useRole'
 import { usePageView, useTracker } from '@/lib/tracking'
 import { nameSimilarity, stalenessLabel, stalenessOf, aggregateBattingLines, MIN_PA_FOR_TENDENCY , aggregatePitchingLines, opponentNameFromParse } from '@/lib/scouting'
 import { crossCheckHits } from '@/lib/recapCrossCheck'
@@ -130,6 +132,8 @@ function ScoutingContent() {
   const supabase = createSupabaseComponentClient()
   const searchParams = useSearchParams()
   const teamId = searchParams.get('teamId')
+  // Recording what you saw of another team is 'record'.
+  const { can: allowed } = useRole(teamId)
   const track = useTracker()
   usePageView('scouting')
 
@@ -451,6 +455,11 @@ function ScoutingContent() {
 
   return (
     <div className="space-y-6">
+      {/* The guide's real job here is the limitation: a rest-day estimate is
+          arithmetic over counts this coach took by hand, not information about
+          the other team. */}
+      <ModuleHelp module="scouting" ctx={{ teamId }} hasTeam={!!teamId} can={allowed} />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>

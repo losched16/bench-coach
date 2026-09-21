@@ -37,6 +37,9 @@ export type HelpModule =
   | 'pitch-counter'
   | 'lineups'
   | 'notes'
+  | 'log-entry'
+  | 'stats'
+  | 'scouting'
   | 'playbooks'
   | 'getting-started'
 
@@ -382,24 +385,48 @@ export const HELP_GUIDES: HelpGuide[] = [
     requiresNote:
       'Writing the document that goes to a family is the head coach\'s. Anyone on the staff can read reports that already exist.',
     steps: [
-      { do: 'Open the player, go to the "Reports" tab, and start a new report.' },
       {
-        do: 'Check what it has pulled in from the season before you edit anything.',
+        do: 'Open the player from the roster and pick the "Reports" tab.',
+        note: 'That tab is the only way in. Reports belong to a player, so there is no separate reports page to start one from.',
       },
-      { do: 'Edit the wording until it sounds like you.' },
       {
-        do: 'Finalize it, then export the PDF and send that to the family.',
-        note: 'Parents get the exported file. They do not need a BenchCoach account and never see your team.',
+        do: 'Press "Create Player Report" — or "Continue draft" if you already started one.',
+        note: 'Only one draft is open at a time, so you can close the laptop and come back.',
+      },
+      {
+        do: 'Answer "Start from what you have already recorded?" to decide whether it pulls the season in.',
+        note: 'Saying yes fills the sections from your notes, measurements and priorities. Saying no gives you a blank one.',
+      },
+      {
+        do: 'Work down "Report setup", "Strengths", "Development" and "Closing", editing until it sounds like you.',
+        note: 'It saves as you go. Nothing is sent anywhere while it says "Draft".',
+      },
+      {
+        do: 'Use "Preview the PDF" to see exactly what a parent will get.',
+      },
+      {
+        do: 'Press "Finalize report", then "Open PDF" and send that file to the family.',
+        note: 'Parents get the file. They do not need a BenchCoach account and never see your team.',
       },
     ],
+    example:
+      'Mid-season for Charlie: you say yes to starting from what is recorded, it fills in two strengths and a development area from your notes, you rewrite the closing in your own words, preview it, finalize, and email the PDF that evening.',
     problems: [
       {
         symptom: 'The report says things you would not say to a parent.',
-        fix: 'Edit it before finalizing. It is a draft built from what is recorded, not a finished document.',
+        fix: 'Edit it before finalizing. What it starts with is assembled from what you recorded, not a finished document — every word is yours to change.',
       },
       {
         symptom: 'You want the parents to log in and read it.',
-        fix: 'They do not need to. Export the PDF and send it however you already talk to them.',
+        fix: 'They do not need to. Send the PDF however you already talk to them.',
+      },
+      {
+        symptom: 'You finalized it and something is wrong.',
+        fix: 'A finalized report opens on its preview and cannot be edited in place. Start a revision from it — the original stays as it was, which is the point if it has already gone out.',
+      },
+      {
+        symptom: 'You are not the head coach and there is no button.',
+        fix: 'Writing the document that goes to a family is the head coach\'s. You can read reports that already exist on that tab.',
       },
     ],
     result: 'The report is saved against the player. Finalized reports keep their own copy of what they said.',
@@ -645,13 +672,23 @@ export const HELP_GUIDES: HelpGuide[] = [
     summary: 'Notes about the team or one player, kept where you will find them.',
     requires: ['team', 'record'],
     steps: [
-      { do: 'Use Notes for anything about the team.' },
-      { do: 'Use the notes on a player profile for anything about that player.' },
       {
-        do: 'Notes inside a development plan stay with the stage you wrote them on.',
+        do: 'Open Notes and press "Add Team Note" for anything about the team.',
+        note: 'Give it a short title — "Throwing Issues" — and write as much or as little as you want.',
+      },
+      {
+        do: 'Press "Add Player Note", or use the notes on a player profile, for one kid.',
+      },
+      {
+        do: 'Use "Edit Note" to change one later, or "Delete Note" to remove it.',
       },
     ],
     problems: [
+      {
+        // The distinction the brief asks for, from the Notes side.
+        symptom: 'You are not sure whether this belongs in Notes or in Log an Entry.',
+        fix: 'Notes are what you think. Log an Entry is what happened. A note is standing context that stays true: he is scared of the ball, or you have no catcher until June. An entry is one dated event — this game, this practice, this lesson. If it has a date attached, log it; if it describes how things are, note it.',
+      },
       {
         symptom: 'You cannot find a note you wrote.',
         fix: 'Notes live where you wrote them — team notes in Notes, player notes on that player, plan notes on that stage of that plan.',
@@ -659,8 +696,169 @@ export const HELP_GUIDES: HelpGuide[] = [
     ],
     result: 'Notes are saved to your team and visible to your coaching staff. They are not shared with families.',
     nextAction: 'Ask CoachAI about something you noted — it reads them.',
-    related: ['roster', 'coachai', 'player-development'],
-    synonyms: ['note', 'journal', 'log', 'observations', 'write down', 'remember'],
+    related: ['log-entry', 'roster', 'coachai'],
+    synonyms: ['note', 'journal', 'observations', 'write down', 'remember', 'context'],
+    version: 1,
+  },
+  {
+    id: 'log-entry',
+    module: 'log-entry',
+    tasks: ['record-what-happened'],
+    title: 'Log what happened',
+    purpose:
+      'Record one dated thing — a game, a practice, a lesson — so the rest of the product has something real to work from.',
+    summary: 'One dated event. This is what stats and reports are built out of.',
+    requires: ['team', 'record'],
+    requiresNote:
+      'Anyone who can record for the team can log an entry. It is not the head coach\'s alone.',
+    steps: [
+      {
+        do: 'Open Log an Entry and pick what kind of thing it was.',
+        note: 'A game, a practice, a lesson, or "Something else" if none of them fit.',
+      },
+      {
+        do: 'Set the date. It defaults to the most recent weekend, which is usually right.',
+      },
+      {
+        do: 'Choose "Whole team" or one player.',
+        note: 'Picking a player is what makes it show up on their profile and in their report.',
+      },
+      {
+        do: 'Write what you saw under "What did you see?"',
+        note: 'Plain sentences. This is the text CoachAI and the report builder read back.',
+      },
+      {
+        do: 'Add a box-score screenshot if you have one, and check what it pulled out before saving.',
+        note: 'A screenshot of a phone screen can drop a letter, and a wrong name follows the kid all season.',
+      },
+    ],
+    example:
+      'Saturday\'s game: you pick Game, leave the date on Saturday, choose Charlie, write that he was late on anything with speed but his glove work was the best it has been, and attach the box score.',
+    problems: [
+      {
+        // The distinction the brief asks for, from the Log side.
+        symptom: 'You are not sure whether this belongs here or in Notes.',
+        fix: 'Log an Entry is what happened on a day. Notes are what is true in general. If you would start the sentence with a date, log it. If you would start it with "he" or "we", it is probably a note.',
+      },
+      {
+        symptom: 'The stats did not change after you logged a game.',
+        fix: 'Stats are built from the numbers in a box score, not from what you wrote. An entry with only a written description adds context, not batting averages.',
+      },
+      {
+        symptom: 'The screenshot pulled out the wrong name.',
+        fix: 'Correct it on the review step before you save. Names are matched against your roster and a close miss is easy to accept by accident.',
+      },
+    ],
+    result:
+      'One dated entry saved to the team, and to the player if you picked one. It feeds their profile, their report and anything you ask CoachAI afterwards.',
+    nextAction: 'Ask CoachAI about what you just logged, or log the next one.',
+    related: ['notes', 'stats', 'player-reports'],
+    synonyms: [
+      'log', 'entry', 'record', 'game', 'practice', 'lesson', 'box score',
+      'screenshot', 'what happened', 'session',
+    ],
+    version: 1,
+  },
+  {
+    id: 'stats',
+    module: 'stats',
+    tasks: ['record-what-happened'],
+    title: 'Read your stats',
+    purpose:
+      'See batting, pitching and fielding numbers for your team and each player, built from the games you have logged.',
+    summary: 'Numbers from the games you logged. Nothing arrives on its own.',
+    requires: ['team'],
+    steps: [
+      {
+        do: 'Log your games first, with the box score.',
+        note: 'This page has nothing to show until something is logged — it is a view of your entries, not a separate record.',
+      },
+      { do: 'Open Stats and pick a player, or stay on the team view.' },
+      {
+        do: 'Use the game type filter — "Regular", "Playoff", "Scrimmage" — if you only want some of them.',
+      },
+    ],
+    example:
+      'You log six games with box scores. Team AVG and the leaderboard fill in; a seventh game you logged as a written note only does not move them, because there were no numbers in it.',
+    problems: [
+      {
+        // The distinction the brief asks for.
+        symptom: 'You are not sure which of these numbers you typed and which the app worked out.',
+        fix: 'You provide the raw counts — at-bats, hits, innings, pitches — from each game\'s box score. Everything with a rate in it, like Team AVG or extra-base hits, is calculated from those. Change a game and the calculated numbers change with it; there is nothing stored separately that could disagree.',
+      },
+      {
+        symptom: 'A number looks wrong.',
+        fix: 'Find the game it came from and check what was entered. A miskeyed box score is the usual cause, and correcting the entry corrects everything derived from it.',
+      },
+      {
+        symptom: 'There is nothing here.',
+        fix: 'No games with box scores have been logged yet. Written entries about a game add context but no numbers.',
+      },
+    ],
+    result:
+      'A read-only view. Nothing on this page changes your data — it is arithmetic over what you logged.',
+    nextAction: 'Log the game you have not got round to yet.',
+    related: ['log-entry', 'player-reports'],
+    synonyms: [
+      'stats', 'statistics', 'average', 'batting average', 'numbers',
+      'leaderboard', 'era', 'totals', 'season',
+    ],
+    version: 1,
+  },
+  {
+    id: 'scouting',
+    module: 'scouting',
+    tasks: ['prepare-for-a-game'],
+    title: 'Keep notes on other teams',
+    purpose:
+      'Record what you saw of an opposing team and their pitchers, so you are not starting from nothing the next time you meet them.',
+    summary: 'What you saw of the other team, kept for next time.',
+    requires: ['team', 'record'],
+    steps: [
+      {
+        do: 'Add the opposing team, then add what you saw as an entry against it.',
+        note: 'Pick an entry type — batting, pitching, or a general note — and set the game date.',
+      },
+      {
+        do: 'Name their pitchers as you see them and record pitch counts.',
+        note: 'Pitch Counter can do this at the fence, and an opponent count files itself here.',
+      },
+      {
+        do: 'Pick a rule set, or add your own under "Custom Pitch Count Rules", if you want rest-day estimates.',
+      },
+      {
+        do: 'Read back what you have before you play them again, and correct anything that was a guess.',
+      },
+    ],
+    example:
+      'You count 68 pitches for their number 12 on Saturday. Next Wednesday the availability view shows he is likely still resting under the rule set you picked — which is a estimate from your own count, not a fact about their roster.',
+    problems: [
+      {
+        // The limitation that matters most, stated first.
+        symptom: 'How much can you trust the rest-day estimate?',
+        fix: 'Only as much as the count it came from. It is worked out from pitches you recorded by hand, against a rule set you chose, and it has no idea what that pitcher threw in a game you did not watch. Treat it as your own notes doing arithmetic, not as information about their team.',
+      },
+      {
+        symptom: 'You recorded the wrong name or the wrong count.',
+        fix: 'Open the entry and correct it. Names are what you typed at a fence, so a wrong one stays wrong until somebody fixes it, and everything downstream is built on it.',
+      },
+      {
+        symptom: 'You logged the same game twice.',
+        fix: 'Re-reading a game you already logged is fine — find the existing entry and edit it rather than adding a second, or the counts add up to more than were thrown.',
+      },
+      {
+        symptom: 'You want to see another coach\'s scouting of this team.',
+        fix: 'You cannot. Scouting stays in the account that recorded it and is never pooled between coaches or leagues.',
+      },
+    ],
+    result:
+      'Your own record of an opposing team, visible to your staff and nobody else.',
+    nextAction: 'Count their pitcher next time you play them.',
+    related: ['pitch-counter', 'game-day', 'notes'],
+    synonyms: [
+      'scouting', 'opponent', 'other team', 'opposing', 'advance',
+      'rest days', 'availability', 'their pitcher',
+    ],
     version: 1,
   },
   {

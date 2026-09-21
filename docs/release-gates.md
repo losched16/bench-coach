@@ -30,20 +30,42 @@ deploys, and it always has.
 fails, the deployment goes to `ERROR`, and the production alias keeps pointing
 at the previous build. Nothing is served from a failed build.
 
-This is not a claim from reading configuration — it was verified in the build
-log of `dpl_H6quRyrwDdJr61mKgswG5tmEUVv9`:
+This is not a claim from reading configuration. It is the build log of
+`dpl_9rG8ZvyaMrBqiZaSyBfmzhtpCvMN` — commit `f6d5692`, target production,
+READY, aliased to `mybenchcoach.com` — with the gate running in full:
 
 ```
 Detected Next.js version: 14.2.0
 Running "npm run build"
+
 > benchcoach@1.0.0 prebuild
-> node scripts/verify-env.mjs
+> node scripts/release-gate.mjs
+
+Release gate — 7 checks
+
+  environment           ok   27ms
+  hook rules            ok   3388ms
+  hook order (scanner)  ok   1151ms
+  types                 ok   11925ms
+  route authorization   ok   39ms
+  help content          ok   593ms
+  onboarding rules      ok   520ms
+
+✓ Gate passed. This build may deploy.
+
 > benchcoach@1.0.0 build
 > next build
 ```
 
 Vercel runs `npm run build`, so npm runs `prebuild` first. That is the hook the
-gate now occupies. (`verify-env.mjs` is still the first check inside it.)
+gate occupies, and the log above is it doing the job in production.
+
+(An earlier version of this document quoted a build from *before* the gate
+existed, where `prebuild` was still `verify-env.mjs` alone. That excerpt proved
+the mechanism but not the gate. `verify-env.mjs` is now the first check inside
+`release-gate.mjs` rather than the whole of it. The run above is **7 checks**;
+it is **8** from the next deployment, because `pitch counter` was added after
+this log was taken.)
 
 ### What the gate checks, and why each one is there
 
@@ -55,9 +77,10 @@ gate now occupies. (`verify-env.mjs` is still the first check inside it.)
 | types | No **new** type errors against `typecheck-baseline.json`. |
 | route authorization | Every API handler authorizes its caller. |
 | help content | Guides may not name controls that do not exist, claim things the product cannot do, or leak repair instructions to coaches. |
+| pitch counter | The pitch guide may not claim enforcement, compliance or safety, and the four display states must match what it says. |
 | onboarding rules | A failed query must not be read as "this is a new coach". |
 
-The whole run is about 12 seconds. That is deliberate: a build gate that takes
+The whole run is about 15 seconds. That is deliberate: a build gate that takes
 minutes, or that fails intermittently, gets deleted within a week and takes the
 useful checks with it.
 
@@ -81,14 +104,41 @@ artifact store (it uploads the layout screenshots), nothing more.
 This is a repository settings change, and it is Clint's to make, because it
 also changes how *he* pushes:
 
-1. GitHub → the repo → Settings → Branches → Add branch ruleset for `main`
-2. Require status checks to pass, and select `release gate`, `test suites`,
-   `chromium smoke`
-3. Decide whether to allow yourself to bypass it. If you do, it is advisory
-   again — but it will still stop anything that arrives by pull request.
+**The exact required-check names are `gate`, `suites` and `browser`** — nothing
+longer. A required status check is matched by the check-run name, which is the
+job's `name:` in the workflow, so those three strings are the whole contract.
+They were shortened from descriptive sentences for exactly this reason:
+renaming a job silently un-requires it, and a required check that no longer
+exists blocks every merge instead of none.
 
-Until that is done, this document should keep saying the workflow is advisory.
-Do not describe it as a gate in a delivery report.
+Settings needed, in order:
+
+1. GitHub → **Settings → Rules → Rulesets → New branch ruleset**
+   (the older Settings → Branches → Branch protection rules works too)
+2. **Target branches:** include `main` — "Default branch" is the simplest
+   target
+3. Enable **Require status checks to pass**
+   - add `gate`
+   - add `suites`
+   - add `browser`
+   - also tick **Require branches to be up to date before merging**, or a
+     green check on a stale branch can still merge something broken
+4. Enable **Require a pull request before merging** as well, unless you want
+   the ruleset to apply only to PRs. **Without this, a direct
+   `git push origin main` is not covered by required checks** — which is how
+   every commit in this repository has been made, so leaving it off means the
+   ruleset changes nothing in practice.
+5. **Bypass list:** decide deliberately. Adding yourself as a bypass actor
+   keeps your own direct pushes working and makes the checks binding only on
+   pull requests. Leaving it empty means you must open a PR like anyone else —
+   including to fix a broken `main`.
+
+The trade in step 4 is the real decision, and it is yours: binding checks and
+a PR for every change, or direct pushes and advisory checks. There is no
+configuration that gives both.
+
+Until a ruleset exists, this document should keep saying the workflow is
+advisory. Do not describe it as a gate in a delivery report.
 
 ## Both hook checks, on purpose
 

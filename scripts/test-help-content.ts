@@ -72,6 +72,15 @@ const SOURCES: Record<string, string> = {
   'drill-library': read('app/dashboard/drills/page.tsx') +
     read('components/drillFinder/DrillFinder.tsx') +
     read('components/drillFinder/DrillDetail.tsx'),
+  // Reports are a two-part workflow: the entry point is a tab on the player
+  // profile, the editing happens on its own route. Both are checked.
+  'player-reports': read('components/PlayerReports.tsx') +
+    read('app/dashboard/player-reports/[reportId]/page.tsx') +
+    read('app/dashboard/roster/[playerId]/page.tsx'),
+  'notes': read('app/dashboard/notes/page.tsx'),
+  'log-entry': read('app/dashboard/log/page.tsx'),
+  'stats': read('app/dashboard/stats/page.tsx'),
+  'scouting': read('app/dashboard/scouting/page.tsx'),
 }
 
 const quoted = (guideId: string): string[] => {
@@ -236,6 +245,66 @@ check('CoachAI draws the line between a priority and a development plan',
 check('and says where each one is started',
   /player’s profile|player's profile/i.test(
     guideById('coachai')!.problems.map(p => p.fix).join(' ')))
+
+// ── the administrative-adjacent four ────────────────────────────────────────
+//
+// Reports, Notes/Log, Stats and Scouting. Two of these guides exist mostly to
+// draw a distinction, and the tests below are about the distinction rather
+// than the prose around it.
+
+// Notes versus Log an Entry: a coach who puts a dated game into Notes loses it
+// to the report builder and the stats, and nothing tells them why.
+const notesProse = guideById('notes')!.problems.map(p => p.symptom + ' ' + p.fix).join(' ')
+const logProse = guideById('log-entry')!.problems.map(p => p.symptom + ' ' + p.fix).join(' ')
+check('the notes guide explains how it differs from logging an entry',
+  /Log an Entry/i.test(notesProse) && /what you think|standing context|how things are/i.test(notesProse))
+check('and the log guide draws the same line from its own side',
+  /Notes are what is true in general|what happened on a day/i.test(logProse))
+check('both give the coach a rule they can apply without thinking',
+  /if it has a date|would start the sentence with a date/i.test(notesProse + logProse))
+
+// Stats: entered versus calculated is the whole question a coach has here.
+const statsProse = guideById('stats')!.problems.map(p => p.symptom + ' ' + p.fix).join(' ')
+check('the stats guide separates what you entered from what was worked out',
+  /raw counts/i.test(statsProse) && /calculated from those/i.test(statsProse))
+check('and says correcting the entry corrects everything derived from it',
+  /correcting the entry corrects/i.test(statsProse))
+check('it does not claim stats appear without logging',
+  /nothing to show until something is logged|Nothing arrives on its own/i
+    .test(guideById('stats')!.summary + guideById('stats')!.steps.map(x => x.do + (x.note || '')).join(' ')))
+
+// Scouting: the limitation is the point, and it comes first.
+const scouting = guideById('scouting')!
+const scoutProse = scouting.problems.map(p => p.symptom + ' ' + p.fix).join(' ')
+check('THE SCOUTING GUIDE LEADS WITH HOW FAR THE EVIDENCE GOES',
+  /How much can you trust/i.test(scouting.problems[0].symptom))
+check('it says a rest-day figure is an estimate from your own counts',
+  /estimate|arithmetic/i.test(scoutProse) && /by hand|your own/i.test(scoutProse))
+check('it says the product does not know what it did not see',
+  /no idea what that pitcher threw|did not watch/i.test(scoutProse))
+check('it explains correcting a wrong name or count',
+  scouting.problems.some(p => /wrong name/i.test(p.symptom)))
+check('and it states that scouting is never pooled between coaches',
+  /never pooled|stays in the account/i.test(scoutProse))
+check('scouting makes no claim about the opposing team as fact',
+  !/\b(their roster says|official|confirmed by|guarantee)\b/i.test(scoutProse))
+
+// Reports: the entry point, and what a finalized one can and cannot do.
+const reports = guideById('player-reports')!
+const reportProse = [...reports.steps.map(x => x.do + ' ' + (x.note || '')),
+  ...reports.problems.map(p => p.symptom + ' ' + p.fix)].join(' ')
+check('the report guide names the tab that is the only way in',
+  /"Reports" tab/.test(reportProse))
+check('and the real button on it',
+  /Create Player Report/.test(reportProse))
+check('it explains the pre-fill question rather than leaving it a surprise',
+  /Start from what you have already recorded/.test(reportProse))
+check('it says a draft is not sent anywhere',
+  /Nothing is sent anywhere while it says "Draft"/.test(reportProse))
+check('and that a finalized report is revised rather than edited',
+  reports.problems.some(p => /finalized/i.test(p.symptom) && /revision/i.test(p.fix)))
+check('parents still need no account',
+  /do not need a BenchCoach account/.test(reportProse))
 
 // ── search ──────────────────────────────────────────────────────────────────
 //

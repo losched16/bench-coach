@@ -6,6 +6,8 @@ import { createSupabaseComponentClient } from '@/lib/supabase'
 import { Plus, Pin, Trash2, Pencil, Users, User } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import Link from 'next/link'
+import { ModuleHelp } from '@/components/help/ModuleHelp'
+import { useRole } from '@/lib/useRole'
 import { usePageView } from '@/lib/tracking'
 
 interface TeamNote {
@@ -64,6 +66,8 @@ function NotesPageContent() {
   
   const searchParams = useSearchParams()
   const teamId = searchParams.get('teamId')
+  // Writing a note is 'record' — an assistant coach keeps notes too.
+  const { can: allowed } = useRole(teamId)
   const supabase = createSupabaseComponentClient()
 
   useEffect(() => {
@@ -283,6 +287,10 @@ function NotesPageContent() {
 
   return (
     <div className="space-y-6">
+      {/* Notes and Log an Entry are the two places a coach writes something
+          down, and the guide's job is mostly telling them apart. */}
+      <ModuleHelp module="notes" ctx={{ teamId }} hasTeam={!!teamId} can={allowed} />
+
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Notes</h2>
         <button

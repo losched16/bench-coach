@@ -37,9 +37,16 @@ env:
   SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-not-a-real-key
   ADMIN_EMAIL: ci@example.invalid
 
+# The job `name:` values below are what GitHub publishes as check-run names,
+# and therefore what a branch ruleset must require BY EXACT STRING. They are
+# kept short and boring on purpose: renaming a job silently un-requires it,
+# and a required check that no longer exists blocks every merge instead.
+#
+#   gate  ·  suites  ·  browser
+#
 jobs:
   gate:
-    name: release gate (same checks Vercel runs)
+    name: gate
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -53,7 +60,7 @@ jobs:
         run: npm run gate
 
   suites:
-    name: test suites
+    name: suites
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -69,9 +76,10 @@ jobs:
       - run: npm run test:pathways
       - run: npm run test:pathway-ui
       - run: npm run test:drill-finder
+      - run: npm run test:pitch-count
 
   browser:
-    name: chromium smoke (cannot run in a Vercel build)
+    name: browser
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:

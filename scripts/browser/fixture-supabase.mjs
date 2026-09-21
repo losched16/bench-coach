@@ -29,6 +29,16 @@ let tables = {}
 let failing = {}
 let users = {}
 
+// Ids for rows inserted without one. Stable and readable, so a failing test
+// prints `pitch_count_sessions-1` rather than a uuid nobody can place.
+const idCounters = new Map()
+function nextId(table) {
+  const n = (idCounters.get(table) || 0) + 1
+  idCounters.set(table, n)
+  return `${table}-${n}`
+}
+
+
 function reset(seed = {}) {
   tables = {
     teams: [], team_players: [], practice_plans: [], team_notes: [],
@@ -36,6 +46,7 @@ function reset(seed = {}) {
     ...(seed.tables || {}),
   }
   failing = seed.failing || {}
+  idCounters.clear()
   users = seed.users || {
     'coach@example.test': {
       id: '11111111-1111-4111-8111-111111111111',
@@ -113,7 +124,7 @@ function applyFilters(rows, params) {
   let out = rows
   for (const [key, raw] of params) {
     if (IGNORED.has(key)) continue
-    const m = /^(eq|neq|gt|lt|gte|lte|is)\.(.*)$/s.exec(raw)
+    const m = /^(eq|neq|gt|lt|gte|lte|is|ilike)\.(.*)$/s.exec(raw)
     if (!m) continue
     const [, op, v] = m
     const want = parseValue(v)
@@ -121,6 +132,13 @@ function applyFilters(rows, params) {
       const got = r[key]
       switch (op) {
         case 'eq': case 'is': return String(got) === String(want) || got === want
+        // PostgREST ilike, with * as the wildcard. The pitch-count route uses
+        // it to match an ad-hoc counter by name.
+        case 'ilike': {
+          const pattern = String(want).replace(/[.*+?^${}()|[\]\\]/g, m2 => m2 === '*' ? m2 : '\\' + m2)
+          const rx = new RegExp('^' + pattern.split('*').join('.*') + '$', 'i')
+          return rx.test(String(got ?? ''))
+        }
         case 'neq': return String(got) !== String(want)
         case 'gt': return got > want
         case 'lt': return got < want
@@ -240,14 +258,21 @@ const server = createServer(async (req, res) => {
       const body = await readBody(req)
       const incoming = Array.isArray(body) ? body : [body]
       const merge = prefer.includes('merge-duplicates')
+      const written = []
       for (const row of incoming) {
         if (merge && table === 'user_ui_prefs') {
           const i = rows.findIndex(r => r.user_id === row.user_id && r.key === row.key)
-          if (i >= 0) { rows[i] = { ...rows[i], ...row }; continue }
+          if (i >= 0) { rows[i] = { ...rows[i], ...row }; written.push(rows[i]); continue }
         }
-        rows.push(row)
+        // Real tables default their primary key. Code that inserts and then
+        // reads `.id` back — the pitch-count route does — needs one here too.
+        const stored = { id: row.id ?? nextId(table), ...row }
+        if (stored.id === undefined) stored.id = nextId(table)
+        rows.push(stored)
+        written.push(stored)
       }
-      return json(res, 201, prefer.includes('return=representation') ? incoming : null)
+      if (!prefer.includes('return=representation')) return json(res, 201, null)
+      return json(res, 201, wantsObject ? written[0] : written)
     }
 
     if (req.method === 'DELETE') {
@@ -258,8 +283,16 @@ const server = createServer(async (req, res) => {
 
     if (req.method === 'PATCH') {
       const body = await readBody(req)
-      for (const r of applyFilters(rows, url.searchParams)) Object.assign(r, body)
-      return json(res, 204, null)
+      const touched = applyFilters(rows, url.searchParams)
+      for (const r of touched) Object.assign(r, body)
+      if (!prefer.includes('return=representation')) return json(res, 204, null)
+      if (wantsObject && touched.length === 0) {
+        return json(res, 406, {
+          code: 'PGRST116', message: 'JSON object requested, 0 rows returned',
+          details: 'Results contain 0 rows', hint: null,
+        })
+      }
+      return json(res, 200, wantsObject ? touched[0] : touched)
     }
   }
 

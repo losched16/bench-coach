@@ -12,6 +12,7 @@
 // tap away rather than a search through sent mail.
 
 import { useEffect, useState } from 'react'
+import { ModuleHelp } from '@/components/help/ModuleHelp'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -96,6 +97,18 @@ export function PlayerReports({
   const openDraft = reports.find(r => r.status === 'draft')
 
   return (
+    <>
+      {/* In the Reports tab, which is the only way into this workflow — a
+          coach looking for "reports" finds them on a player, not on a page of
+          their own. `can` reports the real capability so the guide explains
+          who may write one rather than offering a button that fails. */}
+      <ModuleHelp
+        module="player-reports"
+        ctx={{ teamId, playerId }}
+        hasTeam={!!teamId}
+        can={(c) => (c === 'decide' ? canCreate : true)}
+        className="mb-6"
+      />
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
@@ -198,6 +211,7 @@ export function PlayerReports({
         </ul>
       )}
     </div>
+    </>
   )
 }
 

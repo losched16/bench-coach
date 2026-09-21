@@ -16,6 +16,8 @@ import { focusAreaLabel, focusAreaChip, focusAreaRank } from '@/lib/focusAreas'
 import { PriorityDrills } from '@/components/PriorityDrills'
 import { prepareImages, imagesFromClipboard } from '@/lib/imagePrep'
 import { FEATURE_UNAVAILABLE } from '@/lib/migrationHints'
+import { ModuleHelp } from '@/components/help/ModuleHelp'
+import { useRole } from '@/lib/useRole'
 
 // ── Types ──────────────────────────────────────────────
 
@@ -108,6 +110,8 @@ function LogContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const teamId = searchParams.get('teamId')
+  // Logging what happened is 'record'.
+  const { can: allowed } = useRole(teamId)
   const track = useTracker()
   usePageView('log')
 
@@ -518,6 +522,11 @@ function LogContent() {
           Takes about 30 seconds. Only the first two steps are required — everything else is optional.
         </p>
       </div>
+
+      {/* Below the header rather than above it: the page already opens with a
+          one-line explanation, and a card above that would be the second thing
+          explaining the page before the coach reaches the form. */}
+      <ModuleHelp module="log-entry" ctx={{ teamId }} hasTeam={!!teamId} can={allowed} />
 
       {needsMigration && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3">

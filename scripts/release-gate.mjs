@@ -74,6 +74,16 @@ const CHECKS = [
     run: ['npx', ['tsx', '--tsconfig', 'tsconfig.json', 'scripts/test-help-content.ts']],
   },
   {
+    // Safety-critical: these assert that the pitch guide claims no
+    // enforcement, no compliance and nothing medical, and that the four
+    // display states are what the guide says they are. It was written in the
+    // last phase and wired to NOTHING — defined in package.json and invoked
+    // by no workflow and no gate. Found by checking rather than assuming.
+    name: 'pitch counter',
+    why: 'the pitch guide may not claim enforcement, compliance or safety',
+    run: ['npx', ['tsx', '--tsconfig', 'tsconfig.json', 'scripts/test-pitch-count.ts']],
+  },
+  {
     name: 'onboarding rules',
     why: 'a failed query must not read as a new coach',
     run: ['npx', ['tsx', '--tsconfig', 'tsconfig.json', 'scripts/test-onboarding.ts']],

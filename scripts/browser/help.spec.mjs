@@ -49,7 +49,7 @@ const team = {
   workspace_kind: 'team', season: null, created_at: '2026-01-01T00:00:00Z',
 }
 
-async function seed({ players = 0, plans = 0, prefs = [], failing = {} } = {}) {
+async function seed({ players = 0, plans = 0, prefs = [], failing = {}, rules = [] } = {}) {
   const body = {
     failing,
     tables: {
@@ -60,7 +60,15 @@ async function seed({ players = 0, plans = 0, prefs = [], failing = {} } = {}) {
       team_members: [],
       team_players: Array.from({ length: players }, (_, i) => ({
         id: `p${i}`, team_id: TEAM, name: `Player ${i}`,
+        // The count page reads the embedded player, not the roster row's name.
+        player: { name: `Player ${i}`, jersey_number: String(i + 1) },
       })),
+      // A deliberately small daily max. Fifteen keeps all three display
+      // states reachable by tapping: under below 5, warning from 5, over at 15.
+      pitch_count_rules: rules,
+      pitch_count_sessions: [],
+      opponent_teams: [],
+      opponent_players: [],
       practice_plans: Array.from({ length: plans }, (_, i) => ({
         id: `plan${i}`, team_id: TEAM, name: `Practice ${i}`,
         created_at: '2026-09-01T00:00:00Z',
@@ -693,6 +701,277 @@ try {
       box.x + box.width <= 375 + 1,
       `panel spans ${box?.x}..${Math.round((box?.x || 0) + (box?.width || 0))}`)
     await page.screenshot({ path: 'docs/audits/phase2j-pitch-375px.png' })
+    await context.close()
+  }
+
+  // ══ 4c. THE PITCH COUNTER, ACTUALLY COUNTING ════════════════════════════
+  //
+  // Everything above about the pitch counter tested the HELP. This drives the
+  // screen: start a count, tap, undo, reload and resume, and watch the three
+  // display states arrive as the number climbs. The guide tells a coach what
+  // this screen does; these are the checks that it does it.
+  //
+  // The rule set used here has a daily max of 15 so all three states are
+  // reachable: nothing under 5, a warning from 5, over at 15.
+  console.log('\nThe pitch counter, counting')
+
+  const RULE = {
+    id: 'rule-ll12u', sanctioning_body: 'Little League', age_group: '12U', daily_max: 15,
+  }
+
+  // The sidebar team switcher is also a <select> and comes first in the DOM,
+  // so the rules dropdown has to be identified by the option only it carries.
+  const rulesSelect = page => page.locator('select')
+    .filter({ has: page.locator('option', { hasText: 'Just count, no rules' }) })
+
+  const tap = async (page, times) => {
+    const btn = page.getByRole('button', { name: /tap anywhere to count/i })
+    for (let i = 0; i < times; i++) await btn.click()
+    // Every tap is a PATCH; let the last one land before reading anything.
+    await page.waitForTimeout(500)
+  }
+  const shown = async page => Number(
+    (await page.locator('.text-8xl').first().textContent() || '0').trim())
+
+  {
+    // ── NO RULE SET ──────────────────────────────────────────────────────
+    await seed({ players: 3, plans: 1, rules: [RULE] })
+    const { context, page } = await signedIn(browser)
+    await page.goto(`${APP}/dashboard/count?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1200)
+
+    await page.getByRole('button', { name: 'Start counting' }).click()
+    await page.waitForTimeout(400)
+    // The select is left on its default, "Just count, no rules".
+    const select = rulesSelect(page)
+    await select.waitFor({ state: 'visible', timeout: 10000 })
+    eq('the rule dropdown defaults to no rules', await select.inputValue(), '')
+    await page.getByRole('button', { name: /Player 0/ }).first().click()
+    await page.waitForTimeout(900)
+
+    eq('a new count starts at zero', await shown(page), 0)
+    await tap(page, 3)
+    eq('THREE TAPS COUNT THREE', await shown(page), 3)
+
+    check('WITH NO RULE SET THERE IS NO WARNING AT ALL',
+      (await page.getByText(/daily max/i).count()) === 0)
+
+    // ── UNDO ─────────────────────────────────────────────────────────────
+    await page.getByRole('button', { name: 'Undo' }).click()
+    await page.waitForTimeout(500)
+    eq('UNDO TAKES ONE OFF', await shown(page), 2)
+
+    // ── RELOAD AND RESUME ────────────────────────────────────────────────
+    await page.reload({ waitUntil: 'networkidle' })
+    await page.waitForTimeout(1500)
+    check('after a reload the count is waiting under "Still counting"',
+      await page.getByText('Still counting').isVisible())
+    await page.getByRole('button', { name: /Player 0/ }).first().click()
+    await page.waitForTimeout(900)
+    eq('RESUMING CARRIES THE COUNT — IT DOES NOT RESTART', await shown(page), 2)
+
+    const stored = (await fixtureState()).tables.pitch_count_sessions
+    eq('and one row holds the day rather than several', stored.length, 1)
+    eq('with the number the screen showed', stored[0].pitches, 2)
+    await context.close()
+  }
+
+  {
+    // ── A SELECTED RULE SET, THROUGH ALL THREE STATES ────────────────────
+    await seed({ players: 3, plans: 1, rules: [RULE] })
+    const { context, page } = await signedIn(browser)
+    await page.goto(`${APP}/dashboard/count?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1200)
+
+    await page.getByRole('button', { name: 'Start counting' }).click()
+    await page.waitForTimeout(400)
+    await rulesSelect(page).selectOption(RULE.id)
+    await page.getByRole('button', { name: /Player 1/ }).first().click()
+    await page.waitForTimeout(900)
+
+    check('SELECTED RULE: nothing is said well under the max',
+      (await page.getByText(/daily max/i).count()) === 0)
+    check('and the rule set is named on the counter',
+      /Little League 12U/.test((await page.locator('body').innerText())))
+
+    await tap(page, 5)
+    eq('at five of fifteen the count is five', await shown(page), 5)
+    check('WARNING STATE: it counts down the pitches left',
+      await page.getByText('10 pitches to the daily max.').isVisible())
+
+    await tap(page, 10)
+    eq('at the max the count is fifteen', await shown(page), 15)
+    check('OVER STATE: it names the rule set and the real total',
+      await page.getByText("Daily max for Little League 12U is 15. He's at 15.")
+        .isVisible())
+
+    // THE WHOLE POINT.
+    const btn = page.getByRole('button', { name: /tap anywhere to count/i })
+    eq('AND THE COUNT BUTTON IS STILL ENABLED PAST THE MAX',
+      await btn.isDisabled(), false)
+    await tap(page, 1)
+    eq('COUNTING PAST THE DAILY MAX IS ALLOWED — IT WARNS, IT DOES NOT BLOCK',
+      await shown(page), 16)
+    check('and it says so with the real number, not the max',
+      await page.getByText("Daily max for Little League 12U is 15. He's at 16.")
+        .isVisible())
+    await context.close()
+  }
+
+  // ══ 4d. REPORTS, NOTES, LOG, STATS, SCOUTING ════════════════════════════
+  console.log('\nContextual help on the record-keeping modules')
+
+  {
+    await seed({ players: 4, plans: 1 })
+    const { context, page } = await signedIn(browser)
+
+    const MODULES = [
+      { name: 'Notes', path: 'notes', heading: 'Notes' },
+      { name: 'Log an Entry', path: 'log', heading: 'Log an Entry' },
+      { name: 'Stats', path: 'stats', heading: 'Stats' },
+      { name: 'Scouting', path: 'scouting', heading: null },
+    ]
+
+    for (const m of MODULES) {
+      const crashes = []
+      const onErr = e => crashes.push(String(e.message || e))
+      page.on('pageerror', onErr)
+
+      await page.goto(`${APP}/dashboard/${m.path}?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+      await page.waitForTimeout(1500)
+
+      if (m.heading) {
+        check(`${m.name} renders its heading`,
+          await page.getByRole('heading', { name: m.heading }).first()
+            .isVisible().catch(() => false))
+      }
+      check(`${m.name} raises no React error`, crashes.length === 0,
+        crashes.slice(0, 1).join(' '))
+      check(`${m.name} offers a way into its guide`,
+        (await page.getByRole('button', { name: /How to use this|Show me how/ }).count()) > 0)
+      page.off('pageerror', onErr)
+    }
+    await context.close()
+  }
+
+  {
+    // Notes and Log an Entry exist to be told apart, so the two guides are
+    // read for the sentence that does it.
+    await seed({ players: 4, plans: 1 })
+    const { context, page } = await signedIn(browser)
+
+    await page.goto(`${APP}/dashboard/notes?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1200)
+    await page.getByRole('button', { name: /How to use this|Show me how/ }).first().click()
+    let dialog = page.getByRole('dialog')
+    await dialog.waitFor({ state: 'visible', timeout: 5000 })
+    let body = (await dialog.textContent()) || ''
+    check('THE NOTES GUIDE TELLS A COACH WHICH OF THE TWO THEY WANT',
+      /Log an Entry/.test(body) && /standing context/i.test(body), body.slice(0, 140))
+    await page.keyboard.press('Escape')
+    await dialog.waitFor({ state: 'hidden', timeout: 5000 })
+
+    await page.goto(`${APP}/dashboard/log?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1200)
+    await page.getByRole('button', { name: /How to use this|Show me how/ }).first().click()
+    dialog = page.getByRole('dialog')
+    await dialog.waitFor({ state: 'visible', timeout: 5000 })
+    body = (await dialog.textContent()) || ''
+    check('AND THE LOG GUIDE DRAWS THE SAME LINE FROM ITS SIDE',
+      /what is true in general|what happened on a day/i.test(body), body.slice(0, 140))
+    check('it warns that a written entry alone moves no stats',
+      /adds context, not batting averages/i.test(body))
+    await context.close()
+  }
+
+  {
+    // Stats: entered versus calculated, which is the question the page raises.
+    await seed({ players: 4, plans: 1 })
+    const { context, page } = await signedIn(browser)
+    await page.goto(`${APP}/dashboard/stats?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1500)
+    await page.getByRole('button', { name: /How to use this|Show me how/ }).first().click()
+    const dialog = page.getByRole('dialog')
+    await dialog.waitFor({ state: 'visible', timeout: 5000 })
+    const body = (await dialog.textContent()) || ''
+    check('THE STATS GUIDE SEPARATES WHAT YOU TYPED FROM WHAT WAS WORKED OUT',
+      /raw counts/i.test(body) && /calculated from those/i.test(body), body.slice(0, 140))
+    check('and says the page changes nothing',
+      /read-only|Nothing on this page changes your data/i.test(body))
+    await context.close()
+  }
+
+  {
+    // Scouting: the limitation comes first, and it is the reason the guide
+    // exists at all.
+    await seed({ players: 4, plans: 1 })
+    const { context, page } = await signedIn(browser)
+    await page.goto(`${APP}/dashboard/scouting?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1800)
+    const entry = page.getByRole('button', { name: /How to use this|Show me how/ }).first()
+    check('scouting offers its guide', await entry.count() > 0)
+    await entry.click()
+    const dialog = page.getByRole('dialog')
+    await dialog.waitFor({ state: 'visible', timeout: 5000 })
+    const body = (await dialog.textContent()) || ''
+    check('THE SCOUTING GUIDE SAYS HOW FAR THE EVIDENCE GOES',
+      /How much can you trust/i.test(body), body.slice(0, 140))
+    check('and that a rest-day figure is your own arithmetic, not their roster',
+      /no idea what that pitcher threw/i.test(body))
+    check('and that scouting is never pooled between coaches',
+      /never pooled/i.test(body))
+    await context.close()
+  }
+
+  {
+    // Dismissal and reopening on one of the new modules, and that it does not
+    // leak to another.
+    await seed({ players: 4, plans: 1 })
+    const { context, page } = await signedIn(browser)
+    await page.goto(`${APP}/dashboard/stats?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1500)
+    const dismiss = page.getByRole('button', { name: 'Dismiss this tip' }).first()
+    check('stats shows a first-use card', await dismiss.count() > 0)
+    await dismiss.click()
+    await page.waitForTimeout(400)
+    check('dismissing leaves the button', 
+      await page.getByRole('button', { name: 'How to use this' }).first().isVisible())
+    await page.reload({ waitUntil: 'networkidle' })
+    await page.waitForTimeout(1200)
+    check('and it stays dismissed across a reload',
+      (await page.getByRole('button', { name: 'Dismiss this tip' }).count()) === 0)
+    check('the button still reopens the guide from there',
+      await page.getByRole('button', { name: 'How to use this' }).first().isVisible())
+
+    await page.goto(`${APP}/dashboard/notes?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1200)
+    check('DISMISSING STATS DID NOT DISMISS NOTES',
+      (await page.getByRole('button', { name: 'Dismiss this tip' }).count()) > 0)
+    await context.close()
+  }
+
+  {
+    // Mobile, on the module most likely to be opened one-handed.
+    await seed({ players: 4, plans: 1 })
+    const { context, page } = await signedIn(browser, {
+      viewport: { width: 375, height: 667 },
+    })
+    await page.goto(`${APP}/dashboard/log?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1500)
+    const overflow = await page.evaluate(() =>
+      document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    check('Log an Entry does not scroll sideways at 375px', overflow <= 1,
+      `overflows by ${overflow}px`)
+
+    await page.getByRole('button', { name: /How to use this|Show me how/ }).first().click()
+    const dialog = page.getByRole('dialog')
+    await dialog.waitFor({ state: 'visible', timeout: 5000 })
+    await settle(dialog)
+    const box = await dialog.boundingBox()
+    check('and its help panel fits a phone',
+      box && box.x >= -1 && box.x + box.width <= 375 + 1,
+      `panel spans ${box?.x}..${Math.round((box?.x || 0) + (box?.width || 0))}`)
+    await page.screenshot({ path: 'docs/audits/phase2k-log-375px.png' })
     await context.close()
   }
 

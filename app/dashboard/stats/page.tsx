@@ -7,6 +7,7 @@ import {
   Star, Target, Zap, Award, Edit2, Trash2, ChevronDown, ChevronUp,
   Users, Hash, X, Save, Loader2
 } from 'lucide-react'
+import { ModuleHelp } from '@/components/help/ModuleHelp'
 import { usePageView } from '@/lib/tracking'
 
 // ── Types ──────────────────────────────────────────────
@@ -182,6 +183,12 @@ export default function StatsPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 pb-24">
+      {/* Stats is read-only arithmetic over logged games, so no capability is
+          passed — there is nothing here to be allowed or refused. */}
+      <div className="pt-4">
+        <ModuleHelp module="stats" ctx={{ teamId }} hasTeam={!!teamId} />
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between py-4">
         <div>
