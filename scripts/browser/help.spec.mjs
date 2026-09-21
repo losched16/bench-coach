@@ -1261,7 +1261,15 @@ try {
     check('it tells a coach where the entry is',
       /under Planning/i.test(body))
     check('and it still says which of the two to reach for',
-      /fixed programme/i.test(body) && /one kid/i.test(body))
+      /fixed programme/i.test(body) &&
+      /judge they are ready|how the player is actually doing/i.test(body))
+    // Read off the rendered panel, because the correction was a copy change
+    // and the point is that a coach sees it. The distinction is fixed
+    // sessions versus assessed progression; "Specific Player" is a real
+    // option, so team size is not what separates them.
+    check('AND IT SEPARATES THEM BY THE PROGRAMME, NOT BY TEAM SIZE',
+      /whether you start it for the whole team or for one player/i.test(body) &&
+      !/(use|pick|choose) a Playbook (to|for|when)[^.]*(whole team|the team)/i.test(body))
     const action = page.getByRole('link', { name: 'Open Playbooks' }).first()
     check('the article now offers a way there', await action.count() > 0)
     await context.close()

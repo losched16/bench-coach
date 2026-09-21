@@ -38,12 +38,26 @@ retire the feature, not to leave it running where only a URL finds it.
 So the entry goes in, and the guide keeps drawing the line rather than
 pretending there isn't one:
 
-> A Playbook is a fixed programme: the same sessions in the same order for
-> everyone you start it for, and you tick them off. A development plan is a
-> stage sequence you move one player through on your own judgement, with
-> measurements and a history of what you decided. Use a Playbook to run
-> something with the whole team; use a development plan when you are working
-> on one kid.
+> A Playbook is a fixed programme: a set list of sessions in a set order that
+> you work through and tick off. It does not change on what you see, and it is
+> the same programme whether you start it for the whole team or for one
+> player. A development plan is the other way round: stages a player only
+> moves up when you judge they are ready, with measurements and a record of
+> what you decided. Pick a Playbook when you want a set programme followed;
+> pick a development plan when the next step should depend on how the player
+> is actually doing.
+
+**The first version of that answer was wrong, and is worth recording.** It
+said to use a Playbook for the whole team and a development plan when working
+with one kid — framing the distinction as team versus individual. That
+contradicted the guide's own step two steps above, which names "Whole Team"
+**and** "Specific Player" as the real options on the start dialog, and it
+would have sent a coach who wanted a set programme for a single player to the
+wrong tool.
+
+The distinction is **fixed sessions versus progression you assess**, and it
+holds at either size. Three assertions now pin it, including a negative one
+that fails if the prose ever prescribes a Playbook by team size again.
 
 ## What changed
 

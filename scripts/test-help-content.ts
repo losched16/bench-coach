@@ -163,10 +163,27 @@ check('Playbooks now offers an action, because the decision was made',
   primaryActionFor('playbooks', { teamId: 't1' })!.href ===
     '/dashboard/playbooks?teamId=t1')
 // Both are reachable now, so telling them apart is the guide's real job.
+const playbookVsPlan = playbooks.problems.find(p =>
+  /Playbook or a development plan/i.test(p.symptom))
 check('THE GUIDE STILL SEPARATES A PLAYBOOK FROM A DEVELOPMENT PLAN',
-  playbooks.problems.some(p =>
-    /Playbook or a development plan/i.test(p.symptom) &&
-    /fixed programme/i.test(p.fix) && /one kid/i.test(p.fix)))
+  !!playbookVsPlan && /fixed programme/i.test(playbookVsPlan.fix))
+// The line is fixed sessions versus progression you assess — NOT team versus
+// individual. A playbook can be started for one player ("Specific Player" is
+// on the start dialog), so the guide has to say the programme is the same
+// either way, or a coach wanting a set programme for a single kid is sent to
+// the wrong tool.
+check('and it draws the line at a set programme rather than at team size',
+  !!playbookVsPlan &&
+  /whether you start it for the whole team or for one player/i.test(playbookVsPlan.fix) &&
+  /judge they are ready|how the player is actually doing/i.test(playbookVsPlan.fix))
+check('IT DOES NOT PRESCRIBE A PLAYBOOK BY TEAM SIZE — the earlier wording did',
+  !!playbookVsPlan &&
+  !/(use|pick|choose) a Playbook (to|for|when)[^.]*(whole team|the team)/i
+    .test(playbookVsPlan.fix) &&
+  !/(use|pick|choose) a development plan (to|for|when)[^.]*(one kid|one player|single player|individual)/i
+    .test(playbookVsPlan.fix))
+check('and the purpose line does not read as one-player-only either',
+  /team or one player|team or a player/i.test(playbooks.purpose))
 check('and says starting one is the head coach\'s',
   playbooks.requires.includes('decide'))
 

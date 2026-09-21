@@ -1140,7 +1140,7 @@ export const HELP_GUIDES: HelpGuide[] = [
     tasks: ['help-a-player'],
     title: 'Playbooks',
     purpose:
-      'Follow a fixed multi-week template with a player, session by session.',
+      'Follow a fixed multi-week template, session by session, with a team or one player.',
     summary: 'A fixed multi-week template, session by session.',
     requires: ['team', 'decide'],
     requiresNote:
@@ -1165,8 +1165,16 @@ export const HELP_GUIDES: HelpGuide[] = [
     problems: [
       {
         // The distinction is the real question now that both are reachable.
+        //
+        // It is NOT team versus individual. A playbook can be started for one
+        // player — "Specific Player" is a real option on the start dialog, two
+        // steps above this — and an earlier version of this answer said to use
+        // a playbook for the team and a development plan for one kid, which
+        // contradicted the step and sent a coach to the wrong tool whenever
+        // they wanted a set programme for a single player. The line is fixed
+        // sessions versus progression you assess.
         symptom: 'You are not sure whether to use a Playbook or a development plan.',
-        fix: 'A Playbook is a fixed programme: the same sessions in the same order for everyone you start it for, and you tick them off. A development plan is a stage sequence you move one player through on your own judgement, with measurements and a history of what you decided. Use a Playbook to run something with the whole team; use a development plan when you are working on one kid.',
+        fix: 'A Playbook is a fixed programme: a set list of sessions in a set order that you work through and tick off. It does not change on what you see, and it is the same programme whether you start it for the whole team or for one player. A development plan is the other way round: stages a player only moves up when you judge they are ready, with measurements and a record of what you decided. Pick a Playbook when you want a set programme followed; pick a development plan when the next step should depend on how the player is actually doing.',
       },
       {
         symptom: 'You cannot start one.',
