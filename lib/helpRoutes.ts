@@ -132,11 +132,14 @@ export function primaryActionFor(
       // The commissioner's dashboard lives outside /dashboard entirely, and
       // it is /league-admin — /league is only an invitation link.
       return { label: 'Open the league dashboard', href: '/league-admin', enabled: true }
+    case 'playbooks':
+      // This returned null while Playbooks was absent from the sidebar, on the
+      // grounds that linking to a feature the product had stopped surfacing
+      // would be making a product decision inside a help article. It is in the
+      // sidebar now, so the article points at it like any other destination.
+      return { label: 'Open Playbooks', href: withTeam('/dashboard/playbooks', ctx), enabled: !!safeId(ctx.teamId) }
     case 'getting-started':
       return { label: 'Open Roster', href: withTeam('/dashboard/roster', ctx), enabled: !!ctx.teamId }
-    // Playbooks deliberately has no action. It is not in the sidebar, and
-    // offering a link to a feature the product has stopped surfacing would be
-    // making a product decision inside a help article.
     default:
       return null
   }

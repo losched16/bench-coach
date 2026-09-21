@@ -9,7 +9,7 @@ import { useLeague } from '@/lib/useLeague'
 import Link from 'next/link'
 import Image from 'next/image'
 import { CaptureMenu } from '@/components/CaptureMenu'
-import { MessageSquare, Users, StickyNote, ClipboardList, Home, LogOut, Plus, UserPlus, Trash2, Settings, Bookmark, HelpCircle, Brain, UsersRound, UserCircle, Menu, X, Calendar, BarChart3, Activity, Target, Search, CalendarCheck, Timer, Building2 } from 'lucide-react'
+import { MessageSquare, Users, StickyNote, ClipboardList, Home, Book, LogOut, Plus, UserPlus, Trash2, Settings, Bookmark, HelpCircle, Brain, UsersRound, UserCircle, Menu, X, Calendar, BarChart3, Activity, Target, Search, CalendarCheck, Timer, Building2 } from 'lucide-react'
 
 
 interface Team {
@@ -268,8 +268,11 @@ function DashboardContent({
   // sits at the top under its own heading. Everything else is a tool you reach
   // for when you need it, and headings say so without hiding anything.
   //
-  // Playbooks is deliberately absent — the page still exists, it is just not a
-  // destination. It duplicates what a priority does, without the evidence.
+  // Playbooks is in Planning as of this change. It had been deliberately left
+  // out on the grounds that it duplicates what a priority does without the
+  // evidence — that concern has not gone away, and the help article still
+  // tells a coach which of the two to reach for, but a 1,019-line feature
+  // nobody could navigate to was the worse end of the trade.
   const allNavGroups: Array<{
     label: string
     items: Array<{
@@ -325,6 +328,12 @@ function DashboardContent({
       label: 'Planning',
       items: [
         { label: 'Practice Plans', href: '/dashboard/practice', icon: ClipboardList, needs: 'decide', needsTeam: true },
+        // Starting a playbook assigns a multi-week programme to a team or a
+        // player, which is 'decide' — the same rung as a practice plan or a
+        // lineup. Deliberately NOT needsTeam: a parent on the Personal plan
+        // running a programme with their own kid is exactly who this suits,
+        // and the page works from any workspace's id.
+        { label: 'Playbooks', href: '/dashboard/playbooks', icon: Book, needs: 'decide' },
         { label: 'Drill Library', href: '/dashboard/drills', icon: Bookmark },
       ],
     },

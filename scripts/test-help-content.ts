@@ -143,17 +143,32 @@ check('no promise that parents need an account',
     guideById('player-reports')!.steps.map(s => s.note || '').join(' ') +
     guideById('player-reports')!.problems.map(p => p.fix).join(' ')))
 
-// Playbooks is a real page that is not in the sidebar. Saying "go to
-// Playbooks in the menu" was the old article's mistake.
-check('the Playbooks guide does not send anyone to a sidebar entry',
-  !/sidebar|in the menu(?! at the moment| at present)/i.test(
-    guideById('playbooks')!.steps.map(s => s.do).join(' ')))
-check('and says plainly that it is not in the menu',
-  /not in the sidebar/i.test(
-    (guideById('playbooks')!.requiresNote || '') +
-    guideById('playbooks')!.problems.map(p => p.fix).join(' ')))
-eq('Playbooks offers no action, because that would be a product decision',
-  primaryActionFor('playbooks', { teamId: 't1' }), null)
+// Playbooks WAS a real page with no sidebar entry, and these checks used to
+// assert the guide said so. It is in the sidebar now, so they assert the
+// opposite — the point was never the absence, it was that the article and the
+// navigation agree.
+const playbooks = guideById('playbooks')!
+const playbookProse = [...playbooks.steps.flatMap(x => [x.do, x.note || '']),
+  playbooks.requiresNote || '',
+  ...playbooks.problems.flatMap(x => [x.symptom, x.fix])].join(' ')
+check('the Playbooks guide no longer says it is missing from the menu',
+  !/not in the sidebar|not currently in the sidebar|cannot find Playbooks/i
+    .test(playbookProse), playbookProse.slice(0, 140))
+check('it names the sidebar group the entry actually sits in',
+  /under Planning/i.test(playbookProse) &&
+  read('app/dashboard/layout.tsx').includes("label: 'Planning'"))
+check('and the nav entry exists, with the href the guide implies',
+  read('app/dashboard/layout.tsx').includes("href: '/dashboard/playbooks'"))
+check('Playbooks now offers an action, because the decision was made',
+  primaryActionFor('playbooks', { teamId: 't1' })!.href ===
+    '/dashboard/playbooks?teamId=t1')
+// Both are reachable now, so telling them apart is the guide's real job.
+check('THE GUIDE STILL SEPARATES A PLAYBOOK FROM A DEVELOPMENT PLAN',
+  playbooks.problems.some(p =>
+    /Playbook or a development plan/i.test(p.symptom) &&
+    /fixed programme/i.test(p.fix) && /one kid/i.test(p.fix)))
+check('and says starting one is the head coach\'s',
+  playbooks.requires.includes('decide'))
 
 // ── the distinctions the brief asked for ────────────────────────────────────
 

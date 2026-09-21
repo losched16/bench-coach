@@ -1142,27 +1142,46 @@ export const HELP_GUIDES: HelpGuide[] = [
     purpose:
       'Follow a fixed multi-week template with a player, session by session.',
     summary: 'A fixed multi-week template, session by session.',
-    requires: ['team'],
+    requires: ['team', 'decide'],
     requiresNote:
-      'Playbooks are not currently in the sidebar. If you have players enrolled in one, their progress is still kept and still shows on their profile.',
+      'Starting a playbook assigns a multi-week programme, so it is the head coach\'s. Anyone on the staff can see the progress of one already running, on the player\'s profile.',
     steps: [
-      { do: 'Open a player and look for "Active Playbooks" on their Overview tab.' },
-      { do: 'Work through the sessions in order and mark them complete as you go.' },
+      {
+        do: 'Open Playbooks under Planning and pick a programme from "Progression Playbooks".',
+        note: 'Each one says what it is for and how many sessions it runs to.',
+      },
+      {
+        do: 'Press "Start Playbook" and choose "Whole Team" or "Specific Player".',
+      },
+      {
+        do: 'Work through the sessions in order, pressing "Mark Complete" as you finish each one.',
+      },
+      {
+        do: 'Check progress later from Playbooks, or from "Active Playbooks" on a player\'s Overview tab.',
+      },
     ],
+    example:
+      'You pick a six-week throwing accuracy programme and start it for the whole team. Every session you run, you mark the day complete, and the progress bar on each player carries across to their profile.',
     problems: [
       {
-        symptom: 'You cannot find Playbooks in the menu.',
-        fix: 'It is not in the sidebar at the moment. Existing playbooks still work and still show on a player\'s profile. For starting something new, a development plan on the player\'s Development tab is the current way.',
+        // The distinction is the real question now that both are reachable.
+        symptom: 'You are not sure whether to use a Playbook or a development plan.',
+        fix: 'A Playbook is a fixed programme: the same sessions in the same order for everyone you start it for, and you tick them off. A development plan is a stage sequence you move one player through on your own judgement, with measurements and a history of what you decided. Use a Playbook to run something with the whole team; use a development plan when you are working on one kid.',
       },
       {
-        symptom: 'You are not sure whether to use a Playbook or a development plan.',
-        fix: 'Development plans are the current system and the one being built on. A Playbook is a fixed template; a development plan is a stage sequence you advance a player through deliberately, with measurements and history.',
+        symptom: 'You cannot start one.',
+        fix: 'Starting a playbook is the head coach\'s. You can still see how a running one is going on the player\'s profile.',
+      },
+      {
+        symptom: 'You started the wrong one, or for the wrong player.',
+        fix: 'Start the right one and work from that. The sessions you have already marked complete stay recorded against whoever they were marked for.',
       },
     ],
-    result: 'Session completion is saved against the player.',
-    nextAction: 'For new work, start a development plan on the player\'s Development tab.',
-    related: ['player-development'],
-    synonyms: ['playbook', 'program', 'multi week', 'template', 'progression'],
+    result: 'The playbook is saved against the team or the player, and session completion is kept as you mark it.',
+    nextAction: 'Run the first session at your next practice.',
+    related: ['player-development', 'practice-plans'],
+    synonyms: ['playbook', 'programme', 'program', 'multi week', 'template',
+      'progression', 'curriculum', 'sessions'],
     version: 1,
   },
   {

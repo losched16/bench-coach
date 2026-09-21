@@ -1199,6 +1199,74 @@ try {
     await context.close()
   }
 
+  // ══ 4f. PLAYBOOKS IS IN THE SIDEBAR ═════════════════════════════════════
+  //
+  // This was a product decision carried across four phases and finally made.
+  // The checks are about the navigation and the article agreeing: a guide that
+  // says "open Playbooks under Planning" is only true while that entry is
+  // there, and the previous version of this article was wrong the other way
+  // round for months.
+  console.log('\nPlaybooks in the sidebar')
+
+  {
+    await seed({ players: 4, plans: 1 })
+    const { context, page } = await signedIn(browser)
+    await page.goto(dash(), { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1500)
+
+    const navLink = page.getByRole('link', { name: 'Playbooks' }).first()
+    check('THE SIDEBAR HAS A PLAYBOOKS ENTRY', await navLink.count() > 0)
+    check('and it points at the playbooks page, carrying the team',
+      (await navLink.getAttribute('href') || '').includes('/dashboard/playbooks'),
+      await navLink.getAttribute('href'))
+
+    const crashes = []
+    page.on('pageerror', e => crashes.push(String(e.message || e)))
+    await navLink.click()
+    await page.waitForURL(/playbooks/, { timeout: 15000 })
+    await page.waitForTimeout(1800)
+    check('FOLLOWING IT REACHES A PAGE THAT RENDERS', crashes.length === 0,
+      crashes.slice(0, 1).join(' '))
+    check('and the page is the one the guide describes',
+      await page.getByText('Progression Playbooks').first()
+        .isVisible().catch(() => false))
+    await context.close()
+  }
+
+  {
+    // Starting a playbook is 'decide', so a contributor should not be handed
+    // the entry — the same rule Practice Plans and Lineup Builder follow.
+    await seed({ players: 4, plans: 1 })
+    const { context, page } = await signedIn(browser, { role: 'contributor' })
+    await page.goto(dash(), { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1500)
+    check('A CONTRIBUTOR IS NOT OFFERED THE PLAYBOOKS ENTRY',
+      (await page.getByRole('link', { name: 'Playbooks' }).count()) === 0)
+    check('and neither is Practice Plans, which is the same rung',
+      (await page.getByRole('link', { name: 'Practice Plans' }).count()) === 0)
+    await context.close()
+  }
+
+  {
+    // The article and the navigation have to agree, which is the whole reason
+    // this block exists.
+    await seed({ players: 4, plans: 1 })
+    const { context, page } = await signedIn(browser)
+    await page.goto(help('&article=playbooks'), { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1200)
+    const body = await page.locator('body').innerText()
+    check('THE ARTICLE NO LONGER SAYS IT IS MISSING FROM THE MENU',
+      !/not in the sidebar|not currently in the sidebar/i.test(body),
+      body.slice(0, 160))
+    check('it tells a coach where the entry is',
+      /under Planning/i.test(body))
+    check('and it still says which of the two to reach for',
+      /fixed programme/i.test(body) && /one kid/i.test(body))
+    const action = page.getByRole('link', { name: 'Open Playbooks' }).first()
+    check('the article now offers a way there', await action.count() > 0)
+    await context.close()
+  }
+
   // ══ 5. LAYOUT ═══════════════════════════════════════════════════════════
   console.log('\nLayout')
 
