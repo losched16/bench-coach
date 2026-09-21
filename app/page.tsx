@@ -207,10 +207,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── 3. Introduce the guide and the solution ─────────────────────── */}
-      <section id="features" className="py-24 px-4 bg-white">
+      {/* ── 3. Introduce the guide ──────────────────────────────────────── */}
+      <section className="py-24 px-4 bg-white">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center max-w-3xl mx-auto mb-16">
+          <div className="text-center max-w-3xl mx-auto">
             <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-6">
               A little help planning. A clearer purpose for practice.
             </h2>
@@ -225,39 +225,115 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8">
+        </div>
+      </section>
+
+      {/* ── 3b. Features ────────────────────────────────────────────────── */}
+      {/*
+        Nine cards. Each description was checked against the feature that
+        actually ships before it was written, and two of the supplied drafts
+        described something the product does not do:
+
+        PLAYBOOKS. The draft read "Give your team a shared understanding of
+        what to do on the field. Teach situations, responsibilities, and team
+        execution with a clear reference." That is a situational playbook —
+        cutoffs, bunt coverage, who backs up which base. BenchCoach's
+        Playbooks are nothing of the kind: player_playbooks rows carry
+        total_sessions, sessions_per_week and completed_sessions, and the
+        screen is headed "Progression Playbooks". It is a multi-week TRAINING
+        PROGRAMME you work through and tick off. A coach who subscribed on the
+        strength of the original wording would have found the wrong feature,
+        so the card describes the real one. The word "playbook" carrying a
+        different meaning in baseball is exactly why this needs saying.
+
+        SCOUTING. The draft read "Use AI-assisted scouting to help you
+        understand opponents", which invites the reading that BenchCoach knows
+        something about the opposition. It does not. Scouting is the coach's
+        OWN recorded observations — lib/helpContent puts it as "Record what you
+        saw of an opposing team and their pitchers" — plus help reading a
+        bracket screenshot. Nothing is pooled between coaches, by design, so
+        the card says whose notes these are.
+      */}
+      <section id="features" className="py-24 px-4 bg-slate-50">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-5">
+              Everything you need to show up ready to coach.
+            </h2>
+            <p className="text-xl text-slate-600 leading-relaxed">
+              Plan better practices, help players develop, and prepare for game day&mdash;all in one place.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               {
-                title: 'Plan the session',
-                body: 'Build a practice around your team’s age, skill level, and goals. Review the activities, make changes, and save the plan for another day.',
+                title: 'AI Practice Planner',
+                body: 'Turn your team’s needs into a practice you can take to the field. Build around your age group, available time, and skills you want to improve.',
                 d: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
               },
               {
-                title: 'Know how to teach the drill',
-                body: 'Find setup instructions, coaching cues, and common mistakes to watch for. Go into the activity knowing what to explain and where to focus your feedback.',
+                title: 'Player Development Plans',
+                body: 'Give each player a clear next step. Work through skill stages one at a time, record what you see, and decide when they are ready to move on.',
+                d: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6',
+              },
+              {
+                title: 'AI Coaching Chat',
+                body: 'Get help with the coaching questions that come up all season. Talk through mechanics, practice challenges, and ways to teach a skill.',
+                d: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z',
+              },
+              {
+                title: 'Drill Library',
+                body: 'Find the right drill without another night of searching. Explore age-appropriate activities with setup instructions and coaching cues.',
                 d: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
               },
               {
-                title: 'Keep track of what needs attention',
-                body: 'Keep team and player notes together so you can return to your observations when preparing the next practice.',
+                title: 'Progression Playbooks',
+                body: 'Follow a ready-made multi-week program. Start one for your whole team or a single player, run the sessions in order, and mark each one complete.',
+                d: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
+              },
+              {
+                title: 'Tournament Scouting',
+                body: 'Head into your next travel tournament better prepared. Keep your own notes on teams and pitchers you have faced, and get help reading a bracket so you know who you might meet.',
+                d: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z',
+              },
+              {
+                title: 'Player Development Reports',
+                body: 'Give families a clear picture of their player’s development. Share strengths, areas to improve, and recommended drills in a report you write and review.',
+                d: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+              },
+              {
+                title: 'Team & Player Notes',
+                body: 'Keep your coaching observations in one place. Capture what’s working and what needs attention before planning your next session.',
                 d: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
               },
               {
-                title: 'Get help when you’re unsure',
-                body: 'Ask the AI coaching assistant about a skill, a practice problem, or a player who needs a different approach. Review its suggestions and decide what fits your team.',
-                d: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z',
+                title: 'Assistant Coach Collaboration',
+                body: 'Get your coaching staff on the same page. Invite assistants to help prepare and support your team throughout the season.',
+                d: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
               },
             ].map(card => (
-              <div key={card.title} className="bg-slate-50 rounded-2xl p-8 border border-slate-200">
-                <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center mb-5">
-                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div key={card.title} className="bg-white rounded-2xl p-7 border border-slate-200 shadow-sm">
+                <div className="w-11 h-11 rounded-xl bg-red-100 flex items-center justify-center mb-4">
+                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={card.d} />
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-3">{card.title}</h3>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">{card.title}</h3>
                 <p className="text-slate-600 leading-relaxed">{card.body}</p>
               </div>
             ))}
+          </div>
+
+          <div className="text-center mt-14">
+            <Link href="/auth/signup" className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-all shadow-lg">
+              Start Free Trial
+            </Link>
+            {/* The supplied copy ends this section with "Bringing BenchCoach to
+                your entire league? Explore League Options →". There is still no
+                league page and no contact route to point it at, so it is left
+                out rather than shipped as a dead link — the same call as the
+                nav item and the league pathway section. */}
           </div>
         </div>
       </section>
