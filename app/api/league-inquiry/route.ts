@@ -27,7 +27,10 @@ import { upsertContact, addNoteToContact } from '@/lib/gohighlevel'
 export const dynamic = 'force-dynamic'
 
 /** Length caps, because this is an unauthenticated write. */
-const LIMITS = { name: 120, email: 254, phone: 40, league: 160, size: 40, message: 2000 }
+const LIMITS = {
+  name: 120, email: 254, phone: 40, league: 160, size: 40, message: 2000,
+  role: 120, ageGroups: 120, improve: 2000,
+}
 
 function clean(v: unknown, max: number): string {
   return typeof v === 'string' ? v.trim().slice(0, max) : ''
@@ -51,10 +54,16 @@ export async function POST(request: NextRequest) {
   const league = clean(body.league, LIMITS.league)
   const size = clean(body.size, LIMITS.size)
   const message = clean(body.message, LIMITS.message)
+  const role = clean(body.role, LIMITS.role)
+  const ageGroups = clean(body.ageGroups, LIMITS.ageGroups)
+  const improve = clean(body.improve, LIMITS.improve)
 
-  if (!name || !email || !league) {
+  // Role and team count are required on the form because a board conversation
+  // needs both. They are validated here too rather than trusting the client.
+  if (!name || !email || !league || !role || !size) {
     return NextResponse.json(
-      { error: 'Please give your name, your email and your league.' }, { status: 400 })
+      { error: 'Please give your name, email, league, role and roughly how many teams.' },
+      { status: 400 })
   }
   if (!EMAIL.test(email)) {
     return NextResponse.json({ error: 'That email address does not look right.' }, { status: 400 })
@@ -62,7 +71,8 @@ export async function POST(request: NextRequest) {
 
   // STEP 1 — the backstop, first and unconditionally.
   console.log('[league-inquiry]', JSON.stringify({
-    at: new Date().toISOString(), name, email, phone, league, size, message,
+    at: new Date().toISOString(),
+    name, email, phone, league, role, size, ageGroups, improve, message,
   }))
 
   // STEP 2/3 — the CRM. Never allowed to fail the request.
@@ -72,17 +82,20 @@ export async function POST(request: NextRequest) {
     const last = name.split(/\s+/).slice(1).join(' ')
     const contact = await upsertContact({
       email, firstName: first, lastName: last, phone: phone || undefined,
-      tags: ['league-inquiry'],
+      tags: ['league-inquiry', 'league-demo-request'],
     })
     if (contact?.id) {
       crm = true
       // createContact does not send customFields despite declaring them, so
       // the detail goes in a note, which is readable in the CRM either way.
       await addNoteToContact(contact.id, [
-        'BenchCoach league inquiry',
+        'BenchCoach league demo request',
         `League: ${league}`,
-        size ? `Size: ${size}` : null,
+        `Role: ${role}`,
+        `Teams: ${size}`,
+        ageGroups ? `Age groups: ${ageGroups}` : null,
         phone ? `Phone: ${phone}` : null,
+        improve ? `\nWants to improve:\n${improve}` : null,
         message ? `\n${message}` : null,
       ].filter(Boolean).join('\n'))
     }
