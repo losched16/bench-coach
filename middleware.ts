@@ -58,15 +58,6 @@ export async function middleware(request: NextRequest) {
   // Refresh the auth session if it exists
   const { data: { session } } = await supabase.auth.getSession()
 
-  // The front door is the sign-in page for now. The marketing home is hidden
-  // while coaches are invited in to test, so a visitor at the domain sees a
-  // login and nothing else; a signed-in coach goes straight to the dashboard.
-  // The page itself is untouched. To bring it back: delete this block and
-  // remove '/' from the matcher below.
-  if (request.nextUrl.pathname === '/') {
-    return NextResponse.redirect(new URL(session ? '/dashboard' : '/auth/login', request.url))
-  }
-
   // Protect dashboard routes
   if (request.nextUrl.pathname.startsWith('/dashboard')) {
     if (!session) {
@@ -102,7 +93,10 @@ export async function middleware(request: NextRequest) {
 // 🔥 THIS IS THE FIX - Only run middleware on protected routes
 export const config = {
   matcher: [
-    '/',
+    // '/' is deliberately absent. The marketing home is public and needs no
+    // session, so running middleware there only costs a round trip. It was
+    // listed from 2026-09-11 to 2026-09-21 while the sign-in page stood in as
+    // the front door during coach testing (c79a88d); that block is gone.
     '/dashboard/:path*',
     '/auth/:path*',
     '/onboarding/:path*',
