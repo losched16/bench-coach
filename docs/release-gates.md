@@ -95,24 +95,29 @@ honest omission, so it lives in CI instead.
 `.github/workflows/checks.yml` runs the gate, the slower test suites, and the
 Chromium smoke suite on every push and PR.
 
-**It still blocks nothing, as of 2026-09-21.** A ruleset was configured on that
-date with `gate`, `suites`, `browser`, a pull-request requirement and an empty
-bypass list — and it did **not** take effect. Tested by pushing straight to
-`main` rather than by reading the settings page:
+**It became binding on 2026-09-21.** A branch ruleset on `main` requires
+`gate`, `suites` and `browser`, requires a pull request, blocks force pushes,
+and has an **empty bypass list** — so it applies to the repository owner too.
+
+Verified by pushing at `main` and being refused, not by reading the settings
+page. The settings page had already looked correct twice while nothing was
+enforced, so this is the only evidence this document accepts:
 
 ```
 $ git push origin HEAD:main
-   9daf3ab..600145d  HEAD -> main      ← accepted; should have been rejected
+remote: error: GH013: Repository rule violations found for refs/heads/main.
+  - Cannot update this protected ref.
+  - Changes must be made through a pull request.
+  - 3 of 3 required status checks are expected.
+ ! [remote rejected] HEAD -> main (push declined due to repository rule violations)
 ```
 
-Until a push to `main` is actually refused, this document says the workflow is
-advisory, because that is what the evidence says. **Do not describe it as a
-gate in a delivery report.** The repository is public, so the free-plan
-restriction on private-repo rulesets is not the cause; the likely causes are a
-ruleset left on **Disabled** or **Evaluate** instead of **Active**, one that
-was never saved, or one whose target pattern does not match `main`.
+"3 of 3 required status checks are expected" is the line that matters: all
+three names resolved. A mistyped required check does not error — it simply
+never arrives, and blocks every merge forever.
 
-It remains a signal and an artifact store (it uploads the layout screenshots).
+It remains a signal and an artifact store as well (it uploads the layout
+screenshots).
 
 > **This does not make it a deploy gate.** Vercel builds from `main` and does
 > not consult GitHub checks. The ruleset controls what is *allowed to reach*
@@ -130,11 +135,10 @@ genuinely broken, edit the ruleset to drop that one check until it is fixed.
 gets put back. A bypass actor is invisible in the merge history and is the
 change that quietly turns the whole ruleset into decoration.
 
-### The configuration that was attempted
+### The configuration
 
-Kept because a ruleset is not in the repository and cannot be diffed. This is
-what was set on 2026-09-21; re-check each line against the settings page,
-because something here is not doing what it says:
+Kept because a ruleset lives in GitHub settings, not in the repository, so it
+cannot be diffed or reviewed. If it is ever lost, this is what it was:
 
 **The exact required-check names are `gate`, `suites` and `browser`** — nothing
 longer. A required status check is matched by the check-run name, which is the
@@ -145,8 +149,14 @@ exists blocks every merge instead of none.
 
 Settings needed, in order:
 
-1. GitHub → **Settings → Rules → Rulesets → New branch ruleset**
-   (the older Settings → Branches → Branch protection rules works too)
+1. GitHub → **Settings → Rules → Rulesets → New branch ruleset**, with
+   **Enforcement status: Active** — not Disabled, and not Evaluate, which is a
+   dry run that records violations and allows the push anyway.
+   *(An earlier version of this file said the older Settings → Branches UI
+   "works too". It does not, not the same way: classic branch protection lets
+   repository admins bypass it unless "Do not allow bypassing the above
+   settings" is ticked, and every push here authenticates as the owner. Use
+   the ruleset.)*
 2. **Target branches:** include `main` — "Default branch" is the simplest
    target
 3. Enable **Require status checks to pass**
