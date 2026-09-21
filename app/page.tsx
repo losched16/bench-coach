@@ -23,10 +23,6 @@ import { useState } from 'react'
 //
 // WHAT THE DRAFT ASKED FOR AND IS DELIBERATELY NOT HERE
 //
-//   "For Leagues"       there is no league marketing page. app/league holds
-//                       only invite/. The draft is explicit: do not publish a
-//                       dead link. Nav item and CTA omitted until a real
-//                       destination exists.
 //   "See a Sample
 //    Practice Plan"     no public sample plan exists and one cannot be
 //                       invented here, so the draft's own fallback is used:
@@ -39,6 +35,10 @@ import { useState } from 'react'
 // No testimonials, no customer counts, no measured-improvement claims, and no
 // "no credit card required" — Stripe Checkout in subscription mode collects a
 // card, so that line would have been false.
+//
+// "For Leagues" WAS on that omitted list through three revisions, for want of
+// anywhere to send a league buyer. /leagues exists now, so the nav item, the
+// footer link and the features-section CTA all point at it.
 
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -60,6 +60,7 @@ export default function LandingPage() {
               {/* /use-cases is an existing indexed route — kept so the rewrite
                   does not quietly drop an SEO destination. */}
               <Link href="/use-cases" className="text-slate-300 hover:text-white font-medium transition-colors">Use Cases</Link>
+              <Link href="/leagues" className="text-slate-300 hover:text-white font-medium transition-colors">For Leagues</Link>
               <a href="#pricing" className="text-slate-300 hover:text-white font-medium transition-colors">Pricing</a>
             </nav>
 
@@ -97,6 +98,7 @@ export default function LandingPage() {
                 <a href="#how-it-works" className="text-slate-300 hover:text-white font-medium transition-colors">How It Works</a>
                 <a href="#features" className="text-slate-300 hover:text-white font-medium transition-colors">Features</a>
                 <Link href="/use-cases" className="text-slate-300 hover:text-white font-medium transition-colors">Use Cases</Link>
+                <Link href="/leagues" className="text-slate-300 hover:text-white font-medium transition-colors">For Leagues</Link>
                 <a href="#pricing" className="text-slate-300 hover:text-white font-medium transition-colors">Pricing</a>
                 <div className="border-t border-slate-700 pt-4 mt-2 flex flex-col gap-3">
                   <Link href="/auth/login" className="text-slate-300 hover:text-white font-semibold transition-colors">Log In</Link>
@@ -351,11 +353,14 @@ export default function LandingPage() {
             <Link href="/auth/signup" className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-all shadow-lg">
               Start Free Trial
             </Link>
-            {/* The supplied copy ends this section with "Bringing BenchCoach to
-                your entire league? Explore League Options →". There is still no
-                league page and no contact route to point it at, so it is left
-                out rather than shipped as a dead link — the same call as the
-                nav item and the league pathway section. */}
+            {/* This link was omitted three times for want of a destination.
+                /leagues exists now, so it points at it. */}
+            <p className="mt-6 text-slate-600">
+              Bringing BenchCoach to your entire league?{' '}
+              <Link href="/leagues" className="text-red-600 hover:text-red-700 font-medium">
+                Explore League Options &rarr;
+              </Link>
+            </p>
           </div>
         </div>
       </section>
@@ -664,6 +669,7 @@ export default function LandingPage() {
                 <li><a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a></li>
                 <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
                 <li><Link href="/use-cases" className="hover:text-white transition-colors">Use Cases</Link></li>
+                <li><Link href="/leagues" className="hover:text-white transition-colors">For Leagues</Link></li>
                 <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
               </ul>
             </div>
