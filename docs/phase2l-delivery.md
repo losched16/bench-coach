@@ -188,8 +188,10 @@ every module a coach can open:
    `gate`, `suites`, `browser`; the settings are in `docs/release-gates.md`.
    Until a ruleset exists, the workflow blocks nothing and only the Vercel
    build gate can refuse a deploy.
-6. **Playbooks navigation unchanged** — still a real page, still not in the
-   sidebar, still offering no action button.
+6. ~~**Playbooks navigation unchanged** — still a real page, still not in the
+   sidebar, still offering no action button.~~ **Resolved after this report
+   was written** — see `docs/playbooks-navigation.md`. It is in Planning, and
+   the article offers an action.
 7. **No support destination.** Twenty-one guides now end at a product that
    cannot be asked a question. This is the one carried item that has grown
    more awkward with every phase, and it is a configuration decision, not a
