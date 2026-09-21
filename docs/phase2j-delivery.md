@@ -331,10 +331,16 @@ Browser checks added for the five modules:
 
 **Deployment status, separate from code completion:**
 
-- `87b869a` → `dpl_G9Jke1eJBdX9WvS6V5tnkgYnmM1m`, production, **READY**, with
-  the gate visible in its build log.
-- Part 2 deploys on push under the standing merge-and-deploy authorisation, and
-  now has to pass the gate to do it.
+- **Part 1 — `87b869a` → `dpl_G9Jke1eJBdX9WvS6V5tnkgYnmM1m`, production,
+  READY.** Verified, with the gate visible in its build log.
+- **Part 2 — `f6d5692` pushed to `main`. Its deployment state is NOT verified.**
+  The Vercel API became unavailable to this session before I could check, so I
+  am not going to state an outcome I did not see. It will have run the same
+  gate, and the gate passed locally on exactly this tree; if the build failed,
+  production stays on `87b869a` and nothing is lost but the new help.
+  Check it at
+  vercel.com/clints-projects-2a091ff7/bench-coach, or tell me and I will
+  confirm when the API is back.
 
-That a build deployed is verified. That any of it works in production is not —
-see the manual checklist.
+That a build deployed is verified for Part 1 only. That any of it works in
+production is not verified at all — see the manual checklist.
