@@ -168,18 +168,30 @@ async function signedIn(browser, { role = 'owner', viewport } = {}) {
 
   const page = await context.newPage()
 
-  await page.goto(`${APP}/auth/login`, { waitUntil: 'networkidle' })
+  // Sign in, with one retry.
+  //
   // Clicking before React hydrates submits the form natively, which reloads
   // the login page with an empty query string and looks exactly like a failed
-  // sign-in. Wait for the handler to be attached.
-  await page.waitForFunction(() => {
-    const f = document.querySelector('form')
-    return !!f && !!Object.keys(f).find(k => k.startsWith('__reactProps'))
-  }, { timeout: 15000 })
-  await page.fill('input[type="email"]', 'coach@example.test')
-  await page.fill('input[type="password"]', 'fixture-password')
-  await page.click('button[type="submit"]')
-  await page.waitForURL(/\/dashboard/, { timeout: 20000 })
+  // sign-in — so the hydration wait is not optional. The retry is here because
+  // this suite now opens twenty-odd contexts in one run, and the last few were
+  // occasionally timing out on that wait: a slow sandbox at the end of a long
+  // run is not a product behaviour, and a flaky harness gets ignored.
+  const signIn = async () => {
+    await page.goto(`${APP}/auth/login`, { waitUntil: 'networkidle' })
+    await page.waitForFunction(() => {
+      const f = document.querySelector('form')
+      return !!f && !!Object.keys(f).find(k => k.startsWith('__reactProps'))
+    }, { timeout: 30000 })
+    await page.fill('input[type="email"]', 'coach@example.test')
+    await page.fill('input[type="password"]', 'fixture-password')
+    await page.click('button[type="submit"]')
+    await page.waitForURL(/\/dashboard/, { timeout: 30000 })
+  }
+  try {
+    await signIn()
+  } catch {
+    await signIn()
+  }
   return { context, page }
 }
 
