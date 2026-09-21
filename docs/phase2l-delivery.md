@@ -174,9 +174,14 @@ every module a coach can open:
    `/api/me` and `/api/entitlements`. This is unchanged and still the biggest
    gap; the manual checklist in `docs/release-gates.md` is the only thing that
    closes it.
-2. **League Admin's browser case depends on the fixture giving the account a
-   league.** If it does not, the case records an explicit failure rather than
-   passing quietly — I would rather see a red line than a skipped one.
+2. **League Admin's browser case uses a stubbed league API.** League
+   membership lives behind `requireLeagueRole()` and tables the fixture does
+   not model, so `/api/league/me`, `/api/league-admin/overview` and
+   `/api/league-admin/members` are stubbed per case — the same way `/api/me`
+   and `/api/entitlements` already were. What that proves is the help on that
+   page, not who is allowed to reach it. The first run of this case failed
+   loudly ("no help entry point rendered — this account has no league in the
+   fixture") rather than skipping, which is why the stub exists.
 3. **Player Reports is still not browser-driven end to end** (carried).
 4. **No screen reader, no real device, no Safari or Firefox** (carried).
 5. **Branch protection still unread and unset.** Required check names are

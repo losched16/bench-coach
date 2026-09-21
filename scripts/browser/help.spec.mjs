@@ -27,6 +27,7 @@ const FIXTURE = process.env.FIXTURE_URL || 'http://127.0.0.1:54321'
 const TEAM = '22222222-2222-4222-8222-222222222222'
 const PLAYER = '33333333-3333-4333-8333-333333333333'
 const USER = '11111111-1111-4111-8111-111111111111'
+const LEAGUE = '44444444-4444-4444-8444-444444444444'
 
 let passed = 0
 const failures = []
@@ -134,6 +135,36 @@ async function signedIn(browser, { role = 'owner', viewport } = {}) {
 
   // Telemetry has nowhere to go here and its failures are noisy.
   await context.route(/\/api\/track/, route => route.fulfill({ status: 200, body: '{}' }))
+
+  // The league dashboard. Stubbed rather than fixtured because league
+  // membership lives behind requireLeagueRole() and several tables the fixture
+  // does not model — and what is being tested here is the HELP on that page,
+  // not who is allowed to see it. Called out in the report as mocked.
+  await context.route(/\/api\/league\/me/, route => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({
+      admin: [{ leagueId: LEAGUE, name: 'Fixture Little League', role: 'commissioner' }],
+    }),
+  }))
+  await context.route(/\/api\/league-admin\/overview/, route => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({
+      league: {
+        id: LEAGUE, name: 'Fixture Little League', logoUrl: null,
+        city: 'Springfield', state: 'IL', status: 'active',
+      },
+      seasons: [], activeSeason: null,
+      license: { licensed: true, status: 'active', coachLimit: 50, seatsUsed: 12, endsAt: null },
+      kpis: {
+        coachesInvited: 12, coachesActivated: 9, teams: 4,
+        activeCoachesLast7Days: 6, practicePlansCreated: 21,
+      },
+      divisions: [], teams: [], coaches: [],
+    }),
+  }))
+  await context.route(/\/api\/league-admin\/members/, route => route.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify({ members: [] }),
+  }))
 
   const page = await context.newPage()
 
