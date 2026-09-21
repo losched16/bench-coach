@@ -1,0 +1,94 @@
+# BenchCoach checks.
+#
+# IMPORTANT, AND EASY TO GET WRONG: this workflow does NOT block anything
+# today. The repository has no branch protection, so a red run here does not
+# stop a merge and does not stop a deploy — `git push origin main` goes
+# straight to Vercel regardless of what this says.
+#
+# The thing that actually blocks production is `npm run gate`, which runs as
+# `prebuild` inside the Vercel build. See docs/release-gates.md.
+#
+# So what is this for? The browser suite, which cannot run in a Vercel build
+# container (no Chromium, no dev server). It is the only place the practice
+# page's "does it render at all" check can live. To make it binding, see the
+# branch-protection section of docs/release-gates.md — that is a repository
+# settings change and it is Clint's to make, because it also changes how he
+# pushes.
+
+name: checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The gate's environment check requires these. They are not secrets: the URL
+  # and anon key are public by design (the anon key is shipped to every
+  # browser), and nothing in CI talks to production — the browser suite points
+  # at an in-memory fixture on localhost.
+  NEXT_PUBLIC_SUPABASE_URL: https://chdpqsumqospnaztvfqe.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+  SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-not-a-real-key
+  ADMIN_EMAIL: ci@example.invalid
+
+jobs:
+  gate:
+    name: release gate (same checks Vercel runs)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: npm run gate
+        run: npm run gate
+
+  suites:
+    name: test suites
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      # Not in the build gate: slower, and a build gate that takes minutes is a
+      # build gate somebody deletes.
+      - run: npm run test:player-pathways
+      - run: npm run test:pathways
+      - run: npm run test:pathway-ui
+      - run: npm run test:drill-finder
+
+  browser:
+    name: chromium smoke (cannot run in a Vercel build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: install chromium
+        run: npx playwright install --with-deps chromium
+      - name: npm run test:browser
+        run: npm run test:browser
+      - name: keep the screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-screenshots
+          path: docs/audits/*.png
+          if-no-files-found: ignore

@@ -176,6 +176,9 @@ try {
     const { context, page } = await signedIn(browser)
     await page.goto(dash(), { waitUntil: 'networkidle' })
     const list = page.getByTestId('first-practice-checklist')
+    // First navigation of the run also compiles the route, so this one waits
+    // rather than sampling: the cold-start delay is not a product behaviour.
+    await list.waitFor({ state: 'visible', timeout: 30000 }).catch(() => {})
     check('a new coach with no roster sees the checklist', await list.isVisible())
     check('the roster step is marked optional, because the builder works without one',
       (await list.textContent()).includes('Optional'))
@@ -364,33 +367,73 @@ try {
   }
 
   {
-    // THE REASON THE PANEL IS NOT A ROUTE: it must not take the page down
-    // with it, so nothing a coach has half-done is lost by reading the help.
+    // THE PRACTICE PAGE, END TO END. This is the regression guard for the bug
+    // that shipped: a hook below an early return meant the page reached
+    // `loading` and then aborted, so it rendered NOTHING for four days. The
+    // first two checks below are the ones that would have caught it, and they
+    // are deliberately about the page existing at all rather than about help.
     //
-    // Checked by NODE IDENTITY rather than by typing into a field, for a
-    // reason worth recording: on both integrated surfaces the only free-text
-    // forms live inside modals — the practice builder, Add Player — that
-    // cover the help button, so there is no inline input a coach could be
-    // typing into while the help entry point is reachable. Marking a live DOM
-    // node and finding the same node afterwards proves the stronger thing
-    // anyway: React did not remount the page, so no page state was lost,
-    // form fields included.
-    await seed({ players: 5, plans: 1 })
+    // Then the claim help actually makes: opening and closing the panel must
+    // not take the page down with it. Retained heading nodes hint at that;
+    // real values typed into the real builder and still being there afterwards
+    // prove it.
+    // No saved plans, so the empty state offers "Generate Your First Plan".
+    await seed({ players: 5, plans: 0 })
     const { context, page } = await signedIn(browser)
-    await page.goto(`${APP}/dashboard/practice?teamId=${TEAM}`, { waitUntil: 'networkidle' })
-    await page.waitForTimeout(1200)
 
+    const crashes = []
+    page.on('pageerror', e => crashes.push(String(e.message || e)))
+
+    await page.goto(`${APP}/dashboard/practice?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+
+    // ── loading → ready ────────────────────────────────────────────────────
+    const heading = page.getByRole('heading', { name: 'Practice Plans' })
+    await heading.waitFor({ state: 'visible', timeout: 20000 })
+    check('THE PRACTICE PAGE REACHES READY AND RENDERS ITS HEADING',
+      await heading.isVisible())
+    check('and it is not still sitting on the loading state',
+      !(await page.getByText('Loading practice plans...').isVisible().catch(() => false)))
+    check('NO REACT ERROR ON THE WAY THERE — this is the four-day bug',
+      crashes.length === 0, crashes.slice(0, 2).join(' | '))
+    check('and no dev error overlay is mounted',
+      (await page.locator('nextjs-portal').count()) === 0 ||
+      !(await page.getByText('Unhandled Runtime Error').isVisible().catch(() => false)))
+
+    // ── open the builder and put real work into it ─────────────────────────
+    // Exactly this button. "New Plan" in the header opens a MENU, not the
+    // builder, and a regex matching both picks the header one by DOM order.
+    const openBuilder = () => page
+      .getByRole('button', { name: 'Generate Your First Plan' }).first().click()
+    await openBuilder()
+
+    const specifics = page.getByPlaceholder(/Hitting off live pitching/)
+    await specifics.waitFor({ state: 'visible', timeout: 20000 })
+    await specifics.scrollIntoViewIfNeeded()
+
+    const TYPED = 'Only the infield tonight, no catcher, work cutoffs'
+    await specifics.fill(TYPED)
+    // A focus chip too, so the check covers more than one kind of input.
+    await page.getByRole('button', { name: 'baserunning' }).first().click()
+    await page.waitForTimeout(300)
+
+    const chipWasOn = await page.getByRole('button', { name: 'baserunning' }).first()
+      .evaluate(el => el.className.includes('border-blue') || el.className.includes('bg-blue'))
+
+    // Cancel closes the builder without clearing what was typed — the values
+    // live in PracticeContent's state, which is exactly what a remount would
+    // destroy.
+    await page.getByRole('button', { name: 'Cancel' }).first().click()
+    await specifics.waitFor({ state: 'hidden', timeout: 10000 })
+
+    // ── read the help, then come back to the work ──────────────────────────
     const opener = page.getByRole('button', { name: /How to use this|Show me how/ }).first()
     await opener.waitFor({ state: 'visible', timeout: 15000 })
 
-    // Mark every heading on the page. A remount recreates these nodes and the
-    // marks go with them.
     const marked = await page.evaluate(() => {
       const els = Array.from(document.querySelectorAll('h1, h2, h3'))
       els.forEach(el => { el.setAttribute('data-survived-help', 'yes') })
       return els.length
     })
-    check('the practice page rendered something to mark', marked > 0)
 
     await opener.click()
     const dialog = page.getByRole('dialog')
@@ -400,9 +443,19 @@ try {
 
     await page.keyboard.press('Escape')
     await dialog.waitFor({ state: 'hidden', timeout: 5000 })
-    eq('OPENING AND CLOSING HELP DOES NOT REMOUNT THE PAGE — every marked ' +
-      'node survived, so nothing held in the page was lost',
+    eq('opening and closing help does not remount the page',
       await page.locator('[data-survived-help]').count(), marked)
+
+    await openBuilder()
+    const specificsAgain = page.getByPlaceholder(/Hitting off live pitching/)
+    await specificsAgain.waitFor({ state: 'visible', timeout: 10000 })
+    eq('READING THE HELP DOES NOT LOSE WHAT WAS TYPED INTO THE BUILDER',
+      await specificsAgain.inputValue(), TYPED)
+    check('nor the focus areas that were picked',
+      !chipWasOn || await page.getByRole('button', { name: 'baserunning' }).first()
+        .evaluate(el => el.className.includes('border-blue') || el.className.includes('bg-blue')))
+    check('and still no React error after all of that',
+      crashes.length === 0, crashes.slice(0, 2).join(' | '))
     await context.close()
   }
 

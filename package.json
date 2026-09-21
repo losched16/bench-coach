@@ -53,7 +53,7 @@
     "enrich:playbooks": "node scripts/update-playbook-templates.mjs",
     "db:report": "NODE_USE_ENV_PROXY=1 node scripts/db-schema-report.mjs",
     "verify:env": "node scripts/verify-env.mjs",
-    "prebuild": "node scripts/verify-env.mjs",
+    "prebuild": "node scripts/release-gate.mjs",
     "staging:seed": "NODE_USE_ENV_PROXY=1 node scripts/seed-staging.mjs",
     "verify:bootstrap": "bash scripts/verify-baseline-bootstrap.sh",
     "inspect:baseline": "node scripts/inspect-baseline.mjs",
@@ -115,7 +115,9 @@
     "test:migration-076": "bash scripts/test-migration-076.sh",
     "test:onboarding": "npx --yes tsx --tsconfig tsconfig.json scripts/test-onboarding.ts",
     "test:hook-order": "npx --yes tsx --tsconfig tsconfig.json scripts/test-hook-order.ts",
-    "test:browser": "bash scripts/browser/run.sh"
+    "test:browser": "bash scripts/browser/run.sh",
+    "gate": "node scripts/release-gate.mjs",
+    "lint:hooks": "eslint --no-eslintrc -c .eslintrc.hooks.cjs --ext .ts,.tsx app components lib"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

@@ -19,17 +19,24 @@ PORT="${APP_PORT:-3100}"
 FIXTURE_PORT="${FIXTURE_PORT:-54321}"
 export FIXTURE_PORT
 
-: "${CHROMIUM_PATH:=/opt/pw-browsers/chromium-1194/chrome-linux/chrome}"
-export CHROMIUM_PATH
-if [ ! -x "$CHROMIUM_PATH" ]; then
-  CHROMIUM_PATH="$(find /opt/pw-browsers /root/.cache/ms-playwright -maxdepth 3 \
-    -name chrome -type f -perm -u+x 2>/dev/null | head -1 || true)"
-  export CHROMIUM_PATH
+# Chromium. Three cases, in order:
+#
+#   1. CHROMIUM_PATH is set and real — use it.
+#   2. This sandbox's preinstalled build, whose revision does not match the
+#      playwright package's expectation, so it has to be named explicitly.
+#   3. Neither — leave CHROMIUM_PATH empty and let Playwright resolve its own
+#      browser. That is the CI case, after `npx playwright install chromium`,
+#      and passing a guessed path there would break a working install.
+if [ -z "${CHROMIUM_PATH:-}" ]; then
+  CHROMIUM_PATH="$(find /opt/pw-browsers -maxdepth 3 \
+    -path '*chrome-linux/chrome' -type f 2>/dev/null | head -1 || true)"
 fi
-if [ -z "${CHROMIUM_PATH:-}" ] || [ ! -x "$CHROMIUM_PATH" ]; then
-  echo "No Chromium found. Set CHROMIUM_PATH, or run: npx playwright install chromium"
+if [ -n "${CHROMIUM_PATH:-}" ] && [ ! -x "$CHROMIUM_PATH" ]; then
+  echo "CHROMIUM_PATH is set but not executable: $CHROMIUM_PATH"
   exit 1
 fi
+export CHROMIUM_PATH
+echo "chromium: ${CHROMIUM_PATH:-<playwright default>}"
 
 pids=()
 cleanup() {

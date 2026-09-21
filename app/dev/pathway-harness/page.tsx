@@ -99,7 +99,14 @@ const CONTEXT: PathwayContext = {
 }
 
 export default function PathwayHarness() {
-  if (process.env.NODE_ENV === 'production') return null
+  // The production guard used to sit HERE, above the hooks. It never actually
+  // crashed, because NODE_ENV is a build-time constant and so the early return
+  // either always fires or never does within one environment — but it is only
+  // safe by accident, and rules-of-hooks is right to refuse it. The guard now
+  // sits below the hooks, where the hook order cannot depend on it.
+  //
+  // Found by `npm run lint:hooks`, which is the point of adding it: the
+  // indentation scanner reads this as a normal early return and sees nothing.
 
   // `?scenario=` drives the failure states the acceptance run needs. Default is
   // the happy path.
@@ -117,6 +124,9 @@ export default function PathwayHarness() {
     if (slug === 'build-the-swing') return SWING
     return null
   }, [slug])
+
+  // Every hook is above this line.
+  if (process.env.NODE_ENV === 'production') return null
 
   const listState: LoadState =
     scenario === 'list-error' ? 'error'
