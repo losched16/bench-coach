@@ -254,3 +254,27 @@ export async function trackPaymentRecovered(email: string) {
     await removeTagsFromContact(contact.id, ['payment_failed'])
   }
 }
+
+/**
+ * Attach a free-text note to a contact.
+ *
+ * Added for the league inquiry form, which has to carry the league's name,
+ * size and message somewhere a human will read them. createContact() declares
+ * customFields on ContactData and never sends them, so a note is the reliable
+ * place for detail without touching the contact shape other callers rely on.
+ *
+ * Returns false rather than throwing: the caller has already written the
+ * inquiry to the server log, so a CRM hiccup must not fail their request.
+ */
+export async function addNoteToContact(contactId: string, body: string): Promise<boolean> {
+  try {
+    await ghlRequest(`/contacts/${contactId}/notes`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    })
+    return true
+  } catch (error) {
+    console.error('Error adding note to contact:', error)
+    return false
+  }
+}

@@ -35,6 +35,11 @@ const EXEMPT = {
   // a fixed allowlist and a few length-capped strings, and stores no
   // identifier — so there is no principal to authorize and nothing to leak.
   'app/api/track/seo/route.ts':           'public marketing pages — the visitors it measures have no session',
+  // Public by design: a league administrator filling this in has no account,
+  // which is the entire point of the form. There is no principal to authorize.
+  // Writes nothing to our database — it logs the submission and forwards it to
+  // the CRM — and every field is length-capped before it is used.
+  'app/api/league-inquiry/route.ts':      'public league inquiry form — the sender has no account',
 }
 
 // The league guards live in lib/leagueAuthz.ts rather than lib/authz.ts, because
