@@ -20,6 +20,11 @@ import { primaryActionFor, articleHref } from '../lib/helpRoutes'
 import { readFileSync } from 'fs'
 import { execSync } from 'child_process'
 import { FEATURE_UNAVAILABLE } from '../lib/migrationHints'
+import {
+  PLAYBOOK_BLURB, PLAYBOOK_TAGLINE, DEVELOPMENT_BLURB, DEVELOPMENT_TAGLINE,
+  PROGRAM_DISTINCTION, MASTERY_NOTE, decisionAidSentence,
+  developmentPlanLink, playbooksLink,
+} from '../lib/programChoice'
 
 let passed = 0
 const failures: string[] = []
@@ -162,30 +167,133 @@ check('and the nav entry exists, with the href the guide implies',
 check('Playbooks now offers an action, because the decision was made',
   primaryActionFor('playbooks', { teamId: 't1' })!.href ===
     '/dashboard/playbooks?teamId=t1')
-// Both are reachable now, so telling them apart is the guide's real job.
-const playbookVsPlan = playbooks.problems.find(p =>
-  /Playbook or a development plan/i.test(p.symptom))
-check('THE GUIDE STILL SEPARATES A PLAYBOOK FROM A DEVELOPMENT PLAN',
-  !!playbookVsPlan && /fixed programme/i.test(playbookVsPlan.fix))
-// The line is fixed sessions versus progression you assess — NOT team versus
-// individual. A playbook can be started for one player ("Specific Player" is
-// on the start dialog), so the guide has to say the programme is the same
-// either way, or a coach wanting a set programme for a single kid is sent to
-// the wrong tool.
-check('and it draws the line at a set programme rather than at team size',
-  !!playbookVsPlan &&
-  /whether you start it for the whole team or for one player/i.test(playbookVsPlan.fix) &&
-  /judge they are ready|how the player is actually doing/i.test(playbookVsPlan.fix))
+// ── THE PLAYBOOK / DEVELOPMENT-PLAN DISTINCTION ─────────────────────────────
+//
+// Both features are reachable, both serve one player or a whole team, and a
+// coach could not tell them apart. These checks pin the answer to the shared
+// constants in lib/programChoice.ts rather than to a literal sentence, so the
+// copy can be edited in one place without rotting the suite — while the
+// NEGATIVE checks below still fail if the old team-versus-individual framing
+// comes back in any wording.
+
+const devPlan = guideById('player-development')!
+
+check('THE PLAYBOOKS GUIDE TAKES ITS DESCRIPTION FROM THE SHARED CONSTANT',
+  playbooks.purpose === PLAYBOOK_BLURB && playbooks.summary === PLAYBOOK_TAGLINE)
+check('AND THE DEVELOPMENT GUIDE TAKES ITS OWN FROM THE SAME FILE',
+  devPlan.purpose === DEVELOPMENT_BLURB && devPlan.summary === DEVELOPMENT_TAGLINE)
+
+// Asked from both sides, answered identically, because both read the same
+// constant. A coach who lands on either guide gets the same line.
+const pbWhich = playbooks.problems.find(p => /which should i use/i.test(p.symptom))
+const dpWhich = devPlan.problems.find(p => /which should i use/i.test(p.symptom))
+check('BOTH GUIDES ANSWER "WHICH SHOULD I USE?"', !!pbWhich && !!dpWhich)
+check('and they give the same answer, word for word',
+  !!pbWhich && !!dpWhich && pbWhich.fix === dpWhich.fix)
+check('which is the shared distinction plus the decision aid',
+  !!pbWhich && pbWhich.fix === PROGRAM_DISTINCTION + ' ' + decisionAidSentence())
+
+// The distinction itself: what decides the next step, not how many players.
+check('THE DISTINCTION IS THE PROGRAM, NOT THE NUMBER OF PLAYERS',
+  /same program whether you start it for the whole team or for one player/i
+    .test(PROGRAM_DISTINCTION) &&
+  /when you decide they are ready/i.test(PROGRAM_DISTINCTION))
 check('IT DOES NOT PRESCRIBE A PLAYBOOK BY TEAM SIZE — the earlier wording did',
-  !!playbookVsPlan &&
   !/(use|pick|choose) a Playbook (to|for|when)[^.]*(whole team|the team)/i
-    .test(playbookVsPlan.fix) &&
-  !/(use|pick|choose) a development plan (to|for|when)[^.]*(one kid|one player|single player|individual)/i
-    .test(playbookVsPlan.fix))
-check('and the purpose line does not read as one-player-only either',
-  /team or one player|team or a player/i.test(playbooks.purpose))
+    .test(PROGRAM_DISTINCTION + ' ' + decisionAidSentence()) &&
+  !/(use|pick|choose) a (development plan|Development Plan) (to|for|when)[^.]*(one kid|one player|single player|individual)/i
+    .test(PROGRAM_DISTINCTION + ' ' + decisionAidSentence()))
+check('and the playbook description names both targets',
+  /your team or an individual player/i.test(PLAYBOOK_BLURB))
+
+// Completing a session is not mastery, and the coach decides. Both are
+// explicit requirements of this change.
+check('THE PLAYBOOKS GUIDE SAYS FINISHING A SESSION IS NOT MASTERY',
+  playbooks.problems.some(p => p.fix.indexOf(MASTERY_NOTE) !== -1))
+check('and that advancing is the coach\'s call',
+  /your call/i.test(MASTERY_NOTE))
+check('the development guide still says ticking a signal unlocks nothing',
+  devPlan.steps.some(s => /do not unlock anything|still your call/i.test(s.note || '')))
+
+// No invented capability. A playbook does not adapt, learn or re-plan, and
+// nothing in either description may suggest it does.
+const distinctionProse = [
+  PLAYBOOK_BLURB, DEVELOPMENT_BLURB, PROGRAM_DISTINCTION,
+  MASTERY_NOTE, decisionAidSentence(),
+].join(' ')
+check('NEITHER DESCRIPTION CLAIMS THE PROGRAM ADAPTS ON ITS OWN',
+  !/adapts?|adjusts? itself|learns from|automatically (adjusts|advances|updates)|personalis|personaliz|AI-(powered|driven)/i
+    .test(distinctionProse), distinctionProse.slice(0, 120))
+
+// A CoachAI priority is a third thing. Collapsing it into either of the other
+// two is its own confusion, so the development guide keeps it separate.
+check('AND THE DEVELOPMENT GUIDE KEEPS COACHAI PRIORITIES SEPARATE',
+  devPlan.problems.some(p =>
+    /priority/i.test(p.symptom) && /different things/i.test(p.fix)))
+
 check('and says starting one is the head coach\'s',
   playbooks.requires.includes('decide'))
+
+// The guides agreeing with each other proves nothing if the SCREENS still say
+// something else — which is exactly how the team-only wording survived. These
+// read the source of the two pages.
+const playbooksPage = read('app/dashboard/playbooks/page.tsx')
+const devComponent = read('components/PlayerDevelopment.tsx')
+
+check('THE PLAYBOOKS PAGE RENDERS THE SHARED NOTE RATHER THAN ITS OWN COPY',
+  playbooksPage.includes('<ProgramChoiceNote') &&
+  playbooksPage.includes('variant="playbooks"'))
+check('and the old subtitle that described both features is gone',
+  !playbooksPage.includes('Step-by-step training programs to build specific skills'))
+check('THE PLAYER PROFILE RENDERS THE SHARED BLURB WITH THE PLAYER IN IT',
+  devComponent.includes('developmentBlurb(playerName)'))
+check('and offers the cross-link from its empty state',
+  devComponent.includes('<ProgramChoiceNote') &&
+  devComponent.includes('variant="development"'))
+check('the start dialog says both targets run the same program',
+  /Same program either way/i.test(playbooksPage))
+check('PLAYBOOKS HAS A HELP ENTRY POINT AT ALL — it had none before',
+  playbooksPage.includes('module="playbooks"'))
+
+// The cross-links have to carry context and land somewhere real.
+check('THE CROSS-LINK TO A DEVELOPMENT PLAN CARRIES THE TEAM',
+  developmentPlanLink('t1', 'p1').href ===
+    '/dashboard/roster/p1?teamId=t1&tab=development')
+check('and lands on the Development tab, which the player page now reads',
+  read('app/dashboard/roster/[playerId]/page.tsx').includes("searchParams.get('tab')"))
+check('WITH NO PLAYER IT ASKS FOR ONE INSTEAD OF PRETENDING',
+  developmentPlanLink('t1', null).needsPlayerChoice &&
+  developmentPlanLink('t1', null).href === '/dashboard/roster?teamId=t1' &&
+  /pick a player/i.test(developmentPlanLink('t1', null).label))
+check('the link back to Playbooks carries the team too',
+  playbooksLink('t1').href === '/dashboard/playbooks?teamId=t1')
+check('AND A JUNK ID IN THE ADDRESS BAR IS DROPPED, NOT ESCAPED',
+  developmentPlanLink('t1', '../../admin').href === '/dashboard/roster?teamId=t1' &&
+  playbooksLink('a/b?c').href === '/dashboard/playbooks')
+
+// Mounting the Playbooks guide on the Playbooks page surfaced this: the card's
+// primary action is written for the Help Center, so in-page it offered "Open
+// Playbooks" to a coach already standing there. The fix is in ModuleHelp and
+// applies to every module's card.
+const moduleHelpSrc = read('components/help/ModuleHelp.tsx')
+check('A CARD DOES NOT OFFER TO OPEN THE PAGE IT IS ALREADY ON',
+  moduleHelpSrc.includes('function usefulAction') &&
+  moduleHelpSrc.includes('usefulAction(primaryActionFor(guide.id, ctx), here)'))
+check('and it compares paths, so a teamId on one side does not defeat it',
+  /action\.href\.split\('\?'\)\[0\]/.test(moduleHelpSrc))
+
+// One screen, one spelling. The shared copy uses "program" (which is what the
+// app says everywhere else); the guide had "programme" beside it.
+const playbookAllProse = [
+  playbooks.purpose, playbooks.summary, playbooks.result, playbooks.nextAction,
+  playbooks.example || '', playbooks.requiresNote || '',
+  ...playbooks.steps.flatMap(s => [s.do, s.note || '']),
+  ...playbooks.problems.flatMap(p => [p.symptom, p.fix]),
+].join(' ')
+check('THE PLAYBOOKS GUIDE SPELLS IT "PROGRAM" THROUGHOUT, LIKE THE SCREEN DOES',
+  !/programme/i.test(playbookAllProse), playbookAllProse.slice(0, 120))
+check('and its example is not team-only either',
+  /one player/i.test(playbooks.example || ''))
 
 // ── the distinctions the brief asked for ────────────────────────────────────
 

@@ -8,6 +8,8 @@ import { createSupabaseComponentClient } from '@/lib/supabase'
 import { loadPathways } from '@/lib/developmentPathways'
 import { describeDuration, daysSince } from '@/lib/playerPathways'
 import { ModuleHelp } from '@/components/help/ModuleHelp'
+import { ProgramChoiceNote } from '@/components/ProgramChoiceNote'
+import { developmentBlurb } from '@/lib/programChoice'
 
 // The Development section of a player profile.
 //
@@ -186,9 +188,13 @@ export function PlayerDevelopment({ playerId, teamId, playerName, canDecide }: P
           <div className="p-12 text-center">
             <RouteIcon className="mx-auto text-gray-300 mb-4" size={48} />
             <p className="text-gray-600 mb-1">No development plan yet</p>
+            {/* The old text said a plan "follows a curated teaching sequence,
+                one stage at a time" — true, and equally true of a playbook as
+                far as a coach could tell. What separates them is that the next
+                stage waits on the coach's judgement, so that is what this
+                says now, with {playerName} kept. */}
             <p className="text-sm text-gray-500 mb-4 max-w-md mx-auto">
-              A development plan follows a curated teaching sequence, one stage at a time,
-              so you always know what to work on with {playerName} next.
+              {developmentBlurb(playerName)}
             </p>
             {canDecide ? (
               <button onClick={openPicker} className="text-red-600 hover:text-red-700 font-medium">
@@ -197,6 +203,17 @@ export function PlayerDevelopment({ playerId, teamId, playerName, canDecide }: P
             ) : (
               <p className="text-xs text-gray-400">Ask the head coach to start one.</p>
             )}
+            {/* The cross-link belongs on the empty state rather than beside the
+                header button: a coach who already has a plan running is not
+                choosing between the two any more. */}
+            <ProgramChoiceNote
+              variant="development"
+              teamId={teamId}
+              playerId={playerId}
+              canCrossLink={canDecide}
+              compact
+              className="mt-5 pt-4 border-t border-gray-100 text-left max-w-md mx-auto"
+            />
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
@@ -224,9 +241,16 @@ export function PlayerDevelopment({ playerId, teamId, playerName, canDecide }: P
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-lg w-full max-h-[80vh] flex flex-col">
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-900">
-                What is {playerName} working on?
-              </h3>
+              <div className="min-w-0">
+                <h3 className="text-lg font-bold text-gray-900">
+                  What is {playerName} working on?
+                </h3>
+                {/* At the moment of choosing, say what they are choosing: a
+                    stage sequence they advance, not a fixed session list. */}
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Each plan is a sequence of stages. You decide when to move on.
+                </p>
+              </div>
               <button
                 onClick={() => setPicking(false)}
                 aria-label="Close"

@@ -24,6 +24,18 @@
 // lib/helpRoutes.ts turns that into a link carrying the current team and
 // player. That is what keeps "Open Practice Plans" working from a player page
 // without the content knowing anything about routing.
+//
+// 4. THE PLAYBOOK / DEVELOPMENT-PLAN DISTINCTION IS IMPORTED, NOT RETYPED.
+//    Those two guides take their purpose, summary and "which should I use"
+//    answer from lib/programChoice.ts, which the two screens also render. They
+//    drifted once — the guide said Playbooks were for teams while the start
+//    dialog offered "Specific Player" — and a shared constant is the only
+//    thing that stops that happening again.
+
+import {
+  PLAYBOOK_BLURB, PLAYBOOK_TAGLINE, DEVELOPMENT_BLURB, DEVELOPMENT_TAGLINE,
+  PROGRAM_DISTINCTION, MASTERY_NOTE, decisionAidSentence,
+} from './programChoice'
 
 export type HelpModule =
   | 'practice-plans'
@@ -324,9 +336,10 @@ export const HELP_GUIDES: HelpGuide[] = [
     module: 'player-development',
     tasks: ['help-a-player'],
     title: 'Put a player on a development plan',
-    purpose:
-      'Follow a curated teaching sequence with one player, so you always know what to work on next and can see how far they have come.',
-    summary: 'A stage-by-stage plan for one player, so you always know what is next.',
+    // Same constants the player profile renders — see the note on the
+    // playbooks guide and lib/programChoice.ts.
+    purpose: DEVELOPMENT_BLURB,
+    summary: DEVELOPMENT_TAGLINE,
     requires: ['team', 'decide'],
     requiresNote:
       'Starting a plan and moving a player between stages is the head coach\'s. Anyone on the staff can read the plan and record what they saw.',
@@ -358,8 +371,18 @@ export const HELP_GUIDES: HelpGuide[] = [
       'You start Speed & Agility for a nine-year-old. Stage 1 asks for four baseline measurements. Six weeks and eight sessions later he is on stage 3, and you can see both numbers side by side.',
     problems: [
       {
+        // The same question as on the playbooks guide, answered identically
+        // because it is answered from the same constants. A coach who lands on
+        // either guide gets the same line.
+        symptom: 'Which should I use — a Development Plan or a Playbook?',
+        fix: PROGRAM_DISTINCTION + ' ' + decisionAidSentence(),
+      },
+      {
+        // Kept separate from the Playbook question on purpose. A CoachAI
+        // priority is a third thing and collapsing it into either of the other
+        // two is its own confusion.
         symptom: 'You cannot tell a development plan from a CoachAI priority.',
-        fix: 'A development plan is a long sequence for one player, over a season. A priority is a reaction to a specific problem and ends when it is fixed. Both can be running at once.',
+        fix: 'A development plan is a long sequence for one player, over a season, and it is curated — somebody wrote the stages down in advance. A priority is CoachAI reacting to a specific problem, and it ends when that problem is fixed. They are different things and both can be running at once.',
       },
       {
         symptom: 'Some drills have no video.',
@@ -1139,15 +1162,18 @@ export const HELP_GUIDES: HelpGuide[] = [
     module: 'playbooks',
     tasks: ['help-a-player'],
     title: 'Playbooks',
-    purpose:
-      'Follow a fixed multi-week template, session by session, with a team or one player.',
-    summary: 'A fixed multi-week template, session by session.',
+    // Imported, not restated. The Playbooks page renders the same constants,
+    // so the screen and its guide cannot describe the feature differently —
+    // which is how "Playbooks are for teams" survived in one and not the
+    // other. See lib/programChoice.ts.
+    purpose: PLAYBOOK_BLURB,
+    summary: PLAYBOOK_TAGLINE,
     requires: ['team', 'decide'],
     requiresNote:
-      'Starting a playbook assigns a multi-week programme, so it is the head coach\'s. Anyone on the staff can see the progress of one already running, on the player\'s profile.',
+      'Starting a playbook assigns a multi-week program, so it is the head coach\'s. Anyone on the staff can see the progress of one already running, on the player\'s profile.',
     steps: [
       {
-        do: 'Open Playbooks under Planning and pick a programme from "Progression Playbooks".',
+        do: 'Open Playbooks under Planning and pick a program from "Progression Playbooks".',
         note: 'Each one says what it is for and how many sessions it runs to.',
       },
       {
@@ -1161,7 +1187,7 @@ export const HELP_GUIDES: HelpGuide[] = [
       },
     ],
     example:
-      'You pick a six-week throwing accuracy programme and start it for the whole team. Every session you run, you mark the day complete, and the progress bar on each player carries across to their profile.',
+      'You pick a six-week throwing accuracy program and start it for one player who needs it, or for the whole team. Every session you run, you mark the day complete, and the progress bar on each player carries across to their profile.',
     problems: [
       {
         // The distinction is the real question now that both are reachable.
@@ -1173,8 +1199,14 @@ export const HELP_GUIDES: HelpGuide[] = [
         // contradicted the step and sent a coach to the wrong tool whenever
         // they wanted a set programme for a single player. The line is fixed
         // sessions versus progression you assess.
-        symptom: 'You are not sure whether to use a Playbook or a development plan.',
-        fix: 'A Playbook is a fixed programme: a set list of sessions in a set order that you work through and tick off. It does not change on what you see, and it is the same programme whether you start it for the whole team or for one player. A development plan is the other way round: stages a player only moves up when you judge they are ready, with measurements and a record of what you decided. Pick a Playbook when you want a set programme followed; pick a development plan when the next step should depend on how the player is actually doing.',
+        symptom: 'Which should I use — a Playbook or a Development Plan?',
+        fix: PROGRAM_DISTINCTION + ' ' + decisionAidSentence(),
+      },
+      {
+        // The thing that looks like progress and is not. A playbook's progress
+        // bar measures sessions run, nothing else.
+        symptom: 'A player finished every session but still cannot do it.',
+        fix: MASTERY_NOTE + ' A playbook tracks the sessions you have run, not what a player has learned. If you want to record what you are actually seeing and move them on when they are ready, put them on a Development Plan — you can run both at once.',
       },
       {
         symptom: 'You cannot start one.',

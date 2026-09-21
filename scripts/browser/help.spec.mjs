@@ -50,10 +50,18 @@ const team = {
   workspace_kind: 'team', season: null, created_at: '2026-01-01T00:00:00Z',
 }
 
-async function seed({ players = 0, plans = 0, prefs = [], failing = {}, rules = [] } = {}) {
+async function seed({
+  players = 0, plans = 0, prefs = [], failing = {}, rules = [],
+  // Playbook templates make the Library tab real; activePlaybooks decides
+  // whether the Active tab shows its empty state or a running programme,
+  // which is what switches the first-use card on and off.
+  templates = [], activePlaybooks = [],
+} = {}) {
   const body = {
     failing,
     tables: {
+      playbook_templates: templates,
+      player_playbooks: activePlaybooks,
       // The dashboard layout sends anyone without a subscribed coach row to
       // /onboarding, so this row is the price of reaching the page at all.
       coaches: [{ id: COACH, user_id: USER, is_subscribed: true }],
@@ -61,9 +69,18 @@ async function seed({ players = 0, plans = 0, prefs = [], failing = {}, rules = 
       team_members: [],
       team_players: Array.from({ length: players }, (_, i) => ({
         id: `p${i}`, team_id: TEAM, name: `Player ${i}`,
+        // The player detail page joins on player_id, not on the roster row's
+        // own id, and queries `players` separately — so both have to exist or
+        // that page renders its shell and nothing else.
+        player_id: `p${i}`,
         // The count page reads the embedded player, not the roster row's name.
         player: { name: `Player ${i}`, jersey_number: String(i + 1) },
       })),
+      players: Array.from({ length: players }, (_, i) => ({
+        id: `p${i}`, name: `Player ${i}`, jersey_number: String(i + 1),
+      })),
+      player_notes: [],
+      team_player_archive: [],
       // A deliberately small daily max. Fifteen keeps all three display
       // states reachable by tapping: under below 5, warning from 5, over at 15.
       pitch_count_rules: rules,
@@ -1261,18 +1278,214 @@ try {
     check('it tells a coach where the entry is',
       /under Planning/i.test(body))
     check('and it still says which of the two to reach for',
-      /fixed programme/i.test(body) &&
-      /judge they are ready|how the player is actually doing/i.test(body))
+      /fixed program/i.test(body) &&
+      /when you decide they are ready/i.test(body))
     // Read off the rendered panel, because the correction was a copy change
     // and the point is that a coach sees it. The distinction is fixed
     // sessions versus assessed progression; "Specific Player" is a real
     // option, so team size is not what separates them.
-    check('AND IT SEPARATES THEM BY THE PROGRAMME, NOT BY TEAM SIZE',
-      /whether you start it for the whole team or for one player/i.test(body) &&
+    check('AND IT SEPARATES THEM BY THE PROGRAM, NOT BY TEAM SIZE',
+      /same program whether you start it for the whole team or for one player/i.test(body) &&
       !/(use|pick|choose) a Playbook (to|for|when)[^.]*(whole team|the team)/i.test(body))
+    check('and it carries the decision aid a coach can act on',
+      /ready-made series of sessions to follow, use Playbooks/i.test(body))
     const action = page.getByRole('link', { name: 'Open Playbooks' }).first()
     check('the article now offers a way there', await action.count() > 0)
     await context.close()
+  }
+
+  // ══ 4g. TELLING THE TWO PROGRAMMES APART ════════════════════════════════
+  //
+  // Clint could not tell a Playbook from a Development Plan, and the help had
+  // made it worse by explaining the difference as team versus individual. It
+  // is not: a playbook runs for a whole team OR for one player, and what
+  // separates the two is whether the next step is fixed in advance or waits on
+  // the coach's judgement.
+  //
+  // These checks read the rendered screens rather than the constants, because
+  // the constants agreeing with themselves is not the thing that was broken.
+  console.log('\nTelling Playbooks and Development Plans apart')
+
+  const PB_TEMPLATES = [{
+    id: 'tpl1', title: 'Six-week throwing accuracy', description: 'Build a repeatable throw.',
+    goal: 'Accuracy', age_group: '9-10', skill_category: 'throwing',
+    total_sessions: 6, sessions_per_week: 2, difficulty: 'beginner',
+    equipment: ['balls'], sessions: [],
+  }]
+
+  {
+    await seed({ players: 4, plans: 1, templates: PB_TEMPLATES })
+    const { context, page } = await signedIn(browser)
+    const crashes = []
+    page.on('pageerror', e => crashes.push(String(e.message || e)))
+    await page.goto(`${APP}/dashboard/playbooks?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1800)
+    const body = await page.locator('body').innerText()
+
+    check('THE PLAYBOOKS PAGE RAISES NO REACT ERROR', crashes.length === 0,
+      crashes.slice(0, 1).join(' '))
+    check('IT SAYS A PLAYBOOK WORKS FOR A TEAM OR ONE PLAYER',
+      /your team or an individual player/i.test(body), body.slice(0, 200))
+    check('and that finishing a session is not the same as mastery',
+      /not the same as showing mastery/i.test(body))
+    check('AND THAT ADVANCING IS THE COACH\'S CALL',
+      /always your call/i.test(body))
+    check('the old subtitle that described both features is gone',
+      !/Step-by-step training programs to build specific skills/i.test(body))
+    check('IT OFFERS A WAY TO THE OTHER FEATURE',
+      await page.getByRole('link', { name: /Development Plan/i }).count() > 0)
+    check('and with no player chosen it asks for one rather than guessing',
+      /Pick a player to start a Development Plan/i.test(body))
+    // The card's action is written for the Help Center. In-page it was
+    // offering to open the page the coach is standing on.
+    check('THE CARD DOES NOT OFFER TO OPEN THE PAGE WE ARE ALREADY ON',
+      await page.getByRole('link', { name: 'Open Playbooks' }).count() === 0)
+    check('and one spelling of "program" is used throughout',
+      !/programme/i.test(body), (body.match(/\S*programme\S*/i) || [''])[0])
+
+    // The link has to carry the team, or it lands on a team picker.
+    const cross = page.getByRole('link', { name: /Pick a player/i }).first()
+    check('THE CROSS-LINK CARRIES THE TEAM',
+      (await cross.getAttribute('href') || '').includes(`teamId=${TEAM}`),
+      await cross.getAttribute('href'))
+    await cross.click()
+    await page.waitForURL(/roster/, { timeout: 15000 })
+    check('AND FOLLOWING IT REACHES THE ROSTER, STILL ON THIS TEAM',
+      page.url().includes('/dashboard/roster') && page.url().includes(TEAM))
+    await context.close()
+  }
+
+  {
+    // The start dialog is where the confusion actually bites: a coach picks
+    // "Specific Player" and reasonably wonders if they have just made a
+    // development plan. They have not, and the dialog now says so.
+    await seed({ players: 4, plans: 1, templates: PB_TEMPLATES })
+    const { context, page } = await signedIn(browser)
+    await page.goto(`${APP}/dashboard/playbooks?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1500)
+    await page.getByRole('button', { name: /Library/i }).first().click()
+    await page.waitForTimeout(800)
+
+    const startBtn = page.getByRole('button', { name: /^Start$|Start Playbook/i }).first()
+    if (await startBtn.count() > 0) {
+      await startBtn.click()
+      await page.waitForTimeout(700)
+      const dialog = await page.locator('body').innerText()
+      check('THE START DIALOG OFFERS BOTH TARGETS',
+        /Whole Team/i.test(dialog) && /Specific Player/i.test(dialog))
+      check('AND SAYS BOTH RUN THE SAME PROGRAM',
+        /Same program either way/i.test(dialog), dialog.slice(0, 200))
+    } else {
+      check('THE START DIALOG OFFERS BOTH TARGETS', false,
+        'no start control found in the library tab')
+    }
+    await context.close()
+  }
+
+  {
+    // The first-use card must not stack with the note that is now always on
+    // the page. It earns its place on an empty screen and nowhere else.
+    await seed({
+      players: 4, plans: 1, templates: PB_TEMPLATES,
+      activePlaybooks: [{
+        id: 'pb1', team_id: TEAM, player_id: null, playbook_template_id: 'tpl1',
+        title: 'Six-week throwing accuracy', started_at: '2026-09-01T00:00:00Z',
+        completed_sessions: [1], status: 'active',
+      }],
+    })
+    const { context, page } = await signedIn(browser)
+    await page.goto(`${APP}/dashboard/playbooks?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1800)
+    const body = await page.locator('body').innerText()
+    check('WITH A PLAYBOOK RUNNING THE FIRST-USE CARD IS SUPPRESSED',
+      !/Show me how/i.test(body), body.slice(0, 200))
+    check('but the guide is still reachable from the button',
+      await page.getByRole('button', { name: 'How to use this' }).count() > 0)
+    check('AND THE DISTINCTION IS STILL ON THE PAGE',
+      /your team or an individual player/i.test(body))
+    await context.close()
+  }
+
+  {
+    // The other side: a player's Development tab, reached by the deep link the
+    // cross-link builds. This is also the check that ?tab= works at all.
+    await seed({ players: 4, plans: 1 })
+    const { context, page } = await signedIn(browser)
+    await context.route(/\/api\/player-pathways(\?|$)/, r =>
+      r.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify({ pathways: [] }) }))
+    const crashes = []
+    page.on('pageerror', e => crashes.push(String(e.message || e)))
+    await page.goto(`${APP}/dashboard/roster/p0?teamId=${TEAM}&tab=development`,
+      { waitUntil: 'networkidle' })
+    await page.waitForTimeout(2000)
+    const body = await page.locator('body').innerText()
+
+    check('THE DEEP LINK LANDS ON THE DEVELOPMENT TAB, NOT OVERVIEW',
+      /No development plan yet|Development Plans/i.test(body), body.slice(0, 220))
+    check('and it raises no React error', crashes.length === 0,
+      crashes.slice(0, 1).join(' '))
+    check('THE EMPTY STATE DESCRIBES STAGES AND READINESS, NOT A SESSION LIST',
+      /Work through skill stages with/i.test(body) &&
+      /mastery signals to decide when they are ready to advance/i.test(body))
+    check('and it names the player rather than saying "one player"',
+      /Work through skill stages with Player 0/i.test(body))
+    check('IT OFFERS THE WAY BACK TO PLAYBOOKS',
+      await page.getByRole('link', { name: /Browse Playbooks/i }).count() > 0)
+    const back = page.getByRole('link', { name: /Browse Playbooks/i }).first()
+    check('and that link carries the team too',
+      (await back.getAttribute('href') || '').includes(`teamId=${TEAM}`),
+      await back.getAttribute('href'))
+    await context.close()
+  }
+
+  {
+    // A contributor can read the difference — knowing which feature is which
+    // is not a privilege — but is not handed a link that reads like an
+    // invitation to start something they cannot start.
+    await seed({ players: 4, plans: 1 })
+    const { context, page } = await signedIn(browser, { role: 'contributor' })
+    await context.route(/\/api\/player-pathways(\?|$)/, r =>
+      r.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify({ pathways: [] }) }))
+    await page.goto(`${APP}/dashboard/roster/p0?teamId=${TEAM}&tab=development`,
+      { waitUntil: 'networkidle' })
+    await page.waitForTimeout(2000)
+    const body = await page.locator('body').innerText()
+    check('A CONTRIBUTOR STILL READS WHAT A DEVELOPMENT PLAN IS',
+      /Work through skill stages with/i.test(body))
+    check('is told who starts one',
+      /Ask the head coach to start one/i.test(body))
+    check('AND IS NOT OFFERED THE CROSS-LINK TO START THE OTHER ONE',
+      await page.getByRole('link', { name: /Browse Playbooks/i }).count() === 0)
+    await context.close()
+  }
+
+  {
+    // Mobile and desktop, looked at rather than assumed. The note sits under a
+    // heading and wraps; a 375px screen is where that goes wrong.
+    await seed({ players: 4, plans: 1, templates: PB_TEMPLATES })
+    for (const [label, viewport, file] of [
+      ['375px', { width: 375, height: 780 }, 'docs/audits/phase2m-playbooks-375px.png'],
+      ['1440px', { width: 1440, height: 900 }, 'docs/audits/phase2m-playbooks-1440px.png'],
+    ]) {
+      const { context, page } = await signedIn(browser, { viewport })
+      await page.goto(`${APP}/dashboard/playbooks?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+      await page.waitForTimeout(1800)
+      const over = await page.evaluate(() =>
+        document.documentElement.scrollWidth - document.documentElement.clientWidth)
+      check(`the playbooks page does not scroll sideways at ${label}`, over <= 1, `overflow ${over}px`)
+      // The note is prose, so the real risk is a line running off the edge.
+      const clipped = await page.evaluate(() => {
+        const w = document.documentElement.clientWidth
+        return Array.from(document.querySelectorAll('p, a'))
+          .filter(el => el.textContent && el.textContent.trim().length > 20)
+          .some(el => el.getBoundingClientRect().right > w + 1)
+      })
+      check(`and no line of it runs off the screen at ${label}`, !clipped)
+      await page.screenshot({ path: file, fullPage: false })
+      await context.close()
+    }
   }
 
   // ══ 5. LAYOUT ═══════════════════════════════════════════════════════════

@@ -113,6 +113,9 @@ function SkillRating({
   )
 }
 
+const PLAYER_TABS = ['overview', 'development', 'measurements', 'journal', 'reports'] as const
+type PlayerTab = typeof PLAYER_TABS[number]
+
 function PlayerDetailContent() {
   const params = useParams()
   const searchParams = useSearchParams()
@@ -121,8 +124,19 @@ function PlayerDetailContent() {
   const teamId = searchParams.get('teamId')
   const supabase = createSupabaseComponentClient()
 
-  const [activeTab, setActiveTab] = useState<
-    'overview' | 'development' | 'measurements' | 'journal' | 'reports'>('overview')
+  // ?tab= is read ONCE, as the initial value, and never again. A coach who
+  // arrives on the Development tab from a cross-link and then presses
+  // "Measurements" stays on Measurements; re-syncing to the query string would
+  // drag them back. Anything that is not a known tab falls through to
+  // 'overview' rather than rendering nothing, because the value comes from the
+  // address bar and is untrusted.
+  const initialTab = ((): PlayerTab => {
+    const t = searchParams.get('tab')
+    return t && (PLAYER_TABS as readonly string[]).indexOf(t) !== -1
+      ? (t as PlayerTab)
+      : 'overview'
+  })()
+  const [activeTab, setActiveTab] = useState<PlayerTab>(initialTab)
 
   // Writing a development report is a 'decide' action — see the comment in
   // app/api/player-reports/route.ts. A contributor keeping the book may read

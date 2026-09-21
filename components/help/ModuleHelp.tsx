@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { HelpCircle, X, ChevronRight, Lightbulb, AlertCircle } from 'lucide-react'
 import {
   HelpGuide, HelpModule, guideForModule, guideById, unmetRequirements, requirementMessage,
@@ -48,6 +49,12 @@ export function ModuleHelp({
   const track = useTracker()
   const { value, ready, set } = useUiPref(guide ? helpDismissKey(guide.id) : null)
   const [panelOpen, setPanelOpen] = useState(false)
+  // A guide's primary action is written for the Help Center, where "Open
+  // Playbooks" is the useful thing to offer. Rendered as an in-page card it
+  // becomes a button that reloads the page the coach is already standing on.
+  // Mounting the Playbooks guide on the Playbooks page is what surfaced this;
+  // the fix is general because every module's card has the same shape.
+  const here = usePathname()
 
   if (!guide) return null
 
@@ -72,6 +79,7 @@ export function ModuleHelp({
           ctx={ctx}
           hasTeam={hasTeam}
           can={can}
+          here={here}
           onDetails={() => openPanel('card')}
           onDismiss={dismiss}
           onAction={() =>
@@ -105,20 +113,38 @@ export function ModuleHelp({
 
 // ───────────────────────────────────────────────────────────────────────────
 
+/**
+ * Drops an action that points at the page it is being rendered on.
+ *
+ * Compares PATHS only — the action's href carries a teamId and the current
+ * location may not, and "Open Playbooks" on /dashboard/playbooks is the same
+ * dead end either way. A missing `here` (the panel, which can be opened from
+ * anywhere) leaves the action alone.
+ */
+function usefulAction(
+  action: ReturnType<typeof primaryActionFor>, here?: string | null,
+) {
+  if (!action || !here) return action
+  const path = action.href.split('?')[0].split('#')[0]
+  return path === here ? null : action
+}
+
 function FirstUseCard({
-  guide, ctx, hasTeam, can, onDetails, onDismiss, onAction,
+  guide, ctx, hasTeam, can, here, onDetails, onDismiss, onAction,
 }: {
   guide: HelpGuide
   ctx: HelpRouteContext
   hasTeam: boolean
   can: (c: 'record' | 'decide' | 'own') => boolean
+  /** The path this card is rendered on, so it can drop a self-referential action. */
+  here?: string | null
   onDetails: () => void
   onDismiss: () => void
   onAction: () => void
 }) {
   const unmet = unmetRequirements(guide, { hasTeam, can })
   const blocked = requirementMessage(guide, unmet)
-  const action = primaryActionFor(guide.id, ctx)
+  const action = usefulAction(primaryActionFor(guide.id, ctx), here)
 
   return (
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

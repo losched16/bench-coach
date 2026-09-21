@@ -52,12 +52,19 @@ said to use a Playbook for the whole team and a development plan when working
 with one kid — framing the distinction as team versus individual. That
 contradicted the guide's own step two steps above, which names "Whole Team"
 **and** "Specific Player" as the real options on the start dialog, and it
-would have sent a coach who wanted a set programme for a single player to the
+would have sent a coach who wanted a set program for a single player to the
 wrong tool.
 
 The distinction is **fixed sessions versus progression you assess**, and it
-holds at either size. Three assertions now pin it, including a negative one
-that fails if the prose ever prescribes a Playbook by team size again.
+holds at either size.
+
+> **Superseded by `docs/program-choice.md`.** Correcting one sentence in one
+> guide was not enough: the two features were confusing wherever a coach met
+> them, not only in the help. The wording above now lives in
+> `lib/programChoice.ts`, which the Playbooks page, the player profile and
+> both guides all render, and the exact copy is recorded in that document.
+> The quoted paragraph here is the version that shipped in `51a3b13` and is
+> kept for the record, not as current copy.
 
 ## What changed
 

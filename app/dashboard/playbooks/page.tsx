@@ -8,6 +8,9 @@ import { formatDate } from '@/lib/utils'
 import { DrillVideo, DrillVideoLookup } from '@/components/DrillVideo'
 import { useDrillResources } from '@/lib/useDrillResources'
 import { usePageView } from '@/lib/tracking'
+import { useRole } from '@/lib/useRole'
+import { ModuleHelp } from '@/components/help/ModuleHelp'
+import { ProgramChoiceNote } from '@/components/ProgramChoiceNote'
 
 interface PlaybookTemplate {
   id: string
@@ -99,6 +102,11 @@ function PlaybooksPageContent() {
   const teamId = searchParams.get('teamId')
   const supabase = createSupabaseComponentClient()
   const { drills: drillResources } = useDrillResources()
+  // Above every early return, deliberately. This page returns early for the
+  // session detail view and the loading state, and a hook below one of those
+  // is the bug that left the practice page white for four days.
+  const { can: allowed } = useRole(teamId)
+  const canDecide = allowed('decide')
 
   useEffect(() => {
     if (teamId) {
@@ -640,10 +648,33 @@ function PlaybooksPageContent() {
 
   return (
     <div className="space-y-6">
+      {/* The old subtitle was "Step-by-step training programs to build specific
+          skills", which is true of a development plan too and so told a coach
+          nothing about which of the two they were looking at. The note names
+          what a playbook is, says it works for a team OR one player, and
+          points at the other feature. Copy lives in lib/programChoice.ts so
+          this and the player profile cannot drift apart. */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900">Progression Playbooks</h2>
-        <p className="text-gray-600">Step-by-step training programs to build specific skills</p>
+        <ProgramChoiceNote
+          variant="playbooks"
+          teamId={teamId}
+          canCrossLink={canDecide}
+          className="mt-1 max-w-2xl"
+        />
       </div>
+
+      {/* suppressCard while any playbook is running: by then the coach has used
+          the screen, and the note above already introduces it. The first-use
+          card earns its place on an empty screen and nowhere else, so the two
+          never stack. */}
+      <ModuleHelp
+        module="playbooks"
+        ctx={{ teamId }}
+        hasTeam={!!teamId}
+        can={(c) => (c === 'decide' ? canDecide : true)}
+        suppressCard={activePlaybooks.length > 0}
+      />
 
       {/* Tabs */}
       <div className="flex space-x-1 bg-gray-100 rounded-lg p-1 w-fit">
@@ -681,7 +712,15 @@ function PlaybooksPageContent() {
           {activePlaybooks.length === 0 ? (
             <div className="bg-white rounded-lg shadow p-12 text-center">
               <Book className="mx-auto text-gray-400 mb-4" size={48} />
-              <p className="text-gray-600 mb-4">No active playbooks</p>
+              <p className="text-gray-600 mb-1">No active playbooks</p>
+              {/* The empty state is where a coach decides whether this screen
+                  is the one they wanted, so it repeats the choice rather than
+                  just offering a button. */}
+              <p className="text-sm text-gray-500 mb-4 max-w-md mx-auto">
+                Pick a program from the Library and start it for the whole team or
+                for one player. The sessions are set in advance — you work through
+                them in order.
+              </p>
               <button
                 onClick={() => setActiveTab('library')}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -937,9 +976,16 @@ function PlaybooksPageContent() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Assign To
                 </label>
+                {/* The point of confusion, said at the point of confusion.
+                    Both options run the identical program; picking a player
+                    here does NOT turn this into a development plan. */}
+                <p className="text-xs text-gray-500 mb-2">
+                  Same program either way — this only decides who it is tracked
+                  against.
+                </p>
                 <div className="flex space-x-3">
                   <button
                     onClick={() => setAssignTo('team')}
