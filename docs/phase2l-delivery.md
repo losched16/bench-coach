@@ -136,7 +136,7 @@ Baseline is back to **196, no new identities**.
 | `test:hook-order` | 120 files, 0 problems |
 | `lint:hooks` | clean |
 | typecheck | 196, no new identities |
-| `test:browser` | see below |
+| `test:browser` | **176 passed, 0 failed** (was 146) |
 
 Browser coverage added for all five surfaces: each renders, raises **no React
 error**, and offers a way into its guide; the Staff, AI Memory, League Admin
