@@ -95,12 +95,24 @@ honest omission, so it lives in CI instead.
 `.github/workflows/checks.yml` runs the gate, the slower test suites, and the
 Chromium smoke suite on every push and PR.
 
-**It is binding as of 2026-09-21.** A branch ruleset on `main` requires `gate`,
-`suites` and `browser`, requires a pull request, blocks force pushes, and has
-**an empty bypass list** — so it applies to the repository owner too. A red run
-now stops a merge.
+**It still blocks nothing, as of 2026-09-21.** A ruleset was configured on that
+date with `gate`, `suites`, `browser`, a pull-request requirement and an empty
+bypass list — and it did **not** take effect. Tested by pushing straight to
+`main` rather than by reading the settings page:
 
-It remains an artifact store as well (it uploads the layout screenshots).
+```
+$ git push origin HEAD:main
+   9daf3ab..600145d  HEAD -> main      ← accepted; should have been rejected
+```
+
+Until a push to `main` is actually refused, this document says the workflow is
+advisory, because that is what the evidence says. **Do not describe it as a
+gate in a delivery report.** The repository is public, so the free-plan
+restriction on private-repo rulesets is not the cause; the likely causes are a
+ruleset left on **Disabled** or **Evaluate** instead of **Active**, one that
+was never saved, or one whose target pattern does not match `main`.
+
+It remains a signal and an artifact store (it uploads the layout screenshots).
 
 > **This does not make it a deploy gate.** Vercel builds from `main` and does
 > not consult GitHub checks. The ruleset controls what is *allowed to reach*
@@ -118,10 +130,11 @@ genuinely broken, edit the ruleset to drop that one check until it is fixed.
 gets put back. A bypass actor is invisible in the merge history and is the
 change that quietly turns the whole ruleset into decoration.
 
-### How it was configured
+### The configuration that was attempted
 
-Kept because a ruleset is not in the repository and cannot be diffed — if the
-settings are ever lost, this is the record of what they were:
+Kept because a ruleset is not in the repository and cannot be diffed. This is
+what was set on 2026-09-21; re-check each line against the settings page,
+because something here is not doing what it says:
 
 **The exact required-check names are `gate`, `suites` and `browser`** — nothing
 longer. A required status check is matched by the check-run name, which is the
