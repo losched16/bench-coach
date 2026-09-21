@@ -7,6 +7,7 @@ import { ArrowLeft, Save, Check, Star, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
 import { usePageView } from '@/lib/tracking'
 import { useRole } from '@/lib/useRole'
+import { ModuleHelp } from '@/components/help/ModuleHelp'
 import { AGE_GROUPS, isAgeGroup, nextAgeGroup } from '@/lib/ageGroups'
 
 const PRIMARY_GOALS = [
@@ -341,6 +342,13 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
+      <ModuleHelp
+        module="team-settings"
+        ctx={{ teamId }}
+        hasTeam={!!teamId}
+        can={(c) => (c === 'decide' ? role === 'owner' || role === 'admin' : true)}
+      />
+
       <div className="flex items-center justify-between">
         <div>
           <Link 

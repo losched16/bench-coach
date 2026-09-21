@@ -31,7 +31,7 @@ interface Props {
   ctx: HelpRouteContext
   /** For explaining a missing prerequisite rather than offering a dead action. */
   hasTeam?: boolean
-  can?: (c: 'record' | 'decide') => boolean
+  can?: (c: 'record' | 'decide' | 'own') => boolean
   /**
    * Set when the module already explains itself — an empty state with real
    * prose in it. The first-use card is suppressed and only the button shows,
@@ -111,7 +111,7 @@ function FirstUseCard({
   guide: HelpGuide
   ctx: HelpRouteContext
   hasTeam: boolean
-  can: (c: 'record' | 'decide') => boolean
+  can: (c: 'record' | 'decide' | 'own') => boolean
   onDetails: () => void
   onDismiss: () => void
   onAction: () => void
@@ -199,7 +199,7 @@ export function HelpPanel({
   guide: HelpGuide
   ctx: HelpRouteContext
   hasTeam: boolean
-  can: (c: 'record' | 'decide') => boolean
+  can: (c: 'record' | 'decide' | 'own') => boolean
   onClose: () => void
   onAction?: () => void
 }) {

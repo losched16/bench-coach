@@ -7,6 +7,7 @@ import {
   Brain, Trash2, User, Users, Settings, AlertCircle, 
   StickyNote, Lightbulb, RefreshCw, Info
 } from 'lucide-react'
+import { ModuleHelp } from '@/components/help/ModuleHelp'
 import { usePageView } from '@/lib/tracking'
 
 interface TeamNote {
@@ -188,6 +189,11 @@ function MemoryPageContent() {
 
   return (
     <div className="space-y-6">
+      {/* Anyone on the team can read and delete what is here, so no
+          capability is gated — the guide's job is saying that deleting is
+          global, which is the part a coach cannot tell from the screen. */}
+      <ModuleHelp module="ai-memory" ctx={{ teamId }} hasTeam={!!teamId} />
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>

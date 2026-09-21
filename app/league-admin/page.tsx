@@ -11,6 +11,7 @@ import {
   CoachTable, TeamTable, DivisionSummary,
   type CoachRow, type TeamRow, type DivisionRow,
 } from '@/components/league/LeagueAdminTables'
+import { ModuleHelp } from '@/components/help/ModuleHelp'
 
 // The commissioner's dashboard.
 //
@@ -262,6 +263,14 @@ export default function LeagueAdminPage() {
           </div>
         </div>
       )}
+
+      {/* Above the adoption numbers, because the guide's main job is saying
+          what those numbers are AND are not — this dashboard shows adoption
+          and has no route into what coaches record about children. No team
+          context: administering a league is not coaching a team. */}
+      <div className="mt-6">
+        <ModuleHelp module="league-admin" ctx={{}} hasTeam />
+      </div>
 
       {/* KPIs */}
       {o && (

@@ -119,6 +119,19 @@ export function primaryActionFor(
       return { label: 'Open Lineup Builder', href: withTeam('/dashboard/lineup', ctx), enabled: !!ctx.teamId }
     case 'notes':
       return { label: 'Open Notes', href: withTeam('/dashboard/notes', ctx), enabled: !!ctx.teamId }
+    case 'staff':
+      return { label: 'Open Staff', href: withTeam('/dashboard/team', ctx), enabled: !!safeId(ctx.teamId) }
+    case 'ai-memory':
+      return { label: 'Open AI Memory', href: withTeam('/dashboard/memory', ctx), enabled: !!safeId(ctx.teamId) }
+    case 'team-settings':
+      return { label: 'Open Team Settings', href: withTeam('/dashboard/settings', ctx), enabled: !!safeId(ctx.teamId) }
+    case 'account':
+      // Your account, not a team's — deliberately carries no teamId.
+      return { label: 'Open Profile Settings', href: '/dashboard/profile', enabled: true }
+    case 'league-admin':
+      // The commissioner's dashboard lives outside /dashboard entirely, and
+      // it is /league-admin — /league is only an invitation link.
+      return { label: 'Open the league dashboard', href: '/league-admin', enabled: true }
     case 'getting-started':
       return { label: 'Open Roster', href: withTeam('/dashboard/roster', ctx), enabled: !!ctx.teamId }
     // Playbooks deliberately has no action. It is not in the sidebar, and

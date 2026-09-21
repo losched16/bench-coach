@@ -81,6 +81,12 @@ const SOURCES: Record<string, string> = {
   'log-entry': read('app/dashboard/log/page.tsx'),
   'stats': read('app/dashboard/stats/page.tsx'),
   'scouting': read('app/dashboard/scouting/page.tsx'),
+  'staff': read('app/dashboard/team/page.tsx'),
+  'ai-memory': read('app/dashboard/memory/page.tsx'),
+  'account': read('app/dashboard/profile/page.tsx'),
+  'team-settings': read('app/dashboard/settings/page.tsx'),
+  'league-admin': read('app/league-admin/page.tsx') +
+    read('components/league/LeagueAdminTables.tsx'),
 }
 
 const quoted = (guideId: string): string[] => {
@@ -306,6 +312,92 @@ check('and that a finalized report is revised rather than edited',
 check('parents still need no account',
   /do not need a BenchCoach account/.test(reportProse))
 
+// ── THE ADMINISTRATION MODULES ──────────────────────────────────────────────
+//
+// These are the guides a coach reads once and then acts on for a season. Two
+// of them touch access to children's records, so the tests below are about
+// what they may not promise rather than about how they read.
+
+// Staff: the role vocabulary has to be the one the app enforces, and the one
+// the role selector prints. A second vocabulary in the help is how a coach
+// ends up expecting a permission that does not exist.
+const staff = guideById('staff')!
+const staffProse = [...staff.steps.flatMap(x => [x.do, x.note || '']),
+  ...staff.problems.flatMap(x => [x.symptom, x.fix])].join(' ')
+const teamSrc = read('app/dashboard/team/page.tsx')
+for (const role of ['Admin', 'Contributor', 'Viewer', 'Team Owner']) {
+  check(`the staff guide uses the role name the page prints: ${role}`,
+    staffProse.includes(role) && teamSrc.includes(role))
+}
+check('and describes each role by what it can DO, in the capability words',
+  /read and ask|record what happens|decide things|manages staff/i.test(staffProse))
+check('it says a missing button is a role, not a fault',
+  staff.problems.some(p => /button is missing/i.test(p.symptom)))
+eq('managing staff is the owner\'s', staff.requires.includes('own'), true)
+check('the staff guide promises no email is sent',
+  /no email sent from here|send it however you normally/i.test(staffProse))
+
+// AI Memory: the surprising parts are that deleting is global and that the
+// preferences are the owner's. Both were read out of the page, not assumed —
+// an earlier note of mine guessed an assistant would see nothing here, and
+// the code says otherwise.
+const memory = guideById('ai-memory')!
+const memProse = [...memory.steps.flatMap(x => [x.do, x.note || '']),
+  ...memory.problems.flatMap(x => [x.symptom, x.fix])].join(' ')
+check('THE MEMORY GUIDE SAYS DELETING HERE DELETES EVERYWHERE',
+  /deletes the note or preference itself, for everyone|gone from Notes as well/i
+    .test(memProse), memProse.slice(0, 160))
+check('and that this page is a view rather than a second copy',
+  /not a second copy|same record shown from a different angle/i.test(memProse))
+check('it says preferences belong to the team owner, not the viewer',
+  /saved against the team owner|kept for the team owner/i.test(memProse))
+check('it says nothing is remembered without somebody accepting it',
+  /offers to and somebody accepts|does not store your conversations/i.test(memProse))
+check('AI MEMORY CLAIMS NO LEARNING THE PRODUCT DOES NOT DO',
+  !/\b(learns|training|trains on|improves itself|gets smarter)\b/i.test(memProse))
+
+// Account versus Team Settings: two routes, two scopes, and the likely error
+// is looking for one on the other.
+const account = guideById('account')!
+const teamSettings = guideById('team-settings')!
+check('the account guide sends season and branding to Team Settings',
+  account.problems.some(p => /season, focus areas or report branding/i.test(p.symptom)))
+check('and the team-settings guide sends password and billing to the account',
+  teamSettings.problems.some(p => /password or your subscription/i.test(p.symptom)))
+check('the account guide says it follows you between teams',
+  /follows you between teams|on every team/i.test(
+    [account.result, ...account.problems.map(p => p.fix)].join(' ')))
+check('the team-settings guide says it applies to the whole staff',
+  /everyone on the staff|everyone on the team|whole team/i.test(teamSettings.result),
+  teamSettings.result)
+eq('the account action carries no team id, because it is not a team thing',
+  primaryActionFor('account', { teamId: 't1' })!.href, '/dashboard/profile')
+check('and it works with no team selected at all',
+  primaryActionFor('account', {})!.enabled === true)
+
+// League Admin: the one guide where getting it wrong means a commissioner
+// believes they can read what coaches record about children.
+const league = guideById('league-admin')!
+const leagueProse = [league.purpose, league.summary,
+  ...league.steps.flatMap(x => [x.do, x.note || '']),
+  ...league.problems.flatMap(x => [x.symptom, x.fix]), league.result].join(' ')
+check('THE LEAGUE GUIDE SAYS THE DASHBOARD SHOWS ADOPTION ONLY',
+  /adoption only|shows adoption/i.test(leagueProse), leagueProse.slice(0, 160))
+check('AND THAT THERE IS NO ROUTE INTO WHAT COACHES RECORD',
+  /no route from here into|cannot, and that is deliberate/i.test(leagueProse))
+check('IT NAMES THE THINGS A LEAGUE ADMIN CANNOT SEE',
+  /player note/i.test(leagueProse) && /scouting/i.test(leagueProse) &&
+  /practice plan/i.test(leagueProse))
+check('IT SAYS SPONSORSHIP GRANTS NO PLAYER-LEVEL ACCESS',
+  /Sponsoring a league does not give you access/i.test(leagueProse))
+check('and that coaching a team in the league is a separate thing',
+  league.problems.some(p => /also coach a team/i.test(p.symptom)))
+check('the league guide points at /league-admin, not /league',
+  primaryActionFor('league-admin', {})!.href === '/league-admin')
+check('it uses the league role names the page prints',
+  ['Commissioner', 'Admin', 'Coaching director', 'Owner']
+    .every(r => leagueProse.includes(r)))
+
 // ── search ──────────────────────────────────────────────────────────────────
 //
 // The old Help Center matched titles only. Each of these is a word a coach
@@ -335,7 +427,8 @@ check('a title match outranks a body match',
 
 // ── requirements explain rather than hide ───────────────────────────────────
 
-const contributor = { hasTeam: true, can: (c: 'record' | 'decide') => c === 'record' }
+type Cap = 'record' | 'decide' | 'own'
+const contributor = { hasTeam: true, can: (c: Cap) => c === 'record' }
 const viewer = { hasTeam: true, can: () => false }
 const noTeam = { hasTeam: false, can: () => true }
 

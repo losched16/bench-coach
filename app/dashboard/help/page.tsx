@@ -6,6 +6,7 @@ import Link from 'next/link'
 import {
   Search, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, BookOpen,
   ClipboardList, Users, Target, Activity, FileText, Lightbulb, Info, Rocket,
+  Settings,
 } from 'lucide-react'
 import { useUiPref, ONBOARDING_PREF_KEY } from '@/lib/useUiPref'
 import { usePageView, useTracker } from '@/lib/tracking'
@@ -49,6 +50,7 @@ const TASK_ICON: Record<HelpTask, React.ElementType> = {
   'record-what-happened': FileText,
   'prepare-for-a-game': Activity,
   'player-report': BookOpen,
+  'set-things-up': Settings,
 }
 
 function HelpContent() {

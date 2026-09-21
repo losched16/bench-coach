@@ -40,6 +40,11 @@ export type HelpModule =
   | 'log-entry'
   | 'stats'
   | 'scouting'
+  | 'staff'
+  | 'ai-memory'
+  | 'account'
+  | 'team-settings'
+  | 'league-admin'
   | 'playbooks'
   | 'getting-started'
 
@@ -51,6 +56,7 @@ export type HelpTask =
   | 'record-what-happened'
   | 'prepare-for-a-game'
   | 'player-report'
+  | 'set-things-up'
 
 /**
  * A capability from lib/authz, or 'team' meaning "any team selected".
@@ -59,7 +65,10 @@ export type HelpTask =
  * will fail. A contributor reading the practice guide is told the head coach
  * builds plans, not shown a button that 403s.
  */
-export type HelpRequirement = 'team' | 'record' | 'decide'
+// 'own' is the team owner — staff and billing. It is a real rung in
+// lib/authz.ts and Staff genuinely requires it, so the registry carries it
+// rather than pretending 'decide' is close enough.
+export type HelpRequirement = 'team' | 'record' | 'decide' | 'own'
 
 export interface HelpStep {
   /** Imperative, one action. Contains the exact control name in quotes. */
@@ -862,6 +871,270 @@ export const HELP_GUIDES: HelpGuide[] = [
     version: 1,
   },
   {
+    id: 'staff',
+    module: 'staff',
+    tasks: ['set-things-up'],
+    title: 'Add another coach',
+    purpose:
+      'Invite the other coaches on your team and decide what each of them can do.',
+    summary: 'Invite a coach, pick their role, and know what that role means.',
+    requires: ['team', 'own'],
+    requiresNote:
+      'Only the team owner manages staff. Everyone else can see who is on the team.',
+    steps: [
+      { do: 'Open Staff and press "Invite Coach".' },
+      {
+        do: 'Pick the role you want them to have before you send it.',
+        note: 'Admin, Contributor or Viewer. The page describes each one next to the choice, and those descriptions are what the app actually enforces.',
+      },
+      {
+        do: 'Set how long the link should last, then copy it and send it however you normally talk to them.',
+        note: 'The link is the invitation — there is no email sent from here.',
+      },
+      {
+        do: 'Check "Active Invite Links" later to see what is still outstanding.',
+      },
+      {
+        do: 'Use "Remove Member" if somebody leaves the team.',
+      },
+    ],
+    example:
+      'Your assistant needs to keep the book on Saturday but should not be rewriting lineups. You invite him as a Contributor, send him the link, and he can log entries and keep pitch counts without being able to change the plan.',
+    problems: [
+      {
+        // The vocabulary the whole product leans on, in the page's own words.
+        symptom: 'You are not sure which role to give somebody.',
+        fix: 'Viewer can read and ask CoachAI. Contributor can also record what happens — log entries, keep the book, count pitches. Admin can decide things: build practice plans and lineups, start development plans, write reports. Only the Team Owner manages staff and billing.',
+      },
+      {
+        symptom: 'Somebody says a button is missing.',
+        fix: 'That is their role, not a bug. Change it here and it takes effect for them straight away.',
+      },
+      {
+        symptom: 'The invite link stopped working.',
+        fix: 'Links expire on the date you set. Send a new one from "Invite Coach" — nothing is lost by making another.',
+      },
+      {
+        symptom: 'There is no Invite Coach button.',
+        fix: 'You are not the team owner. The owner is named at the top of this page; ask them.',
+      },
+    ],
+    result:
+      'The coach joins your team with the role you picked, and can be changed or removed here later.',
+    nextAction: 'Show them where the roster and practice plans are.',
+    related: ['roster', 'account'],
+    synonyms: [
+      'staff', 'coaches', 'invite', 'permissions', 'roles', 'access',
+      'assistant', 'admin', 'who can', 'add a coach', 'remove',
+    ],
+    version: 1,
+  },
+  {
+    id: 'ai-memory',
+    module: 'ai-memory',
+    tasks: ['set-things-up'],
+    title: 'See what the AI remembers',
+    purpose:
+      'Look at everything CoachAI reads about your team before it answers, and delete anything that should not be there.',
+    summary: 'Everything CoachAI reads before it answers, in one place.',
+    requires: ['team'],
+    steps: [
+      {
+        do: 'Open AI Memory to see three lists: "Team Notes", "Player Notes" and "Coach Preferences".',
+        note: 'The notes are the ones you wrote elsewhere in the app. This page is a view of them, not a second copy.',
+      },
+      {
+        do: 'Read "Coach Preferences" — these are things CoachAI offered to remember and somebody accepted.',
+        note: 'They are saved against the team owner, so everyone on the staff sees the same list here.',
+      },
+      {
+        do: 'Delete anything that is out of date using the bin icon next to it.',
+        note: 'That deletes the note or preference itself, for everyone on the team. It is not hidden from this page only.',
+      },
+      { do: 'Press "Refresh" if you have just written something and want to see it here.' },
+    ],
+    example:
+      'CoachAI keeps suggesting a drill you stopped using in April. You open AI Memory, find the preference that says you like it, and delete it. The next answer does not mention it.',
+    problems: [
+      {
+        symptom: 'You want to know why CoachAI said something.',
+        fix: 'Everything on this page is what it had to work from. If an answer looks odd, the reason is usually a note here that is no longer true.',
+      },
+      {
+        symptom: 'Deleting a note here — does that delete it everywhere?',
+        fix: 'Yes. A team note deleted here is gone from Notes as well, for the whole staff. This is the same record shown from a different angle, not a copy.',
+      },
+      {
+        symptom: 'Nothing is listed under Coach Preferences.',
+        fix: 'Nothing has been saved yet. CoachAI only remembers something when it offers to and somebody accepts — it does not store your conversations on its own.',
+      },
+      {
+        symptom: 'You expected to see your own preferences and these are somebody else\'s.',
+        fix: 'Preferences are kept for the team owner, so the whole staff sees one shared list rather than a separate one each.',
+      },
+    ],
+    result:
+      'What you delete is gone for the team, and CoachAI stops using it from the next answer.',
+    nextAction: 'Ask CoachAI something and see whether the answer improved.',
+    related: ['coachai', 'notes', 'staff'],
+    synonyms: [
+      'memory', 'remembers', 'ai', 'preferences', 'forget', 'delete',
+      'privacy', 'what it knows', 'stored', 'context',
+    ],
+    version: 1,
+  },
+  {
+    id: 'account',
+    module: 'account',
+    tasks: ['set-things-up'],
+    title: 'Your account and billing',
+    purpose:
+      'Change your own name and password, see which teams you are on, and manage what you pay.',
+    summary: 'Your name, your password, your subscription. Not your team.',
+    requires: [],
+    steps: [
+      { do: 'Open Profile Settings from your account menu.' },
+      {
+        do: 'Change the name other coaches see under "Profile Information".',
+        note: 'Your email cannot be changed here — the page says so next to it.',
+      },
+      { do: 'Use "Change Password" to set a new one.' },
+      {
+        do: 'Check "Teams Owned" and "Team Memberships" to see where you have access.',
+      },
+      {
+        do: 'Use "Manage Billing" for anything to do with your subscription.',
+      },
+    ],
+    problems: [
+      {
+        // Two routes, two different scopes. Confusing them is the likely error.
+        symptom: 'You are looking for the season, focus areas or report branding.',
+        fix: 'Those are Team Settings, not your account. This page is about you and follows you between teams; Team Settings is about one team and changes what everyone on it sees.',
+      },
+      {
+        symptom: 'There is no billing to manage.',
+        fix: 'Billing appears once there is a subscription on your account. If your league bought BenchCoach for you, there may be nothing here to manage and that is correct.',
+      },
+      {
+        symptom: 'You want to change your email.',
+        fix: 'You cannot from here. Everything else on the page is editable.',
+      },
+    ],
+    result: 'Changes to your name and password apply to you everywhere, on every team.',
+    nextAction: 'Set up the team itself in Team Settings.',
+    related: ['team-settings', 'staff'],
+    synonyms: [
+      'account', 'profile', 'password', 'billing', 'subscription', 'payment',
+      'my name', 'sign in', 'plan', 'upgrade',
+    ],
+    version: 1,
+  },
+  {
+    id: 'team-settings',
+    module: 'team-settings',
+    tasks: ['set-things-up'],
+    title: 'Set up the team',
+    purpose:
+      'Name the season, set what you are working on, and choose how player reports are branded.',
+    summary: 'The season, the focus areas, and what reports look like.',
+    requires: ['team', 'decide'],
+    steps: [
+      { do: 'Open Team Settings and check "Team Info" is right.' },
+      {
+        do: 'Set the season under "Season" — a name, a start and an end.',
+        note: 'Season Progress on the dashboard is worked out from those dates.',
+      },
+      {
+        do: 'Pick your "Focus Areas" — what the team is currently working on.',
+        note: 'Practice plans and CoachAI lean on these, so keeping them current changes what you get suggested.',
+      },
+      {
+        do: 'Set "Player Report Branding" if you want reports to carry your own name rather than BenchCoach\'s.',
+      },
+    ],
+    problems: [
+      {
+        symptom: 'You are looking for your password or your subscription.',
+        fix: 'Those are your account, not this team. This page changes things for everyone on the team; your account follows you between teams.',
+      },
+      {
+        symptom: 'Season Progress looks wrong on the dashboard.',
+        fix: 'Check the season start and end dates here. That bar is calculated from them and nothing else.',
+      },
+      {
+        symptom: 'You cannot change anything.',
+        fix: 'Team settings are the head coach\'s. You can see what they are set to.',
+      },
+    ],
+    result: 'Settings apply to the whole team, and everyone on the staff sees them.',
+    nextAction: 'Invite the rest of your coaches from Staff.',
+    related: ['account', 'staff', 'player-reports'],
+    synonyms: [
+      'settings', 'season', 'focus areas', 'branding', 'team name',
+      'logo', 'report header', 'configure',
+    ],
+    version: 1,
+  },
+  {
+    id: 'league-admin',
+    module: 'league-admin',
+    tasks: ['set-things-up'],
+    title: 'Run a league',
+    purpose:
+      'Set up a league\'s seasons, divisions and teams, invite its coaches, and see how many of them are actually using BenchCoach.',
+    summary: 'Seasons, divisions, teams and coaches — and adoption, not coaching.',
+    requires: [],
+    requiresNote:
+      'League administration is separate from coaching a team. Being a league admin does not put you on any team.',
+    steps: [
+      {
+        do: 'Open the league dashboard and create a season with "New season".',
+        note: 'Everything else hangs off a season, so this comes first.',
+      },
+      { do: 'Add your divisions with "New division", then teams with "New team".' },
+      {
+        do: 'Invite each team\'s coach and copy the link you are given.',
+        note: 'You send the link yourself. The coach signs up through it and lands on their own team.',
+      },
+      {
+        do: 'Use "Add administrator" to give somebody else league access.',
+        note: 'Commissioner, Admin, Coaching director or Owner. Only the owner or a commissioner can change who administers a league.',
+      },
+      { do: 'Watch the adoption numbers to see who has actually opened the app.' },
+    ],
+    example:
+      'Before the spring season you create Spring 2027, add three divisions, create twelve teams and send twelve invite links. Two weeks in, the dashboard shows nine coaches activated and four making practice plans — so you know who to ring.',
+    problems: [
+      {
+        // The boundary that matters, stated as plainly as it can be.
+        symptom: 'You want to see a team\'s practice plans, notes or scouting.',
+        fix: 'You cannot, and that is deliberate. This dashboard shows adoption only — who was invited, who accepted, who has opened the app, how many plans exist. There is no route from here into a plan\'s contents, a player note, a scouting report or a CoachAI conversation. Sponsoring a league does not give you access to what its coaches record about children.',
+      },
+      {
+        symptom: 'You also coach a team in this league.',
+        fix: 'That is a separate thing. You reach your own team the normal way, and the access you have there comes from being on that team — not from administering the league.',
+      },
+      {
+        symptom: 'A coach never accepted their invitation.',
+        fix: 'The coaches list shows who was invited and who activated. Send a fresh link; the old one may have expired.',
+      },
+      {
+        symptom: 'You cannot change seasons, divisions or teams.',
+        fix: 'Only a league admin can. If you are a coaching director you can see everything and change less — ask your commissioner.',
+      },
+    ],
+    result:
+      'The league structure and its invitations, plus a count of how many coaches are using it.',
+    nextAction: 'Chase the coaches who have not activated yet.',
+    related: ['staff'],
+    synonyms: [
+      'league', 'commissioner', 'division', 'season', 'adoption',
+      'organization', 'club', 'invite coaches', 'admin',
+    ],
+    version: 1,
+  },
+  {
     id: 'playbooks',
     module: 'playbooks',
     tasks: ['help-a-player'],
@@ -943,6 +1216,7 @@ export const HELP_TASKS: Array<{ id: HelpTask; label: string; blurb: string }> =
   { id: 'record-what-happened', label: 'Record what happened', blurb: 'Recaps, notes and observations.' },
   { id: 'prepare-for-a-game', label: 'Prepare for a game', blurb: 'Lineups, the book and pitch counts.' },
   { id: 'player-report', label: 'Create a player report', blurb: 'A write-up for a family.' },
+  { id: 'set-things-up', label: 'Set up my team and account', blurb: 'Staff, seasons, billing, what the AI remembers.' },
 ]
 
 export function guidesForTask(task: HelpTask): HelpGuide[] {
@@ -1001,7 +1275,7 @@ export function searchGuides(query: string): HelpGuide[] {
 
 export interface HelpContext {
   hasTeam: boolean
-  can: (c: 'record' | 'decide') => boolean
+  can: (c: 'record' | 'decide' | 'own') => boolean
 }
 
 /**

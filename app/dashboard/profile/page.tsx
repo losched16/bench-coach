@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { User, Lock, CreditCard, Shield, Check, AlertCircle, Loader2, ExternalLink } from 'lucide-react'
 import { usePageView } from '@/lib/tracking'
+import { ModuleHelp } from '@/components/help/ModuleHelp'
 
 interface CoachProfile {
   id: string
@@ -233,6 +234,11 @@ export default function ProfilePage() {
         <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
         <p className="text-gray-600 mt-1">Manage your account and subscription</p>
       </div>
+
+      {/* hasTeam is true unconditionally: this page is about the person, not
+          a team, and it is reachable with no team selected. Gating the guide
+          on a team would hide it from exactly the coach who has none yet. */}
+      <ModuleHelp module="account" ctx={{}} hasTeam />
 
       {/* Message */}
       {message && (

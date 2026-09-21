@@ -7,6 +7,7 @@ import {
   Users, Plus, Copy, Check, Trash2, Shield, Eye, Pencil, 
   Crown, Link2, RefreshCw, Clock, UserMinus, ChevronDown
 } from 'lucide-react'
+import { ModuleHelp } from '@/components/help/ModuleHelp'
 import { usePageView } from '@/lib/tracking'
 import { TeamOnly } from '@/components/TeamOnly'
 
@@ -333,6 +334,16 @@ function TeamMembersContent() {
 
   return (
     <div className="space-y-6">
+      {/* Managing staff is the owner's, and currentUserRole is already
+          resolved here — so the guide explains who invites rather than
+          offering a button that would refuse. */}
+      <ModuleHelp
+        module="staff"
+        ctx={{ teamId }}
+        hasTeam={!!teamId}
+        can={(c) => (c === 'decide' ? isOwner : true)}
+      />
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>

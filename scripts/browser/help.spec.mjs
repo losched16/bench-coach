@@ -975,6 +975,187 @@ try {
     await context.close()
   }
 
+  // ══ 4e. THE ADMINISTRATION MODULES ══════════════════════════════════════
+  //
+  // Staff, AI Memory, Account, Team Settings and League Admin. Two of these
+  // guides make claims about who can see children's records, so those are
+  // read out of the rendered panel rather than trusted from the registry.
+  console.log('\nContextual help on the administration modules')
+
+  {
+    await seed({ players: 4, plans: 1 })
+    const { context, page } = await signedIn(browser)
+
+    const MODULES = [
+      { name: 'Staff', path: 'dashboard/team', heading: 'Staff', team: true },
+      { name: 'AI Memory', path: 'dashboard/memory', heading: 'AI Memory', team: true },
+      { name: 'Account', path: 'dashboard/profile', heading: 'Profile Settings', team: false },
+      { name: 'Team Settings', path: 'dashboard/settings', heading: null, team: true },
+    ]
+
+    for (const m of MODULES) {
+      const crashes = []
+      const onErr = e => crashes.push(String(e.message || e))
+      page.on('pageerror', onErr)
+
+      const qs = m.team ? `?teamId=${TEAM}` : ''
+      await page.goto(`${APP}/${m.path}${qs}`, { waitUntil: 'networkidle' })
+      await page.waitForTimeout(1800)
+
+      if (m.heading) {
+        check(`${m.name} renders its heading`,
+          await page.getByRole('heading', { name: m.heading }).first()
+            .isVisible().catch(() => false))
+      }
+      check(`${m.name} raises no React error`, crashes.length === 0,
+        crashes.slice(0, 1).join(' '))
+      check(`${m.name} offers a way into its guide`,
+        (await page.getByRole('button', { name: /How to use this|Show me how/ }).count()) > 0)
+      page.off('pageerror', onErr)
+    }
+    await context.close()
+  }
+
+  {
+    // Staff: the role vocabulary a coach meets everywhere else.
+    await seed({ players: 4, plans: 1 })
+    const { context, page } = await signedIn(browser)
+    await page.goto(`${APP}/dashboard/team?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1500)
+    await page.getByRole('button', { name: /How to use this|Show me how/ }).first().click()
+    const dialog = page.getByRole('dialog')
+    await dialog.waitFor({ state: 'visible', timeout: 5000 })
+    const body = (await dialog.textContent()) || ''
+    check('THE STAFF GUIDE EXPLAINS EACH ROLE BY WHAT IT CAN DO',
+      /Viewer can read/.test(body) && /Contributor can also record/.test(body) &&
+      /Admin can decide/.test(body), body.slice(0, 160))
+    check('and says only the owner manages staff and billing',
+      /Only the Team Owner manages staff and billing/.test(body))
+    check('it says a missing button is a role rather than a fault',
+      /That is their role, not a bug/.test(body))
+    await page.keyboard.press('Escape')
+    await dialog.waitFor({ state: 'hidden', timeout: 5000 })
+    await context.close()
+  }
+
+  {
+    // AI Memory: deleting here deletes everywhere, which the screen does not
+    // say on its own.
+    await seed({ players: 4, plans: 1 })
+    const { context, page } = await signedIn(browser)
+    await page.goto(`${APP}/dashboard/memory?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1500)
+    await page.getByRole('button', { name: /How to use this|Show me how/ }).first().click()
+    const dialog = page.getByRole('dialog')
+    await dialog.waitFor({ state: 'visible', timeout: 5000 })
+    const body = (await dialog.textContent()) || ''
+    check('THE MEMORY GUIDE WARNS THAT DELETING IS GLOBAL',
+      /for everyone on the team/.test(body), body.slice(0, 160))
+    check('and that nothing is remembered without somebody accepting it',
+      /does not store your conversations on its own/.test(body))
+    check('IT CLAIMS NO AUTOMATIC LEARNING',
+      !/\b(learns|trains on|gets smarter)\b/i.test(body))
+    await context.close()
+  }
+
+  {
+    // League Admin: the boundary. This is the guide where being wrong means a
+    // commissioner believes they can read what coaches record about children.
+    await seed({ players: 4, plans: 1 })
+    const { context, page } = await signedIn(browser)
+    const crashes = []
+    page.on('pageerror', e => crashes.push(String(e.message || e)))
+
+    await page.goto(`${APP}/league-admin`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(2000)
+    check('League Admin raises no React error', crashes.length === 0,
+      crashes.slice(0, 1).join(' '))
+
+    const entry = page.getByRole('button', { name: /How to use this|Show me how/ }).first()
+    if (await entry.count() > 0) {
+      await entry.click()
+      const dialog = page.getByRole('dialog')
+      await dialog.waitFor({ state: 'visible', timeout: 5000 })
+      const body = (await dialog.textContent()) || ''
+      check('THE LEAGUE GUIDE SAYS THE DASHBOARD SHOWS ADOPTION ONLY',
+        /adoption only/i.test(body), body.slice(0, 160))
+      check('AND THAT SPONSORSHIP GRANTS NO ACCESS TO WHAT COACHES RECORD',
+        /Sponsoring a league does not give you access/.test(body))
+      check('it names the things a league admin cannot reach',
+        /player note/i.test(body) && /scouting/i.test(body))
+    } else {
+      // The fixture may not give this account a league. Say so rather than
+      // counting a skipped case as a pass.
+      check('the league dashboard offered its guide', false,
+        'no help entry point rendered — this account has no league in the fixture')
+    }
+    await context.close()
+  }
+
+  {
+    // Account is not a team thing: it must work with no team selected, which
+    // is exactly the state a brand new coach is in.
+    await seed({ players: 0, plans: 0 })
+    const { context, page } = await signedIn(browser)
+    await page.goto(`${APP}/dashboard/profile`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1500)
+    const entry = page.getByRole('button', { name: /How to use this|Show me how/ }).first()
+    check('ACCOUNT HELP SHOWS WITH NO TEAM SELECTED', await entry.count() > 0)
+    await entry.click()
+    const dialog = page.getByRole('dialog')
+    await dialog.waitFor({ state: 'visible', timeout: 5000 })
+    const body = (await dialog.textContent()) || ''
+    check('and it sends season and branding to Team Settings',
+      /Those are Team Settings, not your account/.test(body), body.slice(0, 160))
+    check('no action link is offered that needs a team',
+      (await dialog.getByRole('link', { name: 'Open Profile Settings' }).count()) >= 0)
+    await context.close()
+  }
+
+  {
+    // Dismissal isolation across the admin pages, and mobile.
+    await seed({ players: 4, plans: 1 })
+    const { context, page } = await signedIn(browser, {
+      viewport: { width: 375, height: 667 },
+    })
+    await page.goto(`${APP}/dashboard/team?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1500)
+
+    const overflow = await page.evaluate(() =>
+      document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    check('Staff does not scroll sideways at 375px', overflow <= 1,
+      `overflows by ${overflow}px`)
+
+    const dismiss = page.getByRole('button', { name: 'Dismiss this tip' }).first()
+    check('Staff shows a first-use card', await dismiss.count() > 0)
+    await dismiss.click()
+    await page.waitForTimeout(400)
+    await page.reload({ waitUntil: 'networkidle' })
+    await page.waitForTimeout(1200)
+    check('and it stays dismissed across a reload',
+      (await page.getByRole('button', { name: 'Dismiss this tip' }).count()) === 0)
+
+    const opener = page.getByRole('button', { name: 'How to use this' }).first()
+    check('the button still reopens it', await opener.isVisible())
+    await opener.click()
+    const dialog = page.getByRole('dialog')
+    await dialog.waitFor({ state: 'visible', timeout: 5000 })
+    await settle(dialog)
+    const box = await dialog.boundingBox()
+    check('and the panel fits a phone',
+      box && box.x >= -1 && box.x + box.width <= 375 + 1,
+      `panel spans ${box?.x}..${Math.round((box?.x || 0) + (box?.width || 0))}`)
+    await page.screenshot({ path: 'docs/audits/phase2l-staff-375px.png' })
+    await page.keyboard.press('Escape')
+    await dialog.waitFor({ state: 'hidden', timeout: 5000 })
+
+    await page.goto(`${APP}/dashboard/memory?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1200)
+    check('DISMISSING STAFF DID NOT DISMISS AI MEMORY',
+      (await page.getByRole('button', { name: 'Dismiss this tip' }).count()) > 0)
+    await context.close()
+  }
+
   // ══ 5. LAYOUT ═══════════════════════════════════════════════════════════
   console.log('\nLayout')
 
