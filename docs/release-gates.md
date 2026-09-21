@@ -95,14 +95,33 @@ honest omission, so it lives in CI instead.
 `.github/workflows/checks.yml` runs the gate, the slower test suites, and the
 Chromium smoke suite on every push and PR.
 
-**It blocks nothing.** There is no branch protection on this repository, so a
-red run does not stop a merge and does not stop a deploy. It is a signal and an
-artifact store (it uploads the layout screenshots), nothing more.
+**It is binding as of 2026-09-21.** A branch ruleset on `main` requires `gate`,
+`suites` and `browser`, requires a pull request, blocks force pushes, and has
+**an empty bypass list** — so it applies to the repository owner too. A red run
+now stops a merge.
 
-### To make it binding
+It remains an artifact store as well (it uploads the layout screenshots).
 
-This is a repository settings change, and it is Clint's to make, because it
-also changes how *he* pushes:
+> **This does not make it a deploy gate.** Vercel builds from `main` and does
+> not consult GitHub checks. The ruleset controls what is *allowed to reach*
+> `main`; `npm run gate` running as `prebuild` is still the only thing that can
+> refuse a deploy once something is there. Two different gates, in series.
+
+### What changed, and the escape hatch
+
+The job most likely to freeze `main` is `browser` — five minutes of Chromium,
+and it had a flake fixed in `073f4ad` the same morning this was turned on. If
+it goes red for its own reasons: **re-run the job first**, and if it is
+genuinely broken, edit the ruleset to drop that one check until it is fixed.
+
+**Do not add a bypass actor.** Dropping one named check is narrow, visible and
+gets put back. A bypass actor is invisible in the merge history and is the
+change that quietly turns the whole ruleset into decoration.
+
+### How it was configured
+
+Kept because a ruleset is not in the repository and cannot be diffed — if the
+settings are ever lost, this is the record of what they were:
 
 **The exact required-check names are `gate`, `suites` and `browser`** — nothing
 longer. A required status check is matched by the check-run name, which is the
@@ -123,22 +142,18 @@ Settings needed, in order:
    - add `browser`
    - also tick **Require branches to be up to date before merging**, or a
      green check on a stale branch can still merge something broken
-4. Enable **Require a pull request before merging** as well, unless you want
-   the ruleset to apply only to PRs. **Without this, a direct
-   `git push origin main` is not covered by required checks** — which is how
-   every commit in this repository has been made, so leaving it off means the
-   ruleset changes nothing in practice.
-5. **Bypass list:** decide deliberately. Adding yourself as a bypass actor
-   keeps your own direct pushes working and makes the checks binding only on
-   pull requests. Leaving it empty means you must open a PR like anyone else —
-   including to fix a broken `main`.
+4. **Require a pull request before merging** — enabled, 0 required approvals.
+   Without it a direct `git push origin main` is not covered by required
+   checks, which is how every commit before this one was made. This is the
+   setting that actually changed anything.
+5. **Block force pushes** — enabled.
+6. **Bypass list: EMPTY.** Chosen deliberately. The failure this guards
+   against is a tired solo founder pushing at midnight, which is exactly when
+   a bypass would be used.
 
-The trade in step 4 is the real decision, and it is yours: binding checks and
-a PR for every change, or direct pushes and advisory checks. There is no
-configuration that gives both.
-
-Until a ruleset exists, this document should keep saying the workflow is
-advisory. Do not describe it as a gate in a delivery report.
+There is no configuration that gives both binding checks and direct pushes.
+Every change now goes branch → PR → checks → merge, including changes made by
+Claude, and including a fix to a broken `main`.
 
 ## Both hook checks, on purpose
 
