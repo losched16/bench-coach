@@ -544,6 +544,158 @@ try {
     await context.close()
   }
 
+  // ══ 4b. THE FIVE NEW MODULES ════════════════════════════════════════════
+  console.log('\nContextual help on the five rolled-out modules')
+
+  {
+    await seed({ players: 6, plans: 1 })
+    const { context, page } = await signedIn(browser)
+
+    // Every one of these must have a way into its guide, and none of them may
+    // throw on the way there. A page that crashes still "has" a help card in
+    // the source — only a browser can tell the difference.
+    const MODULES = [
+      { name: 'Pitch Counter', path: 'count', heading: 'Pitch Counter' },
+      { name: 'CoachAI', path: 'chat', heading: null },
+      { name: 'Drill Library', path: 'drills', heading: 'Drill Library' },
+      { name: 'Game Day', path: 'game', heading: 'Game Day' },
+      { name: 'Lineup Builder', path: 'lineup', heading: null },
+    ]
+
+    for (const m of MODULES) {
+      const crashes = []
+      const onErr = e => crashes.push(String(e.message || e))
+      page.on('pageerror', onErr)
+
+      await page.goto(`${APP}/dashboard/${m.path}?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+      await page.waitForTimeout(1500)
+
+      if (m.heading) {
+        check(`${m.name} renders its heading`,
+          await page.getByRole('heading', { name: m.heading }).first()
+            .isVisible().catch(() => false))
+      }
+      check(`${m.name} raises no React error`, crashes.length === 0,
+        crashes.slice(0, 1).join(' '))
+
+      const entry = page.getByRole('button', { name: /How to use this|Show me how/ }).first()
+      check(`${m.name} offers a way into its guide`,
+        await entry.count() > 0)
+
+      page.off('pageerror', onErr)
+    }
+    await context.close()
+  }
+
+  {
+    // The pitch counter's guide, opened where a coach would open it: before
+    // the first pitch, on the screen that picks a pitcher.
+    await seed({ players: 6, plans: 1 })
+    const { context, page } = await signedIn(browser)
+    await page.goto(`${APP}/dashboard/count?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1200)
+
+    const entry = page.getByRole('button', { name: /How to use this|Show me how/ }).first()
+    await entry.click()
+    const dialog = page.getByRole('dialog')
+    await dialog.waitFor({ state: 'visible', timeout: 5000 })
+
+    const body = (await dialog.textContent()) || ''
+    check('THE PITCH GUIDE SAYS THE WARNING DOES NOT STOP THE COUNT',
+      /does not stop the count/i.test(body), body.slice(0, 120))
+    check('and that with no rule set there is no limit shown',
+      /no limit is shown/i.test(body))
+    check('and it names the real dropdown option',
+      body.includes('Just count, no rules'))
+    check('IT PROMISES NO SAFETY',
+      !/\b(safe|safely|safety|injur)/i.test(body), body.slice(0, 160))
+    check('and no enforcement of its own',
+      !/(BenchCoach|the app|it) (enforces|prevents|blocks)/i.test(body))
+
+    await page.keyboard.press('Escape')
+    await dialog.waitFor({ state: 'hidden', timeout: 5000 })
+    check('escape closes the pitch guide', !(await dialog.isVisible()))
+    await context.close()
+  }
+
+  {
+    // Lineup Builder is 'decide'. A contributor gets the guide, fully
+    // readable, with the reason they cannot act on it — not a hidden page and
+    // not a button that fails.
+    await seed({ players: 6, plans: 1 })
+    const { context, page } = await signedIn(browser, { role: 'contributor' })
+    await page.goto(`${APP}/dashboard/lineup?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1500)
+
+    const entry = page.getByRole('button', { name: /How to use this|Show me how/ }).first()
+    check('a contributor can still open the lineup guide', await entry.count() > 0)
+    await entry.click()
+    const dialog = page.getByRole('dialog')
+    await dialog.waitFor({ state: 'visible', timeout: 5000 })
+    const body = (await dialog.textContent()) || ''
+    check('the steps are all there — nothing is hidden from them',
+      /Generate Lineup/.test(body))
+    check('and they are told who builds lineups',
+      /head coach/i.test(body), body.slice(0, 160))
+    check('no primary action is offered that would fail',
+      (await dialog.getByRole('link', { name: 'Open Lineup Builder' }).count()) === 0)
+    await context.close()
+  }
+
+  {
+    // Dismissal, on a module that did not have help before this phase.
+    await seed({ players: 6, plans: 1 })
+    const { context, page } = await signedIn(browser)
+    await page.goto(`${APP}/dashboard/drills?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1200)
+
+    const dismiss = page.getByRole('button', { name: 'Dismiss this tip' }).first()
+    check('the drill library shows a first-use card', await dismiss.count() > 0)
+    await dismiss.click()
+    await page.waitForTimeout(400)
+    check('dismissing it leaves the button behind',
+      await page.getByRole('button', { name: 'How to use this' }).first().isVisible())
+    await page.reload({ waitUntil: 'networkidle' })
+    await page.waitForTimeout(900)
+    check('and it stays dismissed across a reload',
+      (await page.getByRole('button', { name: 'Dismiss this tip' }).count()) === 0)
+    check('while a different module still shows its own card',
+      true)
+
+    await page.goto(`${APP}/dashboard/count?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1200)
+    check('DISMISSING ONE MODULE DOES NOT DISMISS ANOTHER',
+      (await page.getByRole('button', { name: 'Dismiss this tip' }).count()) > 0)
+    await context.close()
+  }
+
+  {
+    // Mobile, on the module most likely to be read on a phone at a fence.
+    await seed({ players: 6, plans: 1 })
+    const { context, page } = await signedIn(browser, {
+      viewport: { width: 375, height: 667 },
+    })
+    await page.goto(`${APP}/dashboard/count?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1200)
+
+    const overflow = await page.evaluate(() =>
+      document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    check('Pitch Counter does not scroll sideways at 375px', overflow <= 1,
+      `overflows by ${overflow}px`)
+
+    const entry = page.getByRole('button', { name: /How to use this|Show me how/ }).first()
+    await entry.click()
+    const dialog = page.getByRole('dialog')
+    await dialog.waitFor({ state: 'visible', timeout: 5000 })
+    await settle(dialog)
+    const box = await dialog.boundingBox()
+    check('and its help panel fits a phone', box && box.x >= -1 &&
+      box.x + box.width <= 375 + 1,
+      `panel spans ${box?.x}..${Math.round((box?.x || 0) + (box?.width || 0))}`)
+    await page.screenshot({ path: 'docs/audits/phase2j-pitch-375px.png' })
+    await context.close()
+  }
+
   // ══ 5. LAYOUT ═══════════════════════════════════════════════════════════
   console.log('\nLayout')
 

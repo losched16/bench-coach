@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { Plus, Calendar, Shield, RotateCcw, Save, Trash2, ChevronDown, ChevronUp, Users, AlertCircle, PencilLine, Camera } from 'lucide-react'
 import { usePageView } from '@/lib/tracking'
+import { ModuleHelp } from '@/components/help/ModuleHelp'
+import { useRole } from '@/lib/useRole'
 import { LINEUP_MODES, STRATEGIES, LineupMode, Strategy } from '@/lib/lineup'
 import { LineupRules } from '@/components/LineupRules'
 import { ManualLineup, BuiltLineup } from '@/components/ManualLineup'
@@ -142,6 +144,8 @@ function LineupContent() {
 
   const searchParams = useSearchParams()
   const teamId = searchParams.get('teamId')
+  // Building a lineup is 'decide'. A contributor reads it and keeps the book.
+  const { can: allowed } = useRole(teamId)
   // Arriving from a game in progress. Without this the builder had no idea
   // which game it was building for, so it asked for the date and opponent the
   // coach had already entered and then went looking for a matching game by
@@ -650,6 +654,13 @@ function LineupContent() {
 
   return (
     <div className="space-y-6">
+      <ModuleHelp
+        module="lineups"
+        ctx={{ teamId }}
+        hasTeam={!!teamId}
+        can={allowed}
+      />
+
       {/* Where this lineup is going. Arriving from a live game with no sign
           of that game is what made this feel like a different app. */}
       {forGame && (

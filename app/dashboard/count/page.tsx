@@ -7,7 +7,10 @@ import {
   Plus, Minus, Loader2, X, Users, Shield, Check, AlertTriangle, Clock, Trash2,
 } from 'lucide-react'
 import { usePageView, useTracker } from '@/lib/tracking'
+import { ModuleHelp } from '@/components/help/ModuleHelp'
+import { useRole } from '@/lib/useRole'
 import { FEATURE_UNAVAILABLE } from '@/lib/migrationHints'
+import { pitchWarning } from '@/lib/pitchCount'
 
 // The pitch counter, with no game attached.
 //
@@ -43,6 +46,8 @@ function CountContent() {
   usePageView('count')
   const track = useTracker()
   const teamId = useSearchParams().get('teamId')
+  // Keeping a pitch count is 'record' — an assistant can do it.
+  const { can: allowed } = useRole(teamId)
   const supabase = createSupabaseComponentClient()
 
   const [coachId, setCoachId] = useState<string | null>(null)
@@ -272,8 +277,10 @@ function CountContent() {
       ...open.filter(s => s.id !== active.id && s.counted_on === active.counted_on),
     ]
     const rule = rules.find(r => r.id === active.rule_set_id)
-    const overDaily = rule?.daily_max ? count >= rule.daily_max : false
-    const nearDaily = rule?.daily_max ? count >= rule.daily_max - 10 && !overDaily : false
+    // lib/pitchCount.ts — same expressions, somewhere they can be tested.
+    const warning = pitchWarning(count, rule)
+    const overDaily = warning.level === 'over'
+    const nearDaily = warning.level === 'near'
 
     return (
       <div className="max-w-lg mx-auto">
@@ -338,11 +345,7 @@ function CountContent() {
                       : 'bg-amber-50 border border-amber-200 text-amber-900'
           }`}>
             <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" />
-            <span>
-              {overDaily
-                ? `Daily max for ${rule!.sanctioning_body} ${rule!.age_group} is ${rule!.daily_max}. He's at ${count}.`
-                : `${rule!.daily_max! - count} pitches to the daily max.`}
-            </span>
+            <span>{warning.message}</span>
           </div>
         )}
 
@@ -457,6 +460,17 @@ function CountContent() {
           pitcher too.
         </p>
       </div>
+
+      {/* ONLY ON THIS SCREEN. The counting screen above returns before it ever
+          gets here, which is deliberate: a coach with a pitcher on the mound is
+          not reading a help card, and anything competing with the big number is
+          in the way. The guide is reachable here, before the first pitch. */}
+      <ModuleHelp
+        module="pitch-counter"
+        ctx={{ teamId }}
+        hasTeam={!!teamId}
+        can={allowed}
+      />
 
       {needsMigration && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">

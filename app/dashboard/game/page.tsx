@@ -13,6 +13,8 @@ import { findExistingGame } from '@/lib/games'
 import { LiveLineup } from '@/components/LiveLineup'
 import { Scorebook } from '@/components/Scorebook'
 import { usePageView } from '@/lib/tracking'
+import { ModuleHelp } from '@/components/help/ModuleHelp'
+import { useRole } from '@/lib/useRole'
 
 interface Player {
   id: string
@@ -131,6 +133,8 @@ function GamePageContent() {
   const noteInputRef = useRef<HTMLTextAreaElement>(null)
   const searchParams = useSearchParams()
   const teamId = searchParams.get('teamId')
+  // Keeping the book is 'record'; building the lineup is 'decide'.
+  const { can: allowed } = useRole(teamId)
   const supabase = createSupabaseComponentClient()
 
   useEffect(() => {
@@ -632,6 +636,18 @@ function GamePageContent() {
             <Plus size={18} /> Start Game
           </button>
         </div>
+
+        {/* ONLY IN THE HISTORY VIEW. `view === 'live'`, `'setup'` and
+            `'completed'` all return before this line, so a coach with a game
+            running never sees it. Guidance during a live game is guidance in
+            the way. */}
+        <ModuleHelp
+          module="game-day"
+          ctx={{ teamId }}
+          hasTeam={!!teamId}
+          can={allowed}
+          className="mb-6"
+        />
 
         {games.length === 0 ? (
           <div className="text-center py-16">

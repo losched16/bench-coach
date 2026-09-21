@@ -113,6 +113,10 @@ export function primaryActionFor(
       return { label: 'Ask CoachAI', href: withTeam('/dashboard/chat', ctx), enabled: !!ctx.teamId }
     case 'game-day':
       return { label: 'Open Game Day', href: withTeam('/dashboard/game', ctx), enabled: !!ctx.teamId }
+    case 'pitch-counter':
+      return { label: 'Open Pitch Counter', href: withTeam('/dashboard/count', ctx), enabled: !!ctx.teamId }
+    case 'lineups':
+      return { label: 'Open Lineup Builder', href: withTeam('/dashboard/lineup', ctx), enabled: !!ctx.teamId }
     case 'notes':
       return { label: 'Open Notes', href: withTeam('/dashboard/notes', ctx), enabled: !!ctx.teamId }
     case 'getting-started':

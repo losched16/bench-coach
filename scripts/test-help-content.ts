@@ -51,9 +51,28 @@ check('every task lists at least one guide',
 // that renders it; if somebody renames a control, this fails and the guide gets
 // corrected instead of quietly lying.
 
-const practiceSrc = readFileSync(__dirname + '/../app/dashboard/practice/page.tsx', 'utf8')
-const rosterSrc = readFileSync(__dirname + '/../app/dashboard/roster/page.tsx', 'utf8')
-const chatSrc = readFileSync(__dirname + '/../app/dashboard/chat/page.tsx', 'utf8')
+const read = (rel: string) => readFileSync(__dirname + '/../' + rel, 'utf8')
+
+const practiceSrc = read('app/dashboard/practice/page.tsx')
+const rosterSrc = read('app/dashboard/roster/page.tsx')
+const chatSrc = read('app/dashboard/chat/page.tsx')
+
+// Which files render the controls each guide is allowed to name. A guide that
+// quotes a label not present in its own module's source is lying to a coach
+// standing in front of that screen.
+const SOURCES: Record<string, string> = {
+  'practice-plans': practiceSrc,
+  'roster': rosterSrc,
+  'coachai': chatSrc,
+  'pitch-counter': read('app/dashboard/count/page.tsx'),
+  'lineups': read('app/dashboard/lineup/page.tsx'),
+  'game-day': read('app/dashboard/game/page.tsx'),
+  // The library page is a shell; every control a coach touches lives in the
+  // finder components, so the guide is checked against all of them.
+  'drill-library': read('app/dashboard/drills/page.tsx') +
+    read('components/drillFinder/DrillFinder.tsx') +
+    read('components/drillFinder/DrillDetail.tsx'),
+}
 
 const quoted = (guideId: string): string[] => {
   const g = guideById(guideId)!
@@ -62,13 +81,11 @@ const quoted = (guideId: string): string[] => {
   return Array.from(text.matchAll(/[“"]([^”"]{2,40})[”"]/g)).map(m => m[1])
 }
 
-for (const label of quoted('practice-plans')) {
-  check(`practice guide names a real control: "${label}"`,
-    practiceSrc.includes(label), `not found in the practice page`)
-}
-for (const label of quoted('roster')) {
-  check(`roster guide names a real control: "${label}"`,
-    rosterSrc.includes(label), `not found in the roster page`)
+for (const [guideId, src] of Object.entries(SOURCES)) {
+  for (const label of quoted(guideId)) {
+    check(`${guideId} names a real control: "${label}"`,
+      src.includes(label), `not rendered by that module`)
+  }
 }
 check('the practice guide says "Use this plan", which is what the button says',
   quoted('practice-plans').includes('Use this plan'))
@@ -88,9 +105,18 @@ const allProse = HELP_GUIDES.map(g => [
 
 check('NOTHING claims every drill has a video',
   !/every drill.{0,30}video|all drills.{0,20}video/i.test(allProse))
-check('the drill guide says the opposite, because most do not',
-  /many do not|most do not/i.test(
-    guideById('drill-library')!.problems.map(p => p.fix).join(' ')))
+// The drill guide used to say "many do not", which is a claim about a
+// proportion that nothing keeps true as the library grows. It now says only
+// what is always true: some have one, some do not, and the written
+// instructions are the drill.
+const drillFix = guideById('drill-library')!.problems.map(p => p.fix).join(' ')
+check('the drill guide claims no proportion of drills with video',
+  !/\b(many|most|some|few|all|every|half)\b[^.]{0,30}\b(have|has|do not|don't|lack)\b[^.]{0,20}video/i
+    .test(drillFix), drillFix.slice(0, 120))
+check('and says a video appears where one exists',
+  /where a video exists|Not every drill has one/i.test(drillFix))
+check('while pointing the coach at the written instructions',
+  /written instructions/i.test(drillFix))
 check('no support email is invented',
   !/[a-z0-9._-]+@[a-z0-9.-]+\.[a-z]{2,}/i.test(allProse))
 check('no URLs in the prose — routing belongs to lib/helpRoutes',
@@ -122,6 +148,94 @@ check('the skill-development guide distinguishes a priority from a pathway',
 check('and the player-development guide draws the same line from the other side',
   guideById('player-development')!.problems.some(p =>
     /priority/i.test(p.symptom + p.fix)))
+
+// ── THE PITCH COUNTER GUIDE ─────────────────────────────────────────────────
+//
+// The highest-consequence prose in the product, and the only guide whose
+// failure mode is a child's arm rather than a wasted afternoon.
+//
+// The app shows a daily max from a rule set the coach optionally picks, warns
+// within ten pitches of it, and turns the count button red past it. IT NEVER
+// BLOCKS — there is no disabled state, no confirmation, no stop. A coach who
+// believes BenchCoach is keeping their pitcher legal, or safe, has been told
+// something false about something that matters.
+
+const pitch = guideById('pitch-counter')!
+const pitchProse = [
+  pitch.purpose, pitch.summary, pitch.requiresNote || '',
+  ...pitch.steps.flatMap(s => [s.do, s.note || '']),
+  pitch.example || '', ...pitch.problems.flatMap(p => [p.symptom, p.fix]),
+  pitch.result, pitch.nextAction,
+].join(' ')
+
+check('THE PITCH GUIDE SAYS THE WARNING DOES NOT STOP THE COUNT',
+  /does not stop the count|it does not stop|will let you|It will\./i.test(pitchProse),
+  pitchProse.slice(0, 200))
+check('and puts the decision back on the coach and the league',
+  /your decision|your league/i.test(pitchProse))
+// Enforcement language is only wrong when THE APP is the one doing it. "use
+// whichever your league enforces" is the correct sentence and an earlier,
+// blunter version of this check failed it — so the rule is per sentence, and
+// a sentence that attributes the enforcing to the league or the coach passes.
+const ENFORCING = /\b(enforce[sd]?|enforcement|prevents?|blocks?|will not let|stops? (you|them|him|her))\b/i
+const ATTRIBUTED_ELSEWHERE = /\b(your league|the league|your decision|league'?s? own|you)\b/i
+// No lookbehind — this repo compiles to ES5.
+const badEnforcement = pitchProse
+  .split(/[.!?]+\s+/)
+  .filter(sentence => ENFORCING.test(sentence) && !ATTRIBUTED_ELSEWHERE.test(sentence))
+check('IT CLAIMS NO ENFORCEMENT OF ITS OWN',
+  badEnforcement.length === 0, badEnforcement.join(' | ').slice(0, 200))
+check('IT CLAIMS NO COMPLIANCE',
+  !/\b(compliant|compliance|keeps? (them|him|her|you) legal|guarantee|ensures?)\b/i
+    .test(pitchProse))
+check('AND MAKES NO MEDICAL OR SAFETY CLAIM',
+  !/\b(safe|safely|safety|injur(y|ies|ed)|arm health|protects?|prevent(s|ing)? (injury|damage))\b/i
+    .test(pitchProse), pitchProse.slice(0, 200))
+check('it explains what happens with NO rule set chosen',
+  /no rule set|Just count, no rules/i.test(pitchProse) &&
+  /no limit is shown|there is no limit/i.test(pitchProse))
+check('it says the app does not know your league',
+  /does not know which rules|do not match/i.test(pitchProse))
+check('it explains the per-day, per-pitcher total rather than per-session',
+  /same day|carries on|one total per pitcher|the day stays as one total/i.test(pitchProse))
+check('it explains correcting a miscount',
+  pitch.problems.some(p => /wrong pitcher|double-tapped/i.test(p.symptom + p.fix)))
+check('and the rule sets may not match a league',
+  pitch.problems.some(p => /do not match how your league/i.test(p.symptom)))
+eq('keeping a pitch count is "record", not "decide" — an assistant can do it',
+  pitch.requires.includes('decide'), false)
+
+// ── the lineup guide ────────────────────────────────────────────────────────
+
+const lineups = guideById('lineups')!
+const lineupProse = [
+  ...lineups.steps.flatMap(s => [s.do, s.note || '']),
+  ...lineups.problems.flatMap(p => [p.symptom, p.fix]), lineups.result,
+].join(' ')
+check('the lineup guide says a generated lineup is a draft the coach edits',
+  /draft for you to edit|change what you want|starting point/i.test(lineupProse))
+check('it explains where the constraints come from',
+  /position eligibility|innings limits/i.test(lineupProse))
+check('and that nothing is saved or sent until the coach saves it',
+  /until you save|does not start a game/i.test(lineupProse))
+check('building a lineup is the head coach\'s', lineups.requires.includes('decide'))
+
+// ── game day stays out of the way ───────────────────────────────────────────
+
+const gameDay = guideById('game-day')!
+check('the game-day guide is short enough to read at first pitch',
+  gameDay.steps.length <= 3, `${gameDay.steps.length} steps`)
+check('and tells a coach mid-game they can just start',
+  gameDay.problems.some(p => /already going/i.test(p.symptom)))
+
+// ── priorities versus pathways, from both sides ─────────────────────────────
+
+check('CoachAI draws the line between a priority and a development plan',
+  guideById('coachai')!.problems.some(p =>
+    /priority/i.test(p.symptom + p.fix) && /development plan/i.test(p.fix)))
+check('and says where each one is started',
+  /player’s profile|player's profile/i.test(
+    guideById('coachai')!.problems.map(p => p.fix).join(' ')))
 
 // ── search ──────────────────────────────────────────────────────────────────
 //

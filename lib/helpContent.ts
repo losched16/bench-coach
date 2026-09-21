@@ -34,6 +34,8 @@ export type HelpModule =
   | 'drill-library'
   | 'coachai'
   | 'game-day'
+  | 'pitch-counter'
+  | 'lineups'
   | 'notes'
   | 'playbooks'
   | 'getting-started'
@@ -434,6 +436,11 @@ export const HELP_GUIDES: HelpGuide[] = [
         symptom: 'The answer is generic.',
         fix: 'Say more about the specific kid or situation. It reads your roster and your recorded notes, so naming who you mean helps.',
       },
+      {
+        // The distinction the brief asks for, from the CoachAI side.
+        symptom: 'You want to know whether to make this a priority or start a development plan.',
+        fix: 'A priority is CoachAI\'s answer to something happening now, and it ends when the thing is fixed. A development plan is a curated sequence somebody wrote in advance, with stages, and it runs for weeks whatever else is going on. Priorities come from here; development plans are started on a player\'s profile.',
+      },
     ],
     result: 'The conversation is kept. Nothing changes on your team unless you make something the priority.',
     nextAction: 'Make an answer the priority, or build a practice around it.',
@@ -458,8 +465,14 @@ export const HELP_GUIDES: HelpGuide[] = [
     ],
     problems: [
       {
+        // No proportion is claimed here any more. The library changes as drills
+        // are added, and "many do not" was a number nothing keeps true.
         symptom: 'A drill has no video.',
-        fix: 'Many do not. Every drill carries written instructions and is meant to be run from those. Where a video exists it is shown and labelled with what it actually covers — some are compilations that include the drill somewhere inside them.',
+        fix: 'Not every drill has one. The written instructions are the drill and it is meant to be run from those. Where a video exists it appears under "Supporting video" and is labelled with what it actually covers — some are compilations with the drill somewhere inside them.',
+      },
+      {
+        symptom: 'You cannot find a drill for the thing you are seeing.',
+        fix: 'Search the problem rather than the drill — the box takes "a drill, or the problem you are trying to fix". If nothing fits, ask CoachAI in your own words.',
       },
     ],
     result: 'Nothing is saved by browsing. Sending a drill to a practice plan starts a plan you still have to save.',
@@ -476,21 +489,151 @@ export const HELP_GUIDES: HelpGuide[] = [
     purpose: 'Keep the book, track pitch counts and manage who is playing where during a game.',
     summary: 'Keep the book and the pitch counts during the game.',
     requires: ['team', 'record'],
+    // DELIBERATELY SHORT. This is read standing on a field with a game
+    // starting. Three steps, and the detail lives in the pitch-counter and
+    // lineups guides where there is time to read it.
     steps: [
       { do: 'Build a lineup before the game in Lineup Builder.' },
-      { do: 'Open Game Day to score the game as it happens.' },
-      { do: 'Use Pitch Counter to track pitches and rest days.' },
+      { do: 'Press "Start Game", then score it as it happens.' },
+      {
+        do: 'Keep pitch counts from Pitch Counter.',
+        note: 'Pick a rule set there if you want the daily max and rest days shown.',
+      },
     ],
     problems: [
       {
         symptom: 'You are not the head coach and cannot build the lineup.',
         fix: 'Lineups are the head coach\'s. You can still keep the book and the pitch count.',
       },
+      {
+        symptom: 'The game is already going and you have not read any of this.',
+        fix: 'You do not need to. Tap "Start Game" and score — everything saves as you go, and nothing has to be set up first.',
+      },
     ],
     result: 'What you record during the game is saved to the team and feeds stats and player reports.',
     nextAction: 'Log the recap afterwards.',
-    related: ['roster', 'player-reports'],
+    related: ['lineups', 'pitch-counter', 'player-reports'],
     synonyms: ['scorebook', 'scoring', 'pitch count', 'lineup', 'batting order', 'positions', 'innings'],
+    version: 1,
+  },
+  {
+    id: 'pitch-counter',
+    module: 'pitch-counter',
+    tasks: ['prepare-for-a-game', 'record-what-happened'],
+    title: 'Count pitches',
+    purpose:
+      'Keep a running pitch count for one pitcher at a time, on a screen you can hit without looking at it.',
+    summary: 'Tap to count. Pick a rule set and it shows you where they stand.',
+    requires: ['team', 'record'],
+    requiresNote:
+      'Anyone who can record for the team can keep a pitch count — it is not the head coach\'s job alone.',
+    steps: [
+      {
+        do: 'Choose a rule set under "Rules", or leave it on "Just count, no rules".',
+        // THE MOST IMPORTANT SENTENCE IN THIS FILE. See the note below.
+        note: 'With no rule set you get a plain tally and no limit is shown, because BenchCoach does not know which rules your league plays under. Picking one is what makes the daily max and rest days appear.',
+      },
+      {
+        do: 'Pick the pitcher and tap the big number to count. Every tap saves on its own.',
+        note: 'Nothing has to be pressed at the end for the count to be kept.',
+      },
+      {
+        do: 'Tap "Undo" if you double-tapped or counted a warm-up pitch.',
+        note: 'It takes one off the same count. There is no separate correction screen.',
+      },
+      {
+        do: 'On a pitching change, press "Switch pitcher".',
+        note: 'That leaves the first count open, so you can come back to it later the same day and keep adding.',
+      },
+      {
+        do: 'When a pitcher is finished for the day, press "Finish" on their count.',
+        note: 'You can reopen it if they go back out. The day stays as one total per pitcher rather than several.',
+      },
+    ],
+    example:
+      'You pick your league\'s 10U rule set and start a count on Charlie. At 36 the screen says how many are left to the daily max. He comes out, you switch to the next pitcher, and later Charlie goes back in — you tap his name again and the count carries on from 36 rather than starting over.',
+    problems: [
+      {
+        symptom: 'No limit or warning is shown.',
+        fix: 'No rule set was chosen for that count, so there is no limit to compare against. Start a new count and pick one under "Rules".',
+      },
+      {
+        symptom: 'You went past the daily max and it still let you count.',
+        // The line the whole guide exists for.
+        fix: 'It will. The warning is there to tell you where the pitcher stands against the rule set you picked — it does not stop the count, and it cannot stop a pitch. Whether a pitcher keeps throwing is your decision and your league\'s rules, not the app\'s.',
+      },
+      {
+        symptom: 'The rule sets do not match how your league actually plays.',
+        fix: 'Then the numbers shown will not match either. Check the count against your league\'s own rules and use whichever your league enforces.',
+      },
+      {
+        symptom: 'You counted on the wrong pitcher.',
+        fix: 'Tap "Undo" to take the pitches off, then switch to the right one and add them there. Counts stay open all day, so nothing is lost.',
+      },
+    ],
+    result:
+      'One running total per pitcher per day, saved as you go. With a rule set chosen, the screen also shows the daily max and the rest days that rule set calls for.',
+    nextAction: 'Switch to the next pitcher, or finish the day out.',
+    related: ['game-day', 'lineups'],
+    synonyms: [
+      'pitch count', 'pitches', 'pitcher', 'arm', 'rest days', 'daily max',
+      'limit', 'tally', 'counter', 'innings pitched',
+    ],
+    version: 1,
+  },
+  {
+    id: 'lineups',
+    module: 'lineups',
+    tasks: ['prepare-for-a-game'],
+    title: 'Build a lineup',
+    purpose:
+      'Put together a batting order and a fielding plan for a game, either by generating one or by setting it yourself.',
+    summary: 'Generate a lineup, then change whatever you want before you use it.',
+    requires: ['team', 'decide'],
+    requiresNote:
+      'The head coach and admins build lineups. Everyone else can read one and keep the book.',
+    steps: [
+      { do: 'Open Lineup Builder and set the date, innings and how many players are on the field.' },
+      {
+        do: 'Choose a batting order style and pick "How should we build it?"',
+        note: 'These set what the generator optimises for. Nothing is locked in by choosing them.',
+      },
+      {
+        do: 'Mark anyone unavailable before you generate.',
+        note: 'Position eligibility and any innings limits you have set are read from the roster.',
+      },
+      {
+        do: 'Press "Generate Lineup", or "Set it myself" to build it by hand.',
+      },
+      {
+        do: 'Read the grid, change what you want, and use "Regenerate" or "Start over" if it is not close.',
+        note: 'Every generated lineup is a draft for you to edit. Nothing is sent anywhere until you save it.',
+      },
+    ],
+    example:
+      'Nine players, six innings, one of them cannot pitch this week. You generate, see that two kids sit two innings in a row, swap them by hand, and keep the rest.',
+    problems: [
+      {
+        symptom: 'Somebody is in a position you would never put them in.',
+        fix: 'Set their position eligibility on the roster, then regenerate. The generator only uses what it has been told.',
+      },
+      {
+        symptom: 'The innings are not as even as you want.',
+        fix: 'Change them by hand in the grid. The generator balances what it can, and it is a starting point rather than an answer.',
+      },
+      {
+        symptom: 'You cannot build one.',
+        fix: 'Building a lineup is the head coach\'s. If you keep the book you can still open the lineup and score from it.',
+      },
+    ],
+    result:
+      'A saved lineup you can open on game day. It does not start a game or move anything on its own.',
+    nextAction: 'Open Game Day when the game starts.',
+    related: ['game-day', 'roster', 'pitch-counter'],
+    synonyms: [
+      'lineup', 'batting order', 'positions', 'fielding', 'who plays where',
+      'bench', 'innings', 'rotation', 'card',
+    ],
     version: 1,
   },
   {

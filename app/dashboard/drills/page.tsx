@@ -37,6 +37,7 @@ import { useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { Plus } from 'lucide-react'
 import { usePageView, useTracker } from '@/lib/tracking'
+import { ModuleHelp } from '@/components/help/ModuleHelp'
 import { schedulableDrills, DrillRecord } from '@/lib/drills'
 import { loadAllMedia, groupByDrill, sharedVideoCounts, DrillMedia } from '@/lib/drillMedia'
 import { buildFinderIndex, FinderIndex, ProblemRef } from '@/lib/drillFinder'
@@ -181,6 +182,10 @@ export default function DrillLibraryPage() {
 
   return (
     <div className="space-y-5">
+      {/* The library needs no team and no role — browsing is open to everyone,
+          so no `can` is passed and nothing is gated. */}
+      <ModuleHelp module="drill-library" ctx={{ teamId }} hasTeam={!!teamId} />
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Drill Library</h1>

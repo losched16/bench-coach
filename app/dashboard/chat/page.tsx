@@ -13,6 +13,7 @@ import { SupersedeConfirm, Superseding } from '@/components/SupersedeConfirm'
 import { DrillReview, ReviewDrill, DrillVerdict } from '@/components/DrillReview'
 import { META_SENTINEL, splitSections } from '@/lib/analysis'
 import { usePageView, useTracker } from '@/lib/tracking'
+import { ModuleHelp } from '@/components/help/ModuleHelp'
 import { isUsablePracticePrompt } from '@/lib/practicePrompt'
 import { useEnterSends } from '@/lib/useEnterSends'
 
@@ -677,6 +678,18 @@ export default function ChatPage() {
               <p className="text-xs text-gray-500">CoachAI</p>
             )}
           </div>
+
+          {/* suppressCard: this page is a fixed-height flex column and a card
+              above the transcript would push the composer off the screen. Only
+              the "How to use this" button renders, in the header where it does
+              not compete with the conversation. */}
+          <ModuleHelp
+            module="coachai"
+            ctx={{ teamId, playerId }}
+            hasTeam={!!teamId}
+            suppressCard
+            className="shrink-0"
+          />
 
           {/* Who this conversation is about. Answers get read from that
               player's own history rather than an average of the roster, and
