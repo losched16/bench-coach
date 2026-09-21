@@ -106,7 +106,6 @@ enforced, so this is the only evidence this document accepts:
 ```
 $ git push origin HEAD:main
 remote: error: GH013: Repository rule violations found for refs/heads/main.
-  - Cannot update this protected ref.
   - Changes must be made through a pull request.
   - 3 of 3 required status checks are expected.
  ! [remote rejected] HEAD -> main (push declined due to repository rule violations)
@@ -118,6 +117,22 @@ never arrives, and blocks every merge forever.
 
 It remains a signal and an artifact store as well (it uploads the layout
 screenshots).
+
+> **Do not tick "Restrict updates".** It sits directly between "Restrict
+> creations" and "Restrict deletions" in the ruleset UI and reads harmlessly —
+> *"Only allow users with bypass permission to update matching refs."* With an
+> empty bypass list that means **nobody can update `main` by any route**: not a
+> push, not a merge, not a green pull request. The repository is sealed.
+>
+> It is worth knowing because the symptom is misleading. Required checks go
+> green, the PR looks ready, and the merge fails with `405 Repository rule
+> violations found — Cannot update this protected ref` and an **empty list of
+> violations**, naming nothing. The way to identify it is to compare a push
+> rejection against a merge rejection: the rules that are satisfied drop out of
+> the message, and whatever is left is the culprit. Here everything dropped
+> except that one line.
+>
+> Ticked on 2026-09-21 while setting this up, and unticked the same day.
 
 > **This does not make it a deploy gate.** Vercel builds from `main` and does
 > not consult GitHub checks. The ruleset controls what is *allowed to reach*
@@ -165,12 +180,19 @@ Settings needed, in order:
    - add `browser`
    - also tick **Require branches to be up to date before merging**, or a
      green check on a stale branch can still merge something broken
-4. **Require a pull request before merging** — enabled, 0 required approvals.
-   Without it a direct `git push origin main` is not covered by required
-   checks, which is how every commit before this one was made. This is the
-   setting that actually changed anything.
-5. **Block force pushes** — enabled.
-6. **Bypass list: EMPTY.** Chosen deliberately. The failure this guards
+4. **Require a pull request before merging** — enabled, **0 required
+   approvals**. Without it a direct `git push origin main` is not covered by
+   required checks, which is how every commit before this one was made. This
+   is the setting that actually changed anything.
+   **Leave approvals at 0 and resist the urge to raise it.** GitHub does not
+   let anyone approve their own pull request, and this is a one-person
+   repository, so requiring even one approval means nothing can ever merge —
+   including a fix to a broken `main`. Zero approvals still forces every
+   change through a PR and through all three checks.
+5. **Block force pushes** — enabled. **Restrict deletions** — enabled.
+6. **Restrict updates — LEAVE UNTICKED.** See the warning above. It sits
+   between the other two in the same list and seals the repository.
+7. **Bypass list: EMPTY.** Chosen deliberately. The failure this guards
    against is a tired solo founder pushing at midnight, which is exactly when
    a bypass would be used.
 
