@@ -21,17 +21,30 @@ import {
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// The library as Phase 2F left it. If any of these move, something wrote to the
-// drill library outside a migration, which nothing is allowed to do.
+// FLOORS, not equalities — and the history of this constant is the argument.
 //
-// Phase 2D left 220/154/49/393 and Phase 2E moved none of it. Migration 071
-// deliberately added six canonical drills and seven taxonomy mappings, so the
-// first, second and fourth numbers moved by exactly that and no more.
+// Phase 2D left 220/154/49/393. Phase 2E moved none of it. Migration 071 added
+// six drills and seven mappings. Phase 2H then added the 9U Speed & Agility
+// pathway and its drills, taking the library to 245/179/49/403 — and this
+// assertion was not moved, so it sat red against healthy production for three
+// days. The pathway count below rotted the same way once already: written as
+// four, three more were curated, and it was never updated.
 //
-// The third number did not move, and that is the one worth watching: 2F.7 said
-// no new problem slug would be invented as a side effect of adding drills, and
-// 49 is that promise still holding.
-const EXPECTED = { curated: 226, schedulable: 160, problems: 49, mappings: 400 }
+// Twice is a design fault, not an oversight. An exact equality against a
+// library that is *meant* to grow fails every time content ships, and a check
+// that is expected to be red is a check nobody reads. The thing actually worth
+// catching is LOSS — a curated drill deleted, demoted or unpublished outside a
+// migration, quietly dropping coverage a pathway depends on. So growth is
+// reported and passes; shrinkage fails.
+//
+// problems STAYS AN EXACT EQUALITY. 2F.7 promised no new problem slug would be
+// invented as a side effect of adding drills, so movement in either direction
+// is a broken promise and has to fail. That is a real invariant; the other
+// three were only ever a snapshot.
+const FLOOR = { curated: 245, schedulable: 179, mappings: 403 }
+const EXPECTED = { problems: 49 }
+/** Pathways published as of Phase 2H. Fewer means one stopped publishing. */
+const PATHWAY_FLOOR = 8
 
 let failures = 0
 function check(label: string, ok: boolean, evidence: string) {
@@ -51,14 +64,25 @@ async function main() {
 
   console.log('')
   // ── the drill library is untouched ────────────────────────────────────────
-  check('24. curated drill count unchanged', pool.length === EXPECTED.curated,
-    `${pool.length} (expected ${EXPECTED.curated})`)
-  check('24. schedulable drill count unchanged', schedulable.length === EXPECTED.schedulable,
-    `${schedulable.length} (expected ${EXPECTED.schedulable})`)
+  /**
+   * Passes at or above the floor. Says how far above when it has grown, and
+   * how many are MISSING when it has not — the failing line is the one that
+   * has to be readable, so it does not print "+-1".
+   */
+  const atLeast = (label: string, actual: number, floor: number) => {
+    const d = actual - floor
+    check(label, d >= 0,
+      d === 0 ? `${actual}`
+        : d > 0 ? `${actual} (floor ${floor}, +${d})`
+          : `${actual} — ${-d} MISSING against floor ${floor}`)
+  }
+
+  atLeast('24. curated drills not lost', pool.length, FLOOR.curated)
+  atLeast('24. schedulable drills not lost', schedulable.length, FLOOR.schedulable)
+  // Exact, deliberately — see the note on EXPECTED.
   check('24. taxonomy unchanged', (tax || []).length === EXPECTED.problems,
-    `${(tax || []).length} problems`)
-  check('24. drill-problem mappings unchanged', (map || []).length === EXPECTED.mappings,
-    `${(map || []).length} mappings`)
+    `${(tax || []).length} problems (expected exactly ${EXPECTED.problems})`)
+  atLeast('24. drill-problem mappings not lost', (map || []).length, FLOOR.mappings)
 
   // ── are the pathways there? ───────────────────────────────────────────────
   const pathways = await loadPathways(sb)
@@ -69,11 +93,16 @@ async function main() {
     process.exit(failures > 0 ? 1 : 0)
   }
 
-  // Seven, not four. The Phase 2E brief asked for four pathways first and this
-  // number was written then; three more were curated and applied afterwards and
-  // the assertion was never moved. A count that lags what is deployed passes
-  // while the deployment is incomplete, which is the opposite of the job.
-  check('1. pathways load', pathways.length === 7, `${pathways.length} published`)
+  // A floor for the same reason as the library counts above: this was written
+  // as four, went to seven, then to eight with Phase 2H, and was never moved
+  // either time. What matters is that none of them STOPS publishing — a
+  // pathway a coach was working through disappearing mid-season is the failure
+  // this is here to catch. Every pathway found is checked in full below, so a
+  // new one cannot arrive unexamined just because the count is a floor.
+  check('1. pathways load', pathways.length >= PATHWAY_FLOOR,
+    pathways.length === PATHWAY_FLOOR
+      ? `${pathways.length} published`
+      : `${pathways.length} published (floor ${PATHWAY_FLOOR}, +${pathways.length - PATHWAY_FLOOR})`)
 
   let totalStages = 0
   let totalLinks = 0
