@@ -117,19 +117,39 @@ export default function LandingPage() {
             <div className="space-y-7">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-50 border border-red-200">
                 <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                <span className="text-sm font-medium text-red-900">Youth baseball coaching support for 6U&ndash;12U</span>
+                <span className="text-sm font-medium text-red-900">Player development for youth baseball, 6U&ndash;12U</span>
               </div>
 
+              {/* "Level up your players" is an aspiration, not a guarantee, and
+                  the supporting copy deliberately carries the MECHANISM rather
+                  than a promise of faster improvement. Nothing on this page
+                  claims players get better in a given time, because nothing
+                  measures that. */}
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 leading-tight">
-                Show up to practice knowing what to work on.
+                Level up your players.
+                <span className="block text-red-600 mt-2">Build a stronger team.</span>
               </h1>
 
               <p className="text-xl text-slate-700 leading-relaxed max-w-xl">
-                Build a practice plan that fits your team. Find drills you know how to teach. Get help with the coaching questions that come up along the way.
+                Know what to work on next&mdash;and give every practice a purpose.
               </p>
 
+              {/* VERIFIED, and worth keeping verified. The practice planner
+                  loads team_notes and writes per-player callouts into the
+                  generation prompt (app/api/practice-plan/route.ts), and
+                  CoachAI loads journal entries, notes, game stats, season
+                  batting, past practices and saved drills. What it does NOT do
+                  is read a player's development-plan STAGE and plan around it
+                  on its own — the coach picks the pathway and stage by hand.
+                  So this says your notes and your history shape what comes
+                  back, which is true, and stops short of claiming the plan
+                  knows where each player stands. */}
               <p className="text-lg text-slate-600 leading-relaxed max-w-xl">
-                BenchCoach brings practice planning, drill guidance, and AI coaching support together&mdash;so you can spend less time figuring out what comes next and more time working with your players.
+                BenchCoach keeps your player observations, development plans, and progress in one place, so you can target the skills your players need most. Your notes and your season so far shape the coaching guidance, drills, and practice plans you get back.
+              </p>
+
+              <p className="text-lg text-slate-800 font-medium max-w-xl">
+                Less guesswork. More focused development.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
@@ -190,15 +210,17 @@ export default function LandingPage() {
       <section className="py-20 px-4 bg-[#1a202c]">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-3xl lg:text-4xl font-bold text-white mb-8">
-            You have a team to coach. And a whole day before practice.
+            You can see what each kid needs. Keeping track of it is the hard part.
           </h2>
           <div className="space-y-5 text-lg text-slate-300 leading-relaxed">
-            <p>Work runs late. Field time is limited. Your players need different things.</p>
+            <p>
+              One player steps out on the curveball. One cannot find the ball off the bat. One finally got their throw down last week and you have not built on it since.
+            </p>
             <p className="text-white font-medium text-xl">
               Then comes the question: &ldquo;What are we working on tonight?&rdquo;
             </p>
             <p>
-              You can spend the evening searching for drills and still wonder whether they fit your team. Or fall back on the same routine because there wasn&apos;t time to prepare anything else.
+              You can spend the evening searching for drills and still wonder whether they fit the players you have. Or fall back on the same routine, and the things you noticed never turn into anything.
             </p>
             <p className="text-white">
               You care about doing a good job. You deserve practical support that helps you do it.
@@ -212,13 +234,13 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center max-w-3xl mx-auto">
             <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-6">
-              A little help planning. A clearer purpose for practice.
+              Give your players a clear path forward.
             </h2>
             <p className="text-lg text-slate-600 leading-relaxed mb-4">
-              Built by youth baseball coach Clint Losch, BenchCoach helps you turn the things your team needs to work on into something you can take to the field.
+              Built by youth baseball coach Clint Losch, BenchCoach helps you turn what you notice about your players into something you can take to the field.
             </p>
             <p className="text-lg text-slate-600 leading-relaxed mb-4">
-              Start with your age group, available time, and practice focus. Use the plan and drill guidance to prepare, then adjust them for the players in front of you.
+              Whether you&apos;re helping your own child or coaching an entire team, the work carries forward: what you record about a player informs the practices you build and the advice you get back.
             </p>
             <p className="text-lg text-slate-800 font-medium leading-relaxed">
               You bring your knowledge of the kids. BenchCoach helps you organize what to do next.
@@ -405,26 +427,36 @@ export default function LandingPage() {
       {/* ── 5. Give the reader a simple plan ────────────────────────────── */}
       <section id="how-it-works" className="py-24 px-4 bg-white">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-16 text-center">
-            Your next practice starts with three steps.
-          </h2>
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-5">
+              Development is a loop, not a one-off practice.
+            </h2>
+            <p className="text-lg text-slate-600 leading-relaxed">
+              What you notice about your players shapes what you work on. What you work on gives you something new to notice.
+            </p>
+          </div>
 
+          {/* The loop is the positioning, and each step is something the
+              product does today. Step 3 says "your notes and your history"
+              rather than "your plans know where each player is", because the
+              first is true and the second is not yet — the coach still picks
+              the pathway and stage by hand. */}
           <div className="grid md:grid-cols-3 gap-10">
             {[
               {
                 n: '1',
-                title: 'Tell BenchCoach about your team',
-                body: 'Choose your age group and the skills you want to work on.',
+                title: 'Know your players',
+                body: 'Capture strengths, challenges and what you saw at practice. Team and player notes keep your observations in one place instead of in your head.',
               },
               {
                 n: '2',
-                title: 'Build and review your practice',
-                body: 'Set your available time, create a plan, and adjust the activities to fit your players.',
+                title: 'Target the right skills',
+                body: 'Turn those needs into a development plan for a player, or a practice built around the skills your team needs most.',
               },
               {
                 n: '3',
-                title: 'Take it to the field',
-                body: 'Use the plan to guide the session. Save notes afterward to help you prepare for the next one.',
+                title: 'Build on the work',
+                body: 'Record what happened and advance a player when you judge they are ready. Your notes and your season so far feed back into the plans and advice you get next.',
               },
             ].map(step => (
               <div key={step.n} className="text-center">
