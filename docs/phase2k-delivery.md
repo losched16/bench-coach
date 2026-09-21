@@ -215,7 +215,7 @@ consistent with the standing no-cross-account-aggregation rule.
 | `test:hook-order` | 120 files, 0 problems |
 | `lint:hooks` | clean |
 | typecheck | 196, no new identities |
-| `test:browser` | see below |
+| `test:browser` | **146 passed, 0 failed** (was 101) |
 
 Every quoted control in all eleven module guides is asserted against the
 component that renders it. For reports that means three files — the tab
