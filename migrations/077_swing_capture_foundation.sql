@@ -6,8 +6,9 @@
 --
 -- This migration therefore adds only what player_metrics cannot represent:
 --   1. the video/capture and its analysis/review lifecycle;
---   2. a provenance link from derived readings back to that capture; and
---   3. projected hit distance as a system metric preset.
+--   2. the camera calibration facts needed to turn pixels into real units;
+--   3. a provenance link from derived readings back to that capture; and
+--   4. projected hit distance as a system metric preset.
 --
 -- Exit velocity already exists as the canonical `exit_velo` preset from 019.
 -- Launch angle intentionally DOES NOT become a trend metric yet. There is no
@@ -65,6 +66,10 @@ CREATE TABLE IF NOT EXISTS public.swing_captures (
   frame_width               INT,
   frame_height              INT,
   duration_ms               INT,
+  -- Monocular video has no real-world scale by itself. The setup flow asks for
+  -- the perpendicular lens-to-ball distance at contact; the analyzer combines
+  -- this with camera intrinsics / the stationary tee ball to calibrate motion.
+  camera_distance_ft        NUMERIC(5,2),
   recorded_at               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   recorded_on               DATE NOT NULL DEFAULT CURRENT_DATE,
 
@@ -106,6 +111,8 @@ CREATE TABLE IF NOT EXISTS public.swing_captures (
     CHECK ((frame_width IS NULL OR frame_width > 0) AND (frame_height IS NULL OR frame_height > 0)),
   CONSTRAINT swing_captures_duration_valid
     CHECK (duration_ms IS NULL OR duration_ms > 0),
+  CONSTRAINT swing_captures_camera_distance_valid
+    CHECK (camera_distance_ft IS NULL OR camera_distance_ft BETWEEN 3 AND 30),
   CONSTRAINT swing_captures_exit_velo_valid
     CHECK (exit_velocity_mph IS NULL OR exit_velocity_mph BETWEEN 1 AND 200),
   CONSTRAINT swing_captures_launch_angle_valid
@@ -139,6 +146,8 @@ COMMENT ON COLUMN public.swing_captures.projected_distance_ft IS
   'Projected carry distance, not an observed or tape-measured landing distance.';
 COMMENT ON COLUMN public.swing_captures.launch_angle_deg IS
   'Descriptive launch angle. Not a player_metrics trend until target-range semantics exist.';
+COMMENT ON COLUMN public.swing_captures.camera_distance_ft IS
+  'Perpendicular lens-to-ball distance at contact, captured during setup to provide monocular scale.';
 
 -- ---------------------------------------------------------------------------
 -- 3. Derived player_metrics point back to their source capture
