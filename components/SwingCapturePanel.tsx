@@ -31,14 +31,6 @@ interface Props {
 const MAX_BETA_BYTES = 45 * 1024 * 1024
 const VIDEO_BUCKET = 'journal-media'
 
-function safeExtension(file: File): string {
-  const fromName = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '')
-  if (fromName && fromName.length <= 8) return fromName
-  if (file.type === 'video/quicktime') return 'mov'
-  if (file.type === 'video/webm') return 'webm'
-  return 'mp4'
-}
-
 async function readVideoMetadata(file: File): Promise<{
   durationMs: number | null
   frameWidth: number | null
@@ -144,17 +136,33 @@ export function SwingCapturePanel({ playerId, playerName, teamId, onMetricsChang
     setUploading(true)
     try {
       const metadata = await readVideoMetadata(file)
-      const id = typeof crypto !== 'undefined' && 'randomUUID' in crypto
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2)}`
-      const path = `swing-captures/${teamId}/${playerId}/${id}.${safeExtension(file)}`
 
+      // Authorization and object-path creation happen server-side. The browser
+      // gets a token for one specific private object instead of broad bucket
+      // INSERT permission.
+      const authRes = await fetch('/api/swing-captures/upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamId,
+          playerId,
+          filename: file.name,
+          mimeType: file.type,
+          sizeBytes: file.size,
+        }),
+      })
+      const uploadAuth = await authRes.json()
+      if (!authRes.ok || !uploadAuth.path || !uploadAuth.token) {
+        throw new Error(uploadAuth.error || 'Could not authorize swing video upload.')
+      }
+
+      const bucket = uploadAuth.bucket || VIDEO_BUCKET
+      const path = uploadAuth.path as string
       const { error: uploadError } = await supabase.storage
-        .from(VIDEO_BUCKET)
-        .upload(path, file, {
+        .from(bucket)
+        .uploadToSignedUrl(path, uploadAuth.token, file, {
           contentType: file.type || 'video/mp4',
           cacheControl: '3600',
-          upsert: false,
         })
       if (uploadError) throw uploadError
 
@@ -164,7 +172,7 @@ export function SwingCapturePanel({ playerId, playerName, teamId, onMetricsChang
         body: JSON.stringify({
           teamId,
           playerId,
-          storageBucket: VIDEO_BUCKET,
+          storageBucket: bucket,
           storagePath: path,
           originalFilename: file.name,
           mimeType: file.type,
@@ -180,10 +188,7 @@ export function SwingCapturePanel({ playerId, playerName, teamId, onMetricsChang
       })
       const data = await res.json()
       if (!res.ok) {
-        // Registration failed after upload. Clean up the orphan while the user
-        // still has permission to the object they just created.
-        await supabase.storage.from(VIDEO_BUCKET).remove([path])
-        throw new Error(data.error || 'Could not register swing video.')
+        throw new Error(data.error || 'Video uploaded, but BenchCoach could not register the swing. Please retry with a new clip.')
       }
 
       if (inputRef.current) inputRef.current.value = ''
