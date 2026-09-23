@@ -9,6 +9,7 @@ import {
   MIN_SESSIONS_FOR_TREND,
 } from '@/lib/metrics'
 import { FEATURE_UNAVAILABLE } from '@/lib/migrationHints'
+import { SwingCapturePanel } from '@/components/SwingCapturePanel'
 
 // Tracking a number over time.
 //
@@ -182,6 +183,15 @@ export function PlayerMetrics({ coachId, playerId, playerName, teamId }: Props) 
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+      {process.env.NEXT_PUBLIC_SWING_CAPTURE_BETA === 'true' && teamId && (
+        <SwingCapturePanel
+          playerId={playerId}
+          playerName={playerName}
+          teamId={teamId}
+          onMetricsChanged={load}
+        />
+      )}
+
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2">
           <Gauge className="text-blue-600" size={18} />
