@@ -35,6 +35,7 @@ export interface SwingCapture {
   frame_width: number | null
   frame_height: number | null
   duration_ms: number | null
+  camera_distance_ft: number | null
   recorded_at: string
   recorded_on: string
   status: SwingCaptureStatus
@@ -61,6 +62,9 @@ export interface SwingAnalysisRequest {
   frameWidth: number | null
   frameHeight: number | null
   durationMs: number | null
+  // Perpendicular distance from the phone lens to the baseball at contact.
+  // Monocular pixels have no real-world scale without a calibration fact.
+  cameraDistanceFt: number | null
 }
 
 export interface SwingAnalysisResult {
