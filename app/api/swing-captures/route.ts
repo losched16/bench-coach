@@ -118,6 +118,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Capture frame rate is invalid.' }, { status: 400 })
     }
 
+    const cameraDistanceFt = body.cameraDistanceFt == null
+      ? null
+      : numberInRange(body.cameraDistanceFt, 3, 30)
+    if (body.cameraDistanceFt != null && cameraDistanceFt == null) {
+      return NextResponse.json({ error: 'Camera distance must be between 3 and 30 feet.' }, { status: 400 })
+    }
+
     const recordedAt = body.recordedAt ? new Date(body.recordedAt) : new Date()
     if (Number.isNaN(recordedAt.getTime())) {
       return NextResponse.json({ error: 'recordedAt is invalid.' }, { status: 400 })
@@ -126,6 +133,12 @@ export async function POST(request: NextRequest) {
     const source = ['video_upload', 'native_ios', 'native_android'].includes(body.source)
       ? body.source
       : 'video_upload'
+
+    if (source === 'video_upload' && cameraDistanceFt == null) {
+      return NextResponse.json({
+        error: 'Phone distance from the ball is required to calibrate a camera-only reading.',
+      }, { status: 400 })
+    }
 
     const row = {
       team_id: teamId,
@@ -140,6 +153,7 @@ export async function POST(request: NextRequest) {
       frame_width: body.frameWidth == null ? null : numberInRange(body.frameWidth, 1, 20000),
       frame_height: body.frameHeight == null ? null : numberInRange(body.frameHeight, 1, 20000),
       duration_ms: body.durationMs == null ? null : numberInRange(body.durationMs, 1, 60 * 60 * 1000),
+      camera_distance_ft: cameraDistanceFt,
       recorded_at: recordedAt.toISOString(),
       recorded_on: recordedAt.toISOString().slice(0, 10),
       status: 'uploaded',
