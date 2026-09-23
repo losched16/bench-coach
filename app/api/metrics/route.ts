@@ -21,6 +21,8 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+const READING_SELECT = 'id, metric_type_id, metric, value, unit, attempts, successes, measured_on, note, source_capture_id'
+
 // ---------------------------------------------------------------------------
 // GET
 //   ?coachId=                 → the metric types available to this coach
@@ -53,7 +55,7 @@ export async function GET(request: NextRequest) {
 
     const { data: readings, error: readErr } = await supabaseAdmin
       .from('player_metrics')
-      .select('id, metric_type_id, metric, value, unit, attempts, successes, measured_on, note')
+      .select(READING_SELECT)
       .eq('player_id', playerId)
       .eq('coach_id', coachId)
       .order('measured_on', { ascending: true })
@@ -191,7 +193,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabaseAdmin
       .from('player_metrics')
       .insert(rows)
-      .select('id, metric_type_id, metric, value, unit, attempts, successes, measured_on, note')
+      .select(READING_SELECT)
 
     if (error) throw error
     return NextResponse.json({ readings: data || [], count: rows.length })
@@ -204,6 +206,10 @@ export async function POST(request: NextRequest) {
 // ---------------------------------------------------------------------------
 // DELETE — remove a reading (mistyped), or archive a custom type
 //   ?coachId=&readingId=   |   ?coachId=&typeId=
+//
+// Readings derived from a confirmed swing are provenance-backed facts. They
+// cannot be deleted independently from the capture that produced them or the
+// capture would still claim "confirmed" while Measurements no longer did.
 // ---------------------------------------------------------------------------
 export async function DELETE(request: NextRequest) {
   const denied = await guard(request, 'record')
@@ -220,6 +226,22 @@ export async function DELETE(request: NextRequest) {
 
   try {
     if (readingId) {
+      const { data: reading, error: readError } = await supabaseAdmin
+        .from('player_metrics')
+        .select('id, source_capture_id')
+        .eq('id', readingId)
+        .eq('coach_id', coachId)
+        .maybeSingle()
+      if (readError) throw readError
+      if (!reading) return NextResponse.json({ error: 'Reading not found.' }, { status: 404 })
+
+      if (reading.source_capture_id) {
+        return NextResponse.json({
+          error: 'This reading is backed by a confirmed swing capture and cannot be deleted independently.',
+          code: 'CAPTURE_DERIVED_READING',
+        }, { status: 409 })
+      }
+
       const { error } = await supabaseAdmin
         .from('player_metrics').delete().eq('id', readingId).eq('coach_id', coachId)
       if (error) throw error
