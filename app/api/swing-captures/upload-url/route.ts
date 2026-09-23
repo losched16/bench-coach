@@ -38,12 +38,15 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const teamId = typeof body.teamId === 'string' ? body.teamId : null
+    await authorizeTeam(teamId, 'record')
+
+    // Nothing below this line is trusted until the caller has been resolved
+    // against the team. In particular, do not spend storage work on metadata
+    // supplied by somebody who cannot record for this team.
     const playerId = typeof body.playerId === 'string' ? body.playerId : null
     const filename = typeof body.filename === 'string' ? body.filename.slice(0, 255) : 'swing.mp4'
     const mimeType = typeof body.mimeType === 'string' ? body.mimeType : null
     const sizeBytes = body.sizeBytes == null ? null : Number(body.sizeBytes)
-
-    await authorizeTeam(teamId, 'record')
 
     if (!playerId) {
       return NextResponse.json({ error: 'playerId required' }, { status: 400 })
