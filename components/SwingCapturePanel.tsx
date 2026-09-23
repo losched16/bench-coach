@@ -89,6 +89,7 @@ export function SwingCapturePanel({ playerId, playerName, teamId, onMetricsChang
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [captureFps, setCaptureFps] = useState('240')
+  const [cameraDistanceFt, setCameraDistanceFt] = useState('10')
   const [showGuide, setShowGuide] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editExit, setEditExit] = useState('')
@@ -134,6 +135,12 @@ export function SwingCapturePanel({ playerId, playerName, teamId, onMetricsChang
       return
     }
 
+    const cameraDistance = Number(cameraDistanceFt)
+    if (!Number.isFinite(cameraDistance) || cameraDistance < 3 || cameraDistance > 30) {
+      setError('Measure from the phone lens to the ball at contact (3–30 ft). This is required to turn pixels into real-world speed.')
+      return
+    }
+
     setUploading(true)
     try {
       const metadata = await readVideoMetadata(file)
@@ -164,6 +171,7 @@ export function SwingCapturePanel({ playerId, playerName, teamId, onMetricsChang
           sizeBytes: file.size,
           source: 'video_upload',
           captureFps: fps,
+          cameraDistanceFt: cameraDistance,
           frameWidth: metadata.frameWidth,
           frameHeight: metadata.frameHeight,
           durationMs: metadata.durationMs,
@@ -297,8 +305,9 @@ export function SwingCapturePanel({ playerId, playerName, teamId, onMetricsChang
           <div className="font-medium text-gray-900 mb-2">For the cleanest reading</div>
           <ol className="list-decimal pl-5 space-y-1.5">
             <li>Use the phone&apos;s Slow-Mo camera mode — 240 fps when available, otherwise 120 fps.</li>
-            <li>Put the phone on a tripod roughly side-on to the hitter, far enough back to keep contact and the first part of ball flight in frame.</li>
-            <li>Use bright light and a plain background when possible. Keep the phone still.</li>
+            <li>Put the phone on a tripod side-on to the hitter, with the lens roughly perpendicular to the ball at contact.</li>
+            <li>Measure from the phone lens to the ball at contact and enter that distance below. Use the same setup for a session.</li>
+            <li>Keep contact and the first part of ball flight in frame. Bright light and a plain background help the tracker.</li>
             <li>Trim the clip to roughly 2–3 seconds around contact before uploading.</li>
           </ol>
           <p className="text-xs text-gray-500 mt-3">
@@ -307,9 +316,9 @@ export function SwingCapturePanel({ playerId, playerName, teamId, onMetricsChang
         </div>
       )}
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-[160px_1fr] items-end">
+      <div className="mt-4 grid gap-3 sm:grid-cols-[140px_180px_1fr] items-end">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Recorded frame rate</label>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Frame rate</label>
           <select
             value={captureFps}
             onChange={e => setCaptureFps(e.target.value)}
@@ -320,6 +329,22 @@ export function SwingCapturePanel({ playerId, playerName, teamId, onMetricsChang
             <option value="60">60 fps</option>
             <option value="30">30 fps</option>
           </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Phone → ball distance</label>
+          <div className="relative">
+            <input
+              type="number"
+              min="3"
+              max="30"
+              step="0.1"
+              inputMode="decimal"
+              value={cameraDistanceFt}
+              onChange={e => setCameraDistanceFt(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-8 text-sm"
+            />
+            <span className="absolute right-3 top-2 text-sm text-gray-400">ft</span>
+          </div>
         </div>
         <div>
           <input
@@ -385,6 +410,7 @@ export function SwingCapturePanel({ playerId, playerName, teamId, onMetricsChang
                     <div className="mt-2 text-xs text-gray-500">
                       {new Date(capture.recorded_at).toLocaleString()}
                       {capture.capture_fps ? ` • ${capture.capture_fps} fps` : ''}
+                      {capture.camera_distance_ft ? ` • ${capture.camera_distance_ft} ft setup` : ''}
                     </div>
                   </div>
 
