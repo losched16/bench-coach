@@ -37,6 +37,9 @@ export interface MetricReading {
   successes: number | null
   measured_on: string      // YYYY-MM-DD
   note: string | null
+  // Non-null when the number came from a reviewed phone swing. That source is
+  // immutable evidence, so the scalar row cannot be deleted independently.
+  source_capture_id?: string | null
 }
 
 // Below this, a chart is a rorschach test. Three sessions is the minimum at
