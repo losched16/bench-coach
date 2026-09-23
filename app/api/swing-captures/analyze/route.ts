@@ -20,10 +20,16 @@ const supabaseAdmin = createClient(
 // unaware of whether that service is Python/OpenCV today or native/on-device
 // tomorrow.
 export async function POST(request: NextRequest) {
+  let failedTeamId: string | null = null
+  let failedCaptureId: string | null = null
+
   try {
     const body = await request.json()
     const teamId = typeof body.teamId === 'string' ? body.teamId : null
     const captureId = typeof body.captureId === 'string' ? body.captureId : null
+    failedTeamId = teamId
+    failedCaptureId = captureId
+
     await authorizeTeam(teamId, 'record')
 
     if (!captureId) {
@@ -134,20 +140,17 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : 'Swing analysis failed.'
     console.error('Swing analysis error:', error)
 
-    // Best-effort failure state. We intentionally do not trust a second body
-    // read here to recover captureId; the caller can retry and the original
-    // video remains registered even if this update is skipped.
-    try {
-      const clone = request.clone()
-      const body = await clone.json()
-      if (body?.captureId && body?.teamId) {
+    // We keep the ids from the FIRST body read. Request bodies are streams; a
+    // second request.json() in the catch path cannot reliably recover them.
+    if (failedCaptureId && failedTeamId) {
+      try {
         await supabaseAdmin
           .from('swing_captures')
           .update({ status: 'failed', analysis_error: message.slice(0, 1000) })
-          .eq('id', body.captureId)
-          .eq('team_id', body.teamId)
-      }
-    } catch { /* response below is still the source of truth for this request */ }
+          .eq('id', failedCaptureId)
+          .eq('team_id', failedTeamId)
+      } catch { /* the request error below is still the source of truth */ }
+    }
 
     return NextResponse.json({ error: message }, { status: 502 })
   }
