@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
       frameWidth: capture.frame_width,
       frameHeight: capture.frame_height,
       durationMs: capture.duration_ms,
+      cameraDistanceFt: capture.camera_distance_ft,
     }
 
     const controller = new AbortController()
