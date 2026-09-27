@@ -306,11 +306,19 @@ The constant was never moved. Every other check in that script — including
 `no collection, tutorial or duplicate in the pool: 0 leaked` — passes against
 the current 179.
 
-**It has not been changed**, per the instruction not to modify anything. An
-identical stale-constant failure was corrected in
+**It was not changed as part of this snapshot**, per the instruction not to
+modify anything. An identical stale-constant failure was corrected in
 `scripts/verify-pathways-production.ts` on 2026-09-21 (`9daf3ab`), where the
 exact equalities were replaced with floors; this script was not part of that
 change.
+
+> **Since fixed, 2026-09-27.** The equality was replaced with a floor
+> (`POOL_FLOOR = 179`) in the same shape as `verify-pathways-production.ts`, so
+> growth passes and shrinkage fails with a count of what is missing.
+> `verify:finder-prod` now reports **PASS — 0 failures** against the same
+> production data; the pool figure it reads is unchanged at 179 of 245. The
+> table above is left as it was measured, because it is the record of what the
+> snapshot run actually returned.
 
 ---
 
