@@ -81,7 +81,33 @@ async function main() {
   const index = buildFinderIndex(tax as any[], map as any[])
 
   check('all four reads inside a sensible page load', elapsed < 8000, `${elapsed}ms for four queries`)
-  check('the schedulable pool is the expected size', drills.length === 154, `${drills.length} of ${rows.length} curated`)
+
+  // A FLOOR, not an equality — and the history of this line is the argument.
+  //
+  // It was written as `drills.length === 154`, the Phase 2D figure. The pool
+  // went to 160 with migration 071 and to 179 with 074, and the constant was
+  // moved neither time, so this check sat red against healthy production for
+  // weeks while every other check in the file passed. A check that is expected
+  // to be red is a check nobody reads, which is worse than no check at all —
+  // the next time it goes red for a real reason it gets skipped too.
+  //
+  // The same rot, in the same shape, was corrected in
+  // scripts/verify-pathways-production.ts on 2026-09-21; this file was not part
+  // of that change and is brought into line with it here.
+  //
+  // What is actually worth catching is LOSS: curated drills disappearing,
+  // being demoted, or being marked duplicate outside a migration, which would
+  // quietly shrink what the Drill Finder can offer a coach. Growth is expected
+  // — the library is meant to grow — so growth passes and is reported, and
+  // shrinkage fails and says how many are missing.
+  const POOL_FLOOR = 179
+  const short = POOL_FLOOR - drills.length
+  check('the schedulable pool has not shrunk', short <= 0,
+    short > 0
+      ? `${drills.length} of ${rows.length} curated — ${short} MISSING against floor ${POOL_FLOOR}`
+      : short === 0
+        ? `${drills.length} of ${rows.length} curated`
+        : `${drills.length} of ${rows.length} curated (floor ${POOL_FLOOR}, +${-short})`)
 
   // ── nothing demoted reaches the surface ───────────────────────────────────
 
