@@ -5,6 +5,22 @@
 **Production database inspected read-only:** Supabase project `chdpqsumqospnaztvfqe`.
 **Nothing was changed.** No migration applied, no production write, no deploy, no merge.
 
+> **Corrections, 2026-09-29** (made while implementing recommendation #1):
+>
+> 1. **Usage was over-read.** The original said "four coaches started a development
+>    plan and not one of them ever came back." A read-only aggregate shows all four
+>    enrollments are one user, one team, one player, on one day (2026-09-20) —
+>    consistent with a single test or demo session. It establishes neither four
+>    coaches nor abandonment. §1, §2 and §4 step 8 are corrected; the code-path
+>    findings are unaffected.
+> 2. **The report drafter does not call the shared assembler.** The original said all
+>    four consumers did. The fourth caller is the home-practice plan writer
+>    (`/api/development-plan`); the report drafter works from a coach-ticked source
+>    picker. §7 #1 and §9 are corrected.
+> 3. **The practice planner needed a caller change.** It sends context only when
+>    priorities or observations exist, so a plan-only team would never have reached
+>    it. Noted in §7 #1 and §9.
+
 ---
 
 ## 1. Executive verdict
@@ -27,13 +43,15 @@ What does not exist is the loop. The eleven-step workflow in this brief breaks i
 three places, and all three breaks are the same break wearing different clothes:
 **work recorded in one feature is invisible to the next one.**
 
-The evidence is not an argument from reading code. In production, across the
-entire history of the feature, `player_pathway_events` holds **4 `enrolled` and 2
-`mastery_recorded` rows and nothing else** — zero sessions logged, zero players
-advanced a stage. The `prescriptions` table, which drives the board the sidebar
-calls "Skill Development" and which supplies the richest section of the AI
-context, holds **0 rows**. Four coaches started a development plan and not one of
-them ever came back to it.
+The breaks are established from the code, not from usage. Production data is
+consistent with them but too thin to measure them: across the entire history of
+the feature, `player_pathway_events` holds **4 `enrolled` and 2
+`mastery_recorded` rows and nothing else**, and all four enrollments are **one
+user, one team, one player, on a single day** (2026-09-20) — the shape of one
+test or demo session, not of four coaches. That says nothing about whether
+coaches would come back; nobody has had the chance to. The `prescriptions`
+table, which drives the board the sidebar calls "Skill Development" and which
+supplies the richest section of the AI context, holds **0 rows**.
 
 Against Dugout Master, the honest read is: they appear to have shipped the
 **operational** loop (lineups, live practice mode with timers, real-time coach
@@ -98,10 +116,10 @@ look and one is stronger.
 
 The whole database is small: 11 coaches, 8 teams, 61 players, 15 practice plans.
 Low usage of a feature is therefore weak evidence that the feature is bad — there
-is barely any usage of anything. What the numbers *do* support is **relative**
-comparison inside the same tiny population: 15 practice plans and 83 chat threads
-against 0 logged pathway sessions is a ratio, and ratios survive small samples
-better than absolute counts.
+is barely any usage of anything. For development plans specifically, the sample
+is not a population at all: 4 enrollments, 1 enrolling user, 1 team, 1 player, 1
+day. No ratio or retention conclusion can be drawn from it, and this audit's
+findings about plans rest on the code paths, not on the counts.
 
 ---
 
@@ -238,10 +256,12 @@ as binding. `test:practice-scheduler` 517 assertions pass.
   all session must now navigate Roster → player → Development → the stage → "Record
   today's work", from memory, and re-enter what happened.
 
-**Production proves nobody does this.** 4 enrolled, 2 mastery signals, **0
-`session_logged`, 0 `advanced`**. The most carefully built part of the development
-system — `validateMove`, optimistic-concurrency stage transitions, append-only
-history — has never been exercised by a real coach.
+**Production has never exercised it.** 4 enrolled, 2 mastery signals, **0
+`session_logged`, 0 `advanced`** — all from one user on one team on one day. The
+most carefully built part of the development system — `validateMove`,
+optimistic-concurrency stage transitions, append-only history — has no real
+usage behind it yet. That is an absence of evidence, not evidence that coaches
+tried and gave up.
 
 ### Step 9 — Return for the next session ⚠️ partial
 
@@ -341,8 +361,7 @@ empty for every coach in production (0 rows).
 **Why this first.** It is the smallest change with the largest effect on the claim
 the company is positioned on. Today "the AI knows your players" is true of notes and
 stats and false of the development plan — the one place a coach has explicitly
-written down what they intend to teach. It also immediately makes the existing 4
-enrollments useful instead of inert.
+written down what they intend to teach.
 
 **Reuse.** `assembleCoachContext` / `renderCoachContext`; `lib/playerPathways.ts`
 (`resolveStage`, `planOutline`, and the stage/mastery summarisers already written and
@@ -356,8 +375,10 @@ query when it is not. Render it under a heading that states the rule plainly, e.
 *"DEVELOPMENT PLAN IN FORCE — the coach chose this. Do not contradict it; if you
 think the player is ready to move on, say so and say why, but the coach decides."*
 
-**Files/tables.** `lib/coachContext.ts` (the only required edit); optionally
-`lib/playerPathways.ts` for a summariser. Tables read: `player_pathway_progress`,
+**Files/tables.** `lib/coachContext.ts`; the practice planner's context gate in
+`app/api/practice-plan/route.ts`; and, because the report drafter does not use the
+assembler, a development-plan source item in the report picker
+(`lib/playerReportSources*.ts`). Tables read: `player_pathway_progress`,
 `player_pathway_events`, `development_pathway_stages`. **No schema change.**
 
 **Dependencies/risks.** Context length — the block must be capped (one row per active
@@ -367,8 +388,9 @@ by the fact that no AI route can call the events API (`events/route.ts` is expli
 *"NOTHING HERE MAY BE CALLED BY AN AI"*). Must inherit the same defensive `try/catch`
 the other blocks use so a missing table degrades rather than breaks.
 
-**Effort: small.** One file, one shape, two queries, following a pattern used five
-times already in the same module.
+**Effort: small.** One new block in the assembler, three bounded queries, following a
+pattern used five times already in the same module — plus the two caller changes
+above, each a few lines.
 
 **Acceptance criteria.**
 1. With a player on a pathway, `renderCoachContext` output contains the pathway name, stage number of total, and the stage objective.
@@ -542,12 +564,16 @@ product at one specific joint: the AI does not see the development plan.
 
 **Improvement #1 — put pathway progress into `lib/coachContext.ts`.**
 
-One file, no schema change, no migration, no new surface. It makes the existing
-development plans immediately visible to CoachAI, the practice planner, the analysis
-writer and the report drafter at once, because all four already call the same
-assembler. It is the prerequisite that makes #2 worth building, it is provable by
-unit assertion rather than by judgement, and it can ship behind the existing gate in
-a single small PR.
+No schema change, no migration, no new surface. It makes the existing development
+plans visible to CoachAI, the practice planner, the analysis writer and the
+home-practice plan writer at once, because those four already call the same
+assembler. The **report drafter does not** — it drafts only from items the coach
+ticks in a source picker (`lib/playerReportSourcesStore.ts`), by design — so it
+needs a selectable development-plan source rather than the assembler. And the
+practice planner needs one caller change: it only sends context when priorities or
+observations exist, so without it the new block would never reach a practice. It is
+the prerequisite that makes #2 worth building, it is provable by test rather than by
+judgement, and it can ship behind the existing gate in a single small PR.
 
 Concretely: extend `CoachContext` with an optional `pathwayProgress` block, populate
 it in `assembleCoachContext` with the same defensive `try/catch` the metrics and
