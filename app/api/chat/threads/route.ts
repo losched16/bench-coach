@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { guard } from '@/lib/authz'
+import { guard, authorizePlayer, authorizeThread, authzResponse } from '@/lib/authz'
+import { playersOnTeam } from '@/lib/playerScope'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -64,6 +65,10 @@ export async function GET(request: NextRequest) {
     // One query for all the messages we need rather than one per thread. A
     // coach with thirty conversations should not pay thirty round trips to
     // render a sidebar.
+    // A player is named on a thread only when that player belongs to this
+    // team. A thread whose stored player does not is listed as a team thread.
+    const inScope = await playersOnTeam(supabaseAdmin, teamId, visible.map((t: any) => t.player_id).filter(Boolean))
+
     const ids = visible.map((t: any) => t.id)
     const { data: messages } = await supabaseAdmin
       .from('chat_messages')
@@ -89,10 +94,12 @@ export async function GET(request: NextRequest) {
       // Shown under the title while a thread is still untitled, and as a
       // second line otherwise — enough to tell two pitching chats apart.
       preview: (firstUserMessage.get(t.id) || '').replace(/\s+/g, ' ').slice(0, 90) || null,
-      player_id: t.player_id || null,
+      player_id: t.player_id && inScope.has(t.player_id) ? t.player_id : null,
       // Supabase returns a joined row as an array on some shapes and an object
       // on others depending on the relationship it infers.
-      player_name: (Array.isArray(t.player) ? t.player[0]?.name : t.player?.name) || null,
+      player_name: t.player_id && inScope.has(t.player_id)
+        ? (Array.isArray(t.player) ? t.player[0]?.name : t.player?.name) || null
+        : null,
       opponent_team_id: t.opponent_team_id || null,
       opponent_name: (Array.isArray(t.opponent) ? t.opponent[0]?.name : t.opponent?.name) || null,
     }))
@@ -122,6 +129,8 @@ export async function POST(request: NextRequest) {
   try {
     const { teamId, playerId } = await request.json()
     if (!teamId) return NextResponse.json({ error: 'Missing teamId' }, { status: 400 })
+    // Stored on the thread and read back later, so it is checked here.
+    if (playerId) await authorizePlayer(playerId, { teamId, capability: 'ask' })
 
     const { data, error } = await supabaseAdmin
       .from('chat_threads')
@@ -132,6 +141,8 @@ export async function POST(request: NextRequest) {
     if (error) throw error
     return NextResponse.json({ thread: data })
   } catch (error: any) {
+    const authz = authzResponse(error)
+    if (authz) return NextResponse.json(authz.body, { status: authz.status })
     console.error('Thread create error:', error)
     return NextResponse.json({ error: error.message || 'Could not start a new chat' }, { status: 500 })
   }
@@ -159,7 +170,14 @@ export async function PATCH(request: NextRequest) {
 
     // Explicit null is meaningful here — it means "this is about the whole
     // team now" — so presence in the body is the test, not truthiness.
-    if ('playerId' in body) patch.player_id = body.playerId || null
+    if ('playerId' in body) {
+      // The thread's own team, not one from the request.
+      if (body.playerId) {
+        const { teamId } = await authorizeThread(threadId, 'record')
+        await authorizePlayer(body.playerId, { teamId, capability: 'record' })
+      }
+      patch.player_id = body.playerId || null
+    }
 
     if (Object.keys(patch).length === 0) {
       return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
@@ -175,6 +193,8 @@ export async function PATCH(request: NextRequest) {
     if (error) throw error
     return NextResponse.json({ thread: data })
   } catch (error: any) {
+    const authz = authzResponse(error)
+    if (authz) return NextResponse.json(authz.body, { status: authz.status })
     console.error('Thread rename error:', error)
     return NextResponse.json({ error: error.message || 'Could not rename' }, { status: 500 })
   }

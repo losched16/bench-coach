@@ -17,6 +17,7 @@ import {
   type FullReport, type ReportContext, type DrillSnapshot,
 } from './playerReports'
 import { visibleDrills, schedulableDrills, DRILL_FIELDS } from './drills'
+import { resolvePlayerScope } from './playerScope'
 
 // Everything a snapshot reads, plus the one column DRILL_FIELDS does not carry:
 // where a timestamp came from. Without it the provenance gate in
@@ -79,8 +80,13 @@ export async function buildContext(
   supabase: any,
   opts: { teamId: string; playerId: string; authorUserId?: string | null; coachId: string }
 ): Promise<ReportContext> {
+  // The player's name only once the player is verified against the report's
+  // team (roster or archive). See lib/playerScope.ts.
+  const scope = await resolvePlayerScope(supabase, { playerId: opts.playerId, teamId: opts.teamId })
   const [{ data: player }, { data: team }, coachRes] = await Promise.all([
-    supabase.from('players').select('name').eq('id', opts.playerId).maybeSingle(),
+    scope.ok
+      ? supabase.from('players').select('name').eq('id', scope.playerId).maybeSingle()
+      : Promise.resolve({ data: null }),
     supabase.from('teams').select('name, age_group, season_id').eq('id', opts.teamId).maybeSingle(),
     supabase.from('coaches').select('display_name, report_branding').eq('id', opts.coachId).maybeSingle(),
   ])
@@ -116,10 +122,15 @@ export async function buildContext(
   }
 }
 
-/** The player's age in years, or undefined. Used to filter drill suggestions. */
-export async function playerAge(supabase: any, playerId: string): Promise<number | undefined> {
+/**
+ * The player's age in years, or undefined. Used to filter drill suggestions.
+ * Read only for a player verified against the team (lib/playerScope.ts).
+ */
+export async function playerAge(supabase: any, playerId: string, teamId: string): Promise<number | undefined> {
+  const scope = await resolvePlayerScope(supabase, { playerId, teamId })
+  if (!scope.ok) return undefined
   const { data } = await supabase
-    .from('players').select('birth_year').eq('id', playerId).maybeSingle()
+    .from('players').select('birth_year').eq('id', scope.playerId).maybeSingle()
   const year = (data as any)?.birth_year
   if (!year) return undefined
   const age = new Date().getFullYear() - Number(year)

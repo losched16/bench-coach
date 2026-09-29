@@ -19,6 +19,7 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { focusAreaLabel } from './focusAreas'
 import { MIN_SESSIONS_FOR_TREND } from './metrics'
+import { resolvePlayerScope } from './playerScope'
 
 // ── Timing ─────────────────────────────────────────────
 
@@ -228,6 +229,17 @@ export async function gatherCheckinEvidence(
   if (!pres) return null
   const p = pres as any
   const scope: 'player' | 'team' = p.scope === 'team' ? 'team' : 'player'
+
+  // Nothing about the priority's player is read unless that player belongs to
+  // the priority's team, or — with no team — to the coach who owns it. A
+  // priority that fails this answers as a missing one does.
+  if (p.player_id) {
+    const inScope = await resolvePlayerScope(supabase, {
+      playerId: p.player_id, teamId: p.team_id || null, ownerCoachId: p.coach_id,
+    })
+    if (!inScope.ok) return null
+  }
+
   const issuedAt: string = p.issued_at || p.created_at
   const issuedDate = issuedAt.slice(0, 10)
   const daysElapsed = daysBetween(issuedAt)

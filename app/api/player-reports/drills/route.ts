@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
       query,
       diagnosis,
       taxonomy,
-      playerAge: await playerAge(supabaseAdmin, report.player_id),
+      playerAge: await playerAge(supabaseAdmin, report.player_id, report.team_id),
       competitionLevel: await competitionLevelFor((team as any)?.season_id),
       // Room to drop what is already in the report and still fill the menu.
       limit: want + already.size + 4,

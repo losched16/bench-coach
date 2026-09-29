@@ -14,6 +14,7 @@ import {
   splitVerdict,
 } from '@/lib/checkin'
 import { guard } from '@/lib/authz'
+import { playersOnTeam } from '@/lib/playerScope'
 import { claude as anthropic, describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
 
 // Never prerendered. This route reads the session cookie to decide who is
@@ -79,7 +80,27 @@ export async function GET(request: NextRequest) {
     const { data: rows, error } = await q
     if (error) throw error
 
-    const list = rows || []
+    // A player priority is listed only when its player belongs to its team, or
+    // — with no team — to this coach. Names are read for those players only.
+    const all = rows || []
+    const allowed = new Set<string>()
+    const byTeam = new Map<string, string[]>()
+    const teamless: string[] = []
+    for (const p of all as any[]) {
+      if (!p.player_id) continue
+      if (p.team_id) byTeam.set(p.team_id, [...(byTeam.get(p.team_id) || []), p.player_id])
+      else teamless.push(p.player_id)
+    }
+    await Promise.all(Array.from(byTeam.entries()).map(async ([tid, pids]) => {
+      const ok = await playersOnTeam(supabaseAdmin, tid, pids)
+      for (const pid of Array.from(ok)) allowed.add(`${tid}:${pid}`)
+    }))
+    if (teamless.length) {
+      const { data: owned } = await supabaseAdmin
+        .from('players').select('id').eq('coach_id', coachId).in('id', teamless)
+      for (const r of (owned || []) as any[]) allowed.add(`:${r.id}`)
+    }
+    const list = (all as any[]).filter(p => !p.player_id || allowed.has(`${p.team_id || ''}:${p.player_id}`))
     if (list.length === 0) return NextResponse.json({ prescriptions: [], dueCount: 0 })
 
     // Names and adherence counts in two queries rather than N.

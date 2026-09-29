@@ -4,7 +4,7 @@ import { COACH_VOICE } from '@/lib/coachVoice'
 import { assembleCoachContext, renderCoachContext } from '@/lib/coachContext'
 import { focusAreaLabel } from '@/lib/focusAreas'
 import { migrationHintFor } from '@/lib/migrationHints'
-import { guard } from '@/lib/authz'
+import { guard, authorizePlayer, AuthzError } from '@/lib/authz'
 import { claude as anthropic, describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
 
 // Never prerendered. This route reads the session cookie to decide who is
@@ -202,6 +202,21 @@ export async function POST(request: NextRequest) {
         { error: 'Team priorities get a practice plan, not a development plan.' },
         { status: 400 }
       )
+    }
+
+    // The priority's player is read about below, so the caller must be able to
+    // reach that player — through the priority's team, or as the coach who
+    // owns a team-less player. Anything else answers exactly as a missing
+    // priority does.
+    if (p.player_id) {
+      try {
+        await authorizePlayer(p.player_id, { teamId: p.team_id || null, capability: 'decide' })
+      } catch (error) {
+        if (!(error instanceof AuthzError)) throw error
+        return error.status === 401
+          ? NextResponse.json({ error: error.message }, { status: 401 })
+          : NextResponse.json({ error: 'Priority not found' }, { status: 404 })
+      }
     }
 
     // Who this is for, and how old — a plan for a nine-year-old and a plan for

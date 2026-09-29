@@ -7,7 +7,7 @@ import { resolveFocusArea, focusAreaLabel } from '@/lib/focusAreas'
 import { textFrom } from '@/lib/claudeText'
 import { commitPrescription } from '@/lib/prescriptions'
 import { FEATURE_UNAVAILABLE } from '@/lib/migrationHints'
-import { guard, requireSession } from '@/lib/authz'
+import { guard, requireSession, authorizePlayer, authzResponse } from '@/lib/authz'
 import { visibleDrills, schedulableDrills } from '@/lib/drills'
 import { diagnose, TaxonomyRow, TAXONOMY_FIELDS } from '@/lib/drillDiagnosis'
 import { claude as anthropic, describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
@@ -98,6 +98,22 @@ export async function POST(request: NextRequest) {
     }
     const tax = taxonomy as TaxonomyRow[]
 
+    // A player named here is read about and may be stored on the priority, so
+    // it is verified first: on the team when there is one, the caller's own
+    // player when there is not. Without a team, the context is then built for
+    // the caller's own coach account, which is the only one that owns them.
+    let ownCoachForPlayer: string | null = null
+    if (playerId) {
+      try {
+        const actor = await authorizePlayer(playerId, { teamId: teamId || null, capability: 'ask' })
+        if (!teamId) ownCoachForPlayer = actor.ownerCoachId
+      } catch (error) {
+        const authz = authzResponse(error)
+        if (authz) return NextResponse.json(authz.body, { status: authz.status })
+        throw error
+      }
+    }
+
     // 2. Optionally enrich with player context from the workspace (age + level).
     if (playerId) {
       const { data: player } = await supabaseAdmin
@@ -106,7 +122,7 @@ export async function POST(request: NextRequest) {
         playerAge = new Date().getFullYear() - player.birth_year
       }
     }
-    let coachId: string | null = body.coachId || null
+    let coachId: string | null = ownCoachForPlayer || body.coachId || null
     if (teamId) {
       const { data: team } = await supabaseAdmin
         .from('teams').select('coach_id, season:seasons(league_type)').eq('id', teamId).single()

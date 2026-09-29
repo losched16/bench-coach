@@ -4,6 +4,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { tierOf, tierConfig } from './tiers'
 import { isTeamLeagueSponsored } from './leagueEntitlements'
+import { resolvePlayerScope } from './playerScope'
 
 // Who is asking, and are they allowed.
 //
@@ -442,6 +443,52 @@ export async function authorizeProgress(
   const teamId = (progress as any).team_id as string
   const actor = await authorizeTeam(teamId, capability)
   return { ...actor, teamId, progress: progress as any }
+}
+
+/**
+ * The caller may read or act on private context about `playerId`.
+ *
+ * A player id says which child; it is not a permission. Every route that takes
+ * one from a request — or from a row a request wrote — asks this before reading
+ * anything about that player, and uses what it returns.
+ *
+ *   With a team: the caller must hold `capability` on the team (the same check
+ *   as authorizeTeam, so staff roles work exactly as they do everywhere else),
+ *   AND the player must belong to that team — roster or archive.
+ *
+ *   Without a team: the player must be owned by the caller's OWN coach account.
+ *   Staff on somebody's team are not granted their team-less players, and
+ *   league roles grant nothing here at all — no path in this function consults
+ *   league membership.
+ *
+ * A missing player and one outside the caller's scope both answer 404 "Player
+ * not found", so the response never says which it was.
+ */
+export async function authorizePlayer(
+  playerId: string | null | undefined,
+  opts: { teamId?: string | null; capability: Capability }
+): Promise<Omit<Actor, 'teamId'> & { playerId: string; teamId: string | null }> {
+  if (!playerId) throw new AuthzError('Missing playerId', 400)
+
+  if (opts.teamId) {
+    const actor = await authorizeTeam(opts.teamId, opts.capability)
+    const scope = await resolvePlayerScope(supabaseAdmin, { playerId, teamId: opts.teamId })
+    if (!scope.ok) throw new AuthzError('Player not found', 404)
+    return { ...actor, playerId, teamId: opts.teamId }
+  }
+
+  const userId = await currentUserId()
+  if (!userId) throw new AuthzError('You need to be signed in', 401)
+
+  const { data: own } = await supabaseAdmin
+    .from('coaches').select('id').eq('user_id', userId).maybeSingle()
+  const ownCoachId = (own as any)?.id as string | undefined
+  if (!ownCoachId) throw new AuthzError('Player not found', 404)
+
+  const scope = await resolvePlayerScope(supabaseAdmin, { playerId, ownerCoachId: ownCoachId })
+  if (!scope.ok) throw new AuthzError('Player not found', 404)
+
+  return { userId, coachId: ownCoachId, ownerCoachId: ownCoachId, role: 'owner', playerId, teamId: null }
 }
 
 // ── The one-line guard ─────────────────────────────────

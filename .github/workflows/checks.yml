@@ -75,6 +75,10 @@ jobs:
       - run: npm run test:player-pathways
       - run: npm run test:pathways
       - run: npm run test:pathway-ui
+      # Player scope: the rule, the context builder, lib/authz.ts and the
+      # routes that read or store a player id. Starts a local stand-in for the
+      # auth server and the model API on 127.0.0.1; nothing external is called.
+      - run: npm run test:player-scope
       - run: npm run test:drill-finder
       - run: npm run test:pitch-count
 
