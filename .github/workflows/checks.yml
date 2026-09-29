@@ -79,6 +79,11 @@ jobs:
       # routes that read or store a player id. Starts a local stand-in for the
       # auth server and the model API on 127.0.0.1; nothing external is called.
       - run: npm run test:player-scope
+      # Development plans in the AI context: scoping, limits, and delivery to
+      # each route's prompt. The second starts a capture server on 127.0.0.1
+      # in place of the model API; no model is called.
+      - run: npm run test:pathway-context
+      - run: npm run test:pathway-context-consumers
       - run: npm run test:drill-finder
       - run: npm run test:pitch-count
 

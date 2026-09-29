@@ -11,9 +11,10 @@
 
 import { loadTaxonomy } from './drillDiagnosis'
 import { resolvePlayerScope } from './playerScope'
+import { loadPathwayContext } from './coachContext'
 import {
   seasonWindow, inWindow, measurementItems, priorityItem, noteItem,
-  observationItem, entryItem, traitItem, sortItems,
+  observationItem, entryItem, traitItem, pathwayItem, sortItems,
   type SourceBundle, type SourceItem, type SourceKind, type MetricType,
 } from './playerReportSources'
 
@@ -87,6 +88,11 @@ export async function gatherSources(
       loadTaxonomy(supabase).catch(() => []),
     ])
 
+  // Development plans for THIS player on THIS team — the report's own ids,
+  // both applied, the same loader the coaching context uses. Never throws;
+  // null when there are none or the tables are absent.
+  const plans = await loadPathwayContext(supabase, { teamId, playerId })
+
   // Check-in outcomes belong under their priority, not beside it.
   const checkinsByPrescription = new Map<string, string[]>()
   const presIds = (prescriptions || []).map(p => p.id)
@@ -113,6 +119,7 @@ export async function gatherSources(
       (metricTypes || []) as MetricType[]
     ),
     ...(traits || []).map(traitItem),
+    ...(plans?.entries || []).map(pathwayItem),
   ].filter(it => it.text && (it.kind === 'measurement' || inWindow(it.date, window)))
 
   const counts: Partial<Record<SourceKind, number>> = {}

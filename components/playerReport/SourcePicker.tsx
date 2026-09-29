@@ -46,6 +46,7 @@ const GROUPS: Array<{ kind: SourceKind; title: string; hint?: string }> = [
   { kind: 'observation', title: 'Observations' },
   { kind: 'entry', title: 'Games, practices and lessons' },
   { kind: 'measurement', title: 'Measurements', hint: 'First reading to latest, as recorded.' },
+  { kind: 'pathway', title: 'Development plans', hint: 'The stage you put them on and the signals you recorded. A stage is not a grade.' },
   { kind: 'trait', title: 'Traits', hint: 'Private notes. Nothing here is included unless you choose it.' },
 ]
 

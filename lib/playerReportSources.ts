@@ -32,8 +32,9 @@
 
 import { formatReportDate } from './playerReports'
 import { focusAreaLabel, resolveFocusArea } from './focusAreas'
+import type { PathwayContextEntry } from './pathwayContext'
 
-export type SourceKind = 'priority' | 'note' | 'observation' | 'entry' | 'measurement' | 'trait'
+export type SourceKind = 'priority' | 'note' | 'observation' | 'entry' | 'measurement' | 'trait' | 'pathway'
 export type SourceTarget = 'strengths' | 'development' | 'closing'
 
 export interface SourceItem {
@@ -296,6 +297,55 @@ export function entryItem(e: {
     title: `${kind}${instructor}`,
     text: title || `${kind}${instructor}`,
     sensitive: false, suggestedTarget: null, preselected: false,
+  }
+}
+
+/**
+ * A development plan the coach put this player on, as a factual line.
+ *
+ * Says what stage the coach chose and which mastery signals the coach
+ * recorded, with dates — and nothing that reads as a grade. A stage is not a
+ * level of ability, completing a plan is not mastering it, and no "improved"
+ * is written here; if the coach wants to say that, they say it.
+ *
+ * NEVER pre-selected, including for an active plan. Unlike a priority, a plan
+ * is not a statement the coach made about this player to anyone; whether it
+ * belongs in a letter to the family is theirs to decide. Suggested for
+ * Development while it is running, and for nothing once it is finished —
+ * finishing a plan is not evidence of a strength.
+ */
+export function pathwayItem(e: PathwayContextEntry): SourceItem {
+  const stage = e.stage
+    ? `stage ${e.stage.number} of ${e.stage.total} — ${e.stage.name}`
+    : null
+  const signals = e.masteryRecorded && e.masteryRecorded.signals.length
+    ? `Signals the coach recorded on ${formatReportDate(e.masteryRecorded.on)}: ${e.masteryRecorded.signals.join('; ')}.`
+    : null
+
+  const text = e.status === 'completed'
+    ? `Development plan: ${e.pathwayName}. Marked complete by the coach on ${formatReportDate(e.completedOn || e.stageStartedOn)}.`
+    : [
+        `Development plan: ${e.pathwayName}.`,
+        e.status === 'paused'
+          ? (stage ? `Paused at ${stage}.` : 'Paused.')
+          : (stage ? `Working on ${stage} since ${formatReportDate(e.stageStartedOn)}.` : 'Current stage not available.'),
+        e.status === 'active' && e.stage?.objective ? `Stage goal: ${e.stage.objective}` : null,
+        signals,
+      ].filter(Boolean).join(' ')
+
+  const date = e.status === 'completed'
+    ? (e.completedOn || e.stageStartedOn)
+    : (e.masteryRecorded?.on && e.masteryRecorded.on > e.stageStartedOn ? e.masteryRecorded.on : e.stageStartedOn)
+
+  return {
+    id: `pathway:${e.progressId}`,
+    kind: 'pathway',
+    date: date || null,
+    title: `${e.pathwayName} · ${e.status}`,
+    text,
+    sensitive: false,
+    suggestedTarget: e.status === 'active' ? 'development' : null,
+    preselected: false,
   }
 }
 
