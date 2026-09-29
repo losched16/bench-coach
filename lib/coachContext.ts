@@ -18,6 +18,10 @@ import {
   MetricType, MetricReading, groupIntoSessions, renderMetricsForPrompt,
 } from './metrics'
 import { resolvePlayerScope } from './playerScope'
+import {
+  buildPathwayContext, renderPathwayContext, EVENT_FETCH_CAP,
+  type PathwayContext,
+} from './pathwayContext'
 
 export interface CoachContext {
   player?: {
@@ -112,6 +116,10 @@ export interface CoachContext {
     stepCount?: number | null
     stepTitle?: string | null
   }>
+  // The development-pathway stages the staff put this player (or this team's
+  // players) on, what the coach recorded against them, and when. See
+  // lib/pathwayContext.ts. Absent when there is no team in scope.
+  pathways?: PathwayContext
 }
 
 // Number of plate appearances below which a batting line is an observation,
@@ -468,14 +476,124 @@ export async function assembleCoachContext(
     ctx.activePrescriptions = []
   }
 
+  // ── Development plans ──
+  //
+  // Not for a requested player the scope refused. With playerId null the
+  // loader reads the whole team's plans, which is right for a team question
+  // and wrong for a question about one player — the same no-substitute rule
+  // the observation and priority blocks above follow.
+  const pathways = playerDenied ? null : await loadPathwayContext(supabase, { teamId, playerId })
+  if (pathways) ctx.pathways = pathways
+
   return ctx
+}
+
+// ── Development plans: the reads ───────────────────────
+//
+// SCOPE, AND WHY IT IS ENFORCED HERE RATHER THAN TRUSTED FROM THE CALLER
+//
+// Every caller of this module reads through the service role, so RLS is not
+// protecting these queries — the filters below are. Callers authorize the TEAM;
+// a playerId arrives separately, from a request body or a stored row, and is
+// never checked against that team by the caller. So:
+//
+//   * No team, no plans. A plan belongs to a team (team_id NOT NULL), and a
+//     request that names a player but no team has nothing to scope it by. The
+//     personal-plan and coach-scoped paths get no pathway block at all rather
+//     than one read by player id alone.
+//   * With a player, BOTH filters apply: team_id AND player_id. A player id
+//     from another team matches nothing, so it yields nothing — not an error
+//     that confirms the id is real.
+//   * Events are read by the progress ids that query returned, and ALSO by
+//     team_id. The trigger in migration 072 sets team_id from the progress
+//     row, so the second filter is redundant by construction; it is kept so
+//     this read cannot be widened by a future change to the first one.
+//   * Stage content is curriculum, shared by every team, and carries nothing
+//     about any player.
+//
+// Three queries at most, and one when there are no plans. Bounded: plans by a
+// fetch limit, events by EVENT_FETCH_CAP. lib/pathwayContext.ts applies the
+// display caps and the ordering, deterministically, whatever order these return.
+//
+// Returns null — never throws — when the tables are absent or a read fails: a
+// database without migration 072 loses this block, not the whole context.
+
+const PROGRESS_FETCH_LIMIT = { player: 20, team: 60 } as const
+
+export async function loadPathwayContext(
+  supabase: SupabaseClient,
+  opts: { teamId?: string | null; playerId?: string | null }
+): Promise<PathwayContext | null> {
+  const { teamId, playerId } = opts
+  if (!teamId) return null
+  const scope: 'player' | 'team' = playerId ? 'player' : 'team'
+
+  try {
+    let q = supabase
+      .from('player_pathway_progress')
+      .select(
+        'id, player_id, pathway_id, current_stage_key, current_stage_number, status, ' +
+        'started_at, stage_started_at, completed_at, ' +
+        'pathway:development_pathways(slug, name), player:players(name)'
+      )
+      .eq('team_id', teamId)
+    if (playerId) q = q.eq('player_id', playerId)
+    // A team view is what is being worked on now. Completed plans belong to a
+    // player's own record, not to Tuesday's practice.
+    else q = q.in('status', ['active', 'paused'])
+
+    const { data: progress, error } = await q
+      .order('stage_started_at', { ascending: false })
+      .order('id', { ascending: true })
+      .limit(PROGRESS_FETCH_LIMIT[scope])
+    if (error) throw error
+    if (!progress || progress.length === 0) return null
+
+    const rows = progress as any[]
+    const pathwayIds = Array.from(new Set(rows.map(r => r.pathway_id))).sort()
+    const progressIds = rows.map(r => r.id)
+
+    const [stagesRes, eventsRes] = await Promise.all([
+      supabase
+        .from('development_pathway_stages')
+        .select('pathway_id, stage_number, stage_key, name, objective, why_it_matters, ' +
+                'coaching_emphasis, mastery_signals, common_failure_modes')
+        .in('pathway_id', pathwayIds)
+        .order('pathway_id', { ascending: true })
+        .order('stage_number', { ascending: true }),
+      supabase
+        .from('player_pathway_events')
+        .select('id, progress_id, event_type, stage_key, stage_number, from_stage_key, ' +
+                'to_stage_key, detail, note, occurred_on, created_at')
+        .in('progress_id', progressIds)
+        .eq('team_id', teamId)
+        .order('occurred_on', { ascending: false })
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: true })
+        .limit(EVENT_FETCH_CAP),
+    ])
+    if (stagesRes.error) throw stagesRes.error
+    // Events failing costs the history, not the plan: the stage is still true.
+    const events = eventsRes.error ? [] : (eventsRes.data || [])
+
+    const built = buildPathwayContext({
+      scope,
+      progress: rows,
+      stages: (stagesRes.data || []) as any[],
+      events: events as any[],
+    })
+    return built.entries.length ? built : null
+  } catch (e: any) {
+    console.warn('[coach context] development plans unavailable:', e?.message || e)
+    return null
+  }
 }
 
 // ── Rendering the context into prompt text ─────────────
 // Written as prose-ish blocks rather than JSON: the model reads it as
 // evidence to reason about, not a schema to echo.
 
-export function renderCoachContext(ctx: CoachContext): string {
+export function renderCoachContext(ctx: CoachContext, opts: { today?: Date } = {}): string {
   const parts: string[] = []
 
   if (ctx.player) {
@@ -603,6 +721,12 @@ export function renderCoachContext(ctx: CoachContext): string {
       ).join('\n\n')
     )
   }
+
+  // After the observations and the priorities, deliberately: a plan says what
+  // the coach chose to work on, and what the coach SAW outranks it. Before
+  // "what we've already tried", so current work reads before history.
+  const plans = renderPathwayContext(ctx.pathways, opts.today)
+  if (plans) parts.push(plans)
 
   if (ctx.pastPrescriptions?.length) {
     parts.push(

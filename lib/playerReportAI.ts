@@ -197,7 +197,7 @@ export function improveFailureMessage(error: unknown): string {
 /** One thing the coach recorded, as the model sees it. */
 export interface DraftSourceItem {
   id: string
-  /** 'note' | 'priority' | 'entry' | 'observation' | 'measurement' | 'trait' | 'checkin' */
+  /** 'note' | 'priority' | 'entry' | 'observation' | 'measurement' | 'trait' | 'checkin' | 'pathway' */
   kind: string
   /** YYYY-MM-DD when known. */
   date: string | null
@@ -220,6 +220,8 @@ THIS TASK IS DIFFERENT IN ONE WAY
 You are not rewriting one paragraph. You are handed a numbered list of things the coach recorded during the season — notes, game entries, priorities they set and how they turned out, measurements — and asked to organise them into one section of the report.
 
 You may combine items, put them in a sensible order, and say them plainly. You may say a priority "was worked on" and, if the coach marked it resolved, that it "has become a strength" — that is what resolved means. You may state a measurement exactly as given.
+
+A development-plan item (kind "pathway") says which stage the coach chose to work on and which signals the coach recorded seeing. You may say the player is working on that stage and name the signals the coach recorded. A stage is not a grade: do not call it a level the player has reached, and do not say they "mastered", "passed" or "completed" a skill. A plan the coach marked complete means the coach finished the plan — not that the skill is mastered.
 
 You may not add anything the items do not say. If the items are thin, write less: one honest sentence beats three padded ones. If nothing in the list belongs in this section, say so in one plain sentence to the coach ("Nothing you have recorded yet speaks to this") rather than inventing content.
 

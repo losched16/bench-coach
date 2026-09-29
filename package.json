@@ -104,6 +104,8 @@
     "test:migration-071": "bash scripts/test-migration-071.sh",
     "test:pathway-ui": "npx --yes tsx --tsconfig tsconfig.json scripts/test-pathway-ui.ts",
     "test:pathways": "npx --yes tsx --tsconfig tsconfig.json scripts/test-pathways.ts",
+    "test:pathway-context": "npx --yes tsx --tsconfig tsconfig.json scripts/test-pathway-context.ts",
+    "test:pathway-context-consumers": "npx --yes tsx --tsconfig tsconfig.json scripts/test-pathway-context-consumers.ts",
     "verify:071": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-071.ts",
     "verify:pathway-ui-prod": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-pathway-ui-prod.ts",
     "verify:pathways-prod": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-pathways-production.ts",

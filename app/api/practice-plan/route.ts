@@ -108,7 +108,11 @@ export async function POST(request: NextRequest) {
       teamId,
     })
       .then(ctx =>
-        (ctx.activePrescriptions?.length || ctx.observations?.length)
+        // Development plans count as a reason to send context on their own.
+        // Without them in this test the block could never reach a practice on a
+        // team that has plans but no priorities and no observations — which is
+        // every team in production today (0 prescriptions).
+        (ctx.activePrescriptions?.length || ctx.observations?.length || ctx.pathways?.entries.length)
           ? renderCoachContext(ctx)
           : ''
       )
