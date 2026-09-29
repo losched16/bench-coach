@@ -10,6 +10,7 @@
 // report carries — the same scoping the report itself lives under.
 
 import { loadTaxonomy } from './drillDiagnosis'
+import { resolvePlayerScope } from './playerScope'
 import {
   seasonWindow, inWindow, measurementItems, priorityItem, noteItem,
   observationItem, entryItem, traitItem, sortItems,
@@ -51,6 +52,12 @@ export async function gatherSources(
         supabase.from('seasons').select('start_date, end_date').eq('id', team.season_id).maybeSingle())
     : null
   const window = { ...seasonWindow(season, team?.created_at, { allSeasons }), allSeasons }
+
+  // Nothing about the player is read until the player is verified against the
+  // report's team (roster or archive). Traits and measurements carry no team
+  // column, so this check is what scopes them. See lib/playerScope.ts.
+  const scope = await resolvePlayerScope(supabase, { playerId, teamId })
+  if (!scope.ok) return { window, items: [], skillLevels: null, counts: {} }
 
   const [prescriptions, notes, observations, entries, metrics, metricTypes, traits, teamPlayer, taxonomy] =
     await Promise.all([

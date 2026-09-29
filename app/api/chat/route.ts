@@ -12,7 +12,7 @@ import {
   PitchCountRuleSet,
   aggregatePitchingLines,
 } from '@/lib/scouting'
-import { guard, authorizeTeam, can } from '@/lib/authz'
+import { guard, authorizeTeam, authorizePlayer, authzResponse, can } from '@/lib/authz'
 import { favoriteDrillIds } from '@/lib/drills'
 import { retrieveDrills, RetrievalResult, describeRetrieval } from '@/lib/drillRetrieval'
 import { constraintsFromText, ageFromText } from '@/lib/drillConstraints'
@@ -56,6 +56,18 @@ export async function POST(request: NextRequest) {
         { error: 'Missing teamId or message' },
         { status: 400 }
       )
+    }
+
+    // A player this conversation is about must belong to this team before
+    // anything about them is read, and before the id is stored on the thread.
+    if (playerId) {
+      try {
+        await authorizePlayer(playerId, { teamId, capability: 'ask' })
+      } catch (error) {
+        const authz = authzResponse(error)
+        if (authz) return NextResponse.json(authz.body, { status: authz.status })
+        throw error
+      }
     }
 
     // Check if Anthropic API key is set

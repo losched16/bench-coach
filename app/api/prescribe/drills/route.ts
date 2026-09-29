@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { scoreDrillRelevance } from '@/lib/analysis'
 import { textFrom } from '@/lib/claudeText'
 import { guard } from '@/lib/authz'
+import { resolvePlayerScope } from '@/lib/playerScope'
 import { resolveSteps, clampStep, PlanStep } from '@/lib/progression'
 import { claude as anthropic } from '@/lib/claudeClient'
 
@@ -162,6 +163,16 @@ export async function POST(request: NextRequest) {
 
     if (!p) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     const pres = p as any
+
+    // The priority's player, if any, must belong to its team — or with no
+    // team, to the coach who owns the priority — before anything about them is
+    // read. Otherwise this answers as a missing priority does.
+    if (pres.player_id) {
+      const inScope = await resolvePlayerScope(supabaseAdmin, {
+        playerId: pres.player_id, teamId: pres.team_id || null, ownerCoachId: coachId,
+      })
+      if (!inScope.ok) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
 
     const current: string[] = pres.drill_ids || []
     const retired: string[] = pres.retired_drill_ids || []

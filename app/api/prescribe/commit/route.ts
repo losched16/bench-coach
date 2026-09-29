@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { commitPrescription } from '@/lib/prescriptions'
 import { focusAreaLabel, isFocusArea } from '@/lib/focusAreas'
-import { guard } from '@/lib/authz'
+import { guard, authorizePlayer, authorizeTeam, authzResponse } from '@/lib/authz'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -41,6 +41,24 @@ export async function POST(request: NextRequest) {
 
     const scope: 'player' | 'team' = draft.scope === 'team' ? 'team' : 'player'
 
+    // The player and team come from the draft, and a priority stores both —
+    // later surfaces read about that player from it. So both are verified
+    // here against the caller, not just the coach id the guard checked. A
+    // team-less player priority is stored under the caller's own coach
+    // account, which is the one that owns the player.
+    let ownerCoachId: string = coachId
+    try {
+      if (draft.playerId) {
+        const actor = await authorizePlayer(draft.playerId, { teamId: draft.teamId || null, capability: 'decide' })
+        if (!draft.teamId) ownerCoachId = actor.ownerCoachId
+      }
+      if (draft.teamId && !draft.playerId) await authorizeTeam(draft.teamId, 'decide')
+    } catch (error) {
+      const authz = authzResponse(error)
+      if (authz) return NextResponse.json(authz.body, { status: authz.status })
+      throw error
+    }
+
     // Same check the analysis route runs, repeated here because this is the
     // call that actually writes. Between reading the analysis and confirming
     // it, another priority in this area could have been set from a different
@@ -49,7 +67,7 @@ export async function POST(request: NextRequest) {
       let sq = supabaseAdmin
         .from('prescriptions')
         .select('id, priority, created_at')
-        .eq('coach_id', coachId)
+        .eq('coach_id', ownerCoachId)
         .eq('status', 'active')
         .eq('focus_area', draft.focusArea)
 
@@ -83,7 +101,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await commitPrescription(supabaseAdmin, {
-      coachId,
+      coachId: ownerCoachId,
       scope,
       playerId: draft.playerId,
       teamId: draft.teamId,

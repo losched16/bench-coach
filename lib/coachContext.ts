@@ -17,6 +17,7 @@ import { focusAreaLabel, focusAreaRank } from './focusAreas'
 import {
   MetricType, MetricReading, groupIntoSessions, renderMetricsForPrompt,
 } from './metrics'
+import { resolvePlayerScope } from './playerScope'
 
 export interface CoachContext {
   player?: {
@@ -126,8 +127,27 @@ export async function assembleCoachContext(
   supabase: SupabaseClient,
   opts: { coachId: string; teamId?: string | null; playerId?: string | null }
 ): Promise<CoachContext> {
-  const { coachId, teamId, playerId } = opts
+  const { coachId, teamId } = opts
   const ctx: CoachContext = {}
+
+  // ── Which player this context may describe ──
+  //
+  // Everything below reads through the service role, so these filters are the
+  // enforcement. A requested player is used only once it is verified against
+  // the scope this context is for: on the team (roster or archive) when there
+  // is one, owned by the coach when there is not. See lib/playerScope.ts.
+  //
+  // An unverified player gets NO player-scoped section, and the reads that
+  // would otherwise fall back to the whole team when no player is named are
+  // skipped too — a request about one child must never quietly become a read
+  // about another set of them. A missing player and an out-of-scope one
+  // produce the same context.
+  const requestedPlayerId = opts.playerId || null
+  const scope = requestedPlayerId
+    ? await resolvePlayerScope(supabase, { playerId: requestedPlayerId, teamId, ownerCoachId: coachId })
+    : null
+  const playerId = scope && scope.ok ? scope.playerId : null
+  const playerDenied = !!requestedPlayerId && !playerId
 
   // ── Team ──
   if (teamId) {
@@ -252,7 +272,10 @@ export async function assembleCoachContext(
   }
 
   // ── Observations — the highest-weight evidence we have ──
-  try {
+  if (playerDenied) {
+    ctx.observations = []
+    ctx.lessonDiagnoses = []
+  } else try {
     let obsQuery = supabase
       .from('observations')
       .select('body, prompt_key, observed_on, entry:entries(entry_type, instructor_name)')
@@ -366,7 +389,10 @@ export async function assembleCoachContext(
   }
 
   // ── Prescription history — what we already told them, and whether it moved ──
-  try {
+  if (playerDenied) {
+    ctx.pastPrescriptions = []
+    ctx.activePrescriptions = []
+  } else try {
     const BASE_FIELDS =
       'id, priority, problem_id, focus_area, status, issued_at, review_due_at, ' +
       'min_hold_until, success_criteria, outcome_note'
