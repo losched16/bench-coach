@@ -29,7 +29,7 @@
 
 import * as http from 'http'
 import * as path from 'path'
-import { seed, U, C, T, P, mark, markers } from './fixtures/playerScopeFixture'
+import { seed, U, C, T, P, STAGE, mark, markers } from './fixtures/playerScopeFixture'
 import type { StrictSupabase as StrictT } from './lib/strictSupabase'
 
 let passed = 0
@@ -254,6 +254,22 @@ async function structural() {
   const team = renderCoachContext(await assembleCoachContext(teamDb, { coachId: C.a, teamId: T.a }))
   all('builder: team context still carries team-wide observations', team, ['MK-team-a-wide-observation'])
   none('builder: team context carries no other team', team, markers(P.zoe))
+
+  // Development plans and player scope, together. A permitted player's plan
+  // is in context; a refused player gets neither their own plan NOR the team's
+  // plans in its place; a team question still gets the team's plans.
+  all('plans: a permitted player\'s plan is in context', ok, ['DEVELOPMENT PLANS', STAGE.two, mark(P.marcus, 'plannote')])
+  none('plans: a refused player gets no plan block at all', denied, ['DEVELOPMENT PLANS', STAGE.one, STAGE.two, mark(P.zoe, 'plannote'), mark(P.marcus, 'plannote')])
+  none('plans: nor does a missing player', missing, ['DEVELOPMENT PLANS', STAGE.two, mark(P.marcus, 'plannote')])
+  check('plans: no plan table is queried for a refused player',
+    !denyDb.log.some(q => q.table === 'player_pathway_progress' || q.table === 'player_pathway_events'))
+  all('plans: a team question gets the team\'s plans', team, ['DEVELOPMENT PLANS', STAGE.two])
+  none('plans: a team question gets no other team\'s plans', team, [mark(P.zoe, 'plannote')])
+
+  // A coach who controls two teams: a player on team C is still outside team A.
+  const crossDb = freshDb()
+  const cross = renderCoachContext(await assembleCoachContext(crossDb, { coachId: C.a, teamId: T.a, playerId: P.cleo }))
+  none('builder: the same coach\'s other team is still out of scope', cross, [...markers(P.cleo), 'DEVELOPMENT PLANS'])
 }
 
 // ── layer 3: the real authorization path and the real routes ───────────────
@@ -352,6 +368,20 @@ async function real() {
   refusedOutput.push(cl.text)
   check('chat: league administration is refused at the team', cl.status === 404, `status ${cl.status}`)
 
+  // Development plans through the real path: permitted in, refused out, and
+  // no team plans in place of a refused player.
+  freshDb(); as(U.ownerA); captured.length = 0
+  await call(chat.POST, '/api/chat', { method: 'POST', body: { teamId: T.a, playerId: P.marcus, message: 'How is he throwing?', history: [] } })
+  all('plans/chat: the permitted player\'s plan reaches the prompt', captured.join('\n'), [STAGE.two, mark(P.marcus, 'plannote')])
+  freshDb(); as(U.ownerA)
+  const pz = await refused('plans/chat: another team\'s player', call(chat.POST, '/api/chat', { method: 'POST', body: { teamId: T.a, playerId: P.zoe, message: 'x', history: [] } }))
+  none('plans/chat: the refusal carries no plan of anyone', pz.text, [STAGE.one, STAGE.two, mark(P.zoe, 'plannote'), mark(P.marcus, 'plannote')])
+  await refused('plans/chat: a player on the same coach\'s other team', call(chat.POST, '/api/chat', { method: 'POST', body: { teamId: T.a, playerId: P.cleo, message: 'x', history: [] } }))
+  captured.length = 0
+  await call(chat.POST, '/api/chat', { method: 'POST', body: { teamId: T.a, message: 'Plan the week.', history: [] } })
+  all('plans/chat: a team question still gets the team\'s plans', captured.join('\n'), [STAGE.two])
+  none('plans/chat: and no other team\'s', captured.join('\n'), [mark(P.zoe, 'plannote')])
+
   // Threads.
   freshDb(t => {
     t.chat_threads = [
@@ -444,6 +474,8 @@ async function real() {
   check('report sources: no player-scoped table queried for them', readsOf(repDb, P.zoe).length === 0, readsOf(repDb, P.zoe).join(', '))
   const srcOk = await call(sources.GET, '/api/player-reports/rep-ok/sources', { params: { reportId: 'rep-ok' } })
   check('report sources: the team\'s own player still offers their record', srcOk.text.includes(mark(P.marcus, 'trait')))
+  check('report sources: and their development plan', srcOk.text.includes(STAGE.two))
+  none('report sources: a refused report offers no plan', src.text, [STAGE.one, STAGE.two])
   captured.length = 0
   await call(draftR.POST, '/api/player-reports/draft', { method: 'POST', body: { reportId: 'rep-other', kind: 'development', items: [{ id: 'n', kind: 'note', date: null, text: 'Worked hard.' }] } })
   refusedOutput.push(...captured)
@@ -455,6 +487,8 @@ async function real() {
   // One sweep over everything refused requests produced.
   none('sweep: no refused request produced any of another team\'s player data', refusedOutput.join('\n'), markers(P.zoe))
   none('sweep: nor any of another coach\'s team-less player', refusedOutput.join('\n'), [...markers(P.solokid), ...markers(P.homekid)])
+  none('sweep: nor any of a player on the same coach\'s other team', refusedOutput.join('\n'), markers(P.cleo))
+  none('sweep: nor any team plan in place of a refused player', refusedOutput.join('\n'), [STAGE.one, STAGE.two])
   void port
 }
 
