@@ -84,6 +84,7 @@ jobs:
       # in place of the model API; no model is called.
       - run: npm run test:pathway-context
       - run: npm run test:pathway-context-consumers
+      - run: npm run test:observation-scope
       - run: npm run test:drill-finder
       - run: npm run test:pitch-count
 
