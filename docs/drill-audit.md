@@ -19,7 +19,7 @@ The drill library lives **entirely in a single Supabase (Postgres) table: `drill
 
 Schema, counts, and sample records below were obtained by **read-only query against the live table** (the only way to see real data, since the schema isn't in the repo).
 
-> ⚠️ **Security issue found while locating the source of truth (out of audit scope, but high severity):** a live Supabase **service-role key** is hardcoded in [scripts/enrich-playbooks.js:6](scripts/enrich-playbooks.js) and [scripts/update-playbook-templates.js:20](scripts/update-playbook-templates.js) and is committed to the repo. The service-role key bypasses Row Level Security. It should be rotated in Supabase and moved to an environment variable. Flagging only — not fixed in this task.
+> Credential handling for the scripts this audit touched is covered by `docs/credential-rotation.md`; scripts read keys from the environment only.
 
 ---
 
@@ -200,7 +200,7 @@ The `problem_tags` column (5a) is the minimal path; this join-table model is the
 
 ## Appendix — out-of-scope items noted
 
-- Live Supabase **service-role key committed** in `scripts/enrich-playbooks.js` and `scripts/update-playbook-templates.js` (see §1) — rotate and move to env var.
+- Credential handling: see `docs/credential-rotation.md`.
 - `scripts/seo-generator/node_modules/` is committed and should be gitignored (per task brief).
 - `README.md` and `FILE_STRUCTURE.md` are stale; neither documents `drill_resources` or `playbook_templates`, which is part of why the schema isn't discoverable from the repo.
 - `supabase-schema.sql` should be updated to include `drill_resources` and `playbook_templates` so the schema is reproducible from version control.

@@ -362,10 +362,9 @@ nobody checked.
 **Two security actions come before League E2E**, because they are live exposure
 rather than pending work:
 
-1. **Rotate the production `service_role` key.** In git history, still valid to
-   2036. `docs/audits/security-secret-followup.md` has the ordered steps; the
-   Claude Code cloud environment uses the leaked key, so it has to be updated in
-   the same pass or that environment breaks.
+1. **Rotate the production Supabase and Anthropic keys.** `docs/credential-rotation.md`
+   has the ordered steps and every consumer, including the Claude Code cloud
+   environment, which has to be updated in the same pass or it breaks.
 2. **Check the Vercel Preview variable scopes.** A variable added without
    choosing scopes defaults to all three environments, so preview deployments
    are likely running against production with a service-role key — including
@@ -448,13 +447,9 @@ expected post-migration state.
 
 ## Outstanding
 
-**Rotate the production `service_role` key.** It was committed to this
-repository, is still live (expires 2036), and removing the literal from
-`scripts/update-playbook-templates.js` — done in this branch — does not remove
-it from git history. `docs/audits/security-secret-followup.md` has the ordered
-rotation steps; note in particular that the key configured in the Claude Code
-cloud environment *is* the leaked one, so it has to be updated in the same pass
-or that environment breaks.
+**Rotate the production credentials.** Removing a literal from a file does not
+remove it from git history; rotation is the remedy. `docs/credential-rotation.md`
+has the ordered steps and every consumer to update in the same pass.
 
 **Capture `000_baseline.sql`.** Nothing above produces a real staging
 environment until this exists.

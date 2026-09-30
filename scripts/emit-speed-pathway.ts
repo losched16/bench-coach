@@ -27,6 +27,10 @@
 // and 'prepare' is a pathway sequence word that is not a drill role.
 
 import { createClient } from '@supabase/supabase-js'
+// Names the database before touching it, and refuses an unnamed production
+// write. See scripts/lib/env-guard.mjs.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { requireTarget } = require('./lib/env-guard.mjs')
 import { writeFileSync } from 'fs'
 import { createHash } from 'crypto'
 import { isSchedulable } from '../lib/drills'
@@ -90,6 +94,7 @@ const EMPTY_RATIONALE = [
 
 async function main() {
   if (!URL || !KEY) { console.error('Set the Supabase env vars.'); process.exit(1) }
+  requireTarget({ script: 'emit-speed-pathway', writes: false })  // reads with the public key; writes files only
   const sb = createClient(URL, KEY)
 
   const { data: drillRows, error } = await sb

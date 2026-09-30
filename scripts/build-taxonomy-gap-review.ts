@@ -24,6 +24,10 @@
 // Read-only against production unless you pipe the SQL somewhere.
 
 import { createClient } from '@supabase/supabase-js'
+// Names the database before touching it, and refuses an unnamed production
+// write. See scripts/lib/env-guard.mjs.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { requireTarget } = require('./lib/env-guard.mjs')
 import { readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { dirname } from 'path'
 
@@ -102,6 +106,7 @@ async function page(sb: any, table: string, cols: string): Promise<any[]> {
 
 async function main() {
   if (!URL || !KEY) { console.error('Set the Supabase env vars.'); process.exit(1) }
+  requireTarget({ script: 'build-taxonomy-gap-review', writes: false })  // reads with the public key; writes files only
   const sb = createClient(URL, KEY)
 
   const problems = await page(sb, 'problem_taxonomy', 'slug,label,skill_category')

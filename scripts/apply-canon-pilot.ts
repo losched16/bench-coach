@@ -40,6 +40,10 @@
 // Without --apply it prints the whole plan and touches nothing.
 
 import { createClient } from '@supabase/supabase-js'
+// Names the database before touching it, and refuses an unnamed production
+// write. See scripts/lib/env-guard.mjs.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { requireTarget } = require('./lib/env-guard.mjs')
 import { loadDecisions, effectiveKind, schedulableAfter } from './build-canon-audit'
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -110,6 +114,7 @@ async function main() {
     console.error('Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.')
     process.exit(1)
   }
+  requireTarget({ script: 'apply-canon-pilot', writes: APPLY, what: 'apply the drill canon pilot decisions (drill_resources, drill_activity_families, drill_problem_map)' })
   const sb = createClient(URL, KEY, { auth: { persistSession: false } })
 
   const decisions = loadDecisions()

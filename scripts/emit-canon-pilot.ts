@@ -28,6 +28,10 @@
 //   (omitted)          the Phase 1 pilot, for reproducing that write
 
 import { createClient } from '@supabase/supabase-js'
+// Names the database before touching it, and refuses an unnamed production
+// write. See scripts/lib/env-guard.mjs.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { requireTarget } = require('./lib/env-guard.mjs')
 import { readFileSync } from 'fs'
 import { createHash } from 'crypto'
 import { loadDecisions, effectiveKind, schedulableAfter } from './build-canon-audit'
@@ -47,6 +51,7 @@ async function main() {
   // to be written against production and must be decided against production.
   let library: any[]
   if (URL && KEY) {
+    requireTarget({ script: 'emit-canon-pilot', writes: false })  // reads with the public key; writes files only
     const sb = createClient(URL, KEY)
     const { data, error } = await sb
       .from('drill_resources')
