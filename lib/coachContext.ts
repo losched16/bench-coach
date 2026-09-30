@@ -18,6 +18,7 @@ import {
   MetricType, MetricReading, groupIntoSessions, renderMetricsForPrompt,
 } from './metrics'
 import { resolvePlayerScope } from './playerScope'
+import { scopeObservations } from './observationScope'
 import {
   buildPathwayContext, renderPathwayContext, EVENT_FETCH_CAP,
   type PathwayContext,
@@ -284,15 +285,16 @@ export async function assembleCoachContext(
     ctx.observations = []
     ctx.lessonDiagnoses = []
   } else try {
-    let obsQuery = supabase
-      .from('observations')
-      .select('body, prompt_key, observed_on, entry:entries(entry_type, instructor_name)')
-      .eq('coach_id', coachId)
+    // By team when there is one, so an assistant's observations count too.
+    // See lib/observationScope.ts.
+    const obsQuery = scopeObservations(
+      supabase
+        .from('observations')
+        .select('body, prompt_key, observed_on, entry:entries(entry_type, instructor_name)'),
+      { teamId, coachId, playerId }
+    )
       .order('observed_on', { ascending: false })
       .limit(25)
-
-    if (playerId) obsQuery = obsQuery.eq('player_id', playerId)
-    else if (teamId) obsQuery = obsQuery.eq('team_id', teamId)
 
     const { data: obs } = await obsQuery
 

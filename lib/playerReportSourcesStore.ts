@@ -11,6 +11,7 @@
 
 import { loadTaxonomy } from './drillDiagnosis'
 import { resolvePlayerScope } from './playerScope'
+import { scopeObservations } from './observationScope'
 import { loadPathwayContext } from './coachContext'
 import {
   seasonWindow, inWindow, measurementItems, priorityItem, noteItem,
@@ -69,8 +70,10 @@ export async function gatherSources(
       safe<any[]>('player_notes', supabase.from('player_notes')
         .select('id, note, created_at').eq('team_id', teamId).eq('player_id', playerId)
         .order('created_at', { ascending: false }).limit(100)),
-      safe<any[]>('observations', supabase.from('observations')
-        .select('id, body, observed_on, created_at, prompt_key').eq('coach_id', coachId).eq('player_id', playerId)
+      // By the report's team, so an assistant's observations count too.
+      safe<any[]>('observations', scopeObservations(
+        supabase.from('observations').select('id, body, observed_on, created_at, prompt_key'),
+        { teamId, coachId, playerId })
         .order('created_at', { ascending: false }).limit(100)),
       safe<any[]>('entries', supabase.from('entries')
         .select('id, entry_type, occurred_on, title, instructor_name, duration_min').eq('coach_id', coachId).eq('player_id', playerId)

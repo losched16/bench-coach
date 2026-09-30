@@ -20,6 +20,7 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import { focusAreaLabel } from './focusAreas'
 import { MIN_SESSIONS_FOR_TREND } from './metrics'
 import { resolvePlayerScope } from './playerScope'
+import { scopeObservations } from './observationScope'
 
 // ── Timing ─────────────────────────────────────────────
 
@@ -320,16 +321,17 @@ export async function gatherCheckinEvidence(
   }
 
   // ── What the human saw since ──
-  let obsQuery = supabase
-    .from('observations')
-    .select('body, prompt_key, observed_on, entry:entries(entry_type, instructor_name)')
-    .eq('coach_id', coachId)
+  // By the priority's team when it has one, so an assistant's observations
+  // count too. See lib/observationScope.ts.
+  const obsQuery = scopeObservations(
+    supabase
+      .from('observations')
+      .select('body, prompt_key, observed_on, entry:entries(entry_type, instructor_name)'),
+    { teamId: p.team_id || null, coachId, playerId: scope === 'player' ? p.player_id || null : null }
+  )
     .gte('observed_on', issuedDate)
     .order('observed_on', { ascending: true })
     .limit(30)
-
-  if (scope === 'player' && p.player_id) obsQuery = obsQuery.eq('player_id', p.player_id)
-  else if (p.team_id) obsQuery = obsQuery.eq('team_id', p.team_id)
 
   const { data: obs } = await obsQuery
   const observationsSince = (obs || []).map((o: any) => ({
