@@ -13,6 +13,9 @@
 // The caller has already authorized the team (every context read here runs
 // through the service role, so this filter is the enforcement).
 
+// The same rule scopes the entries those observations belong to (a report's
+// logged sessions): team rows when there is a team, the coach's own when not.
+//
 // Unconstrained on purpose: a structural `eq` constraint against supabase-js's
 // builder types trips TS2589 (instantiation too deep). Any query builder works.
 export function scopeObservations<Q>(

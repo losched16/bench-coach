@@ -63,6 +63,15 @@ function tables(): Tables {
     obs('obs-owner-cleo-c', C.a, T.c, P.cleo, M.ownerCleoTeamC),
     obs('obs-owner-team-c', C.a, T.c, null, M.ownerTeamC),
   )
+  // Logged sessions: the assistant's on team A, and the owner's for the same
+  // player recorded against team C.
+  const entry = (id: string, coach: string, team: string, player: string, title: string) =>
+    ({ id, coach_id: coach, team_id: team, player_id: player, entry_type: 'lesson', occurred_on: '2026-09-05', title, instructor_name: null, duration_min: 30 })
+  t.entries.push(
+    entry('ent-asst-marcus', ASSISTANT_COACH, T.a, P.marcus, 'MK-entry-assistant-marcus'),
+    entry('ent-owner-marcus-a', C.a, T.a, P.marcus, 'MK-entry-owner-marcus'),
+    entry('ent-owner-marcus-c', C.a, T.c, P.marcus, 'MK-entry-owner-marcus-team-c'),
+  )
   return t
 }
 
@@ -179,6 +188,9 @@ async function main() {
     has('report sources: owner observation offered', text, M.ownerMarcusA)
     lacks('report sources: same player on the other team excluded', text, M.ownerMarcusTeamC)
     lacks('report sources: team-wide note excluded', text, M.asstTeamA)
+    has('report sources: the assistant\'s logged session offered', text, 'MK-entry-assistant-marcus')
+    has('report sources: the owner\'s logged session offered', text, 'MK-entry-owner-marcus')
+    lacks('report sources: the same player\'s session on the other team excluded', text, 'MK-entry-owner-marcus-team-c')
     const denied = await gatherSources(new StrictSupabase(tables()) as any, { teamId: T.a, playerId: P.zoe, coachId: C.a })
     check('report sources: refused player offers nothing', denied.items.length === 0)
   }

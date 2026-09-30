@@ -34,6 +34,8 @@ interface Entry {
   image_urls: string[] | null
   observations: Observation[]
   legacy_journal_id?: string | null
+  // Every staff member's entries appear here, so each says who logged it.
+  author?: { id: string; display_name: string | null } | null
 }
 
 const TYPE_LABEL: Record<string, { label: string; icon: string }> = {
@@ -81,6 +83,7 @@ interface Props {
 export function PlayerHistory({ coachId, playerId, playerName, teamId }: Props) {
   const supabase = createSupabaseComponentClient()
   const [entries, setEntries] = useState<Entry[]>([])
+  const [viewerCoachId, setViewerCoachId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({})
@@ -95,6 +98,7 @@ export function PlayerHistory({ coachId, playerId, playerName, teamId }: Props) 
       const d = await res.json()
       if (!res.ok) throw new Error(d.error || 'Could not load the history')
       setEntries(d.entries || [])
+      setViewerCoachId(d.viewerCoachId || null)
       setError(d.needsMigration ? (d.migrationMessage || 'The activity log tables are not set up yet.') : null)
     } catch (e: any) {
       // Never silently empty. An empty list that means "the request failed"
@@ -205,6 +209,9 @@ export function PlayerHistory({ coachId, playerId, playerName, teamId }: Props) 
                             weekday: 'short', month: 'short', day: 'numeric',
                           })}
                         </span>
+                        {entry.author && entry.author.id !== viewerCoachId && (
+                          <span>Logged by {entry.author.display_name || 'another coach'}</span>
+                        )}
                         {entry.duration_min && (
                           <span className="flex items-center gap-1">
                             <Clock size={14} />{entry.duration_min} min

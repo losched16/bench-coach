@@ -706,6 +706,61 @@ async function real() {
   const dOk = await del(U.ownerA, entryId)
   check('log DELETE: the author deletes their own entry', dOk.status === 200 && rowsBy().entries.length === 0, `${dOk.status}`)
 
+  // ── GET /api/log: every authorized staff member's entries ───────────────
+  freshDb(logRows)
+  await post(U.ownerA, { teamId: T.a, playerId: P.marcus, title: 'LOGREAD owner-marcus' })
+  await post(U.assistant, { teamId: T.a, playerId: P.marcus, title: 'LOGREAD asst-marcus' })
+  await post(U.assistant, { teamId: T.a, title: 'LOGREAD asst-team' })
+  await post(U.ownerA, { teamId: T.c, playerId: P.cleo, title: 'LOGREAD owner-team-c' })
+  await post(U.ownerB, { teamId: T.b, playerId: P.zoe, title: 'LOGREAD b-zoe' })
+  await post(U.solo, { playerId: P.solokid, title: 'LOGREAD solo' })
+  await post(U.ownerA, { playerId: P.homekid, title: 'LOGREAD owner-teamless' })
+  const read = async (u: string | null, q: string) => {
+    as(u)
+    const res = await call(logR.GET, `/api/log?limit=50&${q}`)
+    let titles: string[] = [], body: any = {}
+    try { body = JSON.parse(res.text); titles = (body.entries || []).map((e: any) => e.title) } catch { /* refusal */ }
+    return { ...res, titles, body }
+  }
+  const has = (r: { titles: string[] }, t: string) => r.titles.includes(t)
+
+  const ownerList = await read(U.ownerA, `teamId=${T.a}&coachId=${C.b}`)
+  check('log list: head coach sees their own and the assistant\'s team entries', ownerList.status === 200 &&
+    has(ownerList, 'LOGREAD owner-marcus') && has(ownerList, 'LOGREAD asst-marcus') && has(ownerList, 'LOGREAD asst-team'), JSON.stringify(ownerList.titles))
+  check('log list: nothing from the same coach\'s other team, or another team, or anyone\'s team-less entries',
+    !has(ownerList, 'LOGREAD owner-team-c') && !has(ownerList, 'LOGREAD b-zoe') && !has(ownerList, 'LOGREAD solo') && !has(ownerList, 'LOGREAD owner-teamless'), JSON.stringify(ownerList.titles))
+  const withAuthor = (ownerList.body.entries || []).find((e: any) => e.title === 'LOGREAD asst-marcus')
+  check('log list: each entry names who logged it', withAuthor?.author?.id === ASST_COACH, JSON.stringify(withAuthor?.author))
+  check('log list: the response says which entries are the viewer\'s', ownerList.body.viewerCoachId === C.a, String(ownerList.body.viewerCoachId))
+
+  const asstList = await read(U.assistant, `teamId=${T.a}&coachId=${C.b}`)
+  check('log list: the assistant sees the head coach\'s entries too', asstList.status === 200 && has(asstList, 'LOGREAD owner-marcus') && has(asstList, 'LOGREAD asst-team'), JSON.stringify(asstList.titles))
+  const viewerList = await read(U.viewer, `teamId=${T.a}`)
+  check('log list: a viewer can read the team\'s entries', viewerList.status === 200 && has(viewerList, 'LOGREAD owner-marcus'), `${viewerList.status}`)
+
+  const playerList = await read(U.assistant, `teamId=${T.a}&playerId=${P.marcus}`)
+  check('log list: a player\'s history has both coaches\' entries for that player only', has(playerList, 'LOGREAD owner-marcus') &&
+    has(playerList, 'LOGREAD asst-marcus') && !has(playerList, 'LOGREAD asst-team'), JSON.stringify(playerList.titles))
+
+  for (const [who, u, q, expect] of [
+    ['another team\'s coach, even naming the head coach', U.ownerB, `teamId=${T.a}&coachId=${C.a}`, 404],
+    ['a league administrator', U.league, `teamId=${T.a}`, 404],
+    ['a stranger', U.stranger, `teamId=${T.a}`, 404],
+    ['no session', null, `teamId=${T.a}`, 401],
+    ['another team\'s player through this team', U.ownerA, `teamId=${T.a}&playerId=${P.zoe}`, 404],
+    ['the same coach\'s other-team player through this team', U.ownerA, `teamId=${T.a}&playerId=${P.cleo}`, 404],
+    ['no team: another coach\'s player', U.solo, `playerId=${P.homekid}`, 404],
+  ] as const) {
+    const res = await read(u, q)
+    refusedOutput.push(res.text)
+    check(`log list refused: ${who} (${expect})`, res.status === expect && !res.text.includes('LOGREAD'), `${res.status} ${res.text.slice(0, 120)}`)
+  }
+  const forged = await read(U.stranger, `coachId=${C.a}`)
+  check('log list: a forged coachId with no team reads nothing of that coach', !forged.text.includes('LOGREAD owner'), `${forged.status} ${forged.text.slice(0, 120)}`)
+  refusedOutput.push(forged.text)
+  const soloList = await read(U.solo, '')
+  check('log list: with no team, a coach sees their own entries only', has(soloList, 'LOGREAD solo') && soloList.titles.every(t => t === 'LOGREAD solo'), JSON.stringify(soloList.titles))
+
   // One sweep over everything refused requests produced.
   none('sweep: no refused request produced any of another team\'s player data', refusedOutput.join('\n'), markers(P.zoe))
   none('sweep: nor any of another coach\'s team-less player', refusedOutput.join('\n'), [...markers(P.solokid), ...markers(P.homekid)])

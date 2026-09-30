@@ -72,6 +72,8 @@ interface RecentEntry {
   title: string | null
   observations?: Array<{ id: string; body: string }>
   player?: { id: string; name: string } | null
+  // The list is the whole staff's, so an entry says who logged it.
+  author?: { id: string; display_name: string | null } | null
 }
 
 // ── Step heading ───────────────────────────────────────
@@ -880,6 +882,9 @@ function LogContent() {
                   </span>
                   <span className="text-gray-700">{e.occurred_on}</span>
                   {e.player?.name && <span className="text-gray-500 ml-2">{e.player.name}</span>}
+                  {e.author && e.author.id !== coachId && (
+                    <span className="text-gray-400 ml-2">by {e.author.display_name || 'another coach'}</span>
+                  )}
                   {(e.observations?.length || 0) > 0 && (
                     <span className="text-gray-400 ml-2">
                       {e.observations!.length} note{e.observations!.length === 1 ? '' : 's'}

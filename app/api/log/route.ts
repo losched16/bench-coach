@@ -3,7 +3,7 @@ import { migrationHintFor } from '@/lib/migrationHints'
 import { createClient } from '@supabase/supabase-js'
 import { normalizeStatLine } from '@/lib/entries'
 import { findExistingGame } from '@/lib/games'
-import { guard, requireSession, authorizeTeam, authorizeOwnCoach, authzResponse, AuthzError } from '@/lib/authz'
+import { requireSession, authorizeTeam, authorizeOwnCoach, authzResponse, AuthzError } from '@/lib/authz'
 import { resolvePlayerScope } from '@/lib/playerScope'
 
 // Never prerendered. This route reads the session cookie to decide who is
@@ -37,14 +37,25 @@ function normalizeResult(
   return null
 }
 
-// GET: recent entries for a team (the "you've logged this" trail)
+// GET: recent entries — the activity list on the Log page and a player's
+// history on their profile.
+//
+// With a team: everyone on the staff with 'read' (viewers included) sees what
+// every staff member logged for that team — the head coach's practices and the
+// assistant's notes alike. Nothing from another team, even one the same coach
+// owns. A named player must be on the team (roster or archive).
+//
+// Without a team: the caller's own entries.
+//
+// Who is asking comes from the session. A coachId in the query is ignored.
+// Each entry carries its author's display name, and viewerCoachId says which
+// of them are the caller's own.
 export async function GET(request: NextRequest) {
-  const denied = await guard(request, 'read')
-  if (denied) return denied
+  const unauthenticated = await requireSession()
+  if (unauthenticated) return unauthenticated
 
   const { searchParams } = new URL(request.url)
-  const coachId = searchParams.get('coachId')
-  const teamId = searchParams.get('teamId')
+  const teamId = searchParams.get('teamId') || null
   // The player page asks for one player's history. Team-wide entries (a
   // practice logged against the whole roster) carry no player_id and are
   // deliberately excluded — "Charlie's history" showing every team practice
@@ -52,26 +63,43 @@ export async function GET(request: NextRequest) {
   const playerId = searchParams.get('playerId')
   const limit = Number(searchParams.get('limit') || 10)
 
-  if (!coachId) {
-    return NextResponse.json({ error: 'coachId required' }, { status: 400 })
+  let viewerCoachId: string | null
+  let ownerCoachId: string
+  try {
+    if (teamId) {
+      const actor = await authorizeTeam(teamId, 'read')
+      viewerCoachId = actor.coachId
+      ownerCoachId = actor.ownerCoachId
+    } else {
+      const actor = await authorizeOwnCoach()
+      viewerCoachId = actor.coachId
+      ownerCoachId = actor.coachId
+    }
+    if (playerId) {
+      const scope = await resolvePlayerScope(supabaseAdmin, { playerId, teamId, ownerCoachId })
+      if (!scope.ok) return NextResponse.json({ error: 'Player not found' }, { status: 404 })
+    }
+  } catch (error) {
+    const authz = authzResponse(error)
+    if (authz) return NextResponse.json(authz.body, { status: authz.status })
+    throw error
   }
 
   try {
     let query = supabaseAdmin
       .from('entries')
-      .select('*, observations(id, prompt_key, body), player:players(id, name)')
-      .eq('coach_id', coachId)
+      .select('*, observations(id, prompt_key, body), player:players(id, name), author:coaches(id, display_name)')
       .order('occurred_on', { ascending: false })
       .order('created_at', { ascending: false })
-      .limit(Math.min(limit, 50))
+      .limit(Math.min(Math.max(limit, 1), 50))
 
-    if (teamId) query = query.eq('team_id', teamId)
+    query = teamId ? query.eq('team_id', teamId) : query.eq('coach_id', ownerCoachId)
     if (playerId) query = query.eq('player_id', playerId)
 
     const { data, error } = await query
     if (error) throw error
 
-    return NextResponse.json({ entries: data || [] })
+    return NextResponse.json({ entries: data || [], viewerCoachId })
   } catch (error: any) {
     console.error('Log GET error:', error)
     // The table may not exist yet — don't break the page over it
