@@ -484,6 +484,34 @@ async function real() {
   check('reports: a finalized report is unchanged', JSON.stringify(repDb.tables.player_reports.find(r => r.id === 'rep-final')) === before)
   check('reports: no report row written in the whole flow', !repDb.log.some(q => q.op !== 'select' && q.table.startsWith('player_report')))
 
+  // Development Plans page: GET /api/player-pathways?teamId= with no player.
+  // The whole team's plans, filtered by the team just authorized.
+  freshDb()
+  state.db!.tables.player_pathway_progress.push({
+    id: 'prog-cleo', player_id: P.cleo, team_id: T.c, pathway_id: 'pw-1', pathway_version: 1, current_stage_key: 's1',
+    current_stage_number: 1, status: 'active', started_at: '2026-08-01T00:00:00Z', stage_started_at: '2026-08-01T00:00:00Z', completed_at: null,
+  })
+  const plans = load('player-pathways/route.ts')
+  const planList = (u: string | null, team: string) => { as(u); return call(plans.GET, `/api/player-pathways?teamId=${team}`) }
+  const ownList = await planList(U.ownerA, T.a)
+  check('plans list: owner gets their team\'s plans', ownList.status === 200 && ownList.text.includes(mark(P.marcus, 'name')), ownList.text.slice(0, 200))
+  none('plans list: no other team\'s player, including the same coach\'s other team', ownList.text, [mark(P.zoe, 'name'), mark(P.cleo, 'name')])
+  const listQ = state.db!.queriesOn('player_pathway_progress').pop()
+  check('plans list: filtered by the requested team', !!listQ && listQ.filters.some(f => f.column === 'team_id' && f.value === T.a))
+  const cList = await planList(U.ownerA, T.c)
+  check('plans list: the other team of the same coach lists only its own', cList.text.includes(mark(P.cleo, 'name')) && !cList.text.includes(mark(P.marcus, 'name')))
+  check('plans list: viewer on the team can read it', (await planList(U.viewer, T.a)).status === 200)
+  check('plans list: contributor on the team can read it', (await planList(U.assistant, T.a)).status === 200)
+  for (const [who, u] of [['another team\'s coach', U.ownerB], ['league administrator', U.league], ['stranger', U.stranger]] as const) {
+    const r = await planList(u, T.a)
+    check(`plans list: ${who} is refused`, r.status >= 400 && r.status < 500, `status ${r.status}`)
+    refusedOutput.push(r.text)
+  }
+  const anonList = await planList(null, T.a)
+  check('plans list: no session is refused as unauthenticated', anonList.status === 401, `status ${anonList.status}`)
+  refusedOutput.push(anonList.text)
+  none('plans list: refused requests carry no player or plan data', refusedOutput.slice(-4).join('\n'), [mark(P.marcus, 'name'), STAGE.one, STAGE.two])
+
   // One sweep over everything refused requests produced.
   none('sweep: no refused request produced any of another team\'s player data', refusedOutput.join('\n'), markers(P.zoe))
   none('sweep: nor any of another coach\'s team-less player', refusedOutput.join('\n'), [...markers(P.solokid), ...markers(P.homekid)])

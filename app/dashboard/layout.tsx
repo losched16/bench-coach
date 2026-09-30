@@ -9,7 +9,7 @@ import { useLeague } from '@/lib/useLeague'
 import Link from 'next/link'
 import Image from 'next/image'
 import { CaptureMenu } from '@/components/CaptureMenu'
-import { MessageSquare, Users, StickyNote, ClipboardList, Home, Book, LogOut, Plus, UserPlus, Trash2, Settings, Bookmark, HelpCircle, Brain, UsersRound, UserCircle, Menu, X, Calendar, BarChart3, Activity, Target, Search, CalendarCheck, Timer, Building2 } from 'lucide-react'
+import { MessageSquare, Users, StickyNote, ClipboardList, Home, Book, LogOut, Plus, UserPlus, Trash2, Settings, Bookmark, HelpCircle, Brain, UsersRound, UserCircle, Menu, X, Calendar, BarChart3, Activity, Target, Search, CalendarCheck, Timer, Building2, Route as RouteIcon } from 'lucide-react'
 
 
 interface Team {
@@ -328,6 +328,11 @@ function DashboardContent({
       label: 'Planning',
       items: [
         { label: 'Practice Plans', href: '/dashboard/practice', icon: ClipboardList, needs: 'decide', needsTeam: true },
+        // Every player's plan on the team. Reading plans is open to the whole
+        // staff (the API's GET is 'read'), so no capability gate; and not
+        // needsTeam, because a Personal-plan coach's workspace has plans too.
+        // Starting and advancing one still happen on the player's profile.
+        { label: 'Development Plans', href: '/dashboard/development', icon: RouteIcon },
         // Starting a playbook assigns a multi-week programme to a team or a
         // player, which is 'decide' — the same rung as a practice plan or a
         // lineup. Deliberately NOT needsTeam: a parent on the Personal plan
