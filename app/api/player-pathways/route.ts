@@ -31,6 +31,11 @@ const supabaseAdmin = createClient(
 
 // ---------------------------------------------------------------------------
 // GET ?teamId=&playerId=  — the Development section of a player profile
+// GET ?teamId=            — every plan on the team (the Development Plans page)
+//
+// Both are the same read: rows are filtered by the team the caller was just
+// authorized on, so the team-wide list cannot reach another team's plans.
+// Each row carries the player's name, which the team-wide list needs.
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -39,15 +44,16 @@ export async function GET(request: NextRequest) {
 
   try {
     await authorizeTeam(teamId, 'read')
-    if (!playerId) return NextResponse.json({ error: 'playerId is required' }, { status: 400 })
 
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('player_pathway_progress')
-      .select('*, pathway:development_pathways(slug, name, skill_category, summary)')
+      .select('*, pathway:development_pathways(slug, name, skill_category, summary), player:players(id, name)')
       .eq('team_id', teamId as string)
-      .eq('player_id', playerId)
+    if (playerId) query = query.eq('player_id', playerId)
+    const { data, error } = await query
       .order('status', { ascending: true })       // active and paused before completed
       .order('started_at', { ascending: false })
+      .limit(playerId ? 100 : 300)
     if (error) throw error
 
     const rows = data || []

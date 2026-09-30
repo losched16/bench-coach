@@ -1264,6 +1264,38 @@ try {
     await context.close()
   }
 
+  // ══ 4g. DEVELOPMENT PLANS IS IN THE SIDEBAR ═════════════════════════════
+  //
+  // Plans are coached from each player's profile; before this entry the only
+  // way in was Roster → player → Development. Reading plans is open to the
+  // whole staff, so a contributor gets the entry too.
+  console.log('\nDevelopment Plans in the sidebar')
+
+  for (const role of ['owner', 'contributor']) {
+    await seed({ players: 4, plans: 1 })
+    const { context, page } = await signedIn(browser, role === 'owner' ? undefined : { role })
+    await page.goto(dash(), { waitUntil: 'networkidle' })
+    await page.waitForTimeout(1500)
+
+    const navLink = page.getByRole('link', { name: 'Development Plans' }).first()
+    check(`THE SIDEBAR HAS A DEVELOPMENT PLANS ENTRY (${role})`, await navLink.count() > 0)
+    check(`and it points at the development page, carrying the team (${role})`,
+      /\/dashboard\/development\?teamId=/.test(await navLink.getAttribute('href') || ''),
+      await navLink.getAttribute('href'))
+
+    const crashes = []
+    page.on('pageerror', e => crashes.push(String(e.message || e)))
+    await navLink.click()
+    await page.waitForURL(/dashboard\/development/, { timeout: 15000 })
+    await page.waitForTimeout(1800)
+    check(`FOLLOWING IT REACHES A PAGE THAT RENDERS (${role})`, crashes.length === 0,
+      crashes.slice(0, 1).join(' '))
+    check(`and the page is the Development Plans list (${role})`,
+      await page.getByRole('heading', { name: 'Development Plans' }).first()
+        .isVisible().catch(() => false))
+    await context.close()
+  }
+
   {
     // The article and the navigation have to agree, which is the whole reason
     // this block exists.
