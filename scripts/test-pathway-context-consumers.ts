@@ -230,6 +230,19 @@ async function main() {
     check('practice: with nothing to say, nothing is added', captured.length > 0 && !captured.some(withPlans) &&
       !captured.some(c => c.text.includes("WHAT WE'RE ALREADY WORKING ON")),
       `${captured.length} captured`)
+
+    // Building a practice FROM a plan stage writes nothing to any player's
+    // plan, and saves nothing either — recording happens only when a coach
+    // presses "Record on players' plans" (migration 077).
+    reset()
+    await drain(await practice.POST(req('/api/practice-plan', { method: 'POST', body: {
+      teamId: IDS.teamA, duration: 60, focus: ['Throwing'], coachCount: 2,
+      pathwaySlug: 'build-the-arm', pathwayStage: 2,
+    } })))
+    const writes = db().log.filter(q => q.op !== 'select' &&
+      ['player_pathway_events', 'player_pathway_progress', 'practice_plans'].includes(q.table))
+    check('practice: generating from a plan stage writes nothing to any plan', writes.length === 0,
+      writes.map(w => `${w.op} ${w.table}`).join(', '))
   }
 
   // ── Analysis writer (prescribe): player-scoped ───────────────────────────

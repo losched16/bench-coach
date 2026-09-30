@@ -56,6 +56,9 @@ async function seed({
   // whether the Active tab shows its empty state or a running programme,
   // which is what switches the first-use card on and off.
   templates = [], activePlaybooks = [],
+  // Per-plan overrides by index, e.g. [{ pathway_slug: 'x', pathway_stage_number: 2 }],
+  // and extra tables (development plans) for the practice → plan picker.
+  planExtras = [], extraTables = {},
 } = {}) {
   const body = {
     failing,
@@ -90,9 +93,11 @@ async function seed({
       practice_plans: Array.from({ length: plans }, (_, i) => ({
         id: `plan${i}`, team_id: TEAM, name: `Practice ${i}`,
         created_at: '2026-09-01T00:00:00Z',
+        ...(planExtras[i] || {}),
       })),
       team_notes: [],
       user_ui_prefs: prefs,
+      ...extraTables,
     },
   }
   const r = await fetch(`${FIXTURE}/__fixture/reset`, {
@@ -1293,6 +1298,57 @@ try {
     check(`and the page is the Development Plans list (${role})`,
       await page.getByRole('heading', { name: 'Development Plans' }).first()
         .isVisible().catch(() => false))
+    await context.close()
+  }
+
+  // ══ 4h. RECORD A PRACTICE ON PLAYERS' PLANS ══════════════════════════════
+  //
+  // Only a practice built from a plan stage offers it (plan0 below; plan1 was
+  // built without one). Opening it records nothing — the coach picks, then
+  // confirms. The write itself, its permissions and its once-only rule run
+  // through the real authorization path in test:player-scope.
+  console.log("\nRecord a practice on players' plans")
+
+  const planSeed = {
+    players: 3, plans: 2,
+    planExtras: [{ title: 'Linked practice', duration_minutes: 60, pathway_slug: 'build-the-arm', pathway_stage_number: 2 },
+                 { title: 'Plain practice', duration_minutes: 60 }],
+    extraTables: {
+      development_pathways: [{ id: 'pw-arm', slug: 'build-the-arm', name: 'Build the Arm', status: 'published', version: 1 }],
+      development_pathway_stages: [{ id: 'st-2', pathway_id: 'pw-arm', stage_number: 2, stage_key: 's2', name: 'Stage two' }],
+      player_pathway_progress: [
+        { id: 'prog-p0', team_id: TEAM, player_id: 'p0', pathway_id: 'pw-arm', pathway_version: 1, status: 'active',
+          current_stage_key: 's2', current_stage_number: 2, started_at: '2026-08-01T00:00:00Z', stage_started_at: '2026-08-01T00:00:00Z',
+          player: { id: 'p0', name: 'Player 0' } },
+      ],
+      player_pathway_events: [],
+    },
+  }
+
+  for (const role of ['owner', 'contributor', 'viewer']) {
+    await seed(planSeed)
+    const { context, page } = await signedIn(browser, role === 'owner' ? undefined : { role })
+    const crashes = []
+    page.on('pageerror', e => crashes.push(String(e.message || e)))
+    await page.goto(`${APP}/dashboard/practice?teamId=${TEAM}`, { waitUntil: 'networkidle' })
+    await page.getByRole('heading', { name: 'Practice Plans' }).waitFor({ state: 'visible', timeout: 20000 })
+    await page.waitForTimeout(1200)
+    const buttons = page.getByRole('button', { name: "Record on players' plans" })
+    if (role === 'viewer') {
+      check('A VIEWER IS NOT OFFERED "RECORD ON PLAYERS\' PLANS"', (await buttons.count()) === 0)
+    } else {
+      check(`ONLY THE PRACTICE BUILT FROM A PLAN OFFERS IT (${role})`, (await buttons.count()) === 1, `${await buttons.count()} buttons`)
+      const before = (await fixtureState()).tables?.player_pathway_events?.length ?? 0
+      await buttons.first().click()
+      const dialog = page.getByRole('dialog', { name: "Record this practice on players' plans" })
+      check(`opening it shows the picker (${role})`, await dialog.isVisible().catch(() => false))
+      await page.waitForTimeout(1500)
+      check(`the picker lists the player on that plan (${role})`,
+        await dialog.getByText('Player 0').isVisible().catch(() => false))
+      const after = (await fixtureState()).tables?.player_pathway_events?.length ?? 0
+      check(`OPENING THE PICKER RECORDS NOTHING (${role})`, after === before, `${before} → ${after}`)
+      check(`no crash (${role})`, crashes.length === 0, crashes.slice(0, 1).join(' '))
+    }
     await context.close()
   }
 

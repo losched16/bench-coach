@@ -4,6 +4,7 @@ import { authorizeProgress, authzResponse, Capability } from '@/lib/authz'
 import { loadPathway, orderedStages } from '@/lib/developmentPathways'
 import { validateMove, MoveKind, PlayerPathwayProgress } from '@/lib/playerPathways'
 import { migrationHintFor } from '@/lib/migrationHints'
+import { practiceLink, practiceDrillIds, practiceMinutes, practiceSessionDate, recordedFor } from '@/lib/practicePlanLink'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,6 +14,8 @@ export const dynamic = 'force-dynamic'
 // split and putting it in one table makes it reviewable:
 //
 //   session   a coach recorded that work happened        'record'  contributor
+//             (with practicePlanId: a saved practice built for this plan's
+//             pathway, recorded once — see lib/practicePlanLink.ts)
 //   mastery   a coach recorded what they observed        'record'  contributor
 //   note      a coach wrote something down               'record'  contributor
 //   advance   a coach decided the player is ready        'decide'  admin
@@ -135,7 +138,39 @@ export async function POST(
       }
 
       const detail: Record<string, any> = {}
-      if (kind === 'session') {
+      let occurredOn = clean(body?.occurredOn, 10)
+
+      // ── a saved practice, recorded on this plan (migration 077) ─────────
+      //
+      // The practice page sends only the practice id. What happened is read
+      // from the practice itself — its length, its drills, its date — rather
+      // than trusted from the request, and the practice must belong to this
+      // plan's team and have been built for this plan's pathway. Once per
+      // practice per plan: checked here so the coach is told, and enforced by
+      // the unique index in 077 so two tabs cannot get past it.
+      const practicePlanId = kind === 'session' ? clean(body?.practicePlanId, 64) : null
+      if (practicePlanId) {
+        const { data: plan } = await supabaseAdmin
+          .from('practice_plans').select('*').eq('id', practicePlanId).maybeSingle()
+        const link = practiceLink(plan as any)
+        if (!plan || (plan as any).team_id !== progress.team_id) {
+          return NextResponse.json({ error: 'Practice not found' }, { status: 404 })
+        }
+        if (!link || link.slug !== slug) {
+          return NextResponse.json({ error: 'That practice was not built from this plan' }, { status: 400 })
+        }
+        const { data: prior } = await supabaseAdmin
+          .from('player_pathway_events').select('event_type, detail')
+          .eq('progress_id', params.progressId).eq('event_type', 'session_logged')
+        if (recordedFor((prior || []) as any[], practicePlanId)) {
+          return NextResponse.json({ error: 'Already recorded', alreadyRecorded: true }, { status: 409 })
+        }
+        detail.practice_plan_id = practicePlanId
+        const mins = practiceMinutes((plan as any).duration_minutes)
+        if (mins) detail.minutes = mins
+        detail.drill_ids = practiceDrillIds((plan as any).content)
+        occurredOn = practiceSessionDate((plan as any).scheduled_for, new Date().toISOString().slice(0, 10))
+      } else if (kind === 'session') {
         const minutes = Number(body?.minutes)
         // Recorded only when the coach actually gave a number. A default of 30
         // would put a figure in the history that nobody chose.
@@ -163,8 +198,12 @@ export async function POST(
         detail,
         note: clean(body?.note),
         actor_user_id: actor.userId,
-        ...(clean(body?.occurredOn, 10) ? { occurred_on: clean(body?.occurredOn, 10) } : {}),
+        ...(occurredOn ? { occurred_on: occurredOn } : {}),
       })
+      // 23505: the 077 index caught a repeat the check above raced with.
+      if (error && (error as any).code === '23505' && practicePlanId) {
+        return NextResponse.json({ error: 'Already recorded', alreadyRecorded: true }, { status: 409 })
+      }
       if (error) throw error
 
       return NextResponse.json({ recorded: true })

@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ModuleHelp } from '@/components/help/ModuleHelp'
 import { useRole } from '@/lib/useRole'
+import { RecordPracticeToPlans } from '@/components/RecordPracticeToPlans'
+import { linkColumns, isMissingLinkColumns } from '@/lib/practicePlanLink'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import { Plus, Clock, ChevronDown, ChevronUp, Trash2, Pencil, Sparkles, ClipboardCheck, RefreshCw, Search, X, FileText, AlertCircle, Check, Printer } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
@@ -80,6 +82,10 @@ interface PracticePlan {
   // deliberately leaves undated.
   scheduled_for?: string | null
   recap_dismissed_at?: string | null
+  // The Development Plan stage this practice was built for (migration 077).
+  // Null on practices built without one and on everything saved before it.
+  pathway_slug?: string | null
+  pathway_stage_number?: number | null
 }
 
 function PracticeContent() {
@@ -143,6 +149,11 @@ function PracticeContent() {
   // The summary the route streams back on a pathway-guided build. The route
   // has sent this since Phase 2E; until now the page dropped it on the floor.
   const [pathwayContext, setPathwayContext] = useState<PathwayContext | null>(null)
+  // The pathway and stage the CURRENT draft was generated for, captured at
+  // generation. Saved with the practice so it can later be recorded on the
+  // players' plans. Not the picker's live value: a coach who changes the
+  // picker after generating has not changed what this draft was built for.
+  const [draftLink, setDraftLink] = useState<{ slug: string; stage: number | null } | null>(null)
   const track = useTracker()
   // The plan before it is committed. Generating straight into the database
   // meant the first version was the only version — a coach who wanted one
@@ -627,6 +638,7 @@ function PracticeContent() {
     // Cleared every time, or a rebuild after clearing the pathway would keep
     // showing the focus card from the build before it.
     setPathwayContext(null)
+    setDraftLink(pathwaySlug ? { slug: pathwaySlug, stage: pathwayStage ?? null } : null)
 
     // Every generation, pathway or not. Without this there is no denominator:
     // "what share of practices are built from a pathway" is the first question
@@ -917,44 +929,51 @@ function PracticeContent() {
     if (!draft) return
     setSavingDraft(true)
     try {
-      const { error } = await supabase
-        .from('practice_plans')
-        .insert({
-          team_id: teamId,
-          title: draft.title,
-          duration_minutes: duration,
-          focus: focusAreas,
-          // Object rather than a bare array so the coach's framing and the
-          // flags survive the save. Both render paths already accept either
-          // shape — `Array.isArray(content) ? content : content.blocks` — so
-          // plans saved before today keep working untouched.
-          content: {
-            blocks: draft.blocks,
-            coach_notes: draft.coach_notes || null,
-            flags: draft.flags || [],
-            // The clipboard half of the plan. Stored inside content because it
-            // is JSONB and already versioned by shape — no migration, and a
-            // plan written before today simply has none of these.
-            //
-            // The model's objective wins over the raw input: it is the coach's
-            // own goal sharpened, and it is the wording they just reviewed in
-            // the draft. Their text is the fallback for a plan where the model
-            // returned nothing.
-            objective: draft.objective || objective.trim() || null,
-            coaching_points: draft.coaching_points || [],
-            start_time: startTime || null,
-            equipment_available: Array.from(equipmentAvailable),
-            // What the plan gave each selected focus area, as measured when
-            // it was generated. Plan content, not UI state: which blocks the
-            // coach had open is deliberately not saved.
-            priority_coverage: draft.priority_coverage || null,
-          },
-          ...(scheduleReady ? { scheduled_for: scheduledFor } : {}),
-        })
+      const row: Record<string, any> = {
+        team_id: teamId,
+        title: draft.title,
+        duration_minutes: duration,
+        focus: focusAreas,
+        // Object rather than a bare array so the coach's framing and the
+        // flags survive the save. Both render paths already accept either
+        // shape — `Array.isArray(content) ? content : content.blocks` — so
+        // plans saved before today keep working untouched.
+        content: {
+          blocks: draft.blocks,
+          coach_notes: draft.coach_notes || null,
+          flags: draft.flags || [],
+          // The clipboard half of the plan. Stored inside content because it
+          // is JSONB and already versioned by shape — no migration, and a
+          // plan written before today simply has none of these.
+          //
+          // The model's objective wins over the raw input: it is the coach's
+          // own goal sharpened, and it is the wording they just reviewed in
+          // the draft. Their text is the fallback for a plan where the model
+          // returned nothing.
+          objective: draft.objective || objective.trim() || null,
+          coaching_points: draft.coaching_points || [],
+          start_time: startTime || null,
+          equipment_available: Array.from(equipmentAvailable),
+          // What the plan gave each selected focus area, as measured when
+          // it was generated. Plan content, not UI state: which blocks the
+          // coach had open is deliberately not saved.
+          priority_coverage: draft.priority_coverage || null,
+        },
+        ...(scheduleReady ? { scheduled_for: scheduledFor } : {}),
+      }
+      // Saved with the pathway and stage it was built for, when there was one.
+      // A database without migration 077 refuses those columns by name; the
+      // practice then saves exactly as it always did, without the link.
+      const link = linkColumns(draftLink?.slug, draftLink?.stage)
+      let { error } = await supabase.from('practice_plans').insert({ ...row, ...link } as any)
+      if (error && Object.keys(link).length && isMissingLinkColumns(error)) {
+        ;({ error } = await supabase.from('practice_plans').insert(row as any))
+      }
       if (error) throw error
 
       setShowPlanModal(false)
       setDraft(null)
+      setDraftLink(null)
       setFocusAreas([])
       setSpecifics('')
       setAdjustment('')
@@ -1181,7 +1200,10 @@ function PracticeContent() {
                   what actually happened.
                 </p>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                {/* Built from a Development Plan stage: the same moment is
+                    the one to put it on the players' plans. */}
+                <RecordPracticeToPlans plan={plan} teamId={teamId} canRecord={allowed('record')} variant="button" />
                 <button
                   onClick={() => dismissRecap(plan.id)}
                   disabled={dismissing === plan.id}
@@ -1272,7 +1294,7 @@ function PracticeContent() {
                     ))}
                   </div>
                 )}
-                <div className="flex items-center space-x-4">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                   <button
                     onClick={() => setExpandedPlan(expandedPlan === plan.id ? null : plan.id)}
                     className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center"
@@ -1296,6 +1318,7 @@ function PracticeContent() {
                     <ClipboardCheck size={16} className="mr-1" />
                     Log Recap
                   </Link>
+                  <RecordPracticeToPlans plan={plan} teamId={teamId} canRecord={allowed('record')} />
                   {/* The version that goes on a clipboard. Sits next to the
                       other two verbs rather than hidden inside the expanded
                       plan — printing is something a coach decides before they
