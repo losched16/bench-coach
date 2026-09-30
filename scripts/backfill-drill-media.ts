@@ -31,6 +31,10 @@
 // Without --apply it prints exactly what it would write and touches nothing.
 
 import { createClient } from '@supabase/supabase-js'
+// Names the database before touching it, and refuses an unnamed production
+// write. See scripts/lib/env-guard.mjs.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { requireTarget } = require('./lib/env-guard.mjs')
 import { videoIdFor, watchUrl } from '../lib/drillVideo'
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -84,6 +88,7 @@ export function mediaRowFor(d: any): Record<string, any> | null {
 }
 
 async function main() {
+  requireTarget({ script: 'backfill-drill-media', writes: APPLY, what: 'upsert drill_media_resources rows' })
   const sb = createClient(URL!, KEY!, { auth: { persistSession: false } })
 
   const { data: drills, error } = await sb

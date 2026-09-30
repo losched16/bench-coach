@@ -20,9 +20,8 @@
  * environment and goes through scripts/lib/env-guard.mjs, which prints the
  * target and refuses production unless the caller names the project.
  *
- * Removing the literal does NOT undo the exposure — the value is still in git
- * history and the key is still live. See docs/audits/security-secret-followup.md;
- * rotation is the only remedy and remains outstanding.
+ * Removing a literal from a file does not undo an exposure: git history keeps
+ * it. Rotation is the remedy — see docs/credential-rotation.md.
  *
  * A note on --dry-run: this is a generative script whose output is prose a
  * coach will read, and it overwrites a JSON column wholesale. Being able to

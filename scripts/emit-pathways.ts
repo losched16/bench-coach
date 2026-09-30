@@ -24,6 +24,10 @@
 //   * stage numbering that is not 1..n, or a duplicated key
 
 import { createClient } from '@supabase/supabase-js'
+// Names the database before touching it, and refuses an unnamed production
+// write. See scripts/lib/env-guard.mjs.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { requireTarget } = require('./lib/env-guard.mjs')
 import { writeFileSync, mkdirSync } from 'fs'
 import { isSchedulable } from '../lib/drills'
 import { PATHWAYS, PathwaySpec, StageSpec, StageDrillSpec } from './fixtures/development-pathways'
@@ -68,6 +72,7 @@ interface Resolved {
 async function main() {
   if (!URL || !KEY) { console.error('Set the Supabase env vars.'); process.exit(1) }
   const mode = process.argv.includes('--audit') ? 'audit' : 'emit'
+  requireTarget({ script: 'emit-pathways', writes: false })  // reads with the public key; writes files only
   const sb = createClient(URL, KEY)
 
   const { data: rows, error } = await sb.from('drill_resources').select('*')
