@@ -68,7 +68,8 @@ export function SeoStructuredData({ page, block, hub }: SeoStructuredDataProps) 
       author: {
         '@type': 'Person',
         name: 'Clint Losch',
-        jobTitle: 'Youth Baseball Coach',
+        jobTitle: 'Founder of BenchCoach',
+        description: 'Founded by Clint Losch, a former Division I baseball player and current youth rec and travel coach.',
       },
       publisher: {
         '@type': 'Organization',
