@@ -152,10 +152,10 @@ export default function LeaguesPage() {
             Invest in your coaches. Give every player a better chance to develop.
           </h1>
           <p className="text-xl text-slate-700 leading-relaxed mb-5">
-            Equip your volunteer coaches with practice plans, drill guidance, and AI coaching support built around the teams and players they&apos;re working with.
+            Give your volunteer coaches a clear way to turn player observations into development plans, focused practices, and a record of the work completed.
           </p>
           <p className="text-lg text-slate-600 leading-relaxed mb-9">
-            Help coaches turn what they see on the field into more focused practice&mdash;and give families a clear reason to value your league&apos;s investment in player development.
+            BenchCoach brings the coaching staff&apos;s notes and each player&apos;s development stage into its AI guidance&mdash;helping coaches prepare the next session around the players they actually have.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <a href="#demo" className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-all shadow-lg">
@@ -227,36 +227,43 @@ export default function LeaguesPage() {
       </section>
 
       {/* ── 5. Benefits for coaches ─────────────────────────────────────── */}
+      {/* Each card names something that exists: Development Plans with stages,
+          cues and signals (migrations 069–075); practice planning that reads
+          observations and plan stages (lib/coachContext.ts); recording a linked
+          practice on the players' plans (migration 077); team-scoped staff
+          observations and activity (lib/observationScope.ts, GET /api/log); the
+          Development Plans page (/dashboard/development); and finalized PDF
+          reports whose sources include plans and staff-logged sessions. */}
       <section className="py-20 px-4 bg-slate-50">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-14 text-center max-w-2xl mx-auto">
-            Give coaches something they can use at the next practice.
+            Give every coach a way to build on the last practice.
           </h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               {
-                t: 'Practice plans with a purpose',
-                b: 'Help coaches turn available field time and team priorities into a structured session. They can review the plan, adjust the activities, and arrive knowing what they want to teach.',
+                t: 'A clear next step for each player',
+                b: 'Development Plans organize work into skill stages with objectives, coaching cues, and signs to watch for. Coaches record what they see and decide when a player is ready to advance.',
               },
               {
-                t: 'Drills they know how to run',
-                b: 'Setup instructions, coaching cues, and common mistakes give coaches more than a drill name. They have guidance for explaining the activity and helping players through it.',
+                t: 'Practices built around those needs',
+                b: 'Bring player observations and development stages into practice planning. Coaches can review and adjust the activities, timing, and focus to fit their team.',
               },
               {
-                t: 'AI help for the questions that come up',
-                b: 'From catching confidence to choosing a practice focus, coaches have a place to ask questions and explore an approach. They review the suggestions and decide what fits their players.',
+                t: 'A record of the work completed',
+                b: 'After a linked practice, coaches choose which players participated and record a session on their plans. That history becomes part of the context available for future coaching guidance.',
               },
               {
-                t: 'Team and player context',
-                b: 'Keep observations and notes together. The coaching assistant is given relevant context about the team and players, so its guidance can address the situation the coach describes.',
+                t: 'The whole coaching staff’s observations',
+                b: 'Head coaches and assistants can contribute observations and review the team’s activity history. Relevant staff observations inform coaching guidance, so preparation can draw on more than one coach’s perspective.',
               },
               {
-                t: 'A record to build on',
-                b: 'Return to player notes and previous plans when preparing the next session. Keep the things that need attention in view as the season moves forward.',
+                t: 'Development plans that are easy to find',
+                b: 'A dedicated Development Plans page brings the team’s active, paused, and completed plans together. Coaches can return to a player’s plan without searching through scattered notes.',
               },
               {
-                t: 'Support for assistant coaches',
-                b: 'Bring assistants into the preparation. They can add team and player notes and work from the same plans, so the coaching staff understands what they are working on together.',
+                t: 'Reports families can use',
+                b: 'Coaches create and review individual development reports with strengths, areas to work on, and recommended drills. They can select development-plan information and staff-recorded sessions as supporting sources, then share a finalized PDF with the family.',
               },
             ].map(c => (
               <div key={c.t} className="bg-white rounded-2xl p-7 border border-slate-200 shadow-sm">
@@ -268,45 +275,59 @@ export default function LeaguesPage() {
         </div>
       </section>
 
-      {/* ── 6. Benefits for players ─────────────────────────────────────── */}
+      {/* ── 6. A worked example ─────────────────────────────────────────── */}
+      {/* Every step is something the COACH does; recording a session is not
+          mastery and nothing advances a player automatically (advancing is a
+          'decide' action on the plan page). The screenshot is the real plan
+          page rendered against synthetic data — no real player appears. */}
       <section id="how" className="py-20 px-4 bg-white">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-7 text-center">
-            Make the next practice more relevant to the players on the field.
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-12 text-center max-w-3xl mx-auto">
+            When a coach notices a problem, give them somewhere to go next.
           </h2>
-          <div className="space-y-5 text-lg text-slate-600 leading-relaxed mb-10">
-            <p>A team can share an age group without sharing the same development needs.</p>
-            <p>
-              One player is learning to trust their glove. Another needs more accurate throws. Another understands a drill but struggles to use the skill in a game.
-            </p>
-            <p>BenchCoach helps coaches organize those observations and find ways to work on them.</p>
+          <div className="grid lg:grid-cols-2 gap-12 items-start">
+            <div>
+              <p className="text-lg text-slate-700 leading-relaxed mb-8">
+                Imagine a player whose throws keep missing the target.
+              </p>
+              <ol className="space-y-5 mb-8">
+                {[
+                  ['Capture the observation.', 'The coach records what they see. An assistant can add observations from another station or a game.'],
+                  ['Choose the next skill to work on.', 'The coach places the player on an appropriate development stage, with teaching cues and signs to look for.'],
+                  ['Bring that focus into practice.', 'BenchCoach uses relevant observations and plan information to help the coach prepare a focused session.'],
+                  ['Record the work and build from it.', 'After a linked practice, the coach records who participated and adds what they observed. That history helps inform the next coaching question or practice plan.'],
+                ].map(([t, b], i) => (
+                  <li key={t} className="flex gap-4">
+                    <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-red-600 text-white text-sm font-bold flex items-center justify-center">
+                      {i + 1}
+                    </span>
+                    <div>
+                      <h3 className="font-bold text-slate-900 mb-1">{t}</h3>
+                      <p className="text-slate-600 leading-relaxed">{b}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+              <p className="text-slate-800 font-medium leading-relaxed mb-8">
+                The coach stays in control. Completing a session records the work done; the coach decides whether the player has demonstrated the skill and is ready to move forward.
+              </p>
+              <a href="#demo" className="inline-flex items-center justify-center px-7 py-3.5 text-base font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-all shadow-lg">
+                See the Development Workflow in a League Demo
+              </a>
+            </div>
+            <figure className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+              <Image
+                src="/screenshots/league-development-plan.png"
+                alt="A player's Throwing Development plan in BenchCoach: the current stage and its objective, the signs to look for, drills for the stage, and notes from the coaching staff"
+                width={1500}
+                height={2075}
+                className="w-full h-auto"
+              />
+              <figcaption className="px-5 py-3 text-sm text-slate-500 border-t border-slate-100">
+                A development plan in BenchCoach. Sample player.
+              </figcaption>
+            </figure>
           </div>
-
-          {/* Every step here is something the COACH does. The draft is explicit
-              that the cycle must not be depicted as automated progress
-              tracking or automatic plan advancement, and it is not. */}
-          <div className="grid sm:grid-cols-2 gap-5 mb-10">
-            {[
-              ['Choose a focus', 'Identify a skill or challenge that needs attention.'],
-              ['Put it into practice', 'Select relevant activities and clear teaching cues.'],
-              ['Observe and record', 'Note what the coach sees during the session.'],
-              ['Build from there', 'Use those observations to inform what comes next.'],
-            ].map(([t, b], i) => (
-              <div key={t} className="flex gap-4 bg-slate-50 rounded-xl p-5 border border-slate-200">
-                <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-red-600 text-white text-sm font-bold flex items-center justify-center">
-                  {i + 1}
-                </span>
-                <div>
-                  <h3 className="font-bold text-slate-900 mb-1">{t}</h3>
-                  <p className="text-slate-600 text-base leading-relaxed">{b}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <p className="text-xl text-slate-900 font-medium text-center">
-            Give coaches a way to connect what they notice with what they teach.
-          </p>
         </div>
       </section>
 
@@ -340,6 +361,28 @@ export default function LeaguesPage() {
                 <p className="text-slate-600 leading-relaxed">{c.b}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 7b. Something families can see ──────────────────────────────── */}
+      {/* Reports: finalized, previewed, downloaded as a PDF by the coach; there
+          is no parent account (docs/player-reports.md). */}
+      <section className="py-20 px-4 bg-white">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-7">
+            Give families something concrete to understand.
+          </h2>
+          <div className="space-y-5 text-lg text-slate-600 leading-relaxed">
+            <p>
+              Your league&apos;s investment becomes visible in the work coaches do: a purposeful practice, a development focus for a player, and a report explaining strengths and next steps.
+            </p>
+            <p>
+              Coaches can share finalized development reports as PDFs. Parents receive something they can read and use without needing a BenchCoach team account.
+            </p>
+            <p className="text-slate-800 font-medium">
+              It gives your league a practical way to show what supporting player development looks like throughout the season.
+            </p>
           </div>
         </div>
       </section>
@@ -475,6 +518,12 @@ export default function LeaguesPage() {
                 'Experienced coaches can use it to organize preparation, explore drills for a particular need, and keep team and player observations together. They retain control over what they teach and how they run practice.'],
               ['How does it help individual players?',
                 'Coaches can record what they notice about a player, and that context informs the guidance they get back. It helps connect practice decisions to the needs they identify. Player improvement still depends on instruction, practice, and the individual child.'],
+              ['Does BenchCoach automatically advance players?',
+                'No. Coaches choose the development stage, record what they observe, and decide when to advance a player. Recording a practice session does not automatically mark a skill as mastered.'],
+              ['Can assistant coaches contribute?',
+                'Yes. Authorized assistants can record observations and practice sessions. The team’s coaching staff can review shared activity, and relevant observations inform AI coaching guidance.'],
+              ['Can coaches share development information with parents?',
+                'Yes. Coaches can create, review, and finalize a player development report, then share the PDF with the family. Parents do not need team accounts.'],
               ['Does the AI make coaching decisions?',
                 'No. The coach reviews the suggestions and decides what to use. BenchCoach provides planning and guidance; the coach remains responsible for instruction, safety, and what is appropriate for the team.'],
               ['Does every coach have to run the same practice?',
@@ -483,6 +532,8 @@ export default function LeaguesPage() {
                 'Evaluate BenchCoach for practice planning, teaching guidance, and player-development support. Those are the coaching tasks this page focuses on. During the demo, discuss how your coaches would use it alongside their existing tools.'],
               ['What can a league administrator see?',
                 'Adoption, not coaching. You can see which coaches you invited, who accepted, who has opened the app, and how many plans exist. There is no route from the league dashboard into a plan’s contents, a note a coach wrote about a player, or a conversation with the coaching assistant. Sponsoring a league does not give you access to what its coaches record about children.'],
+              ['Does the league dashboard show individual player development records?',
+                'No. The league dashboard provides adoption information. Sponsoring access does not give league administrators access to private player notes, coaching conversations, or development-plan contents.'],
               ['What should we tell parents?',
                 'Explain the investment in practical terms: your league is providing coaching resources to help volunteers prepare practices, teach skills, and pay attention to development. Show an example and describe how your league intends to use it.'],
               ['How much does league access cost?',
