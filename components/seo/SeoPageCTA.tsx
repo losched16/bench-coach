@@ -33,9 +33,9 @@ export function SeoPageCTA({ ageGroup }: SeoPageCTAProps) {
           <span className="text-red-400">✓</span>
           Ask coaching questions anytime
         </li>
-        <li className="flex items-center gap-2">
+        <li className="flex items-start gap-2">
           <span className="text-red-400">✓</span>
-          Built by a youth baseball coach
+          Founded by Clint Losch, a former Division I baseball player and current youth rec and travel coach.
         </li>
       </ul>
       <div className="flex flex-col sm:flex-row gap-4">

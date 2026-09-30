@@ -114,13 +114,18 @@ export async function SeoPageLayout({ page }: SeoPageLayoutProps) {
         {/* Author info. Kept above the fold — a coach deciding whether to
             trust a practice plan is partly deciding whether to trust the
             person who wrote it. */}
-        <div className="print:hidden flex flex-wrap items-center gap-3 mb-8 pb-8 border-b border-gray-200">
-          <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-lg font-bold text-slate-600">
+        <div className="print:hidden flex flex-wrap items-start gap-3 mb-8 pb-8 border-b border-gray-200">
+          <div className="w-12 h-12 shrink-0 rounded-full bg-slate-200 flex items-center justify-center text-lg font-bold text-slate-600">
             CL
           </div>
-          <div>
-            <div className="font-medium text-gray-900">Clint Losch</div>
-            <div className="text-sm text-gray-500">Youth Baseball Coach &amp; Founder of BenchCoach</div>
+          <div className="flex-1 min-w-0 basis-60">
+            <div className="font-medium text-gray-900">
+              Clint Losch <span className="text-gray-400" aria-hidden="true">&middot;</span>{' '}
+              <span className="font-normal text-gray-600">Founder of BenchCoach</span>
+            </div>
+            <p className="mt-1 text-sm text-gray-500 leading-relaxed">
+              Former Division I baseball player at Lafayette College, high school coach, and private instructor at All Star Baseball Academy. Now a youth rec and travel coach who helped coach his son&apos;s 8U team to the Cal Ripken World Series, Clint built BenchCoach to give fellow coaches practical support for developing their players.
+            </p>
           </div>
           {updated && (
             <div className="text-sm text-gray-500 sm:ml-auto">

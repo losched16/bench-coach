@@ -214,13 +214,23 @@ export default function LeaguesPage() {
           </h2>
           <div className="space-y-5 text-lg text-slate-600 leading-relaxed">
             <p>
-              Built by youth baseball coach Clint Losch, BenchCoach brings practice planning, drill guidance, player notes, and AI coaching assistance into one place.
+              BenchCoach brings practice planning, drill guidance, player notes, and AI coaching assistance into one place.
             </p>
             <p>
               Coaches can prepare around their team&apos;s age, skill level, and goals, keep track of what they observe, and ask for help with the situations they face.
             </p>
             <p className="text-slate-800 font-medium">
               That gives your league a concrete way to support the people responsible for teaching the game&mdash;throughout the season, as new questions come up.
+            </p>
+          </div>
+          {/* Who built it. Deliberately quieter than the league's benefits; the
+              full founder story lives on the homepage (#founder). */}
+          <div className="mt-10 pt-8 border-t border-slate-200 space-y-3 text-base text-slate-500 leading-relaxed">
+            <p>
+              BenchCoach was founded by Clint Losch, a former Division I baseball player at Lafayette College, high school coach, and private instructor at All Star Baseball Academy. Today, he coaches his son&apos;s rec and travel teams, including an 8U team that reached the Cal Ripken World Series.
+            </p>
+            <p>
+              He built BenchCoach to give volunteer coaches practical support for teaching the game and developing the players in front of them.
             </p>
           </div>
         </div>

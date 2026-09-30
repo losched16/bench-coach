@@ -239,7 +239,7 @@ export default function LandingPage() {
               Give your players a clear path forward.
             </h2>
             <p className="text-lg text-slate-600 leading-relaxed mb-4">
-              Built by youth baseball coach Clint Losch, BenchCoach helps you turn what you notice about your players into something you can take to the field.
+              BenchCoach helps you turn what you notice about your players into something you can take to the field.
             </p>
             <p className="text-lg text-slate-600 leading-relaxed mb-4">
               Whether you&apos;re helping your own child or coaching an entire team, the work carries forward: what you record about a player informs the practices you build and the advice you get back.
@@ -478,6 +478,47 @@ export default function LandingPage() {
             <Link href="/auth/signup" className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-all shadow-lg">
               Start Free Trial
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 5b. The founder ─────────────────────────────────────────────── */}
+      {/* The one full founder story on the site. Facts only as supplied by the
+          founder: Lafayette College (Division I), coached at his former high
+          school, private instructor at All Star Baseball Academy, coaches his
+          son's rec and travel teams, and helped coach the 8U team that earned a
+          Cal Ripken World Series trip. No titles, dates, years or awards beyond
+          that. Text-only: there is no photo of Clint in the repository, and a
+          stand-in person would misrepresent him. */}
+      <section id="founder" className="py-24 px-4 bg-slate-50">
+        <div className="max-w-3xl mx-auto">
+          <p className="text-sm font-semibold tracking-wide text-red-700 uppercase mb-4">
+            From the founder
+          </p>
+          <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-8">
+            Built by a baseball coach who&apos;s in your shoes.
+          </h2>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-7 sm:p-10 border-l-4 border-l-red-600">
+            <div className="space-y-5 text-lg text-slate-700 leading-relaxed">
+              <p className="text-xl text-slate-900 font-semibold">
+                I&apos;m Clint Losch, founder of BenchCoach.
+              </p>
+              <p>
+                I played Division I baseball at Lafayette College, coached at my former high school, and worked as a private instructor at All Star Baseball Academy.
+              </p>
+              <p>
+                Today, I coach my son&apos;s recreational and travel teams&mdash;including his 8U team, which earned a trip to the Cal Ripken World Series.
+              </p>
+              <p>
+                Those experiences shape BenchCoach. I&apos;ve taught players individually, coached teams, and become the parent trying to help his own child grow in the game. I know how much coaches care&mdash;and how much thought goes into deciding what to teach next.
+              </p>
+              <p>
+                I built BenchCoach to help coaches turn what they notice about their players into focused practices and clear development steps.
+              </p>
+              <p className="text-slate-900 font-medium">
+                You bring your knowledge of the kids. BenchCoach helps you put it to work.
+              </p>
+            </div>
           </div>
         </div>
       </section>
