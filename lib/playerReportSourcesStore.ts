@@ -75,8 +75,11 @@ export async function gatherSources(
         supabase.from('observations').select('id, body, observed_on, created_at, prompt_key'),
         { teamId, coachId, playerId })
         .order('created_at', { ascending: false }).limit(100)),
-      safe<any[]>('entries', supabase.from('entries')
-        .select('id, entry_type, occurred_on, title, instructor_name, duration_min').eq('coach_id', coachId).eq('player_id', playerId)
+      // Logged sessions by the report's team, so an assistant's count too —
+      // the same rule as observations (lib/observationScope.ts).
+      safe<any[]>('entries', scopeObservations(
+        supabase.from('entries').select('id, entry_type, occurred_on, title, instructor_name, duration_min'),
+        { teamId, coachId, playerId })
         .order('occurred_on', { ascending: false }).limit(100)),
       safe<any[]>('player_metrics', supabase.from('player_metrics')
         .select('metric, metric_type_id, value, unit, measured_on').eq('coach_id', coachId).eq('player_id', playerId)
