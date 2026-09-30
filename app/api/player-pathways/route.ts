@@ -36,20 +36,36 @@ const supabaseAdmin = createClient(
 // Both are the same read: rows are filtered by the team the caller was just
 // authorized on, so the team-wide list cannot reach another team's plans.
 // Each row carries the player's name, which the team-wide list needs.
+//
+// &pathway=<slug> narrows the team-wide list to one pathway, and
+// &practicePlanId=<id> marks each row already_recorded when that practice has
+// been recorded on it — together, the "record this practice on players' plans"
+// picker on the practice page (migration 077).
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const teamId = searchParams.get('teamId')
   const playerId = searchParams.get('playerId')
+  const pathwaySlug = searchParams.get('pathway')
+  const practicePlanId = searchParams.get('practicePlanId')
 
   try {
     await authorizeTeam(teamId, 'read')
+
+    let pathwayFilter: string | null = null
+    if (pathwaySlug) {
+      const { data: pw } = await supabaseAdmin
+        .from('development_pathways').select('id').eq('slug', pathwaySlug).maybeSingle()
+      if (!pw) return NextResponse.json({ pathways: [] })
+      pathwayFilter = (pw as any).id
+    }
 
     let query = supabaseAdmin
       .from('player_pathway_progress')
       .select('*, pathway:development_pathways(slug, name, skill_category, summary), player:players(id, name)')
       .eq('team_id', teamId as string)
     if (playerId) query = query.eq('player_id', playerId)
+    if (pathwayFilter) query = query.eq('pathway_id', pathwayFilter)
     const { data, error } = await query
       .order('status', { ascending: true })       // active and paused before completed
       .order('started_at', { ascending: false })
@@ -63,13 +79,15 @@ export async function GET(request: NextRequest) {
     const ids = rows.map((r: any) => r.id)
     const counts = new Map<string, number>()
     const atStage = new Map<string, number>()
+    const recorded = new Set<string>()
     if (ids.length) {
       const { data: evs } = await supabaseAdmin
         .from('player_pathway_events')
-        .select('progress_id, stage_key')
+        .select('progress_id, stage_key, detail')
         .in('progress_id', ids)
         .eq('event_type', 'session_logged')
       for (const e of (evs || []) as any[]) {
+        if (practicePlanId && e.detail?.practice_plan_id === practicePlanId) recorded.add(e.progress_id)
         counts.set(e.progress_id, (counts.get(e.progress_id) || 0) + 1)
         const row = rows.find((r: any) => r.id === e.progress_id)
         if (row && e.stage_key === row.current_stage_key) {
@@ -95,6 +113,7 @@ export async function GET(request: NextRequest) {
         stage_total: totals.get(r.pathway_id) || 0,
         sessions_total: counts.get(r.id) || 0,
         sessions_at_stage: atStage.get(r.id) || 0,
+        ...(practicePlanId ? { already_recorded: recorded.has(r.id) } : {}),
       })),
     })
   } catch (error: any) {

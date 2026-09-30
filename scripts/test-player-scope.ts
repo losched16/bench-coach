@@ -512,6 +512,85 @@ async function real() {
   refusedOutput.push(anonList.text)
   none('plans list: refused requests carry no player or plan data', refusedOutput.slice(-4).join('\n'), [mark(P.marcus, 'name'), STAGE.one, STAGE.two])
 
+  // Recording a saved practice on players' plans (migration 077):
+  // POST /api/player-pathways/[progressId]/events { kind: 'session', practicePlanId }.
+  const practiceRows = (t: ReturnType<typeof seed>) => {
+    const pp = (id: string, team: string, extra: Record<string, any>) => ({
+      id, team_id: team, title: `Synthetic ${id}`, duration_minutes: 75, created_at: '2026-09-01T00:00:00Z',
+      content: { blocks: [{ title: 'Warm-up', minutes: 10 }, { title: 'Drill', drill_id: 'drill-1', minutes: 20 },
+        { title: 'Stations', stations: [{ title: 'A', drill_id: 'drill-2' }, { title: 'B', drill_id: 'drill-1' }] }] },
+      scheduled_for: '2026-09-20', pathway_slug: null, pathway_stage_number: null, ...extra,
+    })
+    ;(t as any).practice_plans = [
+      pp('pp-a', T.a, { pathway_slug: 'synthetic-arm', pathway_stage_number: 2 }),
+      pp('pp-a-future', T.a, { pathway_slug: 'synthetic-arm', pathway_stage_number: 2, scheduled_for: '2099-01-01' }),
+      pp('pp-a-nolink', T.a, {}),
+      pp('pp-a-otherpath', T.a, { pathway_slug: 'some-other-pathway', pathway_stage_number: 1 }),
+      pp('pp-b', T.b, { pathway_slug: 'synthetic-arm', pathway_stage_number: 1 }),
+    ]
+  }
+  const events = load('player-pathways/[progressId]/events/route.ts')
+  const rec = (u: string | null, progressId: string, practicePlanId: string) => {
+    as(u)
+    return call(events.POST, `/api/player-pathways/${progressId}/events`,
+      { method: 'POST', body: { kind: 'session', practicePlanId }, params: { progressId } })
+  }
+  const practiceEvents = (progressId: string) => state.db!.tables.player_pathway_events
+    .filter(e => e.progress_id === progressId && e.event_type === 'session_logged' && e.detail?.practice_plan_id)
+
+  freshDb(practiceRows)
+  const first = await rec(U.ownerA, 'prog-marcus', 'pp-a')
+  check('practice record: head coach records a practice on their player\'s plan', first.status === 200, `${first.status} ${first.text}`)
+  const ev1 = practiceEvents('prog-marcus')
+  check('practice record: exactly one session written', ev1.length === 1, `${ev1.length}`)
+  const e1 = ev1[0] || {}
+  check('practice record: minutes come from the practice', e1.detail?.minutes === 75, JSON.stringify(e1.detail))
+  check('practice record: drill ids from the practice, stations included, deduplicated',
+    JSON.stringify(e1.detail?.drill_ids) === JSON.stringify(['drill-1', 'drill-2']), JSON.stringify(e1.detail))
+  check('practice record: dated the day of the practice', e1.occurred_on === '2026-09-20', String(e1.occurred_on))
+  check('practice record: filed on the player\'s current stage', e1.stage_key === 's2', String(e1.stage_key))
+  const again = await rec(U.ownerA, 'prog-marcus', 'pp-a')
+  check('practice record: pressing again says already recorded', again.status === 409 && again.text.includes('alreadyRecorded'), `${again.status} ${again.text}`)
+  check('practice record: and writes nothing more', practiceEvents('prog-marcus').length === 1)
+
+  const listed = await (async () => { as(U.ownerA); return call(plans.GET, `/api/player-pathways?teamId=${T.a}&pathway=synthetic-arm&practicePlanId=pp-a`) })()
+  const listedRows = JSON.parse(listed.text).pathways || []
+  check('practice picker: lists the team\'s plans on that pathway', listedRows.some((r: any) => r.id === 'prog-marcus'), listed.text.slice(0, 200))
+  check('practice picker: marks the one already recorded', listedRows.find((r: any) => r.id === 'prog-marcus')?.already_recorded === true)
+  check('practice picker: nothing from another team', !listed.text.includes('prog-zoe') && !listed.text.includes(mark(P.zoe, 'name')))
+  const otherPath = await (async () => { as(U.ownerA); return call(plans.GET, `/api/player-pathways?teamId=${T.a}&pathway=no-such-pathway`) })()
+  check('practice picker: an unknown pathway lists nothing', (JSON.parse(otherPath.text).pathways || []).length === 0)
+
+  const future = await rec(U.ownerA, 'prog-marcus', 'pp-a-future')
+  const fe = practiceEvents('prog-marcus').find(e => e.detail?.practice_plan_id === 'pp-a-future')
+  check('practice record: a future practice is not dated in the future', future.status === 200 && !!fe && fe.occurred_on == null, `${future.status} ${JSON.stringify(fe)}`)
+
+  freshDb(practiceRows)
+  const asst = await rec(U.assistant, 'prog-marcus', 'pp-a')
+  check('practice record: an assistant (contributor) can record', asst.status === 200, `${asst.status} ${asst.text}`)
+  freshDb(practiceRows)
+  const viewer = await rec(U.viewer, 'prog-marcus', 'pp-a')
+  check('practice record: a viewer cannot', viewer.status === 403 && practiceEvents('prog-marcus').length === 0, `${viewer.status}`)
+  const outsider = await rec(U.ownerB, 'prog-marcus', 'pp-b')
+  check('practice record: another team\'s coach cannot record on this team\'s player', outsider.status >= 400 && outsider.status < 500 && practiceEvents('prog-marcus').length === 0, `${outsider.status}`)
+  refusedOutput.push(outsider.text)
+  const crossPractice = await rec(U.ownerA, 'prog-marcus', 'pp-b')
+  check('practice record: another team\'s practice cannot be recorded here', crossPractice.status === 404 && practiceEvents('prog-marcus').length === 0, `${crossPractice.status}`)
+  const noLink = await rec(U.ownerA, 'prog-marcus', 'pp-a-nolink')
+  check('practice record: a practice not built from a plan is refused', noLink.status === 400, `${noLink.status}`)
+  const wrongPath = await rec(U.ownerA, 'prog-marcus', 'pp-a-otherpath')
+  check('practice record: a practice built for another pathway is refused', wrongPath.status === 400, `${wrongPath.status}`)
+  const missingPractice = await rec(U.ownerA, 'prog-marcus', 'pp-missing')
+  check('practice record: a missing practice answers like another team\'s', missingPractice.status === crossPractice.status && missingPractice.text === crossPractice.text)
+  const anonRec = await rec(null, 'prog-marcus', 'pp-a')
+  check('practice record: no session is refused', anonRec.status === 401 && practiceEvents('prog-marcus').length === 0, `${anonRec.status}`)
+  as(U.ownerA)
+  const manual = await call(events.POST, '/api/player-pathways/prog-marcus/events',
+    { method: 'POST', body: { kind: 'session', minutes: 20 }, params: { progressId: 'prog-marcus' } })
+  const manualEv = state.db!.tables.player_pathway_events.filter(e => e.progress_id === 'prog-marcus' && e.event_type === 'session_logged')
+  check('practice record: a hand-recorded session still works as before', manual.status === 200 &&
+    manualEv.length === 1 && manualEv[0].detail?.minutes === 20 && !('practice_plan_id' in (manualEv[0].detail || {})), `${manual.status} ${JSON.stringify(manualEv)}`)
+
   // One sweep over everything refused requests produced.
   none('sweep: no refused request produced any of another team\'s player data', refusedOutput.join('\n'), markers(P.zoe))
   none('sweep: nor any of another coach\'s team-less player', refusedOutput.join('\n'), [...markers(P.solokid), ...markers(P.homekid)])
