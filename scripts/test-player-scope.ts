@@ -591,6 +591,121 @@ async function real() {
   check('practice record: a hand-recorded session still works as before', manual.status === 200 &&
     manualEv.length === 1 && manualEv[0].detail?.minutes === 20 && !('practice_plan_id' in (manualEv[0].detail || {})), `${manual.status} ${JSON.stringify(manualEv)}`)
 
+  // ── POST/PATCH/DELETE /api/log: authorship from the session ──────────────
+  const logR = load('log/route.ts')
+  const ASST_COACH = 'coach-assistant'
+  const logRows = (t: ReturnType<typeof seed>) => {
+    // Every signed-in user has a coach profile in production (the new-user
+    // trigger makes one); the fixture's assistant gets theirs here.
+    t.coaches.push({ id: ASST_COACH, user_id: U.assistant, display_name: 'Synthetic Assistant', subscription_tier: 'free', is_subscribed: false })
+    ;(t as any).games = []
+    ;(t as any).roster_name_mappings = []
+    t.prescriptions.push(
+      { id: 'rx-a', coach_id: C.a, team_id: T.a, player_id: P.marcus, scope: 'player', status: 'active', issued_at: '2026-09-01T00:00:00Z', created_at: '2026-09-01T00:00:00Z' },
+      { id: 'rx-b', coach_id: C.b, team_id: T.b, player_id: P.zoe, scope: 'player', status: 'active', issued_at: '2026-09-01T00:00:00Z', created_at: '2026-09-01T00:00:00Z' },
+    )
+  }
+  const post = (u: string | null, body: Record<string, any>) => {
+    as(u)
+    return call(logR.POST, '/api/log', { method: 'POST', body: { entryType: 'practice', occurredOn: '2026-09-28', ...body } })
+  }
+  const rowsBy = () => ({
+    entries: state.db!.tables.entries.map(e => ({ id: e.id, coach_id: e.coach_id, team_id: e.team_id, player_id: e.player_id })),
+    observations: state.db!.tables.observations.filter(o => String(o.body).startsWith('LOGTEST')),
+  })
+  const note = (b: string) => [{ prompt_key: 'how_it_went', body: `LOGTEST ${b}` }]
+
+  // Legitimate writes, with a forged coachId that must be ignored.
+  freshDb(logRows)
+  const own = await post(U.ownerA, { coachId: C.b, teamId: T.a, playerId: P.marcus, notes: note('owner') })
+  let r = rowsBy()
+  check('log: head coach writes an observation on their team\'s player', own.status === 200, `${own.status} ${own.text.slice(0, 120)}`)
+  check('log: authored by the session\'s coach, not the forged id', r.entries.length === 1 && r.entries[0].coach_id === C.a &&
+    r.observations.length === 1 && r.observations[0].coach_id === C.a, JSON.stringify(r))
+  check('log: nothing is attributed to the impersonated coach', !r.entries.some(e => e.coach_id === C.b) && !r.observations.some(o => o.coach_id === C.b))
+
+  const asstLog = await post(U.assistant, { coachId: C.a, teamId: T.a, playerId: P.marcus, notes: note('assistant') })
+  r = rowsBy()
+  check('log: an assistant (contributor) writes on the team\'s player', asstLog.status === 200, `${asstLog.status} ${asstLog.text.slice(0, 120)}`)
+  check('log: the assistant\'s note is theirs, not the head coach\'s', r.observations.some(o => o.body === 'LOGTEST assistant' && o.coach_id === ASST_COACH),
+    JSON.stringify(r.observations))
+
+  // Refused writes create nothing.
+  freshDb(logRows)
+  const cases: Array<[string, () => Promise<{ status: number; text: string }>, number]> = [
+    ['a viewer', () => post(U.viewer, { teamId: T.a, playerId: P.marcus, notes: note('viewer') }), 403],
+    ['another team\'s coach', () => post(U.ownerB, { coachId: C.a, teamId: T.a, playerId: P.marcus, notes: note('ownerB') }), 404],
+    ['a league administrator', () => post(U.league, { teamId: T.a, playerId: P.marcus, notes: note('league') }), 404],
+    ['a stranger', () => post(U.stranger, { teamId: T.a, notes: note('stranger') }), 404],
+    ['no session', () => post(null, { teamId: T.a, notes: note('anon') }), 401],
+    ['another team\'s player on this team', () => post(U.ownerA, { teamId: T.a, playerId: P.zoe, notes: note('zoe') }), 404],
+    ['the same coach\'s other-team player', () => post(U.ownerA, { teamId: T.a, playerId: P.cleo, notes: note('cleo') }), 404],
+    ['another team\'s priority', () => post(U.ownerA, { teamId: T.a, playerId: P.marcus, prescriptionId: 'rx-b', notes: note('rxb') }), 404],
+    ['no team: another coach\'s player', () => post(U.solo, { playerId: P.marcus, notes: note('solo-marcus') }), 404],
+    ['no team: forged coachId for another coach\'s player', () => post(U.ownerA, { coachId: C.solo, playerId: P.solokid, notes: note('forged-solo') }), 404],
+    ['no team: staff reaching the head coach\'s team-less player', () => post(U.assistant, { playerId: P.homekid, notes: note('asst-home') }), 404],
+  ]
+  for (const [who, fn, expect] of cases) {
+    const res = await fn()
+    refusedOutput.push(res.text)
+    check(`log refused: ${who} (${expect})`, res.status === expect, `${res.status} ${res.text.slice(0, 120)}`)
+  }
+  r = rowsBy()
+  check('log refused: NO entry or observation row was written by any refused request', r.entries.length === 0 && r.observations.length === 0, JSON.stringify(r))
+
+  freshDb(logRows)
+  state.db!.tables.coaches = state.db!.tables.coaches.filter(c => c.id !== ASST_COACH)
+  const noProfile = await post(U.assistant, { teamId: T.a, notes: note('no-profile') })
+  check('log refused: a caller with no coach profile is told so and writes nothing', noProfile.status === 403 && rowsBy().entries.length === 0, `${noProfile.status}`)
+
+  // Legitimate no-team writes.
+  freshDb(logRows)
+  const solo = await post(U.solo, { coachId: C.a, playerId: P.solokid, notes: note('solo') })
+  r = rowsBy()
+  check('log: a solo coach writes about their own team-less player', solo.status === 200 && r.entries[0]?.coach_id === C.solo && r.entries[0]?.team_id == null, `${solo.status} ${JSON.stringify(r)}`)
+  const home = await post(U.ownerA, { playerId: P.homekid, notes: note('home') })
+  check('log: a head coach writes about their own team-less player', home.status === 200, `${home.status}`)
+
+  // Box scores and name mappings cannot reach another team's roster rows.
+  freshDb(logRows)
+  const game = await post(U.ownerA, {
+    teamId: T.a, entryType: 'game',
+    games: [{ game_date: '2026-09-27', opponent: 'Synthetic Opponent', team_score: 3, opponent_score: 2,
+      players: [{ team_player_id: 'tp-marcus', batting_line: {} }, { team_player_id: 'tp-zoe', batting_line: {} }] }],
+    rosterMappings: [{ source_name: 'M', team_player_id: 'tp-marcus' }, { source_name: 'Z', team_player_id: 'tp-zoe' }],
+  })
+  const stats = state.db!.tables.player_game_stats.map(s => s.team_player_id)
+  const maps = ((state.db!.tables as any).roster_name_mappings || []).map((m: any) => m.team_player_id)
+  check('log: a box score writes only this team\'s players', game.status === 200 && stats.includes('tp-marcus') && !stats.includes('tp-zoe'), `${game.status} ${JSON.stringify(stats)}`)
+  check('log: a name mapping to another team\'s player is dropped', maps.includes('tp-marcus') && !maps.includes('tp-zoe'), JSON.stringify(maps))
+
+  // PATCH and DELETE: only the entry's author, from the session.
+  freshDb(logRows)
+  const made = await post(U.ownerA, { teamId: T.a, playerId: P.marcus, prescriptionId: 'rx-a', quickLog: true })
+  const entryId = JSON.parse(made.text).entry?.id
+  check('log: the one-tap log still works for a team priority', made.status === 200 && !!entryId, `${made.status} ${made.text.slice(0, 120)}`)
+  const againLog = await post(U.ownerA, { teamId: T.a, playerId: P.marcus, prescriptionId: 'rx-a', quickLog: true })
+  check('log: a second one-tap the same day returns the first entry', againLog.status === 200 && JSON.parse(againLog.text).alreadyLogged === true && rowsBy().entries.length === 1)
+  const patch = (u: string | null, body: Record<string, any>) => { as(u); return call(logR.PATCH, '/api/log', { method: 'PATCH', body }) }
+  const del = (u: string | null, id: string, coachId?: string) => { as(u); return call(logR.DELETE, `/api/log?entryId=${id}${coachId ? `&coachId=${coachId}` : ''}`, { method: 'DELETE' }) }
+  const pa = await patch(U.assistant, { coachId: C.a, entryId, notes: note('asst-patch') })
+  check('log PATCH: an assistant cannot add to the head coach\'s entry, even naming them', pa.status === 404 && !rowsBy().observations.length, `${pa.status}`)
+  const pb = await patch(U.ownerB, { coachId: C.a, entryId, notes: note('b-patch') })
+  check('log PATCH: another team\'s coach cannot', pb.status === 404 && !rowsBy().observations.length, `${pb.status}`)
+  const pv = await patch(U.viewer, { entryId, notes: note('v-patch') })
+  check('log PATCH: a viewer cannot', pv.status >= 400 && !rowsBy().observations.length, `${pv.status}`)
+  const po = await patch(U.ownerA, { coachId: C.b, entryId, notes: note('owner-patch') })
+  check('log PATCH: the author adds a note, authored by the session', po.status === 200 &&
+    rowsBy().observations.length === 1 && rowsBy().observations[0].coach_id === C.a, `${po.status} ${JSON.stringify(rowsBy().observations)}`)
+  const da = await del(U.assistant, entryId, C.a)
+  check('log DELETE: an assistant cannot delete the head coach\'s entry, even naming them', da.status === 404 && rowsBy().entries.length === 1, `${da.status}`)
+  const db2 = await del(U.ownerB, entryId, C.a)
+  check('log DELETE: another team\'s coach cannot', db2.status === 404 && rowsBy().entries.length === 1, `${db2.status}`)
+  const dn = await del(null, entryId)
+  check('log DELETE: no session is refused', dn.status === 401 && rowsBy().entries.length === 1, `${dn.status}`)
+  const dOk = await del(U.ownerA, entryId)
+  check('log DELETE: the author deletes their own entry', dOk.status === 200 && rowsBy().entries.length === 0, `${dOk.status}`)
+
   // One sweep over everything refused requests produced.
   none('sweep: no refused request produced any of another team\'s player data', refusedOutput.join('\n'), markers(P.zoe))
   none('sweep: nor any of another coach\'s team-less player', refusedOutput.join('\n'), [...markers(P.solokid), ...markers(P.homekid)])

@@ -603,6 +603,22 @@ export async function callerCoachId(): Promise<string | null> {
   return (data as any)?.id || null
 }
 
+/**
+ * The caller acting on their own account, with no team involved: a Personal
+ * plan coach logging about their own player. Off the session, never off the
+ * request. Refuses a caller with no coach profile, because every row written
+ * this way is authored by that profile.
+ */
+export async function authorizeOwnCoach(): Promise<Actor & { coachId: string }> {
+  const userId = await currentUserId()
+  if (!userId) throw new AuthzError('You need to be signed in', 401)
+  const { data } = await supabaseAdmin
+    .from('coaches').select('id').eq('user_id', userId).maybeSingle()
+  const coachId = (data as any)?.id as string | undefined
+  if (!coachId) throw new AuthzError('Your account has no coach profile to record this under', 403)
+  return { userId, coachId, ownerCoachId: coachId, role: 'owner' }
+}
+
 export async function requireAdmin() {
   const supabase = await sessionClient()
   const { data: { user } } = await supabase.auth.getUser()

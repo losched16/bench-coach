@@ -3,7 +3,8 @@ import { migrationHintFor } from '@/lib/migrationHints'
 import { createClient } from '@supabase/supabase-js'
 import { normalizeStatLine } from '@/lib/entries'
 import { findExistingGame } from '@/lib/games'
-import { guard } from '@/lib/authz'
+import { guard, requireSession, authorizeTeam, authorizeOwnCoach, authzResponse, AuthzError } from '@/lib/authz'
+import { resolvePlayerScope } from '@/lib/playerScope'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -78,16 +79,41 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// WHO IS WRITING, AND WHAT THEY MAY WRITE ABOUT
+//
+// Authorship comes from the session, never from the request. A coachId in the
+// body is ignored: the entry and its observations are written under the
+// caller's own coach profile, so nobody can file a note as another coach.
+//
+//   With a team:  'record' on that team (owner, admin, contributor — not a
+//                 viewer, not a league administrator), and every player, roster
+//                 row and priority named must belong to that team.
+//   No team:      the caller's own account (a Personal plan coach), and the
+//                 player and priority must be theirs.
+//
+// Anything that fails answers 404 (or the authorization status) before a
+// single row is written.
+async function authorizeLogWrite(teamId: string | null): Promise<{ authorCoachId: string; ownerCoachId: string; teamId: string | null }> {
+  if (teamId) {
+    const actor = await authorizeTeam(teamId, 'record')
+    if (!actor.coachId) throw new AuthzError('Your account has no coach profile to record this under', 403)
+    return { authorCoachId: actor.coachId, ownerCoachId: actor.ownerCoachId, teamId }
+  }
+  const actor = await authorizeOwnCoach()
+  return { authorCoachId: actor.coachId, ownerCoachId: actor.coachId, teamId: null }
+}
+
 // POST: create an entry, its observations, and (for games) normalized stats
 export async function POST(request: NextRequest) {
-  const denied = await guard(request, 'record')
-  if (denied) return denied
+  // Signed in first; the team or own-account check follows once the body says
+  // which applies (authorizeLogWrite), before anything is read or written.
+  const unauthenticated = await requireSession()
+  if (unauthenticated) return unauthenticated
 
   try {
     const body = await request.json()
     const {
-      coachId,
-      teamId,
+      teamId: rawTeamId,
       playerId,
       entryType,
       occurredOn,
@@ -105,11 +131,45 @@ export async function POST(request: NextRequest) {
       quickLog,                                // true only from "Ran it today"
     } = body
 
-    if (!coachId || !entryType || !occurredOn) {
+    const teamId: string | null = typeof rawTeamId === 'string' && rawTeamId ? rawTeamId : null
+    const { authorCoachId, ownerCoachId } = await authorizeLogWrite(teamId)
+    const coachId = authorCoachId
+
+    if (!entryType || !occurredOn) {
       return NextResponse.json(
-        { error: 'coachId, entryType and occurredOn are required' },
+        { error: 'entryType and occurredOn are required' },
         { status: 400 }
       )
+    }
+
+    // The player must be on this team (roster or archive), or with no team,
+    // the caller's own. Same rule, same refusal, as every other player read.
+    if (playerId) {
+      const scope = await resolvePlayerScope(supabaseAdmin, { playerId, teamId, ownerCoachId })
+      if (!scope.ok) return NextResponse.json({ error: 'Player not found' }, { status: 404 })
+    }
+
+    // A named priority must be this team's (or, with no team, the caller's
+    // own team-less one) and, when a player is named, that player's.
+    if (body.prescriptionId) {
+      const { data: rx } = await supabaseAdmin
+        .from('prescriptions').select('id, team_id, player_id, coach_id')
+        .eq('id', String(body.prescriptionId)).maybeSingle()
+      const r = rx as any
+      const fits = !!r && (teamId
+        ? r.team_id === teamId
+        : !r.team_id && r.coach_id === ownerCoachId)
+        && (!playerId || !r.player_id || r.player_id === playerId)
+      if (!fits) return NextResponse.json({ error: 'Priority not found' }, { status: 404 })
+    }
+
+    // Roster rows named by a parsed box score or a confirmed name mapping must
+    // be this team's. Anything else is dropped, never written.
+    let teamRosterIds = new Set<string>()
+    if (teamId && (Array.isArray(games) || Array.isArray(rosterMappings))) {
+      const { data: roster } = await supabaseAdmin
+        .from('team_players').select('id').eq('team_id', teamId)
+      teamRosterIds = new Set(((roster || []) as any[]).map(r => r.id))
     }
 
     // A home session works whatever priority is currently active — logging it
@@ -126,15 +186,17 @@ export async function POST(request: NextRequest) {
     const choseExplicitly = Object.prototype.hasOwnProperty.call(body, 'prescriptionId')
     let prescriptionId: string | null = explicitPrescriptionId || null
     if (entryType === 'home_session' && !prescriptionId && !choseExplicitly) {
+      // The team's priorities (set by its owner), or with no team the
+      // caller's own — not the author's, which for an assistant is nobody's.
       let pq = supabaseAdmin
         .from('prescriptions')
         .select('id')
-        .eq('coach_id', coachId)
+        .eq('coach_id', ownerCoachId)
         .eq('status', 'active')
         .order('issued_at', { ascending: false })
         .limit(1)
+      pq = teamId ? pq.eq('team_id', teamId) : pq.is('team_id', null)
       if (playerId) pq = pq.eq('player_id', playerId)
-      else if (teamId) pq = pq.eq('team_id', teamId)
       const { data: active } = await pq
       prescriptionId = active?.[0]?.id || null
     }
@@ -151,7 +213,6 @@ export async function POST(request: NextRequest) {
       const { data: existing } = await supabaseAdmin
         .from('entries')
         .select('*')
-        .eq('coach_id', coachId)
         .eq('prescription_id', prescriptionId)
         .eq('occurred_on', occurredOn)
         .eq('quick_log', true)
@@ -229,7 +290,7 @@ export async function POST(request: NextRequest) {
     // 3. Persist confirmed roster mappings so next weekend matches itself
     if (teamId && Array.isArray(rosterMappings) && rosterMappings.length > 0) {
       const mappingRows = rosterMappings
-        .filter((m: any) => m?.source_name && m?.team_player_id)
+        .filter((m: any) => m?.source_name && m?.team_player_id && teamRosterIds.has(String(m.team_player_id)))
         .map((m: any) => ({
           team_id: teamId,
           source_name: String(m.source_name).trim(),
@@ -299,7 +360,7 @@ export async function POST(request: NextRequest) {
         if (!firstGameId) firstGameId = gameId
 
         const statRows = (g.players || [])
-          .filter((p: any) => p.team_player_id)
+          .filter((p: any) => p.team_player_id && teamRosterIds.has(String(p.team_player_id)))
           .map((p: any) => {
             const line = normalizeStatLine(p.batting_line || {})
             return {
@@ -361,9 +422,26 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error: any) {
+    const authz = authzResponse(error)
+    if (authz) return NextResponse.json(authz.body, { status: authz.status })
     console.error('Log POST error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+}
+
+// An entry the caller wrote, on a team they may still record on (or, with no
+// team, their own). Null answers 404 — a missing entry, someone else's, and
+// another team's all look the same.
+async function ownEntry(entryId: string) {
+  const { data: entry } = await supabaseAdmin
+    .from('entries')
+    .select('id, coach_id, team_id, player_id, occurred_on')
+    .eq('id', entryId)
+    .maybeSingle()
+  if (!entry) return null
+  const e = entry as any
+  const { authorCoachId } = await authorizeLogWrite(e.team_id || null)
+  return e.coach_id === authorCoachId ? { entry: e, authorCoachId } : null
 }
 
 // PATCH: attach notes to an entry that already exists.
@@ -371,37 +449,33 @@ export async function POST(request: NextRequest) {
 // The one-tap logger saves the session the instant the button is pressed —
 // that is the whole point, and making it wait for a text box is how you get
 // nothing logged at all. The optional "how did it go" arrives afterwards, if
-// they feel like it, and lands here.
+// they feel like it, and lands here. Only the entry's author may add to it,
+// and a coachId in the body is ignored — see authorizeLogWrite.
 export async function PATCH(request: NextRequest) {
-  const denied = await guard(request, 'record')
-  if (denied) return denied
+  const unauthenticated = await requireSession()
+  if (unauthenticated) return unauthenticated
 
   try {
-    const { coachId, entryId, notes } = await request.json()
+    const { entryId, notes } = await request.json()
 
-    if (!coachId || !entryId) {
-      return NextResponse.json({ error: 'coachId and entryId are required' }, { status: 400 })
+    if (!entryId) {
+      return NextResponse.json({ error: 'entryId is required' }, { status: 400 })
     }
 
-    const { data: entry } = await supabaseAdmin
-      .from('entries')
-      .select('id, team_id, player_id, occurred_on')
-      .eq('id', entryId)
-      .eq('coach_id', coachId)
-      .maybeSingle()
-
-    if (!entry) return NextResponse.json({ error: 'Entry not found' }, { status: 404 })
+    const found = await ownEntry(String(entryId))
+    if (!found) return NextResponse.json({ error: 'Entry not found' }, { status: 404 })
+    const { entry, authorCoachId } = found
 
     const rows = (notes || [])
       .filter((n: any) => n?.body && String(n.body).trim())
       .map((n: any) => ({
-        coach_id: coachId,
-        team_id: (entry as any).team_id,
-        player_id: (entry as any).player_id,
-        entry_id: (entry as any).id,
+        coach_id: authorCoachId,
+        team_id: entry.team_id,
+        player_id: entry.player_id,
+        entry_id: entry.id,
         prompt_key: n.prompt_key || null,
         body: String(n.body).trim(),
-        observed_on: (entry as any).occurred_on,
+        observed_on: entry.occurred_on,
       }))
 
     if (rows.length === 0) return NextResponse.json({ success: true, observations: 0 })
@@ -411,33 +485,38 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true, observations: rows.length })
   } catch (error: any) {
+    const authz = authzResponse(error)
+    if (authz) return NextResponse.json(authz.body, { status: authz.status })
     console.error('Log PATCH error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
 
-// DELETE: remove an entry (observations cascade)
+// DELETE: remove an entry the caller wrote (observations cascade).
 export async function DELETE(request: NextRequest) {
-  const denied = await guard(request, 'record')
-  if (denied) return denied
+  const unauthenticated = await requireSession()
+  if (unauthenticated) return unauthenticated
 
   const { searchParams } = new URL(request.url)
   const entryId = searchParams.get('entryId')
-  const coachId = searchParams.get('coachId')
 
-  if (!entryId || !coachId) {
-    return NextResponse.json({ error: 'entryId and coachId required' }, { status: 400 })
+  if (!entryId) {
+    return NextResponse.json({ error: 'entryId required' }, { status: 400 })
   }
 
   try {
+    const found = await ownEntry(entryId)
+    if (!found) return NextResponse.json({ error: 'Entry not found' }, { status: 404 })
     const { error } = await supabaseAdmin
       .from('entries')
       .delete()
-      .eq('id', entryId)
-      .eq('coach_id', coachId)
+      .eq('id', found.entry.id)
+      .eq('coach_id', found.authorCoachId)
     if (error) throw error
     return NextResponse.json({ success: true })
   } catch (error: any) {
+    const authz = authzResponse(error)
+    if (authz) return NextResponse.json(authz.body, { status: authz.status })
     console.error('Log DELETE error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
