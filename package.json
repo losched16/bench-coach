@@ -109,6 +109,7 @@
     "test:observation-scope": "npx --yes tsx --tsconfig tsconfig.json scripts/test-observation-scope.ts",
     "test:practice-plan-link": "npx --yes tsx --tsconfig tsconfig.json scripts/test-practice-plan-link.ts",
     "verify:071": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-071.ts",
+    "verify:078": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-078.ts",
     "verify:pathway-ui-prod": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-pathway-ui-prod.ts",
     "verify:pathways-prod": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/verify-pathways-production.ts",
     "emit:speed-pathway": "NODE_USE_ENV_PROXY=1 npx --yes tsx --tsconfig tsconfig.json scripts/emit-speed-pathway.ts",
