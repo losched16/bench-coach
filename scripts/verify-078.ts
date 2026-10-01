@@ -1,12 +1,12 @@
-// Did migration 078 land, and did it land only where it should?
+// Did migrations 078 and 079 land, and only where they should?
 //
 //   npm run verify:078
 //
-// Read-only, with the public key. The drill ids and the videos they are
-// expected to lose are parsed out of migrations/078_drill_video_link_repair.sql
-// rather than repeated here, so the two cannot drift apart.
+// Read-only, with the public key. The drill ids and videos are parsed out of
+// migrations/078_drill_video_link_repair.sql and 079_drill_video_replacements.sql
+// rather than repeated here, so the files and this check cannot drift apart.
 //
-// Before 078 is applied this fails on every drill it names — that is the
+// Before they are applied this fails on every drill they name — that is the
 // expected "not yet" answer, not a fault.
 
 import { createClient } from '@supabase/supabase-js'
@@ -20,6 +20,7 @@ import { mediaForDrill } from '../lib/drillMedia'
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 const SQL = fs.readFileSync(path.join(__dirname, '..', 'migrations', '078_drill_video_link_repair.sql'), 'utf8')
+const SQL_079 = fs.readFileSync(path.join(__dirname, '..', 'migrations', '079_drill_video_replacements.sql'), 'utf8')
 
 const DEAD = ['3Xqb7j2BYTU', '9EAbFFMBBGE', '3NqJh3hfYZc', 'k8Lzh6YJLUE']
 const HIGH_TEE = 'iKX-qxQ1X5g'
@@ -47,8 +48,10 @@ async function main() {
   const [removeBlock, retargetBlock] = SQL.split('-- ── 3.')
   const removed = rows(removeBlock)
   const retargeted = rows(retargetBlock).filter(r => !r.video)
-  check('parsed the drills 078 names', removed.length === 12 && retargeted.length === 2,
-    `${removed.length} removed, ${retargeted.length} retargeted`)
+  // 079's VALUES block: the drills that get a replacement, and which one.
+  const replaced = new Map(rows(SQL_079.split('eligible AS')[0]).map(r => [r.id, r.video!]))
+  check('parsed the drills 078 and 079 name', removed.length === 12 && retargeted.length === 2 && replaced.size === 6,
+    `${removed.length} removed, ${retargeted.length} retargeted, ${replaced.size} replaced`)
 
   const { data: drills, error } = await sb.from('drill_resources')
     .select('id, drill_name, youtube_video_id, youtube_url, thumbnail_url, youtube_start_seconds')
@@ -68,8 +71,11 @@ async function main() {
     if (!d) { check(`drill ${r.id} exists`, false, 'missing'); continue }
     const shown = mediaForDrill(d as any, mediaOf(r.id) as any)
     const stillShown = shown.some(s => s.url.includes(r.video!))
-    check(`${d.drill_name.slice(0, 60)}`, !d.youtube_video_id && !stillShown,
-      d.youtube_video_id ? `still on ${d.youtube_video_id}` : stillShown ? `${r.video} still shown` : `no video (was ${r.video})`)
+    const want = replaced.get(r.id) ?? null
+    const ok = !stillShown && d.youtube_video_id === want &&
+      (want ? shown[0]?.url.includes(want) === true : shown.length === 0)
+    check(`${d.drill_name.slice(0, 60)}`, ok,
+      stillShown ? `still shows ${r.video}` : `was ${r.video}, now ${d.youtube_video_id ?? 'no video'}${want ? ` (want ${want})` : ''}`)
   }
 
   for (const r of retargeted) {
