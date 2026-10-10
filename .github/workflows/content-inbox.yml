@@ -1,6 +1,11 @@
 name: BenchCoach Content Inbox
 
 on:
+  pull_request:
+    paths:
+      - 'scripts/content-inbox/**'
+      - '.github/workflows/content-inbox.yml'
+      - 'docs/content-inbox-automation.md'
   workflow_dispatch:
   schedule:
     - cron: '7,37 * * * *'
@@ -9,12 +14,25 @@ permissions:
   contents: read
 
 concurrency:
-  group: benchcoach-content-inbox
+  group: benchcoach-content-inbox-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Syntax check processor
+        run: node --check scripts/content-inbox/process.mjs
+
   process:
-    if: ${{ vars.BENCHCOACH_CONTENT_AUTOMATION_ENABLED == 'true' }}
+    if: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && vars.BENCHCOACH_CONTENT_AUTOMATION_ENABLED == 'true' }}
+    needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
