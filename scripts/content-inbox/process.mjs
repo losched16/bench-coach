@@ -31,7 +31,7 @@ const anthropic = new Anthropic({ apiKey: need('ANTHROPIC_API_KEY'), maxRetries:
 function cleanInstagramUrl(raw) {
   try {
     const u = new URL(raw)
-    if (!/(^|\\.)instagram\\.com$/i.test(u.hostname)) return raw
+    if (!/(^|\.)instagram\.com$/i.test(u.hostname)) return raw
     return u.origin + u.pathname
   } catch {
     return raw
