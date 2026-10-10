@@ -2,7 +2,7 @@
 
 This workflow turns a saved public Instagram Reel URL in the Notion **BenchCoach Content Inbox** into a review-ready content brief and short reaction/remix script.
 
-It does **not** publish content, change the BenchCoach drill library, or mark a source as visually verified.
+It does **not** publish content, change the BenchCoach drill library, or mark a source as visually verified. The output is a **review-ready draft**, not an auto-publishable final post.
 
 ## What it does
 
@@ -40,7 +40,9 @@ The automation keeps the Instagram drill-intelligence pilot's core rule: **one R
 
 V1 is transcript/metadata-first. It never claims to have visually verified a drill or mechanic. `Evidence Basis = Visual Verified` is reserved for a later visual-review step.
 
-The generated script must transform the source rather than reproduce it. It should credit the creator when known, add Clint's coaching interpretation, and connect the lesson to BenchCoach only where useful.
+The generated script must transform the source rather than reproduce it. It should credit the creator label when known without inventing an @handle, add Clint's coaching interpretation, and connect the lesson to BenchCoach only where useful.
+
+Before publication, the final content review should still use the Portfolio Brain content playbook and applicable hook/content templates. The automation intentionally stops at a draft so the full BenchCoach editorial system remains the final gate.
 
 The workflow never changes `Permission` or `Remix Available`; those remain human decisions.
 
