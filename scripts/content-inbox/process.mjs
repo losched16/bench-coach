@@ -158,6 +158,8 @@ async function transcribeInstagram(sourceUrl) {
       language: 'auto',
       task: 'transcribe',
       outputs: ['text'],
+      vocabulary: ['baseball', 'hitting', 'fielding', 'pitching', 'catching', 'fungo', 'tee', 'coil', 'load', 'stride', 'launch position', 'backside'],
+      saveFiles: false,
     }),
   })
   if (!res.ok) {
@@ -202,7 +204,7 @@ async function buildEditorial(page, source) {
   if (quickNote) evidenceParts.push('QUICK NOTE:\n' + cap(quickNote, 3000))
   if (!evidenceParts.length && !title) return null
 
-  const creator = source.creator ? '@' + source.creator : 'the original creator'
+  const creator = source.creator || 'the original creator'
   const prompt = [
     'You are the editorial analyst for BenchCoach, a youth-baseball coaching app for volunteer parent-coaches.',
     '',
@@ -214,7 +216,7 @@ async function buildEditorial(page, source) {
     '- Never call this visually verified. This workflow is transcript/metadata only.',
     '- One Reel may contain multiple drills or ideas. Pick the primary concept for this post; note multi-concept sources in the summary.',
     '- Transform the source. Do not reproduce the transcript and do not quote more than a short phrase.',
-    '- Credit ' + creator + ' naturally when creator data is available.',
+    '- Credit ' + creator + ' naturally when creator data is available. Do not invent an @handle; the actor may return a display name.',
     '- Audience: volunteer youth baseball coaches, especially 6U-12U.',
     '- BenchCoach claims may reference only shipped capabilities: curated drill library, practice planning, player observations, player development plans/pathways, development reports, and coach-controlled AI assistance.',
     '- Do not invent features, metrics, customers, outcomes, or testimonials.',
@@ -235,7 +237,7 @@ async function buildEditorial(page, source) {
     '',
     'CONTENT INBOX TITLE: ' + (title || '(untitled)'),
     'AGE GROUPS ALREADY CHOSEN BY CLINT: ' + (ages.length ? ages.join(', ') : '(none specified)'),
-    'SOURCE CREATOR: ' + (source.creator ? '@' + source.creator : '(unknown)'),
+    'SOURCE CREATOR LABEL: ' + (source.creator || '(unknown)'),
     'SOURCE URL: ' + source.sourceUrl,
     '',
     ...evidenceParts,
