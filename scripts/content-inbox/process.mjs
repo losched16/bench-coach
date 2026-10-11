@@ -18,6 +18,29 @@ const VALID_FORMATS = new Set([
   'Coach POV', 'Build in Public', 'Other',
 ])
 
+const EDITORIAL_SCHEMA = {
+  type: 'object',
+  properties: {
+    summary: { type: 'string' },
+    content_job: { type: 'string', enum: Array.from(VALID_CONTENT_JOBS) },
+    skills: { type: 'array', items: { type: 'string', enum: Array.from(VALID_SKILLS) } },
+    drill_concept: { type: 'string' },
+    problem_it_solves: { type: 'string' },
+    benchcoach_angle: { type: 'string' },
+    format: { type: 'string', enum: Array.from(VALID_FORMATS) },
+    hook_candidates: { type: 'array', items: { type: 'string' } },
+    selected_hook: { type: 'string' },
+    script_draft: { type: 'string' },
+    cta: { type: 'string' },
+  },
+  required: [
+    'summary', 'content_job', 'skills', 'drill_concept', 'problem_it_solves',
+    'benchcoach_angle', 'format', 'hook_candidates', 'selected_hook',
+    'script_draft', 'cta',
+  ],
+  additionalProperties: false,
+}
+
 function need(name) {
   const value = process.env[name]
   if (!value) throw new Error(name + ' is required')
@@ -232,8 +255,7 @@ async function buildEditorial(page, source) {
     'Allowed skills: ' + Array.from(VALID_SKILLS).join(', ') + '.',
     'Allowed format: ' + Array.from(VALID_FORMATS).join(', ') + '.',
     '',
-    'Return JSON only with exactly these keys:',
-    '{"summary":"...","content_job":"Authority","skills":["Hitting"],"drill_concept":"...","problem_it_solves":"...","benchcoach_angle":"...","format":"Reaction / Remix","hook_candidates":["...","...","..."],"selected_hook":"...","script_draft":"...","cta":"..."}',
+    'Populate every field in the required structured response. Keep every field concise enough for a coach to review quickly.',
     '',
     'CONTENT INBOX TITLE: ' + (title || '(untitled)'),
     'AGE GROUPS ALREADY CHOSEN BY CLINT: ' + (ages.length ? ages.join(', ') : '(none specified)'),
@@ -245,15 +267,23 @@ async function buildEditorial(page, source) {
 
   const response = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 1800,
+    max_tokens: 2400,
     messages: [{ role: 'user', content: prompt }],
+    output_config: {
+      format: {
+        type: 'json_schema',
+        schema: EDITORIAL_SCHEMA,
+      },
+    },
   })
-  let text = (response.content || []).filter(x => x.type === 'text').map(x => x.text).join('\n').trim()
-  text = text.replace(/^\x60\x60\x60(?:json)?\s*/i, '').replace(/\s*\x60\x60\x60$/, '').trim()
+  const text = (response.content || []).filter(x => x.type === 'text').map(x => x.text).join('\n').trim()
+  if (response.stop_reason === 'max_tokens') {
+    throw new Error('Editorial model hit max_tokens before completing structured output')
+  }
   try {
     return normalizeEditorial(JSON.parse(text))
   } catch {
-    throw new Error('Editorial model returned invalid JSON: ' + cap(text, 500))
+    throw new Error('Editorial model returned unparsable structured output: ' + cap(text, 500))
   }
 }
 
