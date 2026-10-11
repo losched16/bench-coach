@@ -1,0 +1,58 @@
+name: BenchCoach Content Inbox
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/content-inbox/**'
+      - '.github/workflows/content-inbox.yml'
+      - 'docs/content-inbox-automation.md'
+  workflow_dispatch:
+  schedule:
+    - cron: '7,37 * * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: benchcoach-content-inbox-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Syntax check processor
+        run: node --check scripts/content-inbox/process.mjs
+
+  process:
+    if: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && vars.BENCHCOACH_CONTENT_AUTOMATION_ENABLED == 'true' }}
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Process Content Inbox
+        run: node scripts/content-inbox/process.mjs
+        env:
+          NOTION_CONTENT_TOKEN: ${{ secrets.NOTION_CONTENT_TOKEN }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CONTENT_INBOX_DATA_SOURCE_ID: e258f911-ddb4-43dd-9e83-6e05b3261dac
+          CONTENT_INBOX_BATCH_SIZE: '3'
