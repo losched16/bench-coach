@@ -246,7 +246,6 @@ async function buildEditorial(page, source) {
   const response = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 1800,
-    temperature: 0.35,
     messages: [{ role: 'user', content: prompt }],
   })
   let text = (response.content || []).filter(x => x.type === 'text').map(x => x.text).join('\n').trim()
@@ -271,24 +270,9 @@ async function processPage(page) {
 
   try {
     const source = await transcribeInstagram(sourceUrl)
-    const editorial = await buildEditorial(page, source)
     const hasTranscript = Boolean(source.transcript)
 
-    if (!editorial) {
-      await updatePage(pageId, {
-        Platform: select('Instagram'),
-        Creator: richText(source.creator),
-        'Source Caption': richText(source.caption),
-        Transcript: richText(source.transcript),
-        'Transcript Source': select(hasTranscript ? 'Apify Whisper' : 'Unavailable'),
-        'Media URL': url(source.mediaUrl),
-        'Evidence Basis': select(hasTranscript ? 'Transcript + Metadata' : 'Manual Note Only'),
-        'Automation State': select('Manual Review'),
-        'Processing Error': richText('No usable transcript, caption, title, or manual note was available for editorial analysis.'),
-      })
-      return
-    }
-
+    // Preserve retrieved source evidence even if the editorial model fails later.
     await updatePage(pageId, {
       Platform: select('Instagram'),
       Creator: richText(source.creator),
@@ -297,6 +281,19 @@ async function processPage(page) {
       'Transcript Source': select(hasTranscript ? 'Apify Whisper' : 'Unavailable'),
       'Media URL': url(source.mediaUrl),
       'Evidence Basis': select(hasTranscript ? 'Transcript + Metadata' : 'Manual Note Only'),
+    })
+
+    const editorial = await buildEditorial(page, source)
+
+    if (!editorial) {
+      await updatePage(pageId, {
+        'Automation State': select('Manual Review'),
+        'Processing Error': richText('No usable transcript, caption, title, or manual note was available for editorial analysis.'),
+      })
+      return false
+    }
+
+    await updatePage(pageId, {
       'AI Summary': richText(editorial.summary),
       'Drill / Concept': richText(editorial.drillConcept),
       'Problem It Solves': richText(editorial.problem),
@@ -313,6 +310,7 @@ async function processPage(page) {
       'Processing Error': richText(hasTranscript ? '' : 'Drafted without a source transcript; review against the Reel before production.'),
     })
     console.log('  -> ' + (hasTranscript ? 'ready from transcript + metadata' : 'manual review required'))
+    return true
   } catch (error) {
     const message = cap(error?.message || error, 1800)
     console.error('  -> error: ' + message)
@@ -320,6 +318,7 @@ async function processPage(page) {
       'Automation State': select('Error'),
       'Processing Error': richText(message),
     })
+    return false
   }
 }
 
@@ -330,7 +329,12 @@ async function main() {
     return
   }
   console.log('Found ' + pages.length + ' eligible Content Inbox item(s).')
-  for (const page of pages) await processPage(page)
+  let failures = 0
+  for (const page of pages) {
+    const ok = await processPage(page)
+    if (!ok) failures += 1
+  }
+  if (failures > 0) throw new Error(failures + ' Content Inbox item(s) failed')
 }
 
 main().catch(error => {
