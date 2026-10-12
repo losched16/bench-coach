@@ -10,6 +10,7 @@ import { FEATURE_UNAVAILABLE } from '@/lib/migrationHints'
 import { guard, requireSession, authorizePlayer, authzResponse } from '@/lib/authz'
 import { visibleDrills, schedulableDrills } from '@/lib/drills'
 import { diagnose, TaxonomyRow, TAXONOMY_FIELDS } from '@/lib/drillDiagnosis'
+import { citedLibraryDrills, renderTranscript, MAX_RECOMMENDATION_CHARS, PlanSource } from '@/lib/agreedPlan'
 import { claude as anthropic, describeClaudeFailure, logClaudeFailure } from '@/lib/claudeClient'
 
 // Never prerendered. This route reads the session cookie to decide who is
@@ -67,7 +68,12 @@ export async function GET() {
 
 // ---------------------------------------------------------------------------
 // POST — diagnose a plain-English complaint and return a sequenced drill plan.
-//   body: { complaint, teamId?, playerId?, playerAge?, competitionLevel? }
+//   body: { complaint, teamId?, playerId?, playerAge?, competitionLevel?,
+//           recommendation?, transcript? }
+//
+// With `recommendation` (the chat answer the coach agreed to) the plan is a
+// write-up of THAT answer — its priority, its drills, its order — rather than
+// a fresh diagnosis. See lib/agreedPlan.ts for why.
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
   const denied = await guard(request, 'ask')
@@ -83,6 +89,28 @@ export async function POST(request: NextRequest) {
     }
     if (!process.env.ANTHROPIC_API_KEY) {
       return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
+    }
+
+    // The chat answer the coach agreed to, and the exchange behind it. Both are
+    // re-bounded here: the browser sends them, so their size is not trusted.
+    const agreed: PlanSource | null =
+      typeof body.recommendation === 'string' && body.recommendation.trim()
+        ? {
+            question: complaint.trim(),
+            recommendation: body.recommendation.trim().slice(0, MAX_RECOMMENDATION_CHARS),
+            transcript: (Array.isArray(body.transcript) ? body.transcript : [])
+              .filter((t: any) => t && (t.role === 'user' || t.role === 'assistant') && typeof t.content === 'string')
+              .slice(-8)
+              .map((t: any) => ({ role: t.role, content: t.content.slice(0, 3000) })),
+          }
+        : null
+    // Whatever the browser sent, the prompt shows the question and ends on the
+    // full answer that was agreed to — the transcript's copy may be clipped.
+    if (agreed) {
+      const t = agreed.transcript
+      if (t.length && t[t.length - 1].role === 'assistant') t.pop()
+      if (!t.some(x => x.role === 'user')) t.push({ role: 'user', content: agreed.question.slice(0, 3000) })
+      t.push({ role: 'assistant', content: agreed.recommendation })
     }
 
     // 1. Load the controlled vocabulary. Without it there is no engine.
@@ -136,7 +164,13 @@ export async function POST(request: NextRequest) {
     // 3. Diagnose. The taxonomy is an accelerator, not a gate — plenty of real
     //    questions ("how do I add velocity") are goals rather than catalogued
     //    flaws, and we answer those too. An empty match is not a dead end.
-    const { slugs, categories } = await diagnose(complaint, tax)
+    //    With an agreed answer, the answer is read too: it is what decides the
+    //    area of the game this priority sits in, not the coach's opening words
+    //    alone (which may be "yes, let's do that").
+    const diagnosisText = agreed
+      ? `${complaint}\n\n${agreed.recommendation.slice(0, 3000)}`
+      : complaint
+    const { slugs, categories } = await diagnose(diagnosisText, tax)
     const primary = slugs.length > 0 ? (tax.find(t => t.slug === slugs[0]) || null) : null
 
     // Which area of the game this priority occupies. A player works several
@@ -159,7 +193,12 @@ export async function POST(request: NextRequest) {
     // area isn't known until the diagnosis above; guessing it from keywords
     // would name the wrong priority, which is worse than no warning. It also
     // runs before the analysis, so a coach who backs out pays nothing.
-    if (coachId && focusArea && !body.confirmSupersede) {
+    //
+    // Skipped for a draft (`persist: false`): nothing is replaced until the
+    // commit, and /api/prescribe/commit asks this same question before it
+    // writes. Asking here too only stopped the chat flow — it read the 409 as a
+    // failure and showed "Could not write the read."
+    if (coachId && focusArea && !body.confirmSupersede && body.persist !== false) {
       let sq = supabaseAdmin
         .from('prescriptions')
         .select('id, priority, focus_area, created_at')
@@ -204,7 +243,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Select candidate drills mapped to those problems.
-    const { data: mapRows } = slugs.length > 0
+    //
+    //    Not for an agreed answer: its drills are the ones it named (4-agreed,
+    //    below). Searching again is how the plan used to end up with drills
+    //    the coach had never seen.
+    const { data: mapRows } = !agreed && slugs.length > 0
       ? await supabaseAdmin
           .from('drill_problem_map')
           .select('problem_slug, sort_order, curated, drill:drill_resources(*)')
@@ -246,7 +289,7 @@ export async function POST(request: NextRequest) {
     // 4b. Taxonomy came up short — search the library directly against the
     //     coach's own words. This is what makes "how do I add velocity"
     //     answerable even though it is not a catalogued flaw.
-    if (selected.length < 2) {
+    if (!agreed && selected.length < 2) {
       const already = new Set(selected.map(d => d.id))
       // A prescription hands back ONE drill for one problem, so a practice
       // unit — a warm-up routine, a three-phase progression — is the wrong
@@ -272,6 +315,16 @@ export async function POST(request: NextRequest) {
 
       const picked = await pickRelevantDrills(complaint, pool)
       selected = [...selected, ...picked].slice(0, 4)
+    }
+
+    // 4-agreed. The drills the agreed answer named, in the order it named them,
+    //    resolved against everything chat could have offered. No age or level
+    //    filter: the coach has already seen these and said yes. An answer that
+    //    named none gets none — the write-up describes its drills in prose,
+    //    rather than attaching library drills the coach never agreed to.
+    if (agreed) {
+      const { data: library } = await schedulableDrills(supabaseAdmin, coachId, '*').limit(2000)
+      selected = citedLibraryDrills(agreed.recommendation, (library || []) as any[]).slice(0, 6)
     }
 
     // 5. Write the analysis. This is the product — everything above is setup.
@@ -313,7 +366,7 @@ export async function POST(request: NextRequest) {
         let markdown = ''
         try {
           const analysisStream = writeAnalysis(
-            complaint, primary, selected, ctx, scope, playerAge, ageGuidance
+            complaint, primary, selected, ctx, scope, playerAge, ageGuidance, agreed
           )
 
           for await (const event of analysisStream) {
@@ -479,9 +532,12 @@ function writeAnalysis(
   scope: 'player' | 'team',
   playerAge?: number,
   ageGuidance?: string | null,
+  agreed?: PlanSource | null,
 ) {
   const drillList = drills.length === 0
-    ? '(none — our video library has nothing matching this yet)'
+    ? (agreed
+        ? '(none — the drills you recommended are not in our video library)'
+        : '(none — our video library has nothing matching this yet)')
     : drills.map((d, i) =>
     `[${i + 1}] "${d.drill_name}" (${d.skill_category}${d.difficulty_level ? `, ${d.difficulty_level}` : ''})\n` +
     `    What it is: ${d.description || 'no description on file'}\n` +
@@ -494,9 +550,24 @@ function writeAnalysis(
   // is real whenever a player has any — this was a placeholder until now.
   const hasMetrics = (ctx.metrics?.length || 0) > 0
 
-  const prompt = `A coach came to you with this, in their words:
+  const intro = agreed
+    ? `You talked this through with a coach in chat. They read your recommendation and pressed the button to turn it into a tracked plan — that press is their agreement to what you recommended.
 
-"${complaint}"
+THE CONVERSATION (oldest first; your last message is the recommendation they agreed to):
+
+${renderTranscript(agreed.transcript)}
+
+YOUR JOB NOW: write up THAT recommendation in the format below. It is not a fresh read.
+- "The one thing" is the priority the recommendation leads with, in the same terms. If it named more than one focus, the one it led with is the one thing and the rest go in the "Also noticed, not working on yet" line — nothing it recommended is silently dropped.
+- Keep its cues, its drills, its doses and its order. Do not swap a drill, add a new one, or change a dose.
+- If the coach corrected or narrowed something earlier in the conversation, the version they ended up agreeing to is the one you write up.
+- Where the recommendation does not cover a section (usually "What the data showed" and "What to watch next"), fill it in briefly and consistently with it.
+- If the coach's data below clearly contradicts part of the recommendation, say so plainly in "What the data showed" — but still write up what they agreed to; do not quietly replace it.`
+    : `A coach came to you with this, in their words:
+
+"${complaint}"`
+
+  const prompt = `${intro}
 
 ${problem
   ? `This maps to a known problem in our library: **${problem.label}**${problem.description ? ` — ${problem.description}` : ''}`
@@ -512,7 +583,9 @@ ${ageGuidance}
 
 Use that. Do NOT tell the coach to leave it alone or that it will resolve on its own — they asked for a fix and they will go find a worse one elsewhere if you decline. Give them the age-appropriate version of the fix, and be honest about what a realistic three-week change looks like at this age.
 
-` : ''}DRILLS AVAILABLE FOR THIS PROBLEM (already filtered for age and level — use these, and only these, by name):
+` : ''}${agreed
+  ? 'LIBRARY DRILLS YOUR RECOMMENDATION NAMED (in the order you named them — these have videos; use their exact names):'
+  : 'DRILLS AVAILABLE FOR THIS PROBLEM (already filtered for age and level — use these, and only these, by name):'}
 
 ${drillList}
 
@@ -533,7 +606,11 @@ ${scope === 'team'
   : 'Two home sessions of 15–20 minutes each. Say what happens in each one, concretely enough to run without watching a video first. Then one line the parent can hand the team coach — one sentence, something a volunteer can act on in a normal practice.'}
 
 ## Drills
-${drills.length === 0
+${agreed
+  ? (drills.length === 0
+      ? 'The drills exactly as your recommendation gave them — same drills, same order, same dose. None of them is in our video library, so describe each concretely (setup, what the player does, dose, what to watch for) without adding new ones.'
+      : 'Every drill your recommendation used, in the same order and with the same dose: the library drills above by their exact names, plus any it described that are not in the library, described the same way. For each, one line on why it serves the one thing. Add nothing it did not recommend.')
+  : drills.length === 0
   ? `We have no video in our library for this one. Say so in one short sentence — plainly, no apology — and then describe two or three drills yourself: the setup, what the player does, the dose, and what the coach watches for. The absence of a video is not a reason to give a thinner answer.`
   : drills.length < 2
     ? `We only have ${drills.length} matching video. Use it, and describe one or two more drills yourself to complete the plan — setup, dose, what to watch for — noting briefly that those don't have video yet.`

@@ -271,6 +271,61 @@ async function main() {
     }
   }
 
+  // ── Analysis writer, from an agreed chat answer ──────────────────────────
+  // The chat button now sends the answer the coach agreed to. The plan must be
+  // a write-up of THAT answer: its conversation in the prompt, its library
+  // drills (and no others) offered, and the instruction not to re-diagnose.
+  // The player's own context still arrives, scoped as before.
+  {
+    const prescribe = load('prescribe/route.ts')
+    const drill = (id: string, name: string, video: string) => ({
+      id, drill_name: name, youtube_video_id: video, youtube_url: `https://www.youtube.com/watch?v=${video}`,
+      created_by_coach_id: null, resource_kind: 'activity', duplicate_of_drill_id: null, status: 'approved',
+      skill_category: 'Throwing', description: `${name} description`, ai_coaching_notes: null,
+    })
+    reset(t => {
+      t.problem_taxonomy = [{
+        slug: 'throwing-accuracy', label: 'Throwing accuracy', skill_category: 'throwing',
+        description: 'Throws miss the target.', aliases: ['wild throws'],
+        do_not_coach_flag: false, do_not_coach_note: null, age_relevance: null,
+      }]
+      ;(t as any).drill_resources = [
+        drill('d-point', 'Point-and-Go Glove Drill', 'AAAAAAAAAA1'),
+        drill('d-knee', 'Kneel-Down Throw', 'AAAAAAAAAA2'),
+        drill('d-other', 'Long Toss Progression', 'AAAAAAAAAA3'),
+      ]
+    })
+    const answer = 'For Marcus the one thing is **pointing the glove at the target**.\n\n' +
+      'Start with **Kneel-Down Throw** — 2 sets of 10. Then **Point-and-Go Glove Drill** ' +
+      '(https://www.youtube.com/watch?v=AAAAAAAAAA1), 3 sets of 8.'
+    const out = await drain(await prescribe.POST(req('/api/prescribe', { method: 'POST', body: {
+      teamId: IDS.teamA, playerId: IDS.marcus, persist: false,
+      complaint: 'yes, let\'s do that',
+      recommendation: answer,
+      transcript: [
+        { role: 'user', content: 'Marcus throws are all over the place from shortstop' },
+        { role: 'assistant', content: answer },
+        { role: 'user', content: 'yes, let\'s do that' },
+      ],
+    } })))
+    const a = captured.find(c => c.model === 'claude-opus-5')
+    check('agreed plan: the analysis was requested', !!a, `route said: ${out.slice(0, 300)}`)
+    if (a) {
+      has('agreed plan: told to write up the agreed answer', a.text, 'YOUR JOB NOW: write up THAT recommendation')
+      has('agreed plan: the original problem is in front of it', a.text, 'Marcus throws are all over the place from shortstop')
+      has('agreed plan: the agreed answer is in front of it', a.text, '2 sets of 10. Then **Point-and-Go Glove Drill**')
+      const named = a.text.split('LIBRARY DRILLS YOUR RECOMMENDATION NAMED')[1] || ''
+      check('agreed plan: the drills it named are offered, in its order',
+        named.indexOf('"Kneel-Down Throw"') > -1 &&
+        named.indexOf('"Kneel-Down Throw"') < named.indexOf('"Point-and-Go Glove Drill"'),
+        named.slice(0, 400))
+      lacks('agreed plan: no drill it did not name', a.text, 'Long Toss Progression')
+      has('agreed plan: the player\'s own context still arrives', a.text, '[Build the Arm] active · stage 2 of 4')
+      lacks('agreed plan: nothing from team B', a.text, LEAK_SENTINEL)
+    }
+    check('agreed plan: no library search by problem', !db().log.some(q => q.table === 'drill_problem_map'))
+  }
+
   // ── Home-practice plan writer (development-plan): player-scoped ──────────
   // Not one of the four named consumers, but it calls the same assembler, so
   // it receives the block too. Checked so that is a fact, not an assumption.
