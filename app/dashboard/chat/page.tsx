@@ -16,6 +16,7 @@ import { usePageView, useTracker } from '@/lib/tracking'
 import { ModuleHelp } from '@/components/help/ModuleHelp'
 import { isUsablePracticePrompt } from '@/lib/practicePrompt'
 import { useEnterSends } from '@/lib/useEnterSends'
+import { planSourceFromChat } from '@/lib/agreedPlan'
 
 interface Message {
   id: string
@@ -213,17 +214,27 @@ export default function ChatPage() {
 
   // ── Committing a priority ────────────────────────────────
   //
-  // The button doesn't bookmark the chat reply. It runs the full structured
-  // analysis on the original question and saves it as the active priority for
-  // that area of the game, which is what starts the three-week loop. Chat
-  // answers in ten seconds; this is the deliberate act.
+  // The button writes up the answer it sits on as a structured plan — the
+  // same priority, cues and drills the coach just read — and, once they
+  // confirm, saves it as the active priority for that area of the game, which
+  // starts the three-week loop.
+  //
+  // It used to send only the coach's last message and diagnose from scratch,
+  // so the plan often came back saying something else. The answer and the
+  // conversation behind it now travel with the request (lib/agreedPlan.ts).
 
   const selectedPlayer = roster.find(r => r.player_id === playerId)
 
   // Step one: write the read. Nothing is saved — the coach has not agreed to
   // anything yet, and a priority they never confirmed would start a three-week
   // clock they never set.
-  const runAnalysis = async (complaint: string) => {
+  const runAnalysis = async (answerIndex: number) => {
+    const source = planSourceFromChat(
+      messages.map(m => ({ id: m.id, role: m.role, content: m.content, kind: m.meta?.kind || null })),
+      answerIndex
+    )
+    if (!source) return
+    const complaint = source.question
     setCommit({
       complaint, confirming: null, focusAreaLabel: '', running: true, error: null,
       draft: null, drills: [], verdicts: {}, refreshing: false, saving: false, messageId: null,
@@ -243,6 +254,8 @@ export default function ChatPage() {
           playerId: playerId || undefined,
           playerAge,
           persist: false,
+          recommendation: source.recommendation,
+          transcript: source.transcript,
         }),
       })
 
@@ -901,16 +914,16 @@ export default function ChatPage() {
                         </div>
                       )}
 
-                    {/* The commit. Not a bookmark of this reply — it runs the
-                        full structured read on the original question and puts
-                        it on the three-week clock. */}
+                    {/* The commit. Writes up THIS reply as a structured plan
+                        — its priority and its drills — for the coach to
+                        confirm onto the three-week clock. */}
                     {canCommit && (
                       <div className="mt-3 pt-3 border-t border-gray-300">
                         {commit?.error && (
                           <p className="text-sm text-red-700 mb-2">{commit.error}</p>
                         )}
                         <button
-                          onClick={() => runAnalysis(sourceQuestion!)}
+                          onClick={() => runAnalysis(index)}
                           disabled={commit?.running}
                           className="inline-flex items-center gap-2 px-3 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50"
                         >
@@ -920,8 +933,9 @@ export default function ChatPage() {
                           {commit?.running ? 'Working on the read…' : 'Work this up into a plan'}
                         </button>
                         <p className="text-xs text-gray-500 mt-2">
-                          Full read on {selectedPlayer?.name || 'the team'} with drills. You decide
-                          afterwards whether it becomes a tracked priority — nothing is saved yet.
+                          Turns this answer into a plan for {selectedPlayer?.name || 'the team'}, with the
+                          same priority and drills. You decide afterwards whether it becomes a tracked
+                          priority — nothing is saved yet.
                         </p>
 
                       </div>

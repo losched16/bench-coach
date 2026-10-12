@@ -62,6 +62,30 @@ function parseSelect(sel: string | null): { columns: string[] | '*'; embeds: Emb
   return { columns: star ? '*' : columns, embeds }
 }
 
+interface OrTerm { column: string; op: 'eq' | 'is' | 'in'; value: string | string[] | null }
+
+/** `a.eq.1,b.is.null,c.in.(x,y)` → terms, or null for anything else. */
+function parseOr(expr: string): OrTerm[] | null {
+  const parts: string[] = []
+  let depth = 0, cur = ''
+  for (const ch of String(expr)) {
+    if (ch === '(') depth++
+    if (ch === ')') depth--
+    if (ch === ',' && depth === 0) { parts.push(cur); cur = '' } else cur += ch
+  }
+  parts.push(cur)
+  const out: OrTerm[] = []
+  for (const raw of parts) {
+    const p = raw.trim()
+    let m: RegExpExecArray | null
+    if ((m = /^(\w+)\.is\.null$/.exec(p))) out.push({ column: m[1], op: 'is', value: null })
+    else if ((m = /^(\w+)\.in\.\(([^()"]*)\)$/.exec(p))) out.push({ column: m[1], op: 'in', value: m[2].split(',').map(x => x.trim()) })
+    else if ((m = /^(\w+)\.eq\.([^,()"]+)$/.exec(p))) out.push({ column: m[1], op: 'eq', value: m[2] })
+    else return null
+  }
+  return out.length ? out : null
+}
+
 const SINGULAR: Record<string, string> = {
   players: 'player', teams: 'team', seasons: 'season', games: 'game', entries: 'entry',
   development_pathways: 'pathway', playbook_templates: 'template', coaches: 'coach',
@@ -142,8 +166,16 @@ class Builder implements PromiseLike<any> {
   }
   ilike(c: string, v: string) { this.filters.push({ op: 'ilike', column: c, value: v }); return this }
   contains(c: string, v: any) { this.filters.push({ op: 'contains', column: c, value: v }); return this }
-  // Anything with its own mini-language is refused rather than half-parsed.
-  or(expr: string) { this.unsupported = `or(${expr})`; return this }
+  // `or` has its own mini-language. Only the plain shape the app uses is
+  // parsed — a comma list of `column.eq.value`, `column.is.null` and
+  // `column.in.(a,b)` — and parsed completely; anything else (nested and/or,
+  // quoted values, other operators) is refused rather than half-applied.
+  or(expr: string) {
+    const terms = parseOr(expr)
+    if (!terms) this.unsupported = `or(${expr})`
+    else this.filters.push({ op: 'or', column: '', value: terms })
+    return this
+  }
   filter(c: string, o: string) { this.unsupported = `filter(${c}.${o})`; return this }
   textSearch() { this.unsupported = 'textSearch'; return this }
   match() { this.unsupported = 'match'; return this }
@@ -175,6 +207,12 @@ class Builder implements PromiseLike<any> {
           return rx.test(String(got ?? ''))
         }
         case 'contains': return Array.isArray(got) && (f.value as any[]).every(v => got.includes(v))
+        case 'or': return (f.value as OrTerm[]).some(t => {
+          const v = r[t.column]
+          if (t.op === 'is') return v == null
+          if (t.op === 'in') return (t.value as string[]).some(x => String(x) === String(v))
+          return v != null && String(v) === String(t.value)
+        })
         default: return false
       }
     })
