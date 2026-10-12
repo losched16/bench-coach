@@ -130,6 +130,36 @@ check('coaching emphasis is not mistaken for a drill ("**catch**" is not Partner
   ids('Make sure he can **catch** it first.') === '')
 check('a compilation video on its own names no drill (several drills share it)',
   ids('https://www.youtube.com/watch?v=4NOo7JSK6eA') === '')
+// Reported: an answer that listed its drills as plain bullets — no bold, no
+// links — produced a plan with no drills attached. The shape of that answer:
+const FIELDING = [
+  { id: 'f-hands', drill_name: 'The Hands Routine — Infield Fielding Drill', youtube_video_id: 'SHA1orN7eHE' },
+  { id: 'f-castle', drill_name: 'Protect the Castle', youtube_video_id: null },
+  { id: 'f-castle-throw', drill_name: 'Protect the Castle + Throw', youtube_video_id: null },
+  { id: 'f-flamingo', drill_name: 'The Flamingo Drill', youtube_video_id: 'moFsNt7cOig' },
+  { id: 'f-flamingo-balance', drill_name: 'Flamingo Balance Drill — Single-Leg Stability', youtube_video_id: 'ImeXGqKYP7Y' },
+]
+const BULLETS = `**Daily, indoor:**
+- Hands Routine against a wall, ten minutes — glove out front, funnel to the belt
+- Protect the Castle on hardwood or a rug, rolled from 15 feet
+
+**Daily, outdoor:**
+- Flamingo Drill first, a few minutes — one-leg balance with the glove down
+- Protect the Castle at 25-30 feet, after Flamingo — real speed, real hops`
+const fids = (t: string) => citedLibraryDrills(t, FIELDING).map(d => d.id).join(',')
+check('drills listed as plain bullets are found, in order',
+  fids(BULLETS) === 'f-hands,f-castle,f-flamingo', fids(BULLETS))
+check('"Hands Routine" finds "The Hands Routine — …" (leading "the" dropped)',
+  fids('Start with the Hands Routine.') === 'f-hands')
+check('"Flamingo Drill" is The Flamingo Drill, not the Flamingo Balance Drill',
+  fids('Flamingo Drill first.') === 'f-flamingo')
+check('the longer name wins where names overlap',
+  fids('Finish with Protect the Castle + Throw.') === 'f-castle-throw')
+check('a one-word mention in prose is not a drill ("after Flamingo")',
+  fids('Do it after Flamingo, then Castle.') === '')
+check('a section heading in bold is not a drill',
+  fids('**Daily, indoor:**') === '')
+
 check('a compilation video right after its drill\'s name does not add a second drill',
   ids('**Funnel Drill** (https://www.youtube.com/watch?v=4NOo7JSK6eA)') === 'r-funnel')
 

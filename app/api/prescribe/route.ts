@@ -536,7 +536,7 @@ function writeAnalysis(
 ) {
   const drillList = drills.length === 0
     ? (agreed
-        ? '(none — the drills you recommended are not in our video library)'
+        ? '(none — no drill in your recommendation matched our library by name)'
         : '(none — our video library has nothing matching this yet)')
     : drills.map((d, i) =>
     `[${i + 1}] "${d.drill_name}" (${d.skill_category}${d.difficulty_level ? `, ${d.difficulty_level}` : ''})\n` +
@@ -608,7 +608,7 @@ ${scope === 'team'
 ## Drills
 ${agreed
   ? (drills.length === 0
-      ? 'The drills exactly as your recommendation gave them — same drills, same order, same dose. None of them is in our video library, so describe each concretely (setup, what the player does, dose, what to watch for) without adding new ones.'
+      ? 'The drills exactly as your recommendation gave them — same drills, same order, same dose. None of them matched a drill in our library by name, so describe each concretely (setup, what the player does, dose, what to watch for) without adding new ones. Do not claim they have no video.'
       : 'Every drill your recommendation used, in the same order and with the same dose: the library drills above by their exact names, plus any it described that are not in the library, described the same way. For each, one line on why it serves the one thing. Add nothing it did not recommend.')
   : drills.length === 0
   ? `We have no video in our library for this one. Say so in one short sentence — plainly, no apology — and then describe two or three drills yourself: the setup, what the player does, the dose, and what the coach watches for. The absence of a video is not a reason to give a thinner answer.`

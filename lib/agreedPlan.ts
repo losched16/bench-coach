@@ -108,15 +108,26 @@ function norm(s: string): string {
 const dropDrill = (s: string) => s.replace(/\s+drill$/, '').trim()
 
 /**
- * Names a bolded phrase can match: the full drill name, and its head — the
- * part before " — " that the chat uses ("High Tee" for "High Tee Drill —
- * Hitting Up in the Zone"), each with and without a trailing "drill".
+ * Names a drill can be mentioned by: the full name, and its head — the part
+ * before " — " that the chat uses ("High Tee" for "High Tee Drill — Hitting
+ * Up in the Zone") — each with and without a leading "the" and a trailing
+ * "drill" ("Hands Routine" for "The Hands Routine — Infield Fielding Drill").
  */
 function namesFor(drillName: string): string[] {
   const full = norm(drillName)
   const head = norm(String(drillName).split(/\s[—–-]\s|\s\/\s/)[0])
-  return Array.from(new Set([full, head, dropDrill(full), dropDrill(head)].filter(Boolean)))
+  const out = new Set<string>()
+  for (const n of [full, head]) {
+    for (const a of [n, n.replace(/^the\s+/, '')]) {
+      out.add(a)
+      out.add(dropDrill(a))
+    }
+  }
+  out.delete('')
+  return Array.from(out)
 }
+
+const words = (s: string) => s.split(' ').filter(Boolean).length
 
 /**
  * The library drills the answer named, first mention first, each once.
@@ -125,15 +136,23 @@ function namesFor(drillName: string): string[] {
  * INVENTED a drill, so it only treats a bolded phrase as a drill claim when it
  * ends in "drill", "toss" and the like — which skips real names such as
  * "Shoulder Swings", "High Tee" or "Wall Ball". Here the question is the
- * opposite one — which library drills did the coach just agree to — so:
+ * opposite one — which library drills did the coach just agree to — so a drill
+ * counts when the answer mentions it by name, however it is formatted:
  *
- *   * a bolded phrase counts when it IS a drill's name or head (exactly, give
- *     or take a trailing "drill") — "**catch**" is coaching emphasis, not
- *     "Partner Catch";
- *   * a video link counts when exactly one drill uses that video, or when it
- *     belongs to the drill named just before it. A compilation video shared
- *     by several drills cannot say which one was meant, so on its own it
- *     names none.
+ *   * written out in the text — "- Hands Routine against a wall, ten
+ *     minutes" — when the name is at least two words. Answers often list
+ *     their drills as plain bullets with no bold and no link, and a plan built
+ *     from one of those used to come back with no drills at all;
+ *   * bolded, which also lets a one-word name count — "**catch**" on its own
+ *     is still coaching emphasis, not "Partner Catch", because it is not a
+ *     drill's name;
+ *   * a video link, when exactly one drill uses that video. A compilation
+ *     video shared by several drills cannot say which one was meant, so on its
+ *     own it names none.
+ *
+ * Where names overlap, the longest wins at that spot: "Protect the Castle +
+ * Throw" is that drill, not "Protect the Castle". A name two drills share,
+ * with neither called exactly that, names neither.
  *
  * Order matters: "start with X, then Y" is a sequence, and the plan keeps it.
  */
@@ -146,6 +165,10 @@ export function citedLibraryDrills<T extends GroundingCandidate>(text: string, l
       byName.set(n, list)
     }
   }
+  const pick = (name: string): T | undefined => {
+    const hits = byName.get(name) || []
+    return hits.find(d => norm(d.drill_name) === name) || (hits.length === 1 ? hits[0] : undefined)
+  }
   const byVideo = new Map<string, T[]>()
   for (const d of library) {
     const v = d.youtube_video_id
@@ -153,29 +176,50 @@ export function citedLibraryDrills<T extends GroundingCandidate>(text: string, l
     byVideo.set(v, [...(byVideo.get(v) || []), d])
   }
 
-  const out: T[] = []
-  const seen = new Set<string>()
-  const add = (d: T | undefined) => {
-    if (!d || seen.has(d.id)) return
-    seen.add(d.id)
-    out.push(d)
+  const raw = String(text || '')
+  // Everything is placed in the normalised text, so plain, bolded and linked
+  // mentions can be put in one order.
+  const flat = ` ${norm(raw)} `
+  const at = (rawIndex: number) => norm(raw.slice(0, rawIndex)).length
+  const hits: Array<{ pos: number; drill: T }> = []
+
+  // Written out (and bolded — bold is just punctuation once normalised).
+  // Longest names first, so a longer name claims its words before a shorter
+  // name inside it can.
+  const taken: Array<[number, number]> = []
+  const names = Array.from(byName.keys()).filter(n => words(n) >= 2).sort((a, b) => b.length - a.length)
+  for (const name of names) {
+    const drill = pick(name)
+    if (!drill) continue
+    const needle = ` ${name} `
+    for (let i = flat.indexOf(needle); i !== -1; i = flat.indexOf(needle, i + 1)) {
+      const span: [number, number] = [i + 1, i + needle.length - 1]
+      if (taken.some(([a, b]) => span[0] < b && a < span[1])) continue
+      taken.push(span)
+      hits.push({ pos: span[0], drill })
+    }
   }
 
-  let lastNamed: T | null = null
-  for (const m of Array.from(String(text || '').matchAll(CITATION))) {
+  // Bolded one-word names, and video links.
+  for (const m of Array.from(raw.matchAll(CITATION))) {
+    const pos = at(m.index ?? 0)
     if (m[1] !== undefined) {
       const key = norm(m[1])
-      const hits = byName.get(key) || byName.get(dropDrill(key)) || []
-      // Two drills with the same head ("Rocker Drill", "The Rocker Drill for
-      // Pitching") — prefer the one whose full name is exactly what was said.
-      const exact = hits.find(d => norm(d.drill_name) === key) || (hits.length === 1 ? hits[0] : undefined)
-      lastNamed = exact || null
-      add(exact)
+      if (words(key) >= 2) continue  // already found above
+      const drill = pick(key)
+      if (drill) hits.push({ pos, drill })
     } else if (m[2]) {
       const users = byVideo.get(m[2]) || []
-      if (lastNamed && lastNamed.youtube_video_id === m[2]) continue
-      if (users.length === 1) add(users[0])
+      if (users.length === 1) hits.push({ pos, drill: users[0] })
     }
+  }
+
+  const out: T[] = []
+  const seen = new Set<string>()
+  for (const h of hits.sort((a, b) => a.pos - b.pos)) {
+    if (seen.has(h.drill.id)) continue
+    seen.add(h.drill.id)
+    out.push(h.drill)
   }
   return out
 }
