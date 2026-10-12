@@ -890,33 +890,6 @@ export async function POST(request: NextRequest) {
       content: h.content,
     })) || []
 
-    // Generate response
-    let response = await generateChatResponse(message, context, conversationHistory)
-
-    // Did it stay inside the library it was given?
-    //
-    // The prompt asks it to; nothing checked until now. A fabricated video id
-    // renders as a dead embed and a fabricated drill name sends a coach
-    // looking for something that does not exist — both cost more trust than
-    // the answer earned. Unknown video links are stripped (the advice around
-    // them is usually fine); unknown drill names are logged rather than
-    // rewritten, because editing prose to enforce a rule reliably produces
-    // something worse than the problem.
-    if (drillResources.length > 0 && response?.message) {
-      const grounding = checkGrounding(response.message, drillResources as any)
-      if (!grounding.ok) {
-        console.warn('Chat grounding:', {
-          unknownVideoIds: grounding.unknownVideoIds,
-          unknownDrillNames: grounding.unknownDrillNames,
-          candidates: drillResources.length,
-        })
-        response = {
-          ...response,
-          message: stripUngroundedVideos(response.message, grounding),
-        }
-      }
-    }
-
     // Which conversation this belongs to. The client names it explicitly now
     // that a team can have many; falling back to the most recently used one
     // keeps older clients and direct API calls working.
@@ -972,7 +945,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Save messages
+    // Save the question NOW, before the answer is written.
+    //
+    // It used to be saved together with the answer, after generation. A coach
+    // on a phone who switched apps or locked the screen while the answer was
+    // being written came back to a conversation with no sign of their question
+    // and nothing to say an answer was coming — so it looked like the chat only
+    // worked if you watched it. The function itself keeps running when the
+    // browser goes away (nothing here listens for the request being aborted),
+    // so the answer was usually saved anyway; the page just could not tell.
+    // With the question already in the thread, the page sees an unanswered
+    // question on return and waits for the answer (lib/chatPending.ts).
     const { data: userMsg } = await supabaseAdmin
       .from('chat_messages')
       .insert({
@@ -983,6 +966,34 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
+    // Generate response
+    let response = await generateChatResponse(message, context, conversationHistory)
+
+    // Did it stay inside the library it was given?
+    //
+    // The prompt asks it to; nothing checked until now. A fabricated video id
+    // renders as a dead embed and a fabricated drill name sends a coach
+    // looking for something that does not exist — both cost more trust than
+    // the answer earned. Unknown video links are stripped (the advice around
+    // them is usually fine); unknown drill names are logged rather than
+    // rewritten, because editing prose to enforce a rule reliably produces
+    // something worse than the problem.
+    if (drillResources.length > 0 && response?.message) {
+      const grounding = checkGrounding(response.message, drillResources as any)
+      if (!grounding.ok) {
+        console.warn('Chat grounding:', {
+          unknownVideoIds: grounding.unknownVideoIds,
+          unknownDrillNames: grounding.unknownDrillNames,
+          candidates: drillResources.length,
+        })
+        response = {
+          ...response,
+          message: stripUngroundedVideos(response.message, grounding),
+        }
+      }
+    }
+
+    // Save the answer.
     const { data: assistantMsg } = await supabaseAdmin
       .from('chat_messages')
       .insert({
