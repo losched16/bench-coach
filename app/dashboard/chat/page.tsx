@@ -17,12 +17,16 @@ import { ModuleHelp } from '@/components/help/ModuleHelp'
 import { isUsablePracticePrompt } from '@/lib/practicePrompt'
 import { useEnterSends } from '@/lib/useEnterSends'
 import { planSourceFromChat } from '@/lib/agreedPlan'
+import { pendingState, questionArrived } from '@/lib/chatPending'
 
 interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
   memory_suggestions?: any
+  // Server time the message was saved. Absent on messages the page added
+  // itself and has not yet swapped for the saved copy.
+  created_at?: string | null
   // Set on the analysis written into the thread when a priority is committed,
   // so it renders as a decision rather than another chat reply.
   meta?: { kind?: string; prescriptionId?: string | null; playerName?: string | null } | null
@@ -61,6 +65,14 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  // The newest question in this thread is saved but its answer is not, yet.
+  // Set when the page comes back to such a thread (the coach left while it was
+  // being written) or when the phone cut the request off. While it is set the
+  // page checks the thread every few seconds and shows the answer when it lands.
+  const [waiting, setWaiting] = useState(false)
+  // A send whose request died without a response. The question may or may not
+  // have reached the server; the next checks find out which.
+  const lostSend = useRef<{ text: string; sentAt: number } | null>(null)
   const [initialLoading, setInitialLoading] = useState(true)
   const [teamContext, setTeamContext] = useState<any>(null)
   const [threadId, setThreadId] = useState<string | null>(null)
@@ -152,6 +164,9 @@ export default function ChatPage() {
         const data = await response.json()
         setThreadId(data.threadId)
         setMessages(data.messages || [])
+        // Came back to a question whose answer is still being written.
+        lostSend.current = null
+        setWaiting(pendingState(data.messages || []) === 'waiting')
         // A conversation about Charlie stays about Charlie when you reopen it.
         setPlayerId(data.playerId ?? null)
         setCommit(null)
@@ -162,6 +177,65 @@ export default function ChatPage() {
       setInitialLoading(false)
     }
   }
+
+  // Check back while an answer is on its way. Every few seconds, and at once
+  // when the page becomes visible again — a phone that was locked or switched
+  // away from has usually finished by the time the coach looks.
+  useEffect(() => {
+    if (!waiting || !teamId || !threadId) return
+    let stopped = false
+    const check = async () => {
+      try {
+        const res = await fetch(`/api/chat?teamId=${teamId}&threadId=${threadId}`)
+        if (!res.ok || stopped) return
+        const data = await res.json()
+        if (stopped) return
+        const saved: Message[] = data.messages || []
+
+        const lost = lostSend.current
+        if (lost) {
+          if (questionArrived(saved, lost.text, lost.sentAt)) {
+            lostSend.current = null
+          } else if (Date.now() - lost.sentAt > 20_000) {
+            // It never reached the server. Say so, and put the question back
+            // in the box so it is one tap to send again.
+            lostSend.current = null
+            setWaiting(false)
+            setMessages(prev => [
+              ...prev.filter(m => !m.id.startsWith('temp-')),
+              {
+                id: `error-${Date.now()}`,
+                role: 'assistant',
+                content: "That question didn't reach us — the connection dropped before it was sent. It's back in the box below; send it again.",
+              },
+            ])
+            setInput(prev => prev || lost.text)
+            return
+          } else {
+            return
+          }
+        }
+
+        setMessages(saved)
+        if (pendingState(saved) !== 'waiting') {
+          setWaiting(false)
+          loadThreads()
+        }
+      } catch {
+        // Offline for the moment; the next tick tries again.
+      }
+    }
+    const timer = setInterval(check, 4000)
+    const onVisible = () => { if (document.visibilityState === 'visible') void check() }
+    document.addEventListener('visibilitychange', onVisible)
+    void check()
+    return () => {
+      stopped = true
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [waiting, teamId, threadId])
 
   const loadThreads = async () => {
     try {
@@ -562,6 +636,8 @@ export default function ChatPage() {
   const send = async (userMessage: string) => {
     if (!userMessage.trim() || !teamId) return
     setLoading(true)
+    const sentAt = Date.now()
+    let gotResponse = false
 
     const tempUserMsg: Message = {
       id: `temp-${Date.now()}`,
@@ -584,6 +660,7 @@ export default function ChatPage() {
           playerId,
         }),
       })
+      gotResponse = true
 
       const data = await response.json().catch(() => ({}))
 
@@ -613,6 +690,14 @@ export default function ChatPage() {
       loadThreads()
     } catch (error: any) {
       console.error('Chat error:', error)
+      // No response at all: the phone suspended the page or the connection
+      // dropped. The server keeps writing the answer if the question reached
+      // it, so wait for it rather than calling it a failure.
+      if (!gotResponse && threadId) {
+        lostSend.current = { text: userMessage, sentAt }
+        setWaiting(true)
+        return
+      }
       const detail = error?.message ? `\n\n\`${error.message}\`` : ''
       setMessages(prev => [
         ...prev,
@@ -781,7 +866,8 @@ export default function ChatPage() {
                   !message.id.startsWith('error-') &&
                   index === messages.length - 1 &&
                   !!sourceQuestion &&
-                  !loading
+                  !loading &&
+                  !waiting
 
                 // Deliberately NOT gated on being the last message, unlike the
                 // commit above. That one is last-only because a column of
@@ -1040,6 +1126,41 @@ export default function ChatPage() {
                 />
               )}
 
+              {/* An answer on its way — sent from here, or asked before the
+                  coach left the page. Saying they can leave is the point: the
+                  answer no longer depends on them watching. */}
+              {(loading || waiting) && (
+                <div className="flex justify-start">
+                  <div className="bg-gray-100 text-gray-700 px-4 py-3 rounded-lg max-w-3xl flex items-start gap-3">
+                    <Loader2 className="animate-spin shrink-0 mt-0.5 text-gray-500" size={18} />
+                    <div>
+                      <p className="text-sm font-medium">Writing your answer…</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        You can leave this page or lock your phone — the answer will be here when you come back.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* A question whose answer never came (the write failed or ran
+                  out of time). Said plainly, with the question one tap from
+                  being asked again, instead of a question left hanging. */}
+              {!loading && !waiting && pendingState(messages) === 'unanswered' && (
+                <div className="flex justify-start">
+                  <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-lg max-w-3xl text-sm">
+                    No answer came back for your last question.{' '}
+                    <button
+                      onClick={() => setInput(messages[messages.length - 1]?.content || '')}
+                      className="underline font-medium"
+                    >
+                      Put it back in the box
+                    </button>{' '}
+                    to ask again.
+                  </div>
+                </div>
+              )}
+
               <div ref={messagesEndRef} />
             </>
           )}
@@ -1080,11 +1201,11 @@ export default function ChatPage() {
               enterKeyHint="enter"
               placeholder="Ask me anything about coaching..."
               className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none max-h-40 overflow-y-auto"
-              disabled={loading}
+              disabled={loading || waiting}
             />
             <button
               onClick={handleSend}
-              disabled={loading || !input.trim()}
+              disabled={loading || waiting || !input.trim()}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
               {loading ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}

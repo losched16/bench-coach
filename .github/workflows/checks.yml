@@ -90,6 +90,8 @@ jobs:
       - run: npm run test:pitch-count
       # Chat "Work this up into a plan" builds the plan the coach agreed to.
       - run: npm run test:agreed-plan
+      # A chat answer does not depend on the coach watching the screen.
+      - run: npm run test:chat-pending
 
   browser:
     name: browser
