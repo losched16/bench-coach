@@ -3,6 +3,7 @@ import Stripe from 'stripe'
 import { getStripe, stripeUnavailable } from '@/lib/stripe'
 import { createClient } from '@supabase/supabase-js'
 import { tierForPriceId, isTier, Tier } from '@/lib/tiers'
+import { handleAcademyEvent } from '@/lib/academy/webhook'
 import {
   trackTrialStarted,
   trackCustomerCreated,
@@ -56,10 +57,31 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
+  // BenchCoach Academy first. A one-time course purchase is handled (and
+  // finished) there, so it can never reach the subscription code below and
+  // switch on coaches.is_subscribed. See lib/academy/webhook.ts.
+  try {
+    const academy = await handleAcademyEvent(supabaseAdmin, stripe, event)
+    if (academy.handled) {
+      console.log(`Academy webhook ${event.type}: ${academy.outcome}`)
+      return NextResponse.json({ received: true })
+    }
+  } catch (error: any) {
+    console.error('Academy webhook error:', error.message)
+    // 500 so Stripe retries; fulfilment is idempotent.
+    return NextResponse.json({ error: 'Academy fulfilment failed' }, { status: 500 })
+  }
+
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
+        // Only a SUBSCRIPTION checkout may change a coach's plan. Anything
+        // else (a one-time payment of any kind) stops here.
+        if (session.mode !== 'subscription') {
+          console.log(`Ignoring non-subscription checkout ${session.id} (${session.mode})`)
+          break
+        }
         const userId = session.metadata?.user_id
         const customerId = session.customer as string
 

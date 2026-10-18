@@ -44,3 +44,6 @@ pilot/.tools/
 pilot/media/**/source.mp4
 pilot/media/**/frames/
 pilot/media/_adhoc/
+
+# Academy course text generated from the private manuscript (paid content, never commit)
+.academy-content/

@@ -38,7 +38,7 @@ export function getStripe(): Stripe | null {
   if (client) return client
   const key = process.env.STRIPE_SECRET_KEY
   if (!key) return null
-  client = new Stripe(key, { apiVersion: API_VERSION })
+  client = new Stripe(key, { apiVersion: API_VERSION, ...testApiTarget(key) })
   return client
 }
 
@@ -62,4 +62,16 @@ export function stripeUnavailable(): Response {
     }),
     { status: 503, headers: { 'Content-Type': 'application/json' } }
   )
+}
+
+/**
+ * Local test runs only: point the client at a fake Stripe on 127.0.0.1
+ * (scripts/academy/fake-stripe.mjs) via STRIPE_API_BASE. Ignored for a live
+ * key, in Vercel production, and for anything that is not a loopback http URL.
+ */
+export function testApiTarget(key: string, env: Record<string, string | undefined> = process.env): { host?: string; port?: number; protocol?: 'http' } {
+  const base = env.STRIPE_API_BASE
+  if (!base || key.startsWith('sk_live_') || env.VERCEL_ENV === 'production') return {}
+  const m = /^http:\/\/(127\.0\.0\.1|localhost):(\d+)\/?$/.exec(base)
+  return m ? { host: m[1], port: Number(m[2]), protocol: 'http' } : {}
 }

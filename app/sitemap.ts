@@ -39,7 +39,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly',
       priority: 0.6,
     },
+    {
+      url: 'https://www.mybenchcoach.com/academy',
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
   ]
+
+  // BenchCoach Academy: published courses' sales and free-preview pages.
+  // Read through the public client, so row-level security means a draft
+  // course can never be listed. Before migration 080 the query errors and
+  // the list is simply empty.
+  const { data: courses } = await supabase.from('academy_courses').select('slug, updated_at').eq('status', 'published')
+  for (const c of (courses || []) as Array<{ slug: string; updated_at: string | null }>) {
+    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(c.slug)) continue
+    const lastModified = c.updated_at ? new Date(c.updated_at) : new Date()
+    staticPages.push(
+      { url: `https://www.mybenchcoach.com/academy/${c.slug}`, lastModified, changeFrequency: 'weekly', priority: 0.8 },
+      { url: `https://www.mybenchcoach.com/academy/${c.slug}/preview`, lastModified, changeFrequency: 'monthly', priority: 0.6 },
+    )
+  }
   
   // Dynamic SEO pages
   const { data: seoPages } = await supabase

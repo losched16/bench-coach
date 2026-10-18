@@ -92,6 +92,9 @@ jobs:
       - run: npm run test:agreed-plan
       # A chat answer does not depend on the coach watching the screen.
       - run: npm run test:chat-pending
+      # BenchCoach Academy: manuscript parser, seed, payment fulfilment,
+      # webhook routing/replay and route rules. No network, no database.
+      - run: npm run test:academy
 
   browser:
     name: browser
@@ -108,10 +111,16 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: npm run test:browser
         run: npm run test:browser
+      # Academy purchase, access and reading flows against a fake Stripe
+      # (synthetic course text — the real course is not in the repository).
+      - name: npm run test:academy-e2e
+        run: npm run test:academy-e2e
       - name: keep the screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: browser-screenshots
-          path: docs/audits/*.png
+          path: |
+            docs/audits/*.png
+            .academy-content/e2e/*.png
           if-no-files-found: ignore
