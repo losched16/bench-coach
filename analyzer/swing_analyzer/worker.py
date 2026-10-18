@@ -10,7 +10,10 @@ Layout under the data directory (shared with lib/swingPoc/store.ts):
   captures/<id>/video.<ext>    app: the private upload
   captures/<id>/job.json       worker-owned once claimed: state, attempts, error
   captures/<id>/result.json    worker: the swing-pose/1 output
+  captures/<id>/prepare.json   worker: playback-copy state
+  captures/<id>/playback.json  worker: frame times + the verified playback copy
   queue/<id>.json              app: "please analyse", with the request snapshot
+  queue/<id>.prepare.json      app: "please make the playback copy"
   processing/<id>.json         worker: claimed (atomic rename from queue/)
 
 Idempotent: the result records an input hash (video bytes + request +
@@ -28,6 +31,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import signal
 import subprocess
 import sys
 import time
@@ -110,15 +114,25 @@ def process_one(data_dir: str, cap_id: str, model_path: str) -> dict:
         cmd += ["--view", request["camera_view"]]
     if request.get("foot_strike_ms") is not None:
         cmd += ["--foot-strike-ms", str(request["foot_strike_ms"])]
+    if request.get("capture_fps"):
+        cmd += ["--capture-fps", str(request["capture_fps"])]
     env = {**os.environ, "PYTHONPATH": os.path.dirname(os.path.dirname(os.path.abspath(__file__)))}
+    # Own process group, so a timeout kills the analyzer AND the ffmpeg it
+    # started — otherwise a hung decoder outlives the job.
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, start_new_session=True)
     try:
-        proc = subprocess.run(cmd, capture_output=True, timeout=JOB_TIMEOUT_S, env=env)
+        _, err = proc.communicate(timeout=JOB_TIMEOUT_S)
         result = read_json(out_tmp)
         if result is None:
             # Never log the video or frames — only the tail of stderr.
-            tail = proc.stderr.decode("utf-8", "replace")[-400:]
+            tail = err.decode("utf-8", "replace")[-400:]
             result = {"status": "failed", "error": {"code": "analyzer_crashed", "message": "The analyzer stopped unexpectedly.", "detail": tail}}
     except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        proc.communicate()
         result = {"status": "failed", "error": {"code": "timeout", "message": f"Analysis took longer than {JOB_TIMEOUT_S}s and was stopped."}}
     finally:
         if os.path.exists(out_tmp):
@@ -136,12 +150,67 @@ def process_one(data_dir: str, cap_id: str, model_path: str) -> dict:
     return job
 
 
+def process_prepare(data_dir: str, cap_id: str) -> dict:
+    """Make and verify the browser playback copy (see proxy.py)."""
+    from .proxy import prepare
+    from .video import AnalyzerError
+
+    cap_dir = os.path.join(data_dir, "captures", cap_id)
+    claimed = os.path.join(data_dir, "processing", f"{cap_id}.prepare.json")
+    state_path = os.path.join(cap_dir, "prepare.json")
+    codec = os.environ.get("SWING_POC_PROXY_CODEC", "h264")
+    state = {"state": "processing", "updated_at": _now(), "codec": codec}
+    try:
+        video = _video_in(cap_dir) if os.path.isdir(cap_dir) else None
+        if not video:
+            raise AnalyzerError("missing_file", "The uploaded video is missing.")
+        write_json(state_path, state)
+        manifest = prepare(video, cap_dir, codec)
+        write_json(os.path.join(cap_dir, "playback.json"), manifest)
+        state.update({"state": "done", "aligned": manifest["proxy"]["aligned"], "error": None,
+                      "prepare_ms": manifest["prepare_ms"]})
+    except AnalyzerError as e:
+        state.update({"state": "failed", "error": {"code": e.code, "message": e.message}})
+    except Exception as e:  # never leave the job half-claimed
+        state.update({"state": "failed", "error": {"code": "prepare_crashed", "message": "Preparing playback failed.", "detail": str(e)[-300:]}})
+    state["updated_at"] = _now()
+    if os.path.isdir(cap_dir):
+        write_json(state_path, state)
+    if os.path.exists(claimed):
+        os.remove(claimed)
+    return state
+
+
+def purge(data_dir: str, older_than_days: float) -> int:
+    """Delete captures (video and everything derived) older than N days."""
+    import shutil
+    root = os.path.join(data_dir, "captures")
+    cutoff = time.time() - older_than_days * 86400
+    n = 0
+    for name in os.listdir(root) if os.path.isdir(root) else []:
+        d = os.path.join(root, name)
+        meta = os.path.join(d, "meta.json")
+        stamp = os.path.getmtime(meta) if os.path.exists(meta) else os.path.getmtime(d)
+        if stamp < cutoff:
+            shutil.rmtree(d, ignore_errors=True)
+            for q in ("queue", "processing"):
+                for suffix in (".json", ".prepare.json"):
+                    p = os.path.join(data_dir, q, name + suffix)
+                    if os.path.exists(p):
+                        os.remove(p)
+            n += 1
+    return n
+
+
 def recover_stale(data_dir: str) -> None:
     """Jobs left in processing/ by a worker that died go back to the queue (bounded retries)."""
     pdir = os.path.join(data_dir, "processing")
     for name in os.listdir(pdir):
         path = os.path.join(pdir, name)
         if time.time() - os.path.getmtime(path) < JOB_TIMEOUT_S + 60:
+            continue
+        if name.endswith(".prepare.json"):
+            os.replace(path, os.path.join(data_dir, "queue", name))
             continue
         cap_id = name[:-5]
         job_path = os.path.join(data_dir, "captures", cap_id, "job.json")
@@ -166,14 +235,15 @@ def run(data_dir: str, model_path: str, once: bool = False, poll_s: float = 1.0)
         for name in names:
             if not name.endswith(".json"):
                 continue
-            cap_id = name[:-5]
+            is_prepare = name.endswith(".prepare.json")
+            cap_id = name[: -len(".prepare.json")] if is_prepare else name[:-5]
             try:
                 os.rename(os.path.join(qdir, name), os.path.join(data_dir, "processing", name))
             except FileNotFoundError:
                 continue  # another worker claimed it
             t = time.time()
-            job = process_one(data_dir, cap_id, model_path)
-            print(f"swing worker: {cap_id} -> {job['state']} in {time.time() - t:.1f}s", flush=True)
+            job = process_prepare(data_dir, cap_id) if is_prepare else process_one(data_dir, cap_id, model_path)
+            print(f"swing worker: {cap_id} {'prepare' if is_prepare else 'analyze'} -> {job['state']} in {time.time() - t:.1f}s", flush=True)
             did = True
         if once:
             return

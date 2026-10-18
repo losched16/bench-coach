@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createReadStream, promises as fs } from 'fs'
 import { Readable } from 'stream'
 import { requireSession } from '@/lib/authz'
-import { verifyVideo, videoPath } from '@/lib/swingPoc/store'
+import { verifyVideo, videoPath, readPlayback, playbackFile } from '@/lib/swingPoc/store'
 import { authorizeCapture, notEnabled, errorResponse } from '@/lib/swingPoc/access'
 
 // Swing mechanics POC (internal, SWING_MECHANICS_POC=1). See docs/swing-mechanics-poc/.
@@ -23,10 +23,14 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     if (!verifyVideo(meta.id, userId, token)) {
       return NextResponse.json({ error: 'This video link has expired. Reload the page.' }, { status: 403 })
     }
-    const file = videoPath(meta)
+    // ?variant=playback: the worker's verified browser copy (same frames, same
+    // timestamps). Anything else, or a copy that failed its check: the original.
+    const wantCopy = new URL(request.url).searchParams.get('variant') === 'playback'
+    const copy = wantCopy ? playbackFile(meta, await readPlayback(meta.id)) : null
+    const file = copy ? copy.file : videoPath(meta)
     const { size } = await fs.stat(file)
     const headers: Record<string, string> = {
-      'Content-Type': meta.mime_type,
+      'Content-Type': copy ? copy.mime : meta.mime_type,
       'Accept-Ranges': 'bytes',
       // Private and short-lived: never cached by a shared cache.
       'Cache-Control': 'private, no-store',

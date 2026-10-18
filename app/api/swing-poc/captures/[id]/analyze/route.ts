@@ -26,6 +26,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     await enqueue(meta, {
       contact_ms: contact.t_ms, handedness: meta.handedness, camera_view: meta.camera_view,
       foot_strike_ms: fs ? fs.t_ms : null,
+      capture_fps: meta.capture_fps ?? null,
     })
     return NextResponse.json({ job: await readJob(meta.id) }, { status: 202 })
   } catch (e) {

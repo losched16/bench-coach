@@ -138,8 +138,23 @@ async function main() {
   check('a weak signing secret is refused rather than used', (await throws(() => S.signVideo(meta.id, 'u1'), /SIGNING_SECRET/)) === null)
   process.env.SWING_POC_SIGNING_SECRET = savedSecret
 
+  // ── playback copy ─────────────────────────────────────────────────────────
+  check('exported slow-mo capture rate: 120 and 240 accepted', S.parseCaptureFps('240') === 240 && S.parseCaptureFps(120) === 120)
+  check('...and nonsense dropped, not stored', S.parseCaptureFps('fast') === null && S.parseCaptureFps(-1) === null && S.parseCaptureFps(30) === null && S.parseCaptureFps(1e6) === null && S.parseCaptureFps(null) === null)
+  const slow = await S.createCapture({ teamId: 't', playerId: 'p', userId: 'u', originalName: 'x.mp4', mimeType: 'video/mp4', body: stream(5), captureFps: '240' })
+  check('...kept with the capture', slow.capture_fps === 240)
+  await S.enqueuePrepare(meta)
+  const pq = path.join(process.env.SWING_POC_DATA_DIR!, 'queue', `${meta.id}.prepare.json`)
+  check('every upload queues a playback copy for the worker', existsSync(pq) && (await S.readPrepare(meta.id)).state === 'queued')
+  const good = { proxy: { file: 'playback.webm', aligned: true } }
+  check('the verified copy is served with its type', S.playbackFile(meta, good)?.mime === 'video/webm' && S.playbackFile(meta, { proxy: { file: 'playback.mp4', aligned: true } })?.mime === 'video/mp4')
+  check('...but a copy that failed its alignment check never is', S.playbackFile(meta, { proxy: { file: 'playback.webm', aligned: false } }) === null)
+  check('...nor a file name the worker did not write', ['../meta.json', 'original.mp4', 'playback.webm/../x', 'playback.html'].every(f => S.playbackFile(meta, { proxy: { file: f, aligned: true } }) === null))
+  check('...nor anything when there is no manifest', S.playbackFile(meta, null) === null)
+  check('the copy lives inside the capture\'s private folder', S.playbackFile(meta, good)!.file.startsWith(S.captureDir(meta.id) + path.sep))
+
   await S.deleteCapture(meta.id)
-  check('deleting a capture removes the video and its queue entry', !existsSync(S.captureDir(meta.id)) && !existsSync(q))
+  check('deleting a capture removes the video and its queue entries', !existsSync(S.captureDir(meta.id)) && !existsSync(q) && !existsSync(pq))
 
   // ── the routes ────────────────────────────────────────────────────────────
   const root = 'app/api/swing-poc'
@@ -165,6 +180,17 @@ async function main() {
   const ui = readFileSync('components/swingPoc/SwingPocWorkspace.tsx', 'utf8') + readFileSync('components/swingPoc/Pose3DViewer.tsx', 'utf8')
   check('the 3D view is labelled as an estimate on the canvas', ui.includes('Estimated 3D pose — a single-camera model estimate, not measured 3D'))
   check('the UI shows no score or rating', !/\b(score|rating)\b/i.test(ui.replace(/how good the swing is/g, '')))
+
+  // ── nothing private in git ────────────────────────────────────────────────
+  const { execFileSync } = await import('child_process')
+  const tracked = execFileSync('git', ['ls-files'], { encoding: 'utf8' }).split('\n')
+  const media = tracked.filter(f => /\.(mp4|mov|m4v|webm|avi|mkv|3gp|hevc|heic)$/i.test(f) && !f.startsWith('public/'))
+  const swingMedia = tracked.filter(f => /^(analyzer|\.swing-poc-data|docs\/swing-mechanics-poc)\//.test(f) && /\.(mp4|mov|webm|jpg|jpeg|png|task|npz)$/i.test(f))
+  check('no swing video, frame, still or model file is tracked by git', swingMedia.length === 0, swingMedia.join(', '))
+  check('no other video file is tracked outside public/', media.length === 0, media.join(', '))
+  const ignored = (p: string) => { try { execFileSync('git', ['check-ignore', '-q', p]); return true } catch { return false } }
+  check('local captures, analyzer output, fixtures and models are git-ignored',
+    ['.swing-poc-data/x/original.mov', 'analyzer/out/private/run/report.md', 'analyzer/fixtures/x.mp4', 'analyzer/models/m.task'].every(ignored))
 
   console.log('')
   if (failures) { console.log(`${failures} FAILED`); process.exit(1) }

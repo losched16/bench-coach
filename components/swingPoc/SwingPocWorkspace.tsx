@@ -26,7 +26,14 @@ interface Detail {
   job: { state: string; error?: { code: string; message: string } | null; updated_at?: string }
   result: any | null
   review: any | null
+  prepare: { state: string; aligned?: boolean; error?: { code: string; message: string } | null }
+  playback: { frame_times_ms: number[]; proxy: any; source: any } | null
   videoUrl: string
+  playingCopy: boolean
+}
+
+const PREPARE_LABEL: Record<string, string> = {
+  not_requested: '', queued: 'Preparing the video for playback…', processing: 'Preparing the video for playback…',
 }
 
 const STATE_LABEL: Record<string, string> = {
@@ -40,7 +47,7 @@ export default function SwingPocWorkspace({ playerId }: { playerId: string }) {
   const [detail, setDetail] = useState<Detail | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
-  const [form, setForm] = useState({ handedness: 'R', view: 'face_on', setting: 'tee' })
+  const [form, setForm] = useState({ handedness: 'R', view: 'face_on', setting: 'tee', captureFps: '' })
 
   const loadList = useCallback(async () => {
     if (!teamId) return
@@ -50,11 +57,12 @@ export default function SwingPocWorkspace({ playerId }: { playerId: string }) {
     else setError(d.error || 'Could not load captures.')
   }, [teamId, playerId])
 
-  const loadDetail = useCallback(async (id: string) => {
+  const loadDetail = useCallback(async (id: string): Promise<Detail | null> => {
     const r = await fetch(`/api/swing-poc/captures/${id}`)
     const d = await r.json()
-    if (r.ok) setDetail(d)
-    else setError(d.error || 'Could not load the capture.')
+    if (r.ok) { setDetail(d); return d }
+    setError(d.error || 'Could not load the capture.')
+    return null
   }, [])
 
   useEffect(() => { void loadList() }, [loadList])
@@ -63,11 +71,12 @@ export default function SwingPocWorkspace({ playerId }: { playerId: string }) {
   // Poll while the worker has the job. The request that queued it returned
   // at once; this is how the result arrives.
   const jobState = detail?.job?.state
+  const prepState = detail?.prepare?.state
   useEffect(() => {
-    if (!selected || (jobState !== 'queued' && jobState !== 'processing')) return
+    if (!selected || !(jobBusy(jobState || '') || jobBusy(prepState || ''))) return
     const t = setInterval(() => { void loadDetail(selected) }, 2000)
     return () => clearInterval(t)
-  }, [selected, jobState, loadDetail])
+  }, [selected, jobState, prepState, loadDetail])
 
   const upload = async (file: File | undefined) => {
     if (!file || !teamId) return
@@ -75,6 +84,7 @@ export default function SwingPocWorkspace({ playerId }: { playerId: string }) {
     setBusy('upload')
     try {
       const qs = new URLSearchParams({ teamId, playerId, handedness: form.handedness, view: form.view, setting: form.setting })
+      if (form.captureFps) qs.set('captureFps', form.captureFps)
       const r = await fetch(`/api/swing-poc/captures?${qs}`, {
         method: 'POST', body: file,
         headers: { 'Content-Type': file.type || 'video/mp4', 'X-File-Name': encodeURIComponent(file.name).slice(0, 120) },
@@ -128,6 +138,13 @@ export default function SwingPocWorkspace({ playerId }: { playerId: string }) {
               <option value="tee">Tee</option><option value="front_toss">Front toss</option><option value="live">Live pitching</option><option value="other">Other</option>
             </select>
           </label>
+          <label className="flex flex-col max-w-full" title="A slow-mo clip that was shared or exported plays slower than real time; say what it was recorded at so timings are real.">Shared slow-mo?
+            <select className="border rounded px-2 py-1 max-w-full" value={form.captureFps} onChange={e => setForm({ ...form, captureFps: e.target.value })} data-testid="capture-fps">
+              <option value="">No / original file</option>
+              <option value="120">Yes, 120 fps</option>
+              <option value="240">Yes, 240 fps</option>
+            </select>
+          </label>
           <label className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded cursor-pointer">
             <Upload size={16} /> Upload video
             <input type="file" accept="video/*" className="hidden" data-testid="upload-input" onChange={e => upload(e.target.files?.[0])} />
@@ -158,7 +175,7 @@ export default function SwingPocWorkspace({ playerId }: { playerId: string }) {
   )
 }
 
-function CaptureReview({ detail, reload, setError }: { detail: Detail; reload: () => Promise<void>; setError: (s: string | null) => void }) {
+function CaptureReview({ detail, reload, setError }: { detail: Detail; reload: () => Promise<Detail | null>; setError: (s: string | null) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [tMs, setTMs] = useState(0)
@@ -167,7 +184,37 @@ function CaptureReview({ detail, reload, setError }: { detail: Detail; reload: (
   const [noteFor, setNoteFor] = useState<string | null>(null)
   const [note, setNote] = useState('')
   const { capture, job, result, review } = detail
-  const times: number[] = capture.probe?.frame_times_ms || []
+  // Frame times: the worker's manifest (same timestamps the analyzer uses),
+  // else the upload-time probe.
+  const times: number[] = detail.playback?.frame_times_ms || capture.probe?.frame_times_ms || []
+
+  // The video source stays put while the page polls (each poll signs a fresh
+  // URL; swapping it would reload the video). It changes only when the
+  // verified playback copy becomes available, or when the 5-minute link has
+  // expired and the browser reports an error — then it is re-signed and the
+  // playhead restored.
+  const [src, setSrc] = useState(detail.videoUrl)
+  const variantRef = useRef(detail.playingCopy)
+  const resumeAt = useRef<number | null>(null)
+  const retries = useRef(0)
+  useEffect(() => {
+    if (detail.playingCopy === variantRef.current) return
+    variantRef.current = detail.playingCopy
+    resumeAt.current = videoRef.current?.currentTime ?? null
+    setSrc(detail.videoUrl)
+  }, [detail.playingCopy, detail.videoUrl])
+  const onVideoError = async () => {
+    if (retries.current >= 3) { setError('The video could not be loaded. Reload the page.'); return }
+    retries.current += 1
+    resumeAt.current = videoRef.current?.currentTime ?? null
+    const fresh = await reload()
+    if (fresh) { variantRef.current = fresh.playingCopy; setSrc(fresh.videoUrl) }
+  }
+  const onLoaded = () => {
+    const v = videoRef.current
+    if (v && resumeAt.current != null) { v.currentTime = resumeAt.current; resumeAt.current = null }
+    retries.current = 0
+  }
   const frames: ResultFrame[] = result?.status === 'ok' ? result.frames : []
   const contact = capture.contact_history?.at(-1) || null
 
@@ -197,7 +244,7 @@ function CaptureReview({ detail, reload, setError }: { detail: Detail; reload: (
     v.addEventListener('timeupdate', onTime)
     v.addEventListener('seeked', onTime)
     return () => { v.removeEventListener('timeupdate', onTime); v.removeEventListener('seeked', onTime) }
-  }, [detail.videoUrl])
+  }, [src])
 
   const holdMs: number | undefined = result?.source?.frame_intervals?.max_ms ?? undefined
   const current = useMemo(() => frameAt(frames, tMs, holdMs), [frames, tMs, holdMs])
@@ -291,9 +338,10 @@ function CaptureReview({ detail, reload, setError }: { detail: Detail; reload: (
     <div className="grid lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-4">
       <section className="bg-white rounded-lg border p-3 space-y-3 min-w-0">
         <div className="relative bg-black rounded overflow-hidden">
-          <video ref={videoRef} src={detail.videoUrl} controls playsInline muted preload="auto" className="w-full max-h-[70vh] block" data-testid="swing-video" />
+          <video ref={videoRef} src={src} onError={onVideoError} onLoadedMetadata={onLoaded} controls playsInline muted preload="auto" className="w-full max-h-[70vh] block" data-testid="swing-video" />
           <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" data-testid="overlay" />
         </div>
+        <PlaybackStatus detail={detail} />
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <button onClick={() => step(-1)} className="p-2 border rounded" aria-label="Previous frame"><ChevronLeft size={16} /></button>
           <button onClick={() => step(1)} className="p-2 border rounded" aria-label="Next frame"><ChevronRight size={16} /></button>
@@ -362,7 +410,21 @@ function CaptureReview({ detail, reload, setError }: { detail: Detail; reload: (
               <p><strong>Source:</strong> {result.source.width}×{result.source.height}{result.source.rotation_deg ? ` (rotated ${result.source.rotation_deg}°)` : ''}, {result.source.frame_count} frames, {result.source.frame_intervals.effective_fps} fps{result.source.frame_intervals.variable_frame_rate ? ' (variable)' : ''}</p>
               <p><strong>Analysed:</strong> {result.quality.analysed_frames} frames ({result.sampling.rule}); pose found in {result.quality.pose_detected_frames}</p>
               <p><strong>Model:</strong> {result.model.version} · analyzer {result.analyzer.version} · {result.timing.total_ms} ms</p>
+              {result.time_model && result.time_model.time_scale !== 1 && <p><strong>Timing:</strong> {result.time_model.basis}</p>}
               {result.quality.warnings.map((w: string) => <p key={w} className="text-amber-700">⚠ {w}</p>)}
+              {result.quality.landmark_confidence && (
+                <details data-testid="landmark-confidence">
+                  <summary className="cursor-pointer">Joint visibility (how clearly each joint was seen)</summary>
+                  <table className="mt-1 tabular-nums">
+                    <thead><tr><th className="text-left pr-2">Joint</th><th className="pr-2">seen, all frames</th><th>seen, ±50 ms of contact</th></tr></thead>
+                    <tbody>
+                      {Object.entries(result.quality.landmark_confidence).map(([name, c]: [string, any]) => (
+                        <tr key={name}><td className="pr-2">{name.replace(/_/g, ' ')}</td><td className="pr-2 text-center">{c.usable_pct}%</td><td className="text-center">{c.usable_pct_near_contact ?? '—'}{c.usable_pct_near_contact != null ? '%' : ''}</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </details>
+              )}
             </div>
             {result.observations.map((o: any) => {
               const rv = reviewFor(o.id)
@@ -376,7 +438,7 @@ function CaptureReview({ detail, reload, setError }: { detail: Detail; reload: (
                     <>
                       <ul className="space-y-1">
                         {o.values.map((v: any) => (
-                          <li key={v.name}><span className="font-medium tabular-nums">{v.value}</span> <span className="text-gray-500">{v.unit}</span><br /><span className="text-gray-700">{v.label}</span></li>
+                          <li key={v.name}><span className="font-medium tabular-nums">{v.value}</span> <span className="text-gray-500">{v.unit}</span><br /><span className="text-gray-700">{v.label}</span>{v.noise_floor != null && <><br /><span className="text-xs text-gray-500">Stance jitter (noise floor): {v.noise_floor}{v.within_noise ? ' — this is within it, so it can\'t be told apart from no movement' : ''}</span></>}</li>
                         ))}
                       </ul>
                       <p className="text-xs text-gray-600">Input quality: {o.data_quality} (how clearly the joints were seen — not how good the swing is)</p>
@@ -453,7 +515,28 @@ function CaptureReview({ detail, reload, setError }: { detail: Detail; reload: (
   )
 }
 
-function jobBusy(s: string) {
+// Which file is playing, and the proof it shows the analyzer's frames.
+function PlaybackStatus({ detail }: { detail: Detail }) {
+  const prep = detail.prepare
+  const px = detail.playback?.proxy
+  if (jobBusy(prep?.state)) {
+    return <p className="text-xs text-gray-600 inline-flex items-center gap-1" data-testid="playback-status"><Loader2 className="animate-spin" size={12} />{PREPARE_LABEL[prep.state]} The original plays meanwhile; if it won&apos;t play in this browser, wait for the copy.</p>
+  }
+  if (detail.playingCopy && px) {
+    return (
+      <p className="text-xs text-gray-600" data-testid="playback-status">
+        Playing a browser copy ({px.codec}) checked against the original: {px.proxy_frames}/{px.source_frames} frames, timestamps within {px.max_time_error_ms} ms,
+        {' '}{px.pixel_checks?.filter((c: any) => c.matches).length}/{px.pixel_checks?.length} sampled frames match ({px.informative_pixel_checks} with enough motion to tell neighbours apart). Analysis uses the original.
+      </p>
+    )
+  }
+  if (prep?.state === 'failed' || (prep?.state === 'done' && !detail.playingCopy)) {
+    return <p className="text-xs text-amber-700" data-testid="playback-status">Playing the original — a browser copy could not be verified{px?.problems?.length ? ` (${px.problems.join('; ')})` : prep?.error ? ` (${prep.error.message})` : ''}. If it won&apos;t play here, try Safari or another device.</p>
+  }
+  return null
+}
+
+function jobBusy(s: string | undefined) {
   return s === 'queued' || s === 'processing'
 }
 

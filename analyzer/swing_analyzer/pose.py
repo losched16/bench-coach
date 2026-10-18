@@ -34,6 +34,12 @@ L_ANKLE, R_ANKLE = 27, 28
 L_HEEL, R_HEEL = 29, 30
 L_FOOT, R_FOOT = 31, 32
 
+JOINT_NAMES = {
+    0: "nose", 11: "left_shoulder", 12: "right_shoulder", 13: "left_elbow", 14: "right_elbow",
+    15: "left_wrist", 16: "right_wrist", 23: "left_hip", 24: "right_hip", 25: "left_knee", 26: "right_knee",
+    27: "left_ankle", 28: "right_ankle", 29: "left_heel", 30: "right_heel", 31: "left_foot_index", 32: "right_foot_index",
+}
+
 # The joints a swing view must contain for anything below to be measured.
 CORE_JOINTS = [NOSE, L_SHOULDER, R_SHOULDER, L_HIP, R_HIP, L_ANKLE, R_ANKLE]
 

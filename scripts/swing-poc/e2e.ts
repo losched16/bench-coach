@@ -10,7 +10,7 @@
 // This proves the pipeline and the sync; it validates no swing mechanic.
 
 import { chromium, type Page } from 'playwright'
-import { mkdirSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, writeFileSync } from 'fs'
 import path from 'path'
 
 const APP = process.env.APP_URL || 'http://127.0.0.1:3100'
@@ -18,6 +18,11 @@ const FIX = process.env.FIXTURE_URL || 'http://127.0.0.1:54321'
 const OUT = process.env.OUT || 'analyzer/out/e2e'
 const VIDEO = process.env.VIDEO || 'analyzer/fixtures/moving.mp4'
 const CONTACT_FRAME = Number(process.env.CONTACT_FRAME || 50)
+// An iPhone-style HEVC 10-bit, rotated, non-zero-start .mov (analyzer
+// fixtures --phone). This Chromium cannot decode HEVC, so it only plays if the
+// worker's verified copy works — and the red marker in it says which frame is
+// on screen: at frame i its left edge is at x = 40·i mod 616.
+const PHONE_VIDEO = process.env.PHONE_VIDEO || 'analyzer/fixtures/iphone_hevc10_240.mov'
 
 const COACH = { id: '11111111-1111-4111-8111-111111111111', email: 'coach@example.test', password: 'fixture-password' }
 const OTHER = { id: '99999999-9999-4999-8999-999999999999', email: 'other@example.test', password: 'fixture-password' }
@@ -118,6 +123,9 @@ async function main() {
   await page.waitForFunction(() => (document.querySelector('[data-testid="swing-video"]') as HTMLVideoElement)?.readyState >= 2, null, { timeout: 30000 })
   const readout = await page.getByTestId('frame-readout').innerText()
   check('upload is stored privately and frame times are read', /frame 1 \/ \d+/.test(readout), readout)
+  const copyStatus = await page.getByTestId('playback-status').filter({ hasText: /Playing a browser copy|Playing the original/ })
+    .innerText({ timeout: 120000 }).catch(() => '')
+  check('the worker makes a browser copy and proves it matches the original', /Playing a browser copy/.test(copyStatus), copyStatus.replace(/\s+/g, ' ').slice(0, 240))
 
   // Step to the contact frame with the scrubber, then mark it.
   await page.locator('input[type=range]').fill(String(CONTACT_FRAME))
@@ -172,7 +180,7 @@ async function main() {
   check('hip–shoulder separation is shown as not assessable, not a number', /Not assessable/.test(hs))
   const all = await page.locator('section').last().innerText()
   const badges = await page.getByTestId('validation-badge').allInnerTexts()
-  check('every finding is labelled unvalidated or feasibility-only', badges.length === 3 && badges.every(b => b === 'unvalidated' || b === 'feasibility check'), badges.join(', '))
+  check('every finding is labelled unvalidated or feasibility-only', badges.length === 4 && badges.every(b => b === 'unvalidated' || b === 'feasibility check'), badges.join(', '))
   check('no score, rating or ideal-swing language', !/\b(score|rating|grade)\s*[:=]?\s*\d|\b(elite|ideal swing|good swing|bad swing)\b/i.test(all))
 
   // Coach review → drills.
@@ -208,10 +216,57 @@ async function main() {
   check('re-analysis measures the stride to the coach\'s foot strike', /foot strike \(coach-marked\)/.test(lf2))
   check('a re-analysis clears earlier review decisions', /Your review: pending/.test(lf2))
 
+  // Phone format: HEVC 10-bit, rotated, non-zero start, 240 fps.
+  if (existsSync(PHONE_VIDEO)) {
+    await page.setInputFiles('[data-testid="upload-input"]', PHONE_VIDEO)
+    // Wait for the NEW capture's page before reading anything off it.
+    await page.waitForFunction(() => /\/ 480\b/.test(document.querySelector('[data-testid="frame-readout"]')?.textContent || ''), null, { timeout: 60000 }).catch(() => {})
+    const st = await page.getByTestId('playback-status').filter({ hasText: /Playing a browser copy|Playing the original/ })
+      .innerText({ timeout: 240000 }).catch(() => '')
+    check('an iPhone HEVC clip gets a verified browser copy', /Playing a browser copy/.test(st), st.replace(/\s+/g, ' ').slice(0, 240))
+    await page.waitForFunction(() => (document.querySelector('[data-testid="swing-video"]') as HTMLVideoElement)?.readyState >= 2, null, { timeout: 30000 })
+    const r0 = await page.getByTestId('frame-readout').innerText()
+    check('...with all 480 frame times from the original', /\/ 480\b/.test(r0), r0)
+    const dims = await page.evaluate(() => { const v = document.querySelector('[data-testid="swing-video"]') as HTMLVideoElement; return [v.videoWidth, v.videoHeight] })
+    check('...shown upright (display rotation applied)', dims[0] === 640 && dims[1] === 428, dims.join('×'))
+    const shown: string[] = []
+    let bad = 0
+    for (const i of [0, 1, 2, 239, 240, 399, 400, 401, 478, 479]) {
+      await page.locator('input[type=range]').fill(String(i))
+      await page.waitForFunction((f) => document.querySelector('[data-testid="frame-readout"]')?.textContent?.includes(`frame ${f + 1} /`), i, { timeout: 10000 })
+      await page.waitForFunction(() => { const v = document.querySelector('[data-testid="swing-video"]') as HTMLVideoElement; return !v.seeking && v.readyState >= 2 }, null, { timeout: 10000 })
+      await page.waitForTimeout(150)
+      const x = await page.evaluate(() => {
+        const v = document.querySelector('[data-testid="swing-video"]') as HTMLVideoElement
+        const c = document.createElement('canvas')
+        c.width = v.videoWidth; c.height = 40
+        const g = c.getContext('2d')!
+        g.drawImage(v, 0, 0, v.videoWidth, v.videoHeight)
+        const d = g.getImageData(0, 0, c.width, 40).data
+        let min = Infinity
+        for (let y = 6; y < 26; y++) for (let xx = 0; xx < c.width; xx++) {
+          const o = (y * c.width + xx) * 4
+          if (d[o] > 170 && d[o + 1] < 90 && d[o + 2] < 90) min = Math.min(min, xx)
+        }
+        return Number.isFinite(min) ? min : -1
+      })
+      const want = (40 * i) % 616
+      if (Math.abs(x - want) > 3) bad++
+      shown.push(`${i}:${x}${Math.abs(x - want) > 3 ? `≠${want}` : ''}`)
+    }
+    check('stepping to frame N shows frame N of the original (marker position, 10 frames incl. both ends)', bad === 0, shown.join(' '))
+    await page.locator('[data-testid="swing-video"]').screenshot({ path: path.join(OUT, 'phone-hevc-frame-479.png') })
+  } else {
+    check('phone-format fixture present (build with: fixtures --phone)', false, PHONE_VIDEO)
+  }
+
   // Mobile layout.
   await page.setViewportSize({ width: 390, height: 844 })
   await page.waitForTimeout(500)
-  check('no horizontal overflow at 390px', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+  const wide = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth ? '' :
+    Array.from(document.querySelectorAll('body *')).filter(e => e.getBoundingClientRect().right > window.innerWidth + 1)
+      .slice(-4).map(e => `${e.tagName.toLowerCase()}.${String((e as HTMLElement).className).slice(0, 40)} ${Math.round(e.getBoundingClientRect().right)}px`).join(' | '))
+  check('no horizontal overflow at 390px', wide === '', wide)
   await page.screenshot({ path: path.join(OUT, 'review-390.png'), fullPage: true })
 
   // Cross-team: another coach cannot open the capture, its video, or its list.

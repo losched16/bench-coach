@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authorizePlayer, requireSession } from '@/lib/authz'
-import { createCapture, listCaptures, readJob, writeMeta, extFor, MAX_UPLOAD_BYTES, videoPath, StoreError } from '@/lib/swingPoc/store'
+import { createCapture, listCaptures, readJob, writeMeta, extFor, MAX_UPLOAD_BYTES, videoPath, StoreError, enqueuePrepare } from '@/lib/swingPoc/store'
 import { notEnabled, errorResponse } from '@/lib/swingPoc/access'
 import { probeFrames } from '@/lib/swingPoc/probe'
 
@@ -58,8 +58,13 @@ export async function POST(request: NextRequest) {
       originalName: request.headers.get('x-file-name') || 'swing',
       mimeType: mime, body: request.body,
       handedness: sp.get('handedness'), cameraView: sp.get('view'), setting: sp.get('setting'),
+      captureFps: sp.get('captureFps'),
     })
-    // Frame times for the contact scrubber (fast; the analysis runs later in the worker).
+    // The worker makes a browser-playable copy with the same frame timestamps
+    // and proves the alignment (analyzer/swing_analyzer/proxy.py).
+    await enqueuePrepare(meta)
+    // Immediate frame times for the scrubber; replaced by the worker's
+    // playback manifest once the verified copy exists.
     const probe = await probeFrames(videoPath(meta))
     if (probe) {
       ;(meta as any).probe = probe

@@ -3,3 +3,4 @@ models/*.task
 __pycache__/
 fixtures/
 out/
+.cache/

@@ -17,11 +17,31 @@ plumbing against ground truth we control:
 | Automatic foot strike (heavy model, 240 fps upscale) | **150 ms early** — the stride value then reads 0.171 instead of 0.257 |
 | No person / partial body / two people / corrupt file | failed `no_person` / all `not_assessable` / flagged / `unsupported_format` |
 | Overlay sync in the browser | drawn pose timestamp = displayed frame timestamp (1667.0 ms at frame 51) |
+| Negative move: known 16 px slide back, then 48 px forward | pelvis 0.089 vs 0.085 expected; head 0.081; "furthest back" frame inside the held-back span; stride still 0.247 vs 0.256 from the stance |
+| Phone formats (iPhone HEVC Main10 `hvc1` .mov, 90° rotation, AAC, 240 fps, first frame at 0.022 s; Android H.264 rotated −90°, 60 fps; slow-mo VFR original 30→240 fps; exported slow-mo re-timed to 30 fps) | stride 0.254–0.264 vs 0.257 across all four (export only with `--capture-fps 240`); contact frame = truth in each |
+| Exported slow-mo WITHOUT the capture rate | analysis window and timing are 8× off; the analyzer warns, the validation command refuses to run without an explicit answer |
+| Browser playback copy (H.264 / VP9), every phone format | same frame count, timestamps within ≤0.5 ms, every sampled frame matches its own source frame (on clips with enough motion to tell neighbours apart); a copy shifted by one frame is caught (9/9 mismatches) |
+| Headless Chromium, iPhone HEVC clip, stepping with the UI's seek rule | frame N shows frame N at 10/10 checked frames incl. first, last and contact |
+| Automatic foot strike on the iPhone 240 fps HEVC clip (settled-position rule) | **325 ms late** (frame 359 vs 281) — coach must confirm foot strike |
 
 **The heavy-model result matters.** The stride number depends on where foot strike is placed,
 and the automatic estimate can be wrong. That is why the coach can move foot strike, and
 re-analysis then measures to the coach's mark (tested). Treat every automatic event as a
 suggestion.
+
+## Tomorrow's first real swing
+
+Run `bash scripts/swing-poc/validate-real-swing.sh` (RUNBOOK §2) and fill in the manual
+review sheet in the report. What the first clip can and cannot tell us:
+
+- **Can:** whether the phone's format, rotation, frame rate and HDR survive the pipeline;
+  whether the model finds the hitter in every frame and sees hands and lead foot around
+  contact; whether contact and foot strike line up with what a coach sees; whether the
+  playback copy and the browser show the analyzer's frames; whether each measured value
+  is plausible against the evidence frames; how far the automatic foot strike is from a
+  coach's mark.
+- **Cannot:** validate any mechanic. One swing gives no repeatability and no reference.
+  Record agreement/disagreement; do not tune anything to a single clip.
 
 ## Not yet validated — needs real swings
 

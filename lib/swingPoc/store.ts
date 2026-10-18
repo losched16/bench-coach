@@ -66,6 +66,9 @@ export interface CaptureMeta {
   handedness: 'R' | 'L' | null
   camera_view: 'face_on' | 'down_the_line' | 'other' | null
   setting: 'tee' | 'front_toss' | 'live' | 'other' | null
+  // Set only for slow-motion that was shared/exported (re-timed to play
+  // slowly): the frame rate it was RECORDED at. Originals keep real time.
+  capture_fps?: number | null
   // Every contact mark the coach has made, newest last. The analysis uses the
   // newest; the history is provenance.
   contact_history: ContactMark[]
@@ -88,6 +91,11 @@ async function writeJson(p: string, data: unknown): Promise<void> {
   await fs.rename(tmp, p)
 }
 
+export function parseCaptureFps(v: unknown): number | null {
+  const n = Number(v)
+  return Number.isFinite(n) && n >= 60 && n <= 2000 ? n : null
+}
+
 export function extFor(mime: string): string | null {
   return ALLOWED_TYPES[String(mime || '').toLowerCase()] ?? null
 }
@@ -106,6 +114,7 @@ export async function createCapture(input: {
   handedness?: string | null
   cameraView?: string | null
   setting?: string | null
+  captureFps?: string | number | null
 }): Promise<CaptureMeta> {
   const ext = extFor(input.mimeType)
   if (!ext) throw new StoreError('Upload an MP4, MOV or WebM video.', 415)
@@ -152,6 +161,7 @@ export async function createCapture(input: {
     handedness: input.handedness === 'R' || input.handedness === 'L' ? input.handedness : null,
     camera_view: (['face_on', 'down_the_line', 'other'] as const).find(v => v === input.cameraView) ?? null,
     setting: (['tee', 'front_toss', 'live', 'other'] as const).find(v => v === input.setting) ?? null,
+    capture_fps: parseCaptureFps(input.captureFps),
     contact_history: [],
     event_tags: {},
   }
@@ -196,6 +206,31 @@ export interface AnalysisRequest {
   camera_view: string | null
   // The coach's foot-strike mark, when they corrected the automatic estimate.
   foot_strike_ms?: number | null
+  // Recorded frame rate of an exported slow-motion clip (see CaptureMeta).
+  capture_fps?: number | null
+}
+
+/** Ask the worker for the browser playback copy (proxy.py) and frame times. */
+export async function enqueuePrepare(meta: CaptureMeta): Promise<void> {
+  const root = dataDir()
+  await fs.mkdir(path.join(root, 'queue'), { recursive: true })
+  await writeJson(path.join(captureDir(meta.id), 'prepare.json'), { state: 'queued', updated_at: new Date().toISOString() })
+  await writeJson(path.join(root, 'queue', `${meta.id}.prepare.json`), {})
+}
+
+export async function readPrepare(id: string): Promise<any | null> {
+  return readJson(path.join(captureDir(id), 'prepare.json'))
+}
+
+export async function readPlayback(id: string): Promise<any | null> {
+  return readJson(path.join(captureDir(id), 'playback.json'))
+}
+
+/** The verified playback copy, or null. Only the worker's own file names are accepted. */
+export function playbackFile(meta: CaptureMeta, manifest: any): { file: string; mime: string } | null {
+  const name = manifest?.proxy?.file
+  if (!manifest?.proxy?.aligned || !/^playback\.(mp4|webm)$/.test(String(name || ''))) return null
+  return { file: path.join(captureDir(meta.id), name), mime: name.endsWith('.webm') ? 'video/webm' : 'video/mp4' }
 }
 
 export async function enqueue(meta: CaptureMeta, request: AnalysisRequest): Promise<void> {
@@ -229,6 +264,7 @@ export async function writeReview(id: string, review: unknown): Promise<void> {
 export async function deleteCapture(id: string): Promise<void> {
   await fs.rm(captureDir(id), { recursive: true, force: true })
   await fs.rm(path.join(dataDir(), 'queue', `${id}.json`), { force: true })
+  await fs.rm(path.join(dataDir(), 'queue', `${id}.prepare.json`), { force: true })
 }
 
 // ── signed video access ─────────────────────────────────────────────────────

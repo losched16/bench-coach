@@ -3,12 +3,17 @@
 Status: **internal proof of concept**. Off by default (`SWING_MECHANICS_POC=1` to enable),
 not deployed, no production migration, no player data written.
 
+Documents: [RUNBOOK](RUNBOOK.md) (setup, real-swing validation, tests) ·
+[mechanics registry](mechanics-registry.md) (the twelve WIN Reality mechanics, classified for
+one phone camera) · [validation](validation.md) (what is proven, what is not) ·
+[security audit](security-audit.md) (video storage and access) · [report](REPORT.md).
+
 ## What already exists (audited 2026-10-17 against `main` @ 65772a0)
 
 | Piece | Where | Verdict |
 |---|---|---|
 | PR #10 "Swing Metrics MVP" | branch `feature/swing-metrics-mvp`, draft, **conflicts with main** | Do not merge. Its migration is numbered **077**, which `main` already used for `077_practice_plan_pathway_link.sql` (applied in production). It models *performance* readings (exit velocity, launch angle, projected distance) that a pose model cannot produce. Reused as a **pattern**: path-scoped signed upload, private object paths `…/<team>/<player>/<uuid>.<ext>`, server-side authorization before any storage work, and "nothing reaches `player_metrics` without a coach confirming it". |
-| Legacy swing analysis | `app/api/swing-analysis`, `components/SwingAnalysis{Upload,View}.tsx`, `swing_analyses` (000 baseline), external `SWING_ANALYZER_URL` | Not reused. The upload component is not mounted anywhere. It authorizes by `players.coach_id` only (assistants and team scope are not handled), and it links the video with `getPublicUrl` on a `swing-videos` bucket. **That only works if the bucket is public — a child-video exposure risk to check in the Supabase dashboard before anything is built on it.** It could not be verified from this session. |
+| Legacy swing analysis | legacy upload/view components and API (UI not mounted) | Not reused. It authorizes at coach level only and does not follow the storage controls this POC uses. Owner actions are in [security-audit.md](security-audit.md); details were reported privately. |
 | Authorization | `lib/authz.ts` (`authorizePlayer`, `authorizeTeam`, capabilities) and `lib/playerScope.ts` | **Reused unchanged.** Every POC route resolves the capture's stored team and player, not ids from the request. |
 | Measurements | `player_metrics`, `metric_types`, `/api/metrics` | **Not written to.** POC findings are review data only. |
 | Drill retrieval | `lib/drillRetrieval.ts → retrieveDrills` | **Reused**, called with an explicit diagnosis (taxonomy slugs from the registry), so no model call is made and only schedulable library drills come back. |
@@ -108,9 +113,11 @@ rotation, and evaluating sports-specific pose models. Each is a new backend behi
 - No child imagery goes to any outside service. The optional AI interpretation layer is
   **not built**; if added, it would receive only the structured observations (numbers, units,
   coach-accepted wording), never video or frames.
-- Deletion removes video, analysis, review and queued work. The production schema adds a
-  default 180-day expiry.
+- Deletion removes video, playback copy, analysis, review and queued work; `purge` deletes
+  captures older than N days. The production schema adds a default 180-day expiry.
+- Validation runs write only to a git-ignored, owner-only folder; the command refuses a
+  folder git would track and never records the input's file name.
 - **Before any public release:** parental notice and consent for recording minors
   (COPPA applies to under-13s for an online service collecting their images), a retention
-  policy, a deletion path for parents via the coach, and a review of the legacy
-  `swing-videos` bucket, which the old flow links publicly.
+  policy, a deletion path for parents via the coach, and the legacy-storage actions in
+  [security-audit.md](security-audit.md).

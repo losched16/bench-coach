@@ -42,7 +42,7 @@ env:
 # kept short and boring on purpose: renaming a job silently un-requires it,
 # and a required check that no longer exists blocks every merge instead.
 #
-#   gate  ·  suites  ·  browser
+#   gate  ·  suites  ·  browser  ·  analyzer
 #
 jobs:
   gate:
@@ -94,6 +94,39 @@ jobs:
       - run: npm run test:chat-pending
       # Swing mechanics POC (flag-off by default): app rules, store and gates.
       - run: npm run test:swing-poc
+
+  # Swing mechanics POC analyzer (Python). Synthetic adult fixtures only —
+  # built from MediaPipe's own test image, never a real player's video.
+  # Fails if any test is skipped, so a missing model or fixture can't pass
+  # quietly.
+  analyzer:
+    name: analyzer
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: analyzer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: analyzer/requirements.txt
+      - name: system libraries (ffmpeg, EGL for MediaPipe)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg libegl1 libgles2 libgl1
+      - run: pip install -r requirements.txt
+      - name: pose model (checksum-verified)
+        run: scripts/fetch_model.sh
+      - name: synthetic fixtures (checksum-verified source image)
+        run: |
+          scripts/fetch_test_image.sh .cache/pose.jpg
+          python -m swing_analyzer fixtures .cache/pose.jpg fixtures --phone
+      - name: analyzer tests
+        run: |
+          python -m unittest discover -s tests -v 2>&1 | tee .cache/unittest.log
+          test "${PIPESTATUS[0]}" -eq 0
+          if grep -q "skipped" .cache/unittest.log; then echo "::error::analyzer tests were skipped"; exit 1; fi
 
   browser:
     name: browser

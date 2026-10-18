@@ -40,6 +40,35 @@ MIN_STANCE_FEET_GAP = 0.05  # feet closer than this (× body length) cannot set 
 ALLOWED_VALIDATION = {"unvalidated", "experimental_feasibility"}
 
 REGISTRY: Dict[str, dict] = {
+    "negative_move": {
+        "label": "Negative move — back toward the catcher",
+        "definition": (
+            "How far the pelvis (midpoint of the hips) and the head (nose landmark) drift back toward "
+            "the catcher, in the image, after the stance and before the front foot lands. The largest "
+            "backward displacement from the stance position is reported."
+        ),
+        "required_landmarks": ["both hips", "nose", "both ankles", "shoulders"],
+        "camera_view": "face_on",
+        "camera_view_note": "Camera level with the hips, perpendicular to the line between the feet. From behind the catcher this movement points at the lens.",
+        "requires_handedness": True,
+        "event_window": "stance end → foot strike (coach-marked or estimated); stance end → contact if no foot strike",
+        "method": (
+            "Hip-midpoint and nose positions projected on the stance forward axis (back ankle → lead ankle), "
+            "relative to their stance median, divided by the stance shoulder-to-ankle length. The most "
+            "negative value in the window, reported as a backward distance. The same projection's scatter "
+            "during the stance is reported as the noise floor."
+        ),
+        "unit": UNIT_BODY,
+        "evidence": ["stance reference frame", "furthest-back frame", "window end frame"],
+        "limitations": [
+            "Image-plane only, and assumes a static camera.",
+            "The hip landmarks are estimated through clothing; a small shift can be inside the model's noise — compare with the noise floor shown.",
+            "The nose landmark moves when the head turns, not only when it translates.",
+            "Some hitters load with little or no backward shift; no amount is implied to be right.",
+        ],
+        "validation_status": "unvalidated",
+        "drill_taxonomy": ["lunging", "flying-open"],
+    },
     "lead_foot_movement": {
         "label": "Stride — lead-foot movement",
         "definition": (
@@ -55,7 +84,8 @@ REGISTRY: Dict[str, dict] = {
         "method": (
             "Lead-foot point = mean of the visible lead ankle, heel and foot-index landmarks. "
             "Forward axis = image direction from back ankle to lead ankle in the stance. "
-            "Displacement along that axis between the stance reference and foot strike, divided "
+            "Displacement along that axis from the stance position to the planted position (median "
+            "from the estimated foot strike to contact, or the coach-marked foot-strike frame), divided "
             "by the stance shoulder-to-ankle length in pixels."
         ),
         "unit": UNIT_BODY,
@@ -63,7 +93,7 @@ REGISTRY: Dict[str, dict] = {
         "limitations": [
             "Image-plane only: a stride that angles toward or away from the camera is shortened.",
             "Assumes a static camera; a hand-held pan is read as foot movement.",
-            "Foot strike is an automatic estimate from lead-foot speed — check it and move it if wrong.",
+            "Foot strike is an automatic estimate (where the lead foot settles before contact) — check it and move it if wrong.",
             "Not comparable across different camera distances or angles without calibration.",
         ],
         "validation_status": "unvalidated",
@@ -142,6 +172,8 @@ class Track:
     view: Optional[str]         # 'face_on' | 'down_the_line' | 'other' | None
     notes: List[str] = field(default_factory=list)
     foot_strike: Optional[int] = None  # coach-marked foot strike (index), overrides the estimate
+    time_scale: float = 1.0            # real seconds per file second (exported slow-motion < 1)
+    vis: Optional[np.ndarray] = None   # (n, 33) model visibility, for evidence
 
     @property
     def n(self) -> int:
@@ -161,6 +193,25 @@ def _frame_ref(tr: Track, k: Optional[int]) -> Optional[dict]:
     return {"frame": int(tr.src[k]), "t_ms": round(float(tr.t_ms[k]), 3), "k": int(k)}
 
 
+def _evidence(tr: Track, k: Optional[int], label: str, joints: List[int]) -> Optional[dict]:
+    """An evidence frame plus the exact landmarks the number was computed from:
+    pixel position in the displayed frame and the model's visibility, so a
+    coach (or a reviewer) can see which joints produced the finding."""
+    ref = _frame_ref(tr, k)
+    if ref is None:
+        return None
+    lms = {}
+    for j in joints:
+        x, y = tr.px[k, j]
+        lms[P.JOINT_NAMES.get(j, str(j))] = {
+            "x_px": None if not np.isfinite(x) else round(float(x), 1),
+            "y_px": None if not np.isfinite(y) else round(float(y), 1),
+            "visibility": None if tr.vis is None else round(float(tr.vis[k, j]), 3),
+            "usable": bool(tr.ok[k, j]),
+        }
+    return {**ref, "label": label, "landmarks": lms}
+
+
 def _mid(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     return (a + b) / 2.0
 
@@ -178,7 +229,8 @@ def stance_window(tr: Track) -> List[int]:
     if tr.n == 0:
         return []
     t0 = tr.t_ms[0]
-    limit = min(t0 + 250.0, tr.t_ms[tr.contact] - 400.0)
+    s = tr.time_scale or 1.0
+    limit = min(t0 + 250.0 / s, tr.t_ms[tr.contact] - 400.0 / s)
     ks = [k for k in range(tr.n) if tr.t_ms[k] <= limit and all(tr.ok[k, j] for j in P.CORE_JOINTS)]
     return ks
 
@@ -199,21 +251,25 @@ def body_reference(tr: Track, stance: List[int]) -> Optional[dict]:
     return {"length_px": med, "cv": float(np.std(arr) / med), "frames": len(stance)}
 
 
-SPEED_SPAN_MS = 50.0       # speed is measured over this much time, not per frame
+SPEED_SPAN_MS = 50.0       # speed is measured over this much real time, not per frame
 MIN_TRAVEL = 0.03          # lead foot must move this far (× body length) to count as a stride
+SETTLE_TOL = 0.015         # "planted" = within this (× body length) of where it is at contact
 
 
 def estimate_foot_strike(tr: Track, stance: List[int], ref_len: float) -> dict:
     """Automatic, unvalidated estimate of lead-foot strike before contact.
 
-    Lead-foot speed is measured over a fixed 50 ms span (not frame to frame:
-    per-frame landmark jitter divided by 1/240 s looks like fast movement in a
-    slow-motion clip, so a per-frame rule would behave differently at every
-    frame rate). If the lead foot never travels more than 3% of a body length
-    from its stance position, no stride is reported. Otherwise foot strike is
-    the first frame after the fastest movement where the speed has fallen
-    below 20% of that peak and stays there for two frames. These numbers
-    locate an EVENT; they say nothing about whether the stride was good.
+    Foot strike is where the lead foot ARRIVES and stays: the earliest frame
+    after the stance from which the lead foot remains within 1.5% of a body
+    length (or three times its own stance jitter, if larger) of its planted
+    position — its median position over the last 50 ms (real time) before
+    contact. A position-based rule rather than a speed threshold: speed is
+    noisy at high frame rates and stair-stepped in duplicated-frame video,
+    while "where it ended up" is not.
+
+    If the lead foot never travels more than 3% of a body length from its
+    stance position, no stride is reported. The estimate locates an EVENT; it
+    says nothing about whether the stride was good. The coach can move it.
     """
     if tr.handedness not in ("R", "L") or not stance:
         return {"frame": None, "source": "auto_estimate", "status": "not_estimated",
@@ -221,8 +277,9 @@ def estimate_foot_strike(tr: Track, stance: List[int], ref_len: float) -> dict:
     s = side(tr.handedness)
     pts = foot_points(tr, s)
     start = stance[-1]
-    stance_pt = np.nanmedian(np.array([pts[k] for k in stance]), axis=0)
-    seg = range(start + 1, tr.contact + 1)
+    stance_pts = np.array([pts[k] for k in stance])
+    stance_pt = np.nanmedian(stance_pts, axis=0)
+    seg = list(range(start + 1, tr.contact + 1))
     travel = [float(np.linalg.norm(pts[k] - stance_pt)) / ref_len for k in seg if np.all(np.isfinite(pts[k]))]
     if not travel:
         return {"frame": None, "source": "auto_estimate", "status": "not_estimated",
@@ -230,32 +287,29 @@ def estimate_foot_strike(tr: Track, stance: List[int], ref_len: float) -> dict:
     if max(travel) < MIN_TRAVEL:
         return {"frame": None, "source": "auto_estimate", "status": "no_movement_detected",
                 "reason": "The lead foot did not move measurably before contact (e.g. a no-stride swing)."}
-    speeds = np.full(tr.n, np.nan)
-    for k in seg:
-        k0 = k
-        while k0 > start and tr.t_ms[k] - tr.t_ms[k0 - 1] <= SPEED_SPAN_MS:
-            k0 -= 1
-        if k0 == k:
-            k0 = k - 1
-        a, b = pts[k0], pts[k]
-        dt = (tr.t_ms[k] - tr.t_ms[k0]) / 1000.0
-        if np.all(np.isfinite(a)) and np.all(np.isfinite(b)) and dt > 0:
-            speeds[k] = float(np.linalg.norm(b - a)) / ref_len / dt
-    window = speeds[start + 1: tr.contact + 1]
-    if not np.any(np.isfinite(window)):
+    scale = tr.time_scale or 1.0
+    t_c = tr.t_ms[tr.contact]
+    tail = [k for k in seg if (t_c - tr.t_ms[k]) * scale <= SPEED_SPAN_MS and np.all(np.isfinite(pts[k]))]
+    if not tail:
         return {"frame": None, "source": "auto_estimate", "status": "not_estimated",
-                "reason": "The lead foot was not visible long enough to follow its movement."}
-    peak_k = start + 1 + int(np.nanargmax(window))
-    peak = float(speeds[peak_k])
-    for k in range(peak_k + 1, tr.contact):
-        nxt = speeds[k + 1]
-        if np.isfinite(speeds[k]) and speeds[k] < 0.2 * peak and (not np.isfinite(nxt) or nxt < 0.2 * peak):
-            return {**_frame_ref(tr, k), "source": "auto_estimate", "status": "estimated",
-                    "confidence": "low",
-                    "method": "lead-foot speed over 50 ms fell below 20% of its peak for two frames",
-                    "peak_speed_body_lengths_per_s": round(peak, 3)}
-    return {"frame": None, "source": "auto_estimate", "status": "not_estimated",
-            "reason": "The lead foot was still moving at contact; no foot strike could be placed before it."}
+                "reason": "The lead foot was not visible just before contact."}
+    planted = np.median(np.array([pts[k] for k in tail]), axis=0)
+    jitter = float(np.nanmedian(np.linalg.norm(stance_pts - stance_pt, axis=1))) / ref_len if len(stance_pts) else 0.0
+    tol = max(SETTLE_TOL, 3.0 * jitter)
+    fs = None
+    for k in reversed(seg):
+        if not np.all(np.isfinite(pts[k])):
+            continue  # an unseen frame neither breaks nor extends the planted run
+        if float(np.linalg.norm(pts[k] - planted)) / ref_len <= tol:
+            fs = k
+        else:
+            break
+    if fs is None or fs == seg[0]:
+        return {"frame": None, "source": "auto_estimate", "status": "not_estimated",
+                "reason": "Could not tell when the lead foot landed (it was planted from the start of the window or never settled)."}
+    return {**_frame_ref(tr, fs), "source": "auto_estimate", "status": "estimated", "confidence": "low",
+            "method": f"first frame from which the lead foot stays within {tol:.3f} body lengths of its position at contact",
+            "tolerance_body_lengths": round(tol, 4)}
 
 
 def foot_points(tr: Track, s: dict) -> np.ndarray:
@@ -349,6 +403,8 @@ def lead_foot_movement(tr: Track, stance: List[int], ref: Optional[dict], fs: di
         return _not_assessable(mid, "The feet overlap in the image during the stance, so the direction toward the pitcher can't be set — this usually means the camera is behind or in front of the hitter, not face-on.")
     s = side(tr.handedness)
     pts = foot_points(tr, s)
+    foot_joints = [s["lead_ankle"], s["lead_heel"], s["lead_foot"], s["back_ankle"],
+                   P.L_SHOULDER, P.R_SHOULDER, P.L_ANKLE, P.R_ANKLE]
     end_k = fs.get("k") if fs.get("frame") is not None else tr.contact
     window = list(range(stance[0], end_k + 1))
     cov = _coverage(tr, window, [s["lead_ankle"], s["back_ankle"]])
@@ -359,7 +415,16 @@ def lead_foot_movement(tr: Track, stance: List[int], ref: Optional[dict], fs: di
     k_end = _near_usable(tr, end_k, [s["lead_ankle"]])
     if k_end is None or not np.all(np.isfinite(stance_pt)):
         return _not_assessable(mid, "The lead foot was not visible at the end of the stride.")
-    disp = float(np.dot(pts[k_end] - stance_pt, axis)) / L
+    # Where the stride ended. With an automatic foot strike, the planted
+    # position (median from foot strike to contact) — the estimate can sit a
+    # frame or two early, and the planted position does not depend on that.
+    # With a coach-marked foot strike, the position at the coach's frame.
+    if fs.get("source") == "auto_estimate" and fs.get("frame") is not None:
+        run = np.array([pts[k] for k in range(fs["k"], tr.contact + 1) if np.all(np.isfinite(pts[k]))])
+        end_pt = np.median(run, axis=0) if len(run) else pts[k_end]
+    else:
+        end_pt = pts[k_end]
+    disp = float(np.dot(end_pt - stance_pt, axis)) / L
     # Lift: image y grows downward, so "up" is negative y.
     lifts = [(float(stance_pt[1] - pts[k][1]) / L, k) for k in window if np.all(np.isfinite(pts[k]))]
     lift, lift_k = max(lifts) if lifts else (0.0, None)
@@ -380,9 +445,9 @@ def lead_foot_movement(tr: Track, stance: List[int], ref: Optional[dict], fs: di
         ],
         "window": {"start": _frame_ref(tr, stance[0]), "end": _frame_ref(tr, k_end)},
         "evidence_frames": [x for x in [
-            {**_frame_ref(tr, stance[len(stance) // 2]), "label": "stance reference"},
-            {**_frame_ref(tr, lift_k), "label": "peak lift"} if lift_k is not None and lift > 0.01 else None,
-            {**_frame_ref(tr, k_end), "label": end_label},
+            _evidence(tr, stance[len(stance) // 2], "stance reference", foot_joints),
+            _evidence(tr, lift_k, "peak lift", foot_joints) if lift_k is not None and lift > 0.01 else None,
+            _evidence(tr, k_end, end_label, foot_joints),
         ] if x],
         "inputs": {"landmark_coverage": round(cov, 3), "body_reference_px": round(L, 2),
                    "body_reference_cv": round(ref["cv"], 4), "forward_axis_image": [round(float(a), 4) for a in axis]},
@@ -418,19 +483,70 @@ def forward_move(tr: Track, stance: List[int], ref: Optional[dict], fs: dict) ->
         {"name": "pelvis_forward_stance_to_contact", "label": "Pelvis moved toward the pitcher (stance → contact)",
          "value": along(pel0, pel(kc)), "unit": UNIT_BODY},
     ]
-    evidence = [{**_frame_ref(tr, stance[len(stance) // 2]), "label": "stance reference"}]
+    ev_joints = [P.NOSE, P.L_HIP, P.R_HIP, P.L_SHOULDER, P.R_SHOULDER, P.L_ANKLE, P.R_ANKLE]
+    evidence = [_evidence(tr, stance[len(stance) // 2], "stance reference", ev_joints)]
     kf = _near_usable(tr, fs["k"], joints) if fs.get("frame") is not None else None
     if kf is not None:
         values.append({"name": "head_forward_foot_strike_to_contact", "label": "Head moved toward the pitcher (foot strike → contact)",
                        "value": along(head(kf), head(kc)), "unit": UNIT_BODY})
-        evidence.append({**_frame_ref(tr, kf), "label": "foot strike (coach-marked)" if fs.get("source") == "coach" else "foot strike (estimated)"})
-    evidence.append({**_frame_ref(tr, kc), "label": "contact (coach-marked)"})
+        evidence.append(_evidence(tr, kf, "foot strike (coach-marked)" if fs.get("source") == "coach" else "foot strike (estimated)", ev_joints))
+    evidence.append(_evidence(tr, kc, "contact (coach-marked)", ev_joints))
     return {
         **_base(mid), "status": "observed", "data_quality": q, "values": values,
         "window": {"start": _frame_ref(tr, stance[0]), "end": _frame_ref(tr, kc)},
         "evidence_frames": evidence,
         "inputs": {"landmark_coverage": round(cov, 3), "body_reference_px": round(L, 2),
                    "body_reference_cv": round(ref["cv"], 4), "forward_axis_image": [round(float(a), 4) for a in axis]},
+    }
+
+
+def negative_move(tr: Track, stance: List[int], ref: Optional[dict], fs: dict) -> dict:
+    mid = "negative_move"
+    gated = _common_gates(mid, tr, stance, ref)
+    if gated:
+        return gated
+    L = ref["length_px"]
+    axis = forward_axis(tr, stance, L)
+    if axis is None:
+        return _not_assessable(mid, "The feet overlap in the image during the stance, so the direction toward the catcher can't be set (camera not face-on).")
+    hips = [P.L_HIP, P.R_HIP]
+    end_k = fs["k"] if fs.get("frame") is not None else tr.contact
+    window = list(range(stance[-1] + 1, end_k + 1))
+    if len(window) < 2:
+        return _not_assessable(mid, "There is no time between the stance and foot strike to look for a backward move — start recording earlier.")
+    cov = _coverage(tr, window, hips)
+    q = _quality(cov, ref["cv"])
+    if q is None:
+        return _not_assessable(mid, f"The hips were usable in only {cov * 100:.0f}% of frames between the stance and foot strike.")
+    pel = lambda k: _mid(tr.px[k, P.L_HIP], tr.px[k, P.R_HIP])
+    pel0 = np.median(np.array([pel(k) for k in stance]), axis=0)
+    head0 = np.median(np.array([tr.px[k, P.NOSE] for k in stance]), axis=0)
+    along = lambda a, b: float(np.dot(b - a, axis)) / L
+    stance_scatter = [along(pel0, pel(k)) for k in stance]
+    noise = 3.0 * float(np.std(stance_scatter))
+    pel_series = [(along(pel0, pel(k)), k) for k in window if all(tr.ok[k, j] for j in hips)]
+    low, k_low = min(pel_series)
+    head_series = [(along(head0, tr.px[k, P.NOSE]), k) for k in window if tr.ok[k, P.NOSE]]
+    values = [{"name": "pelvis_back_move", "label": "Pelvis moved back toward the catcher (largest, before foot strike)",
+               "value": round(max(-low, 0.0), 3), "unit": UNIT_BODY,
+               "noise_floor": round(noise, 3), "within_noise": max(-low, 0.0) <= noise}]
+    if head_series:
+        h_low, _ = min(head_series)
+        values.append({"name": "head_back_move", "label": "Head moved back toward the catcher (largest, before foot strike)",
+                       "value": round(max(-h_low, 0.0), 3), "unit": UNIT_BODY})
+    ev_joints = [P.NOSE, P.L_HIP, P.R_HIP, P.L_SHOULDER, P.R_SHOULDER, P.L_ANKLE, P.R_ANKLE]
+    end_label = ("foot strike (coach-marked)" if fs.get("source") == "coach" else "foot strike (estimated)") if fs.get("frame") is not None else "contact (no foot strike estimated)"
+    return {
+        **_base(mid), "status": "observed", "data_quality": q, "values": values,
+        "window": {"start": _frame_ref(tr, window[0]), "end": _frame_ref(tr, end_k)},
+        "evidence_frames": [x for x in [
+            _evidence(tr, stance[len(stance) // 2], "stance reference", ev_joints),
+            _evidence(tr, k_low, "furthest back", ev_joints) if low < 0 else None,
+            _evidence(tr, end_k, end_label, ev_joints),
+        ] if x],
+        "inputs": {"landmark_coverage": round(cov, 3), "body_reference_px": round(L, 2),
+                   "body_reference_cv": round(ref["cv"], 4), "forward_axis_image": [round(float(a), 4) for a in axis],
+                   "stance_pelvis_scatter_sd": round(float(np.std(stance_scatter)), 4)},
     }
 
 
@@ -487,6 +603,7 @@ def observe(tr: Track) -> dict:
         "swing_start": {"frame": None, "source": "coach_tag_only", "status": "not_estimated"},
     }
     observations = [
+        negative_move(tr, stance, ref, fs),
         lead_foot_movement(tr, stance, ref, fs),
         forward_move(tr, stance, ref, fs),
         hip_shoulder_feasibility(tr, stance),

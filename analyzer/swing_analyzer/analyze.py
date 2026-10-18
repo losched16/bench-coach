@@ -37,6 +37,7 @@ def analyze(
     camera_view: Optional[str] = None,
     backend: Optional[P.PoseBackend] = None,
     foot_strike_ms: Optional[float] = None,
+    capture_fps: Optional[float] = None,
 ) -> dict:
     """Run the full analysis. Never raises for a bad video — returns status 'failed'."""
     started = time.time()
@@ -45,6 +46,7 @@ def analyze(
         "contact_ms": contact_ms, "handedness": handedness, "camera_view": camera_view,
         "contact_source": "coach" if contact_ms is not None else None,
         "foot_strike_ms": foot_strike_ms,
+        "capture_fps": capture_fps,
     }
     base = {
         "schema": SCHEMA,
@@ -53,6 +55,8 @@ def analyze(
     }
     if handedness not in (None, "R", "L"):
         return {**base, "status": "failed", "error": {"code": "bad_input", "message": "Handedness must be R or L."}}
+    if capture_fps is not None and not (1 <= capture_fps <= 2000):
+        return {**base, "status": "failed", "error": {"code": "bad_input", "message": "Capture frame rate must be between 1 and 2000."}}
     if camera_view is not None and camera_view not in VIEWS:
         return {**base, "status": "failed", "error": {"code": "bad_input", "message": f"Camera view must be one of {sorted(VIEWS)}."}}
 
@@ -77,8 +81,23 @@ def analyze(
     inputs["contact_frame"] = c_idx
     inputs["contact_frame_t_ms"] = _r(times[c_idx] * 1000, 3)
 
-    lo_t = times[c_idx] - PRE_CONTACT_S
-    hi_t = times[c_idx] + POST_CONTACT_S
+    # Slow-motion that was EXPORTED (re-timed to play at 30 fps) stretches time:
+    # the file says 1/30 s between frames that were 1/240 s apart in real life.
+    # Displacements are unaffected; anything per-second (event detection, the
+    # analysis window) must use real time. Originals straight off the phone keep
+    # real timestamps and need no correction.
+    med_dt = source["frame_intervals"]["median_ms"] or 0
+    time_scale = 1.0
+    if capture_fps and med_dt:
+        real_dt_ms = 1000.0 / capture_fps
+        time_scale = 1.0 if abs(real_dt_ms - med_dt) <= 0.05 * med_dt else real_dt_ms / med_dt
+    time_model = {
+        "time_scale": _r(time_scale, 6),
+        "basis": "file timestamps" if time_scale == 1.0 else f"file timestamps × {time_scale:.4f} (coach said captured at {capture_fps:g} fps)",
+        "note": "Event times shown to the coach are file (playback) times; real-time is used only for speed-based event detection and the analysis window.",
+    }
+    lo_t = times[c_idx] - PRE_CONTACT_S / time_scale
+    hi_t = times[c_idx] + POST_CONTACT_S / time_scale
     window = [i for i, ts in enumerate(times) if lo_t <= ts <= hi_t]
     step = max(1, int(np.ceil(len(window) / MAX_ANALYZED)))
     chosen = window[::step]
@@ -136,6 +155,7 @@ def analyze(
     W, H = info.width, info.height
     px = np.full((n, 33, 2), np.nan)
     ok = np.zeros((n, 33), dtype=bool)
+    vis = np.zeros((n, 33))
     world = np.full((n, 33, 3), np.nan)
     blur_med = float(np.median(list(blur.values()))) if blur else 0.0
     detected = 0
@@ -147,6 +167,7 @@ def analyze(
         lm = person["lm"]
         px[k] = np.stack([lm[:, 0] * W, lm[:, 1] * H], axis=1)
         ok[k] = [P.joint_ok(lm, j) for j in range(33)]
+        vis[k] = np.minimum(lm[:, 3], lm[:, 4])
         if person["world"] is not None:
             world[k] = person["world"]
 
@@ -174,7 +195,8 @@ def analyze(
             return {**base, "source": source, "status": "failed",
                     "error": {"code": "bad_input", "message": "The foot strike mark must come before contact."}}
     track = M.Track(t_ms=t_ms, src=np.array(analysed), px=smooth, ok=ok, world=world,
-                    contact=contact_k, handedness=handedness, view=camera_view, foot_strike=fs_k)
+                    contact=contact_k, handedness=handedness, view=camera_view, foot_strike=fs_k,
+                    time_scale=time_scale, vis=vis)
     mech = M.observe(track)
 
     out_frames = []
@@ -215,7 +237,22 @@ def analyze(
         warnings.append("Variable frame rate: frame times are taken from the file, not assumed from an average rate.")
     if step > 1:
         warnings.append(f"Very high frame rate: every {step}th frame was analysed.")
+    fi = source["frame_intervals"]
+    if not capture_fps and (fi.get("effective_fps") or 0) <= 61 and info.duration_s > 6:
+        warnings.append("Long clip at normal frame rate: if this is a slow-motion clip that was shared or exported, "
+                        "set the frame rate it was recorded at — otherwise timing-based events and the analysis window are wrong.")
 
+    # How well the model saw each joint that the mechanics use: over the whole
+    # window, and in the 50 ms (real time) either side of contact, where hands
+    # and the lead foot blur first.
+    near = [k for k in range(n) if abs(t_ms[k] - t_ms[contact_k]) * time_scale <= 50.0]
+    landmark_confidence = {}
+    for j, name in P.JOINT_NAMES.items():
+        landmark_confidence[name] = {
+            "median_visibility": _r(float(np.median(vis[:, j])), 3),
+            "usable_pct": _r(100.0 * float(ok[:, j].mean()), 1),
+            "usable_pct_near_contact": _r(100.0 * float(ok[near, j].mean()), 1) if near else None,
+        }
     timing["total_ms"] = round((time.time() - started) * 1000)
     timing["inference_ms_per_frame"] = round(t_infer * 1000 / max(1, n), 1)
     return {
@@ -234,12 +271,14 @@ def analyze(
             },
         },
         "source": source,
+        "time_model": time_model,
         "sampling": sampling,
         "frames": out_frames,
         "events": mech["events"],
         "observations": mech["observations"],
         "body_reference": mech["body_reference"],
-        "quality": {"pose_detected_frames": detected, "analysed_frames": n, "flags": flags_total, "warnings": warnings},
+        "quality": {"pose_detected_frames": detected, "analysed_frames": n, "flags": flags_total, "warnings": warnings,
+                    "landmark_confidence": landmark_confidence, "near_contact_frames": len(near)},
         "smoothing": "single-frame spike removal on measurement tracks only; gaps are never filled; stored/drawn landmarks are raw",
         "timing": timing,
     }
