@@ -65,6 +65,7 @@
     "test:memory-split": "npx --yes tsx --tsconfig tsconfig.json scripts/test-memory-split.ts",
     "test:agreed-plan": "npx --yes tsx --tsconfig tsconfig.json scripts/test-agreed-plan.ts",
     "test:chat-pending": "npx --yes tsx --tsconfig tsconfig.json scripts/test-chat-pending.ts",
+    "test:swing-poc": "npx --yes tsx --tsconfig tsconfig.json scripts/test-swing-poc.ts",
     "test:roster-archive": "npx --yes tsx --tsconfig tsconfig.json scripts/test-roster-archive.ts",
     "test:plan-edits": "npx --yes tsx --tsconfig tsconfig.json scripts/test-plan-edits.ts",
     "test:player-scope": "npx --yes tsx --tsconfig tsconfig.json scripts/test-player-scope.ts",
@@ -133,6 +134,7 @@
     "@anthropic-ai/sdk": "^0.116.0",
     "@supabase/ssr": "^0.1.0",
     "@supabase/supabase-js": "^2.39.0",
+    "@types/three": "^0.169.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "date-fns": "^3.3.1",
@@ -144,6 +146,7 @@
     "stripe": "^20.2.0",
     "tailwind-merge": "^2.2.1",
     "tailwindcss-animate": "^1.0.7",
+    "three": "^0.169.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {

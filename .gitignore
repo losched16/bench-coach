@@ -44,3 +44,6 @@ pilot/.tools/
 pilot/media/**/source.mp4
 pilot/media/**/frames/
 pilot/media/_adhoc/
+
+# Swing mechanics POC local captures (private, never commit)
+.swing-poc-data/

@@ -92,6 +92,8 @@ jobs:
       - run: npm run test:agreed-plan
       # A chat answer does not depend on the coach watching the screen.
       - run: npm run test:chat-pending
+      # Swing mechanics POC (flag-off by default): app rules, store and gates.
+      - run: npm run test:swing-poc
 
   browser:
     name: browser
