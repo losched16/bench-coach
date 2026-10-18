@@ -96,9 +96,12 @@ export class StrictSupabase {
   log: QueryLog[] = []
   /** Tables that answer with an error, as a database missing a migration would. */
   failing: Set<string>
+  /** Optional unique keys per table, enforced on insert like a real index. */
+  uniques: Record<string, string[][]>
 
-  constructor(tables: Tables, opts: { failing?: string[] } = {}) {
+  constructor(tables: Tables, opts: { failing?: string[]; uniques?: Record<string, string[][]> } = {}) {
     this.failing = new Set(opts.failing || [])
+    this.uniques = opts.uniques || {}
     // Deep-ish copy so a test cannot mutate its own seed by accident.
     this.tables = Object.fromEntries(
       Object.entries(tables).map(([k, v]) => [k, v.map(r => ({ ...r }))]))
@@ -261,6 +264,15 @@ class Builder implements PromiseLike<any> {
       const rows = (Array.isArray(this.payload) ? this.payload : [this.payload!]).map((r, i) => ({
         id: r.id ?? `${this.table}-${table.length + i + 1}`, ...r,
       }))
+      for (const key of this.db.uniques[this.table] || []) {
+        for (const r of rows) {
+          if (key.some(c => r[c] == null)) continue
+          if (table.some(t => key.every(c => String(t[c]) === String(r[c])))) {
+            entry.error = `duplicate key value violates unique constraint (${key.join(', ')})`
+            return { data: null, error: { message: entry.error, code: '23505' } }
+          }
+        }
+      }
       table.push(...rows)
       entry.rows = rows.length
       const data = this.sel !== null ? rows.map(r => this.project(r)) : null

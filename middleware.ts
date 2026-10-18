@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { safeRedirect } from '@/lib/safeRedirect'
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -80,10 +81,23 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Redirect logged-in users away from auth pages
+  // BenchCoach Academy: purchased courses. Signing in is the doorway; the
+  // course pages and APIs decide access from the enrollment, server-side.
+  // Deliberately NOT the /dashboard gate — a course buyer needs no team and
+  // no subscription.
+  if (request.nextUrl.pathname.startsWith('/learn')) {
+    if (!session) {
+      const back = request.nextUrl.pathname + request.nextUrl.search
+      return NextResponse.redirect(new URL(`/auth/login?redirect=${encodeURIComponent(back)}`, request.url))
+    }
+  }
+
+  // Redirect logged-in users away from auth pages — back to where they were
+  // going (a course, an invitation) when that is a same-site path.
   if (request.nextUrl.pathname.startsWith('/auth')) {
     if (session) {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+      const to = safeRedirect(request.nextUrl.searchParams.get('redirect'), '/dashboard')
+      return NextResponse.redirect(new URL(to, request.url))
     }
   }
 
@@ -101,5 +115,7 @@ export const config = {
     '/auth/:path*',
     '/onboarding/:path*',
     '/league-admin/:path*',
+    '/learn/:path*',
+    '/learn',
   ],
 }

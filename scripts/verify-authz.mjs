@@ -40,6 +40,11 @@ const EXEMPT = {
   // Writes nothing to our database — it logs the submission and forwards it to
   // the CRM — and every field is length-capped before it is used.
   'app/api/league-inquiry/route.ts':      'public league inquiry form — the sender has no account',
+  // Academy analytics, same shape as track/seo: anonymous visitors to the
+  // public Academy pages have no session. Takes the user (if any) from the
+  // session, never from the body; writes only an allowlisted event name, a
+  // validated course slug and lesson key. No identifier from the request.
+  'app/api/academy/track/route.ts':       'public Academy pages — the visitors it measures may have no session',
 }
 
 // The league guards live in lib/leagueAuthz.ts rather than lib/authz.ts, because
