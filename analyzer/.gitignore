@@ -1,0 +1,6 @@
+models/*.task
+.venv/
+__pycache__/
+fixtures/
+out/
+.cache/
