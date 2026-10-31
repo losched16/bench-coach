@@ -1,5 +1,6 @@
 'use client'
 
+import { useAcademyOn } from '@/components/academy/AcademyNavLink'
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
@@ -45,6 +46,8 @@ function DashboardContent({
   children: React.ReactNode
 }) {
   const [teams, setTeams] = useState<Team[]>([])
+  // The Academy entry shows only once the Academy is launched (or to its owner).
+  const academyOn = useAcademyOn()
   const [selectedTeamId, setSelectedTeamId] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [showNewMenu, setShowNewMenu] = useState(false)
@@ -377,6 +380,7 @@ function DashboardContent({
       ),
     }))
     .filter(g => g.items.length > 0)
+    .filter(g => g.label !== 'Learn' || academyOn)
 
   // Only for people who actually run a league. A coach whose league PAYS for
   // them is not an administrator and must not see this — useLeague starts

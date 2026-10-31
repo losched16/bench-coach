@@ -3,6 +3,7 @@ import { requireSession } from '@/lib/authz'
 import { getStripe, stripeUnavailable } from '@/lib/stripe'
 import { fulfillCheckoutSession } from '@/lib/academy/fulfillment'
 import { adminDb, currentUser } from '@/lib/academy/server'
+import { academyOff } from '@/lib/academy/flag'
 
 // After Stripe sends the buyer back. The return URL proves nothing, so this
 // ASKS Stripe (with our secret key) about the session, and only for the
@@ -12,6 +13,8 @@ import { adminDb, currentUser } from '@/lib/academy/server'
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
+  const off = academyOff()
+  if (off) return off
   const denied = await requireSession()
   if (denied) return denied
   const user = await currentUser()

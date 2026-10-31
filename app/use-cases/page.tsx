@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useState } from 'react'
+import AcademyNavLink from '@/components/academy/AcademyNavLink'
 
 export default function UseCasesPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -22,7 +23,7 @@ export default function UseCasesPage() {
               <a href="/#features" className="text-slate-300 hover:text-white font-medium transition-colors">Features</a>
               <a href="/#how-it-works" className="text-slate-300 hover:text-white font-medium transition-colors">How It Works</a>
               <Link href="/use-cases" className="text-slate-300 hover:text-white font-medium transition-colors">Use Cases</Link>
-              <Link href="/academy" className="text-slate-300 hover:text-white font-medium transition-colors">Academy</Link>
+              <AcademyNavLink className="text-slate-300 hover:text-white font-medium transition-colors" />
               <a href="/#pricing" className="text-slate-300 hover:text-white font-medium transition-colors">Pricing</a>
             </nav>
 
@@ -59,7 +60,7 @@ export default function UseCasesPage() {
                 <a href="/#features" className="text-slate-300 hover:text-white font-medium transition-colors">Features</a>
                 <a href="/#how-it-works" className="text-slate-300 hover:text-white font-medium transition-colors">How It Works</a>
                 <Link href="/use-cases" className="text-slate-300 hover:text-white font-medium transition-colors">Use Cases</Link>
-                <Link href="/academy" className="text-slate-300 hover:text-white font-medium transition-colors">Academy</Link>
+                <AcademyNavLink className="text-slate-300 hover:text-white font-medium transition-colors" />
                 <a href="/#pricing" className="text-slate-300 hover:text-white font-medium transition-colors">Pricing</a>
                 <div className="border-t border-slate-700 pt-4 mt-2 flex flex-col gap-3">
                   <Link href="/auth/login" className="text-slate-300 hover:text-white font-semibold transition-colors">Log In</Link>

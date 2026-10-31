@@ -4,6 +4,7 @@ import { getStripe, stripeUnavailable } from '@/lib/stripe'
 import { ACADEMY_KIND } from '@/lib/academy/fulfillment'
 import { appOrigin, courseAccess, currentUser, getCourse } from '@/lib/academy/server'
 import { isCourseSlug } from '@/lib/academy/catalog'
+import { academyOff } from '@/lib/academy/flag'
 
 // One-time course purchase. NOT the subscription checkout: mode 'payment',
 // its own metadata kind, and the buyer is whoever is signed in — never a
@@ -11,6 +12,8 @@ import { isCourseSlug } from '@/lib/academy/catalog'
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
+  const off = academyOff()
+  if (off) return off
   const denied = await requireSession()
   if (denied) return denied
   const user = await currentUser()

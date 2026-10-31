@@ -212,6 +212,23 @@ async function main() {
   check('public pages read lesson text only for the preview lesson', pub.filter(([, src]) => /getLessonBody/.test(src)).every(([f, src]) => /preview/.test(f) && /is_preview/.test(src)))
   check('no fabricated "approved" video status anywhere in code', !academySrc.some(([, src]) => /approval_status:\s*'approved'/.test(src)))
 
+  // ── the launch flag: default off, nothing exposed ─────────────────────────
+  const rd = (f: string) => readFileSync(f, 'utf8')
+  const flagSrc = rd('lib/academy/flag.ts')
+  check('the flag is on only for the exact value "1"', /process\.env\.ACADEMY_LAUNCH === '1'/.test(flagSrc))
+  for (const f of ['checkout', 'confirm', 'track']) {
+    const src = rd(`app/api/academy/${f}/route.ts`)
+    const head = src.slice(src.indexOf('export async function POST'), src.indexOf('export async function POST') + 220)
+    check(`POST /api/academy/${f} answers 404 before anything else when not launched`, /const off = academyOff\(\)/.test(head) && head.indexOf('academyOff') < (head.indexOf('requireSession') === -1 ? 1e9 : head.indexOf('requireSession')))
+  }
+  check('/academy 404s for visitors unless launched or the owner', /academyVisibleTo\(user\)\) notFound\(\)/.test(rd('app/academy/layout.tsx')))
+  check('/learn 404s unless launched, the owner, or an existing customer', /academyVisibleTo\(user\)[\s\S]*myCourses\(user\.id\)[\s\S]*notFound\(\)/.test(rd('app/learn/layout.tsx')))
+  check('the sitemap lists Academy pages only when launched', (rd('app/sitemap.ts').match(/academyLaunched\(\)/g) || []).length >= 2)
+  check('the Stripe webhook is NOT behind the flag (refunds must keep working)', !/academyOff|academyLaunched/.test(rd('app/api/stripe/webhook/route.ts')) && !/academyOff|academyLaunched/.test(rd('lib/academy/webhook.ts')))
+  const nav = ['app/page.tsx', 'app/use-cases/page.tsx'].map(rd).join('\n')
+  check('no marketing page links to /academy directly (links go through AcademyNavLink)', !/<Link href="\/academy"/.test(nav) && /AcademyNavLink/.test(nav))
+  check('the dashboard Academy entry is hidden until the Academy is on', /g\.label !== 'Learn' \|\| academyOn/.test(rd('app/dashboard/layout.tsx')))
+
   console.log('')
   if (failures) { console.log(`${failures} FAILED`); process.exit(1) }
   console.log('ALL PASS')

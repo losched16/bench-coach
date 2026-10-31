@@ -11,6 +11,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
+# MODE=on (default): the full flow with ACADEMY_LAUNCH=1.
+# MODE=off: the flag-off smoke, with ACADEMY_LAUNCH="true" (anything but exactly "1" is off).
+MODE="${MODE:-on}"
 PORT="${APP_PORT:-3200}"
 FIXTURE_PORT="${FIXTURE_PORT:-54322}"
 STRIPE_PORT="${FAKE_STRIPE_PORT:-12111}"
@@ -44,6 +47,7 @@ STRIPE_SECRET_KEY=sk_test_fixture \
 STRIPE_WEBHOOK_SECRET="$WEBHOOK_SECRET" \
 STRIPE_API_BASE="http://127.0.0.1:${STRIPE_PORT}" \
 ADMIN_EMAIL=owner@example.test \
+ACADEMY_LAUNCH="$([ "$MODE" = on ] && echo 1 || echo true)" \
   setsid npx next dev -p "$PORT" > .academy-content/e2e/next.log 2>&1 & pids+=($!)
 
 for _ in $(seq 1 90); do
@@ -53,5 +57,7 @@ done
 # Compile the Academy routes once before timing anything.
 for u in /academy /academy/build-a-better-baseball-swing /learn /api/academy/track; do curl -s -o /dev/null --max-time 120 "http://127.0.0.1:${PORT}$u" || true; done
 
+SCRIPT=scripts/academy/e2e.ts
+[ "$MODE" = off ] && SCRIPT=scripts/academy/smoke-off.ts
 APP_URL="http://127.0.0.1:${PORT}" FIXTURE_URL="http://127.0.0.1:${FIXTURE_PORT}" FAKE_STRIPE_URL="http://127.0.0.1:${STRIPE_PORT}" \
-  OUT=.academy-content/e2e npx --yes tsx --tsconfig tsconfig.json scripts/academy/e2e.ts
+  OUT=.academy-content/e2e npx --yes tsx --tsconfig tsconfig.json "$SCRIPT"

@@ -15,6 +15,7 @@ import { join, sep } from 'node:path'
 
 // Routes that authenticate by some other means, each with the reason.
 const EXEMPT = {
+  'app/api/academy/status/route.ts':      'public boolean: whether to show Academy links; reveals nothing else',
   'app/api/cron/checkin-digest/route.ts': 'CRON_SECRET header — no user session exists',
   'app/api/stripe/webhook/route.ts':      'Stripe signature verification',
   'app/api/stripe/checkout/route.ts':     'own session; creates a checkout for the caller',

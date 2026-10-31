@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, currentUser } from '@/lib/academy/server'
 import { isCourseSlug, isLessonKey } from '@/lib/academy/catalog'
+import { academyOff } from '@/lib/academy/flag'
 
 // Academy analytics (Part XII "track events"), into the existing user_events
 // table. The user is taken from the session — or recorded as nobody for an
@@ -14,6 +15,8 @@ const EVENTS = new Set([
 ])
 
 export async function POST(request: NextRequest) {
+  const off = academyOff()
+  if (off) return off
   const body = await request.json().catch(() => ({}))
   const { event, course, lesson } = body || {}
   if (!EVENTS.has(event) || (course != null && !isCourseSlug(course)) || (lesson != null && !isLessonKey(lesson))) {

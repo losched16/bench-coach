@@ -131,7 +131,8 @@
     "test:migration-080": "bash scripts/test-migration-080.sh",
     "academy:import": "npx --yes tsx --tsconfig tsconfig.json scripts/academy/import-course.ts",
     "test:academy": "npx --yes tsx --tsconfig tsconfig.json scripts/test-academy.ts",
-    "test:academy-e2e": "bash scripts/academy/run-e2e.sh"
+    "test:academy-e2e": "bash scripts/academy/run-e2e.sh",
+    "test:academy-flag-off": "MODE=off bash scripts/academy/run-e2e.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",
