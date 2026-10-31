@@ -23,7 +23,7 @@ Phone: portrait, one thumb, outdoors for steps 5 and 9 if you can.
 | 7 | owner | Log B: Braking 2, Reaction 2. Save | "Move to week 2" now shows **Advance**. Tap it: Week 2 of 4: Build |
 | 8 | owner | Log C with **Landing 2, Reaction 2** and tick **Pain**. Note "synthetic test" | The guidance box turns amber: do not add work. Every Advance says blocked until a pain-free session, no override offered |
 | 9 | owner | Change Space to **Indoor**. Look at Session A | Falling start shows "lean-and-catch ... two quick low steps (about 2 yards) ... 10 ft clear"; 10-yard shows the 2–3-yard takeoff and brake |
-| 10 | owner | Baseball: add a result > Type: only "Movement quality" is offered while indoors. Switch Space back to Open outdoor, add **Timed**, 10-yard sprint, **2.31**, grass, stopwatch, standing start, baseline | Saved under "10-yard sprint, Baseline" |
+| 10 | owner | Add a result. Type: only "Movement quality" is offered while indoors. Switch Space back to Open outdoor, add **Timed**, 10-yard sprint, **2.31**, grass, stopwatch, standing start, baseline | Saved under "10-yard sprint, Baseline" |
 | 11 | owner | Add a **Retest**, **2.20**, surface **turf** | "not compared. Different surface." and no number |
 | 12 | owner | Add another retest **2.22**, surface **grass** | "change -0.09 s" and no words like better or faster |
 | 13 | owner | Session A, wall drive, Adjust: sets 1, note "synthetic" | Marked "coach-adjusted"; reload keeps it; Foundation/Advanced untouched |
