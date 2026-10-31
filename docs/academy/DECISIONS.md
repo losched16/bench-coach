@@ -23,7 +23,7 @@ feature is built so it stays safely OFF until the decision is made.
 - Instructor review of all 19 lessons and drills (the manuscript requires it before publication).
 - Lessons **3.3** and **5.3** have no "Video to curate" brief.
 - **No video is approved.** The four candidates in the manuscript are not assigned to lessons or shown; each needs watching, segment approval and the nine-point checklist. Learners see "being reviewed by the instructor" until then.
-- Module 6 ends with a course-completion checkpoint instead of a field test; Lesson 6.4 has no separate "Ready to move on when". Both render as written — confirm intended.
+- Module 6 ends with a course-completion checkpoint instead of a field test; Lesson 6.4 has no separate "Ready to move on when". **Decision: retained as written for now.** A 6.4 field-test/"ready" draft exists in the private review-drafts folder and stays a draft.
 - Credibility block (bio, Cal Ripken World Series) is shown as written — confirm wording.
 - Sales page lists "Printable progress checklists": implemented as a printable page built from each lesson's own "Ready to move on when" text and the manuscript's three stages. Confirm this matches what you meant.
 - Module titles are shown in title case ("The Foundation") rather than the manuscript's capitals. Words unchanged.

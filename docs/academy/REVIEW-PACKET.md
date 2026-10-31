@@ -20,7 +20,7 @@ and to add no new technique:
 
 | Draft | Fills | Note |
 |---|---|---|
-| Field test and "ready" statement for lesson 6.4 | A gap | **It may not be a gap.** `DECISIONS.md` records that Module 6 deliberately ends in a course-completion checkpoint and 6.4 has no separate "Ready to move on". Decide whether to keep your design or take the draft. |
+| Field test and "ready" statement for lesson 6.4 | Optional addition | **Decision: the original Module 6 completion checkpoint is retained for now.** Nothing from this draft is in the course. It stays a DRAFT for later consideration only. |
 | Video brief, lesson 3.3 | Missing brief | Internal; never shown to learners |
 | Video brief, lesson 5.3 | Missing brief | Internal; never shown to learners |
 

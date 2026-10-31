@@ -4,9 +4,9 @@ Nothing in the course is approved today. This is the sheet the instructor works 
 lesson by lesson. A lesson or video counts as approved only when its row is complete **and
 signed**. Until then learners see the written lesson only.
 
-Three items are review **drafts** written by the assistant to fill gaps (they are in the
-private, git-ignored folder `.academy-content/review-drafts/`, not in the database): the field
-test and "ready" statement for 6.4, and the video briefs for 3.3 and 5.3. They need the same
+Three items are review **drafts** written by the assistant (they are in the
+private, git-ignored folder `.academy-content/review-drafts/`, not in the database): an optional field
+test and "ready" statement for 6.4 (the original completion checkpoint is retained), and the video briefs for 3.3 and 5.3. They need the same
 review as everything else, and a stricter one, because the author did not write them.
 
 ## A. Lessons (19)
@@ -39,8 +39,8 @@ Also: ☐ intro pages (welcome, how to use, starting assessment) read and approv
 ☐ resources (four-week program, session card, troubleshooting) read and approved ·
 ☐ the course safety notice is correct and complete · ☐ the free preview lesson (1.1) is one you are happy to give away.
 
-**Open content gaps (drafts supplied, not approved):**
-☐ 6.4 field test and "ready" statement (draft) accepted / edited / rejected ·
+**Drafts (not approved, not in the course):**
+6.4: **the original Module 6 completion checkpoint is retained** (decision); the 6.4 field-test/"ready" draft is optional and only for later consideration ·
 ☐ 3.3 video brief (draft) accepted / edited / rejected · ☐ 5.3 video brief (draft) accepted / edited / rejected.
 
 ## B. Videos (0 of 19 approved)
