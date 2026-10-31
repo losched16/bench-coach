@@ -7,7 +7,7 @@ grant nothing. Each row says where it is tested.
 | Situation | Result | Tested by |
 |---|---|---|
 | A paid Checkout completes | Buyer is enrolled, payment recorded | unit: "a paid course checkout enrolls the buyer", "...and records how it was paid" |
-| The buyer comes back from Stripe before the webhook | The server asks Stripe about the session; the return link alone grants nothing | unit: "an unpaid session grants nothing"; browser e2e (purchase flow) |
+| The buyer comes back from Stripe before the webhook | The server asks Stripe about the session; the return link alone grants nothing | unit: "an unpaid session grants nothing"; browser e2e: "a made-up return URL grants nothing" |
 | Unpaid or unfinished session | Nothing | unit: "an unpaid session grants nothing" |
 | Different price, currency, buyer, unknown buyer, unknown course | Nothing, and no row left behind | unit: "a different price grants nothing" and the five checks after it, "no rejected attempt left a row behind" |
 | Same webhook delivered twice | One enrollment | unit: "the same session again is a no-op", "two simultaneous deliveries of one payment enroll once", "webhook: the same event replayed is skipped" |
@@ -24,7 +24,7 @@ grant nothing. Each row says where it is tested.
 | A team role (owner, admin, contributor, viewer) | No course access unless they bought it | design: access reads enrollments only; Postgres policy test |
 | Signed-out visitor | Sales page and the free preview lesson only; paid text unreachable | Postgres policy test (`test:migration-080`), browser e2e ("sales page carries no paid lesson text") |
 | Another signed-in user | Cannot read someone else's enrollment, progress or lessons | Postgres policy test, browser e2e (unauthorized access) |
-| Owner grants or revokes by hand | Recorded with who did it | Postgres policy test; browser e2e |
+| Owner grants or revokes by hand | Recorded with who did it | browser e2e: "the owner can revoke an enrollment", "the owner can grant (comp) access"; Postgres policy test: no client can write enrollments |
 | Launch flag off | Checkout, confirm and tracking answer 404 for everyone; existing customers keep access; the owner can preview pages | `test:academy-flag-off` (19 checks) |
 | Unapproved video | Never shown to customers | unit: "no fabricated approved video status anywhere in code"; browser e2e (candidate and broken links hidden) |
 | **Chargeback / dispute** | **Nothing happens automatically today** | **Not covered.** See `CHARGEBACK-PROPOSAL.md` |
