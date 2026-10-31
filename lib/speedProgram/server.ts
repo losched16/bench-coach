@@ -26,8 +26,10 @@ export function notEnabled(): NextResponse | null {
   return speedProgramEnabled() ? null : NextResponse.json({ error: 'Not found' }, { status: 404 })
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-export const isUuid = (x: unknown): x is string => typeof x === 'string' && UUID.test(x)
+// A shape check only, to keep junk out of the query. Postgres is the judge of
+// what is a real id: a value it rejects (22P02) is answered as "not found".
+const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/
+export const isUuid = (x: unknown): x is string => typeof x === 'string' && SAFE_ID.test(x)
 
 export interface AssignmentRow {
   id: string
@@ -60,15 +62,20 @@ export const toCore = (a: AssignmentRow): AssignmentCore => ({
 export async function authorizeProgram(id: string, capability: Capability) {
   if (!isUuid(id)) return { error: NextResponse.json({ error: 'Not found' }, { status: 404 }) } as const
   const { data, error } = await db.from('speed_program_assignments').select('*').eq('id', id).maybeSingle()
+  if (error && (error as any).code === '22P02') return { error: NextResponse.json({ error: 'Not found' }, { status: 404 }) } as const
   if (error) throw error
   if (!data) return { error: NextResponse.json({ error: 'Not found' }, { status: 404 }) } as const
+  const teamId = (data as any).team_id as string
   try {
-    const actor = await authorizeTeam((data as any).team_id, capability)
+    const actor = await authorizeTeam(teamId, capability)
     return { actor, assignment: data as unknown as AssignmentRow } as const
   } catch (e) {
     const a = authzResponse(e)
-    // A caller with no access to the team learns nothing: 404, not 403.
-    if (a && (a.status === 403 || a.status === 404)) return { error: NextResponse.json({ error: 'Not found' }, { status: 404 }) } as const
+    if (a && (a.status === 403 || a.status === 404)) {
+      // A team member who may read it but not do this gets a plain 403. Someone
+      // who cannot even read it learns nothing: 404, the same as a missing id.
+      try { await authorizeTeam(teamId, 'read') } catch { return { error: NextResponse.json({ error: 'Not found' }, { status: 404 }) } as const }
+    }
     throw e
   }
 }

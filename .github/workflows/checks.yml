@@ -92,6 +92,10 @@ jobs:
       - run: npm run test:agreed-plan
       # A chat answer does not depend on the coach watching the screen.
       - run: npm run test:chat-pending
+      # Speed, Agility & Explosiveness program: the template against its source
+      # numbers, the safety rules, and the data rules in a real Postgres.
+      - run: npm run test:speed-program
+      - run: npm run test:migration-081
 
   browser:
     name: browser
@@ -108,6 +112,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: npm run test:browser
         run: npm run test:browser
+      - name: npm run test:speed-program-e2e
+        run: npm run test:speed-program-e2e
       - name: keep the screenshots
         if: always()
         uses: actions/upload-artifact@v4

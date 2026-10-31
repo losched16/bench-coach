@@ -44,3 +44,4 @@ pilot/.tools/
 pilot/media/**/source.mp4
 pilot/media/**/frames/
 pilot/media/_adhoc/
+.speed-program-e2e/

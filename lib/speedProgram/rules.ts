@@ -432,8 +432,11 @@ export function validateSessionInput(raw: unknown, core: AssignmentCore, plan: R
 
 // ── guidance and the safe-advancement gate ──────────────────────────────────
 
+// Oldest first. Ties return 0, so the (stable) sort keeps the order the database
+// returned them in rather than flipping on equal timestamps.
+const cmp = (x: string, y: string) => (x < y ? -1 : x > y ? 1 : 0)
 const byTime = (a: SessionRecord, b: SessionRecord) =>
-  (a.occurred_on === b.occurred_on ? (a.created_at ?? '') < (b.created_at ?? '') : a.occurred_on < b.occurred_on) ? -1 : 1
+  cmp(a.occurred_on, b.occurred_on) || cmp(a.created_at ?? '', b.created_at ?? '')
 
 export function logged(sessions: SessionRecord[]): SessionRecord[] {
   return sessions.slice().sort(byTime)

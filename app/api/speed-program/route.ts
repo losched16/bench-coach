@@ -45,6 +45,8 @@ export async function POST(request: NextRequest) {
     const { data, error } = await db.from('speed_program_assignments').insert({
       player_id: body.playerId, team_id: body.teamId, template_key: TEMPLATE_KEY, template_version: TEMPLATE_VERSION,
       level, space: intake.space, days_per_week: daysPerWeek, intake, plan: buildPlan(), created_by: who.userId,
+      // Explicit, so a program never depends on column defaults to start at the beginning.
+      current_week: 1, status: 'active', unlocks: [],
     }).select('id').single()
     if (error) {
       if ((error as any).code === '23505') return NextResponse.json({ error: 'This player already has a speed program running.' }, { status: 409 })

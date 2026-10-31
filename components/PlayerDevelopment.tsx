@@ -10,6 +10,7 @@ import { describeDuration, daysSince } from '@/lib/playerPathways'
 import { ModuleHelp } from '@/components/help/ModuleHelp'
 import { ProgramChoiceNote } from '@/components/ProgramChoiceNote'
 import { developmentBlurb } from '@/lib/programChoice'
+import { SpeedProgramCard } from '@/components/speed-program/SpeedProgramCard'
 
 // The Development section of a player profile.
 //
@@ -148,6 +149,7 @@ export function PlayerDevelopment({ playerId, teamId, playerName, canDecide }: P
 
   return (
     <div className="space-y-6">
+      <SpeedProgramCard playerId={playerId} teamId={teamId} />
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-3 text-sm">
           {error}

@@ -169,6 +169,11 @@ async function main() {
   check('good control still does not say "progress now"', !/advance now|move up now/i.test(guidance([sess()]).message) && /two sessions in a row/.test(guidance([sess()]).message))
   check('a skipped session is neutral, not a failure', guidance([sess({ status: 'skipped', braking: null, reaction: null })]).state === 'continue' && !/fail/i.test(guidance([sess({ status: 'skipped', braking: null, reaction: null })]).message))
 
+  // equal timestamps keep the order they came in (no flipping)
+  const t1 = sess({ session_key: 'A', braking: 0, created_at: '2026-10-05T00:00:00Z', occurred_on: '2026-10-05' })
+  const t2 = sess({ session_key: 'B', braking: 2, created_at: '2026-10-05T00:00:00Z', occurred_on: '2026-10-05' })
+  check('sessions with identical timestamps keep their stored order', guidance([t1, t2]).state === 'continue' && guidance([t2, t1]).state === 'reduce')
+
   // ── the two-session gate ──────────────────────────────────────────────────
   n = 0
   const good1 = sess({ session_key: 'B', braking: 2, reaction: 2 })
