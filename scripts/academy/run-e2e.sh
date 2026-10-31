@@ -14,9 +14,11 @@ cd "$(dirname "$0")/../.."
 # MODE=on (default): the full flow with ACADEMY_LAUNCH=1.
 # MODE=off: the flag-off smoke, with ACADEMY_LAUNCH="true" (anything but exactly "1" is off).
 MODE="${MODE:-on}"
-PORT="${APP_PORT:-3200}"
-FIXTURE_PORT="${FIXTURE_PORT:-54322}"
-STRIPE_PORT="${FAKE_STRIPE_PORT:-12111}"
+# The flag-off run uses its own ports, so it never races the previous run's server for a port in CI.
+if [ "$MODE" = on ]; then D_APP=3200; D_FIX=54322; D_STRIPE=12111; else D_APP=3201; D_FIX=54326; D_STRIPE=12112; fi
+PORT="${APP_PORT:-$D_APP}"
+FIXTURE_PORT="${FIXTURE_PORT:-$D_FIX}"
+STRIPE_PORT="${FAKE_STRIPE_PORT:-$D_STRIPE}"
 export FIXTURE_PORT FAKE_STRIPE_PORT="$STRIPE_PORT"
 WEBHOOK_SECRET="whsec_test_$(head -c 12 /dev/urandom | od -An -tx1 | tr -d ' \n')"
 

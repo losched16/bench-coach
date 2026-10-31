@@ -115,6 +115,8 @@ jobs:
       # (synthetic course text — the real course is not in the repository).
       - name: npm run test:academy-e2e
         run: npm run test:academy-e2e
+      - name: npm run test:academy-flag-off
+        run: npm run test:academy-flag-off
       - name: keep the screenshots
         if: always()
         uses: actions/upload-artifact@v4
