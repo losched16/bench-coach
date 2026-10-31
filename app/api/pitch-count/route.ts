@@ -235,7 +235,8 @@ export async function POST(request: NextRequest) {
 //
 // delta is the hot path: one tap, one row update. It reads the current value
 // server-side rather than trusting a number from a phone that may have been
-// asleep, so two devices counting the same kid can't clobber each other.
+// asleep, and writes conditionally on that value (retrying if another tap won),
+// so two devices, or two fast taps, counting the same kid can't clobber each other.
 // ---------------------------------------------------------------------------
 export async function PATCH(request: NextRequest) {
   const denied = await guard(request, 'record')
@@ -273,14 +274,29 @@ export async function PATCH(request: NextRequest) {
     // The appearance row is updated rather than duplicated on re-finish.
     if (reopen) update.finished_at = null
 
-    const { data: updated, error } = await supabaseAdmin
-      .from('pitch_count_sessions')
-      .update(update)
-      .eq('id', sessionId)
-      .select('*')
-      .single()
+    // A tap is read-then-write. Two taps in flight (a thumb is faster than a
+    // phone's network) both read the same count and both wrote count+1, so one
+    // pitch vanished. The write is therefore conditional on the count it was
+    // computed from; if another tap got there first, re-read and try again. A
+    // pitch count undercounts a young arm's workload if it drops a tap.
+    let updated: any = null
+    let error: any = null
+    let base = s.pitches as number | null
+    for (let attempt = 0; attempt < 12; attempt++) {
+      let q = supabaseAdmin.from('pitch_count_sessions').update(update).eq('id', sessionId)
+      if (typeof delta === 'number') q = base === null || base === undefined ? q.is('pitches', null) : q.eq('pitches', base)
+      const r = await q.select('*').maybeSingle()
+      if (r.error) { error = r.error; break }
+      if (r.data) { updated = r.data; break }
+      if (typeof delta !== 'number') break          // nothing to retry: the row is gone
+      const { data: again } = await supabaseAdmin.from('pitch_count_sessions').select('pitches').eq('id', sessionId).maybeSingle()
+      if (!again) break
+      base = (again as any).pitches
+      update.pitches = Math.max(0, (base || 0) + delta)
+    }
 
     if (error) throw error
+    if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     const u = updated as any
 
     // A counter that was reopened and finished again already has an appearance.
