@@ -132,7 +132,8 @@ https Instagram and YouTube. No video has been manually reviewed.
   and Advanced, with approve boxes. Generated from the template (a test fails if it drifts).
 - `DRILL-DRAFTS.md` - the two missing drills, as drafts.
 - `INDOOR-FALLING-START.md` - the indoor falling-start substitute and why.
-- `MOBILE-QA.md` - the real-device checklist.
+- `COACH-SIGN-OFF.md` - the single packet a coach signs (generated from the template).
+- `MOBILE-QA.md` - the real-device checklist; `MOBILE-WALKTHROUGH.md` - the synthetic-data script.
 - `RELEASE-READINESS.md` - test evidence, the inherited pitch-counter failures, blockers.
 - `scripts/speed-program/verify-prod-readonly.sql` - read-only checks to run in the Supabase SQL editor before and after applying 081.
 

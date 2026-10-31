@@ -269,6 +269,9 @@ async function main() {
   try { require('child_process').execSync('npx --yes tsx --tsconfig tsconfig.json scripts/speed-program/gen-review.ts --check', { stdio: 'pipe' }); check('COACH-REVIEW.md matches what the template prescribes', true) }
   catch (e: any) { check('COACH-REVIEW.md matches what the template prescribes', false, String(e.stderr || e.message).slice(0, 120)) }
 
+  try { require('child_process').execSync('npx --yes tsx --tsconfig tsconfig.json scripts/speed-program/gen-signoff.ts --check', { stdio: 'pipe' }); check('COACH-SIGN-OFF.md matches what the template prescribes', true) }
+  catch (e: any) { check('COACH-SIGN-OFF.md matches what the template prescribes', false, String(e.stderr || e.message).slice(0, 120)) }
+
   // ── the two draft drills are not in the verified drill library ────────────
   const drillText = readFileSync('scripts/fixtures/speed-agility.ts', 'utf8') + readdirSync('migrations').filter(f => f.endsWith('.sql') && !f.startsWith('081_')).map(f => readFileSync(path.join('migrations', f), 'utf8')).join('\n')
   check('neither draft drill exists in the drill fixtures or any earlier migration', !/Skater Step and Stick/i.test(drillText) && !/Round the Cones/i.test(drillText))
