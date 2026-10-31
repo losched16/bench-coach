@@ -316,6 +316,19 @@ END $$;
 -- ---------------------------------------------------------------------------
 -- 8. Grants: nothing to anon
 -- ---------------------------------------------------------------------------
+-- Supabase grants ALL on every new public table to anon, authenticated and
+-- service_role by default. Start from nothing and grant only what is needed,
+-- so the grants themselves say the tables are append-only and not for anon.
+DO $$
+DECLARE t TEXT;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['speed_program_assignments', 'speed_program_sessions', 'speed_program_assessments', 'speed_program_events', 'speed_program_exercise_drills'] LOOP
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN EXECUTE format('REVOKE ALL ON public.%I FROM anon', t); END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN EXECUTE format('REVOKE ALL ON public.%I FROM authenticated', t); END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN EXECUTE format('REVOKE ALL ON public.%I FROM service_role', t); END IF;
+  END LOOP;
+END $$;
+
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN

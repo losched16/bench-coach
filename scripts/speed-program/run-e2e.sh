@@ -9,6 +9,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
+# MODE=on (default) runs the full flow with SPEED_PROGRAM=1.
+# MODE=off runs the flag-off smoke: SPEED_PROGRAM is set to "true" (anything but
+# exactly "1" must leave the feature off) and every surface must not exist.
+MODE="${MODE:-on}"
 PORT="${APP_PORT:-3300}"
 FIXTURE_PORT="${FIXTURE_PORT:-54323}"
 export FIXTURE_PORT
@@ -34,7 +38,7 @@ NEXT_PUBLIC_SUPABASE_URL="http://127.0.0.1:${FIXTURE_PORT}" \
 NEXT_PUBLIC_SUPABASE_ANON_KEY=fixture-anon-key \
 SUPABASE_SERVICE_ROLE_KEY=fixture-service-key \
 NEXT_PUBLIC_APP_URL="http://127.0.0.1:${PORT}" \
-SPEED_PROGRAM=1 \
+SPEED_PROGRAM="$([ "$MODE" = on ] && echo 1 || echo true)" \
   setsid npx next dev -p "$PORT" > .speed-program-e2e/next.log 2>&1 & pids+=($!)
 
 for _ in $(seq 1 90); do
@@ -43,5 +47,7 @@ for _ in $(seq 1 90); do
 done
 for u in /api/speed-program "/dashboard/roster/x/speed-program"; do curl -s -o /dev/null --max-time 120 "http://127.0.0.1:${PORT}$u" || true; done
 
+SCRIPT=scripts/speed-program/e2e.ts
+[ "$MODE" = off ] && SCRIPT=scripts/speed-program/smoke-off.ts
 APP_URL="http://127.0.0.1:${PORT}" FIXTURE_URL="http://127.0.0.1:${FIXTURE_PORT}" OUT=.speed-program-e2e \
-  npx --yes tsx --tsconfig tsconfig.json scripts/speed-program/e2e.ts
+  npx --yes tsx --tsconfig tsconfig.json "$SCRIPT"

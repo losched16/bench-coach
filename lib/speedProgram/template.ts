@@ -254,7 +254,10 @@ export { COOLDOWN as COOLDOWN_TEXT }
 // does not say what to do indoors there, and a 20×15 ft space leaves almost no
 // run-out for a 5-yard start. Flagged as an assumption in docs/speed-program.
 const INDOOR_ACCEL = 'Indoors: 3 reps of a controlled 2–3-yard takeoff and brake. Not a full sprint.'
-const INDOOR_FALLING = 'Indoors: the same number of reps as a controlled 2–3-yard takeoff and brake. Not a full 5-yard start.'
+// PENDING COACH APPROVAL (docs/speed-program/INDOOR-FALLING-START.md). The source gives an indoor
+// substitute for the 10-yard acceleration only. A 5-yard falling start needs the whole 15 ft side,
+// leaving no stopping room, so indoors it becomes a two-step lean-and-catch with a clear run-out.
+const INDOOR_FALLING = 'Indoors: lean-and-catch. Lean forward from a standing stance, take two quick low steps (about 2 yards) and land balanced on two feet. Use the 20 ft length and keep 10 ft clear past the stop line. Grippy footwear, dry non-slip floor. If the floor is slick or the space is tight, skip it and add one wall-drive set instead.'
 
 const DEVELOPMENT_SESSIONS: Record<SessionKey, SessionDef> = {
   A: {

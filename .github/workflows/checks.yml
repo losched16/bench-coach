@@ -96,6 +96,8 @@ jobs:
       # numbers, the safety rules, and the data rules in a real Postgres.
       - run: npm run test:speed-program
       - run: npm run test:migration-081
+      # The same rules against the real production schema export and Supabase's default grants.
+      - run: npm run test:migration-081-baseline
 
   browser:
     name: browser
@@ -114,6 +116,8 @@ jobs:
         run: npm run test:browser
       - name: npm run test:speed-program-e2e
         run: npm run test:speed-program-e2e
+      - name: npm run test:speed-program-flag-off
+        run: npm run test:speed-program-flag-off
       - name: keep the screenshots
         if: always()
         uses: actions/upload-artifact@v4

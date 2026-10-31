@@ -47,6 +47,8 @@ async function main() {
   check('Day A: falling start 4 reps, 45–60 sec', row('A', 'falling_start').reps === 4 && row('A', 'falling_start').rest!.join() === '45,60')
   check('Day A: 10-yard acceleration 3 reps, 60–90 sec, indoor substitute is the spec text',
     row('A', 'accel_10').reps === 3 && row('A', 'accel_10').rest!.join() === '60,90' && /2–3-yard takeoff and brake/.test(row('A', 'accel_10').indoorSubstitute!))
+  check('Day A: the indoor falling start is a two-step lean-and-catch with a clear run-out, not a 5-yard start',
+    /lean-and-catch/.test(row('A', 'falling_start').indoorSubstitute!) && /two quick low steps/.test(row('A', 'falling_start').indoorSubstitute!) && /10 ft clear/.test(row('A', 'falling_start').indoorSubstitute!) && !/5-yard/.test(row('A', 'falling_start').indoorSubstitute!))
   check('Day A: cone reaction chase 4 reps, 45–60 sec', row('A', 'cone_reaction_chase').reps === 4 && row('A', 'cone_reaction_chase').rest!.join() === '45,60')
   check('Day B: shuffle 2 × 2 trips per side 30 sec; plant 3 each direction; half-circle 2 each; 4 field rounds',
     row('B', 'shuffle_stop').sets === 2 && row('B', 'shuffle_stop').reps === 2 && row('B', 'shuffle_plant_accel').reps === 3 &&
