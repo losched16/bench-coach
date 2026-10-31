@@ -265,6 +265,15 @@ async function main() {
   check('the migration maps every exercise in the template, and no other', rows.length === EXERCISES.length && EXERCISES.every(e => rows.some(r => r[1] === e.key)))
   check('...with the same drill name and match for each', EXERCISES.every(e => { const r = rows.find(x => x[1] === e.key)!; return unq(r[2]) === e.drillMap.name && r[3] === e.drillMap.match }))
 
+  // ── the coach-review document is generated from the template ──────────────
+  try { require('child_process').execSync('npx --yes tsx --tsconfig tsconfig.json scripts/speed-program/gen-review.ts --check', { stdio: 'pipe' }); check('COACH-REVIEW.md matches what the template prescribes', true) }
+  catch (e: any) { check('COACH-REVIEW.md matches what the template prescribes', false, String(e.stderr || e.message).slice(0, 120)) }
+
+  // ── the two draft drills are not in the verified drill library ────────────
+  const drillText = readFileSync('scripts/fixtures/speed-agility.ts', 'utf8') + readdirSync('migrations').filter(f => f.endsWith('.sql') && !f.startsWith('081_')).map(f => readFileSync(path.join('migrations', f), 'utf8')).join('\n')
+  check('neither draft drill exists in the drill fixtures or any earlier migration', !/Skater Step and Stick/i.test(drillText) && !/Round the Cones/i.test(drillText))
+  check('...and the draft write-ups say they are drafts, with no video', /DRAFT\. Not in the drill library/.test(readFileSync('docs/speed-program/DRILL-DRAFTS.md', 'utf8')) && !/https?:\/\//.test(readFileSync('docs/speed-program/DRILL-DRAFTS.md', 'utf8')))
+
   // ── routes: static rules ──────────────────────────────────────────────────
   const root = 'app/api/speed-program'
   const files: string[] = []

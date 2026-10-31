@@ -111,23 +111,11 @@ exercise)" for partial matches.
 | Infield react and throw | Three-Ball Slow Roller Drill | partial |
 | Broad jump into acceleration | Broad Jump — Jump and Stick It | partial |
 
-### Two gaps, drafts for review
+### Two gaps
 
-No library drill is created by this change. These are drafts for a coach to
-review before anything is added to the drill library, written fresh (not copied
-from any video):
-
-**Half-Circle Cut — Round the Cones** (gap; closest is the 45-degree cut).
-Three cones in a shallow arc, about three yards apart. The athlete shuffles or
-jogs around the arc, plants the outside foot at each cone and drives off it,
-keeping hips low and chest up. Cue: "plant, push, up." Watch for: planting the
-inside foot, crossing the feet, standing tall through the plant. Regress: walk the
-arc. Progress: add a ball roll at the last cone. Two each direction.
-
-**Skater Step and Stick** (gap). Step laterally, land on the outside foot, and
-hold the landing for two seconds with the knee over the toe and a soft, quiet
-sound. No hop until controlled landings are observed in two sessions (the
-`skater_hop` unlock). Two sets of three each side. Stop for any knee pain.
+No library drill is created by this change. Draft write-ups for the skater step
+and the half-circle cut are in `DRILL-DRAFTS.md`, marked as drafts, with no video,
+for a coach to review before anything is added to the library.
 
 ## Video references
 
@@ -138,6 +126,16 @@ BenchCoach content. A coach can remove or replace a reference per player (the
 replacement is credited and also unreviewed). Reference links are limited to
 https Instagram and YouTube. No video has been manually reviewed.
 
+## Review documents
+
+- `COACH-REVIEW.md` - every dose, progression and safety assumption for Foundation
+  and Advanced, with approve boxes. Generated from the template (a test fails if it drifts).
+- `DRILL-DRAFTS.md` - the two missing drills, as drafts.
+- `INDOOR-FALLING-START.md` - the indoor falling-start substitute and why.
+- `MOBILE-QA.md` - the real-device checklist.
+- `RELEASE-READINESS.md` - test evidence, the inherited pitch-counter failures, blockers.
+- `scripts/speed-program/verify-prod-readonly.sql` - read-only checks to run in the Supabase SQL editor before and after applying 081.
+
 ## Decisions to review
 
 1. **Foundation and Advanced are drafts.** The source specifies Development
@@ -145,8 +143,9 @@ https Instagram and YouTube. No video has been manually reviewed.
    two sessions a week) and Advanced (4-6 quality reps, rest as a floor the coach
    sets) are conservative adaptations, labelled "draft" in the app. Review them.
 2. **Indoor falling start.** The source gives an indoor substitute for the
-   10-yard acceleration only. The falling start uses a similar short controlled
-   substitute; this is an assumption.
+   10-yard acceleration only. The falling start now uses a two-step lean-and-catch
+   with a clear run-out (`INDOOR-FALLING-START.md`); the numbers are mine and
+   pending approval.
 3. **Assessments are stored in their own table, not `player_metrics`.** Migration
    073 says no new measurement table is needed, but `player_metrics` has nowhere
    to store the conditions that make two times comparable. The same metric slugs
