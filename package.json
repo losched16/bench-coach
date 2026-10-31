@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "verify:claude": "node scripts/verify-claude-calls.mjs",
+    "test:speed-program": "npx --yes tsx --tsconfig tsconfig.json scripts/test-speed-program.ts",
+    "test:migration-081": "bash scripts/test-migration-081.sh",
     "test:scorebook": "npx --yes tsx --tsconfig tsconfig.json scripts/test-scorebook.ts",
     "verify:authz": "node scripts/verify-authz.mjs",
     "test:progression": "npx --yes tsx --tsconfig tsconfig.json scripts/test-progression.ts",
