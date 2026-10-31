@@ -13,8 +13,10 @@ cd "$(dirname "$0")/../.."
 # MODE=off runs the flag-off smoke: SPEED_PROGRAM is set to "true" (anything but
 # exactly "1" must leave the feature off) and every surface must not exist.
 MODE="${MODE:-on}"
-PORT="${APP_PORT:-3300}"
-FIXTURE_PORT="${FIXTURE_PORT:-54323}"
+# The flag-off run uses its own ports, so it never races the previous run's server for a port in CI.
+if [ "$MODE" = on ]; then D_APP=3300; D_FIX=54323; else D_APP=3301; D_FIX=54324; fi
+PORT="${APP_PORT:-$D_APP}"
+FIXTURE_PORT="${FIXTURE_PORT:-$D_FIX}"
 export FIXTURE_PORT
 
 if [ -z "${CHROMIUM_PATH:-}" ]; then
