@@ -395,10 +395,10 @@ function AdvancePanel({ s, canDecide, act, base }: Json) {
       {!canDecide ? <p className="text-sm text-gray-600 mt-2">Only a head coach or admin can advance a player.</p> : (
         <ul className="divide-y mt-2">
           {p.currentWeek < 4 && <AdvanceRow title={`Move to week ${p.currentWeek + 1}`} detail="Two completed sessions since the last advance, with no pain and no poor control." el={s.eligibility.week} body={{ kind: 'week' }} act={act} base={base} />}
-          {s.eligibility.nextLevel && <AdvanceRow title={`Move up to ${LEVEL_DEFS[s.eligibility.nextLevel as 'advanced'].label}`} detail="Needs landing, braking and reaction all observed and controlled." el={s.eligibility.level} body={{ kind: 'level' }} act={act} base={base} />}
+          {s.eligibility.nextLevel && <AdvanceRow title={`Move up to ${LEVEL_DEFS[s.eligibility.nextLevel as 'advanced'].label}`} detail="Needs landing, braking and reaction all observed and controlled." el={s.eligibility.level} body={{ kind: 'level' }} act={act} base={base} disabledReason={p.currentWeek < 3 ? 'From Week 3' : null} />}
           {s.progressions.filter((x: Json) => !x.unlocked).map((x: Json) => (
             <AdvanceRow key={x.key} title={`Unlock: ${x.label}`} detail={x.description} el={x.eligibility} body={{ kind: 'unlock', key: x.key }} act={act} base={base}
-              disabledReason={x.outdoorOnly && p.space !== 'outdoor_open' ? 'Needs open outdoor space' : x.key === 'single_leg_hops' && p.level !== 'advanced' ? 'Advanced level only' : x.key === 'broad_jump_to_sprint' && p.currentWeek < 3 ? 'From week 3' : x.key === 'reactive_partner_cues' && p.currentWeek < 2 ? 'From week 2' : null} />
+              disabledReason={p.level === 'foundation' && (x.key === 'skater_hop' || x.key === 'broad_jump_to_sprint') ? 'Move to Development first' : x.outdoorOnly && p.space !== 'outdoor_open' ? 'Needs open outdoor space' : x.key === 'single_leg_hops' && p.level !== 'advanced' ? 'Advanced level only' : x.key === 'broad_jump_to_sprint' && p.currentWeek < 3 ? 'From week 3' : x.key === 'reactive_partner_cues' && p.currentWeek < 2 ? 'From week 2' : null} />
           ))}
         </ul>
       )}

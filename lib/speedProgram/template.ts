@@ -223,7 +223,9 @@ export const EXERCISES: ExerciseDef[] = [
     commonError: 'Hopping before the single-leg landing is steady.',
     observe: ['landing', 'braking'],
     drillMap: { name: null, match: 'none', note: 'No library drill covers a lateral single-leg landing. A draft is in docs/speed-program for review.' },
-    references: [R('Athletic Growth Lab', 'Skater hop over a low hurdle into single-leg plate hops', 'https://www.instagram.com/reel/DaFbUDfn7cW/')],
+    // No reference. The one previously attached showed hurdle hops into single-leg hops, which is the
+    // opposite of a step-and-stick with no hop. Removed (docs/speed-program/REFERENCE-REVIEW.md).
+    references: [],
   },
   {
     key: 'infield_react_throw', name: 'Infield reaction and throw (controlled pace)',
@@ -231,7 +233,9 @@ export const EXERCISES: ExerciseDef[] = [
     commonError: 'Planting and stopping before the throw.',
     observe: ['reaction', 'braking'],
     drillMap: { name: 'Three-Ball Slow Roller Drill', match: 'partial', note: 'Charging under control and throwing on the move; the library drill is the closest match.' },
-    references: [R('Tyler Made Double Play', 'Infield footwork: right-left through the play', 'https://www.instagram.com/reel/DeX1L96OVhJ/')],
+    // No reference. The one previously attached is about double-play footwork, not a controlled
+    // reaction and throw. Removed (docs/speed-program/REFERENCE-REVIEW.md).
+    references: [],
   },
   {
     key: 'broad_to_accel', name: 'Broad jump into 5-yard acceleration',

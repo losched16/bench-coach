@@ -21,6 +21,7 @@ creators and shown in the app as "not yet reviewed". They are references, not Be
 | Falling start, indoor (lean-and-catch, 2 yards, 10 ft clear) | **Assistant proposal**; numbers are mine | **DRAFT** |
 | Skater Step and Stick, Half-Circle Cut write-ups | **Assistant drafts**; not in the library | **DRAFT** |
 | Progression gates, pain rule, one-harder-step rule | Specification's intent, **implemented by the assistant** | Not yet approved by a coach |
+| Week-3 floor for level changes; Foundation cannot unlock hops | **Assistant's conservative defaults**, not in the source | **DRAFT** |
 | Video references | Third-party Instagram posts, credited | **Not reviewed.** No reference is marked verified or approved anywhere in the app |
 | Player-metrics bridge (writing timed results into the existing measurements) | - | **Deferred** by decision; not built |
 
@@ -165,7 +166,8 @@ Ready when: Can maintain technique under faster or sport-reactive demands.
 | 2 | Advanced: start-type exercises 4–6 quality reps, no added sets, rest "at least Development's; coach sets it". | ☐ | |
 | 3 | Foundation runs two sessions a week (A then B, then A then C). | ☐ | |
 | 4 | Advanced adds no exercise: the source mentions 10–20 yard runs and supervised resistance work, shown as text only. | ☐ | |
-| 5 | Two clean sessions are enough to advance a week, unlock a progression or change level. | ☐ | |
+| 5 | Two clean sessions are enough to advance a week or unlock a progression. A level change also needs two clean sessions and is refused before Week 3. | ☐ | |
+| 5b | Foundation cannot unlock hops or a jump into a sprint until the player moves to Development. | ☐ | |
 | 6 | A single reported pain blocks advancing until a pain-free session is logged. | ☐ | |
 | 7 | Age is advisory only; a coach may place any player in any level. | ☐ | |
 | 8 | Games and hard practices reduce the suggested dedicated sessions (3 minus that load, minimum 1). | ☐ | |
@@ -201,8 +203,8 @@ Full draft write-ups are in DRILL-DRAFTS.md. They are **not** in the drill libra
 | React to a rolled tennis ball and field | Baseball by CT: Agility hoop drill: footwork, reaction, ground-ball fundamentals <https://www.instagram.com/reel/DZle8fbAKex/> | Four Cones Ground Ball Drill (partial) |
 | Low two-foot pogo jumps | Pierre Elite Performance: 3 drills kids need to master: skipping, pogo jumps, broad jumps <https://www.instagram.com/reel/Db0wVLNNKTs/> | Pogo Jumps — Quick, Quiet Contacts (exact) |
 | Broad jump and freeze | Pierre Elite Performance: 3 drills kids need to master: skipping, pogo jumps, broad jumps <https://www.instagram.com/reel/Db0wVLNNKTs/> | Broad Jump — Jump and Stick It (exact) |
-| Lateral skater step and stick | Athletic Growth Lab: Skater hop over a low hurdle into single-leg plate hops <https://www.instagram.com/reel/DaFbUDfn7cW/> | none |
-| Infield reaction and throw (controlled pace) | Tyler Made Double Play: Infield footwork: right-left through the play <https://www.instagram.com/reel/DeX1L96OVhJ/> | Three-Ball Slow Roller Drill (partial) |
+| Lateral skater step and stick | — | none |
+| Infield reaction and throw (controlled pace) | — | Three-Ball Slow Roller Drill (partial) |
 | Broad jump into 5-yard acceleration | — | Broad Jump — Jump and Stick It (partial) |
 
 ## H. Sign-off

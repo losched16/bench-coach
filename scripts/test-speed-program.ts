@@ -87,7 +87,8 @@ async function main() {
 
   // ── references: credited, unreviewed, removable, never "verified" ─────────
   const refs = EXERCISES.flatMap(e => e.references)
-  check('every reference is https Instagram, credited, and unreviewed', refs.length >= 9 && refs.every(r => /^https:\/\/www\.instagram\.com\/reel\/[\w-]+\/$/.test(r.url) && r.creator && r.title && r.status === 'unreviewed'))
+  check('every reference is https Instagram, credited, and unreviewed', refs.length === 8 && refs.every(r => /^https:\/\/www\.instagram\.com\/reel\/[\w-]+\/$/.test(r.url) && r.creator && r.title && r.status === 'unreviewed'))
+  check('the two references whose titles contradict their exercise stay removed', !JSON.stringify(refs).includes('DaFbUDfn7cW') && !JSON.stringify(refs).includes('DeX1L96OVhJ') && EXERCISE_BY_KEY['skater_step_stick'].references.length === 0 && EXERCISE_BY_KEY['infield_react_throw'].references.length === 0)
   check('no reference or text claims verification or approval', !/verified|approved/i.test(JSON.stringify(EXERCISES.map(e => e.references))))
   check('no reference carries a URL on a drill record or in the library mapping', EXERCISES.every(e => !/https?:/.test(JSON.stringify(e.drillMap))))
 
@@ -209,11 +210,14 @@ async function main() {
   check('a program in the last week cannot advance a week', !decideAdvance(ok(validateAdvanceInput({ kind: 'week' })), { core: core({ current_week: 4 }), sessions: [s1, s2], events: [] }).ok)
   check('a paused program cannot advance', !decideAdvance(ok(validateAdvanceInput({ kind: 'week' })), { core: core({ status: 'paused' }), sessions: [s1, s2], events: [] }).ok)
 
-  const lvl = decideAdvance(ok(validateAdvanceInput({ kind: 'level' })), { core: core(), sessions: [sess({ session_key: 'B', braking: 2, reaction: 2 }), sess({ session_key: 'C', landing: 2, braking: null, reaction: 2 })], events: [] })
+  const lvl = decideAdvance(ok(validateAdvanceInput({ kind: 'level' })), { core: core({ current_week: 3 }), sessions: [sess({ session_key: 'B', braking: 2, reaction: 2 }), sess({ session_key: 'C', landing: 2, braking: null, reaction: 2 })], events: [] })
   check('level up needs landing, braking and reaction across the last two sessions', lvl.ok && lvl.to === 'advanced')
   check('level up from the highest level is refused', !decideAdvance(ok(validateAdvanceInput({ kind: 'level' })), { core: core({ level: 'advanced' }), sessions: [s1, s2], events: [] }).ok)
-  const lvlNo = decideAdvance(ok(validateAdvanceInput({ kind: 'level' })), { core: core(), sessions: [sess({ session_key: 'A' }), sess({ session_key: 'B' })], events: [] })
+  const lvlNo = decideAdvance(ok(validateAdvanceInput({ kind: 'level' })), { core: core({ current_week: 3 }), sessions: [sess({ session_key: 'A' }), sess({ session_key: 'B' })], events: [] })
   check('level up without ever observing landing is refused', !lvlNo.ok && /landing/.test((lvlNo as any).error))
+
+  const lvlEarly = decideAdvance(ok(validateAdvanceInput({ kind: 'level', override: true, reason: 'Coach wants to move up early' })), { core: core({ current_week: 2 }), sessions: [sess({ session_key: 'B' }), sess({ session_key: 'C', landing: 2, braking: 2 })], events: [] })
+  check('a level change is refused before Week 3, even with an override', !lvlEarly.ok && /Week 3/.test((lvlEarly as any).error))
 
   const un = (key: string, c = core(), ses = [sess({ session_key: 'B' }), sess({ session_key: 'C', landing: 2, braking: 2, reaction: 2 })], events: PlanEvent[] = []) =>
     decideAdvance(ok(validateAdvanceInput({ kind: 'unlock', key })), { core: c, sessions: ses, events })
@@ -221,6 +225,8 @@ async function main() {
   check('an unknown progression is refused', !validateAdvanceInput({ kind: 'unlock', key: 'max_effort_sprints' }).ok)
   check('an unlocked progression cannot be unlocked twice', !un('skater_hop', core({ unlocks: ['skater_hop'] })).ok)
   check('broad jump into a sprint needs Week 3 and outdoor space', !un('broad_jump_to_sprint').ok && un('broad_jump_to_sprint', core({ current_week: 3 })).ok && !un('broad_jump_to_sprint', core({ current_week: 3, space: 'indoor_small' })).ok)
+  check('Foundation cannot unlock hops or a jump into a sprint (move to Development first)', !un('skater_hop', core({ level: 'foundation' })).ok && !un('broad_jump_to_sprint', core({ level: 'foundation', current_week: 3 })).ok && /Move to Development/.test((un('skater_hop', core({ level: 'foundation' })) as any).error))
+  check('...but reaction cue games are open to Foundation from Week 2', un('reactive_partner_cues', core({ level: 'foundation', current_week: 2 })).ok)
   check('single-leg hops are Advanced only', !un('single_leg_hops').ok && un('single_leg_hops', core({ level: 'advanced' })).ok)
   check('reaction cue games start in Week 2', !un('reactive_partner_cues').ok && un('reactive_partner_cues', core({ current_week: 2 })).ok)
   const stacked: PlanEvent[] = [{ event_type: 'advance', detail: { kind: 'unlock', key: 'skater_hop', week: 1 }, occurred_at: '2026-10-01T00:00:00Z' }]

@@ -132,6 +132,9 @@ https Instagram and YouTube. No video has been manually reviewed.
   and Advanced, with approve boxes. Generated from the template (a test fails if it drifts).
 - `DRILL-DRAFTS.md` - the two missing drills, as drafts.
 - `INDOOR-FALLING-START.md` - the indoor falling-start substitute and why.
+- `PRESCRIPTION-AUDIT.md` - volume and progression audit, with what needs a human coach.
+- `REVIEW-PACKETS.md` - skater step, half-circle cut and indoor substitute, each with a safety case and questions.
+- `REFERENCE-REVIEW.md` - what was done with each external video reference (none approved; two removed).
 - `COACH-SIGN-OFF.md` - the single packet a coach signs (generated from the template).
 - `MOBILE-QA.md` - the real-device checklist; `MOBILE-WALKTHROUGH.md` - the synthetic-data script.
 - `RELEASE-READINESS.md` - test evidence, the inherited pitch-counter failures, blockers.

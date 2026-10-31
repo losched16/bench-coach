@@ -49,6 +49,7 @@ const LEDGER = `## 0. What is approved and what is not (read first)
 | Falling start, indoor (lean-and-catch, 2 yards, 10 ft clear) | **Assistant proposal**; numbers are mine | **DRAFT** |
 | Skater Step and Stick, Half-Circle Cut write-ups | **Assistant drafts**; not in the library | **DRAFT** |
 | Progression gates, pain rule, one-harder-step rule | Specification's intent, **implemented by the assistant** | Not yet approved by a coach |
+| Week-3 floor for level changes; Foundation cannot unlock hops | **Assistant's conservative defaults**, not in the source | **DRAFT** |
 | Video references | Third-party Instagram posts, credited | **Not reviewed.** No reference is marked verified or approved anywhere in the app |
 | Player-metrics bridge (writing timed results into the existing measurements) | - | **Deferred** by decision; not built |
 
@@ -91,7 +92,8 @@ ${LEVELS.map(levelTable).join('\n')}
 | 2 | Advanced: start-type exercises 4–6 quality reps, no added sets, rest "at least Development's; coach sets it". | ☐ | |
 | 3 | Foundation runs two sessions a week (A then B, then A then C). | ☐ | |
 | 4 | Advanced adds no exercise: the source mentions 10–20 yard runs and supervised resistance work, shown as text only. | ☐ | |
-| 5 | Two clean sessions are enough to advance a week, unlock a progression or change level. | ☐ | |
+| 5 | Two clean sessions are enough to advance a week or unlock a progression. A level change also needs two clean sessions and is refused before Week 3. | ☐ | |
+| 5b | Foundation cannot unlock hops or a jump into a sprint until the player moves to Development. | ☐ | |
 | 6 | A single reported pain blocks advancing until a pain-free session is logged. | ☐ | |
 | 7 | Age is advisory only; a coach may place any player in any level. | ☐ | |
 | 8 | Games and hard practices reduce the suggested dedicated sessions (3 minus that load, minimum 1). | ☐ | |

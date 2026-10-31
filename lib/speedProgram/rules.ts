@@ -550,12 +550,19 @@ export function decideAdvance(input: AdvanceInput, ctx: AdvanceContext): Advance
   } else if (input.kind === 'level') {
     const i = LEVELS.indexOf(core.level)
     if (i >= LEVELS.length - 1) return { ok: false, status: 409, error: 'Already at the highest level.' }
+    // A level is a bigger step than a week. It is considered after Learn and Build, never in the first two weeks.
+    // (A conservative default of mine, not in the source; flagged for coach approval.)
+    if (core.current_week < 3) return { ok: false, status: 409, error: 'A level change is considered from Week 3, after the Learn and Build weeks.' }
     to = LEVELS[i + 1]
     requires = LEVEL_UP_REQUIRES
   } else {
     const p = PROGRESSIONS.find(x => x.key === input.key)!
     if (core.unlocks.includes(p.key)) return { ok: false, status: 409, error: 'Already unlocked.' }
     if (p.outdoorOnly && core.space !== 'outdoor_open') return { ok: false, status: 409, error: `${p.label} needs open outdoor space.` }
+    // Foundation is low jumps and steps. Hops and a jump into a sprint wait for Development.
+    // (The source says "a step instead of a hop"; keeping them locked here is a conservative reading, flagged for approval.)
+    if (core.level === 'foundation' && (p.key === 'skater_hop' || p.key === 'broad_jump_to_sprint'))
+      return { ok: false, status: 409, error: 'Foundation uses low jumps and steps. Move to Development before adding hops or a jump into a sprint.' }
     if (p.key === 'single_leg_hops' && core.level !== 'advanced') return { ok: false, status: 409, error: 'Single-leg hops are an Advanced-level progression.' }
     if (p.key === 'broad_jump_to_sprint' && core.current_week < 3) return { ok: false, status: 409, error: 'This is a Week 3 (Transfer) progression.' }
     if (p.key === 'reactive_partner_cues' && core.current_week < 2) return { ok: false, status: 409, error: 'Reaction cue games start in Week 2.' }

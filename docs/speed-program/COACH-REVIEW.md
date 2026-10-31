@@ -57,7 +57,7 @@ Rules the source states for this level (shown in the app as-is):
 2. Starts are 2–3 per exercise. Applied to: falling start, 10-yard acceleration, cone reaction chase, shuffle-plant-accelerate, half-circle cut.  ☐ approve  ☐ change: ________
 3. Any other rep count above 4 is capped at 4 (the source says 2–4 reps per drill). Example: wall drive 5 per leg becomes 4.  ☐ approve  ☐ change: ________
 4. Rest times are unchanged from Development (the source gives none for Foundation). A younger child may need more; the coach can adjust per player.  ☐ approve  ☐ change: ________
-5. Hops are locked at this level; the skater exercise stays a step-and-stick. The "skater_hop" unlock exists but Foundation is not blocked from it by level. Should it be?  ☐ approve  ☐ change: ________
+5. Hops are locked at this level and cannot be unlocked here: the skater exercise stays a step-and-stick, and the jump into a sprint stays hidden, until the player is moved to Development. (The source says "a step instead of a hop"; locking the unlocks is my conservative reading.)  ☐ approve  ☐ change: ________
 6. "Not timed, not a race" is written into the 10-yard note, and timed baselines are refused for Foundation (movement-quality rubric only).  ☐ approve  ☐ change: ________
 7. Foundation runs session A plus B or C alternating (two a week). The source says "alternating A and B/C"; the exact alternation (A,B then A,C) is mine.  ☐ approve  ☐ change: ________
 8. No age is used to place a child. If a six-year-old is placed in Development, the app allows it. Confirm that is the intent.  ☐ approve  ☐ change: ________
@@ -118,7 +118,7 @@ Rules the source states for this level (shown in the app as-is):
 5. Single-leg hops are an Advanced-only unlock; they appear only as a progression label, not as a prescribed exercise. Which exercise should they replace?  ☐ approve  ☐ change: ________
 6. Varied baseball starting positions and more reactive partner cues are listed as text; the unlock for reactive cues is available from Week 2 at any level.  ☐ approve  ☐ change: ________
 7. The "do not stack harder jumps, volume and faster cuts in the same week" rule is enforced as one harder step per week (unlock or level), not by tracking volume.  ☐ approve  ☐ change: ________
-8. Level-up from Development needs landing, braking and reaction all observed and all 2 in the last two sessions. Is two sessions enough for a level change?  ☐ approve  ☐ change: ________
+8. Level-up needs landing, braking and reaction all observed and all 2 in the last two sessions, and is refused before Week 3 (Learn and Build come first) even with an override. The Week 3 floor is my conservative default, not the source. Is two sessions, from Week 3, enough for a level change?  ☐ approve  ☐ change: ________
 
 ## Progression and safety rules (all levels)
 
