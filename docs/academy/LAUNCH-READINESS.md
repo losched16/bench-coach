@@ -108,12 +108,13 @@ You decide the price; nothing here sets one.
 
 ## Preview
 
-There is **no preview deployment** of this branch on Vercel today (the project
-shows none for `claude/*` branches). Creating one is a deployment, and a preview
-normally shares production's Supabase keys, so a preview with `ACADEMY_LAUNCH=1`
-would let a tester start a real purchase flow against production data. Use a
-separate Supabase project and Stripe test keys for any preview. I have not created
-one or changed any configuration.
+There is **no preview deployment** of this branch on Vercel today, and none has been created.
+`docs/preview/README.md` is the runbook for an isolated one: a separate Supabase project, synthetic
+players and accounts, Stripe test mode, flags on only inside the preview, a guard script
+(`scripts/preview/check-env.mjs`) that refuses production, and a seed that refuses a populated
+project. `npm run preview:verify` proves the schema build, the seed and the guard locally.
+Use the **sample** manuscript there, never the paid text. The Stripe purchase/refund steps are in
+`STRIPE-TEST-CHECKLIST.md`; lesson and video review is in `LESSON-VIDEO-APPROVAL.md`.
 
 ## Tests (all run locally; CI runs them on the PR)
 

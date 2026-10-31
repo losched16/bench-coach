@@ -1,0 +1,61 @@
+# Academy: real Stripe test-mode purchase and refund checklist
+
+Run only in the **isolated preview** (`docs/preview/README.md`): separate Supabase project,
+synthetic buyers, Stripe in **Test mode**. The public catalog and purchasing stay off in
+production. Everything below uses fake money and test cards.
+
+Before starting: `PRODUCTION_SUPABASE_REF=<prod ref> node scripts/preview/check-env.mjs` passes in
+the preview environment, `ACADEMY_LAUNCH=1` and `PREVIEW_ALLOW_FLAGS=1` are set for that preview only,
+and the preview course (from the **sample** manuscript) is `published` with `price_cents`, `currency`
+and `stripe_price_id` set to your test product.
+
+Stripe test cards: success `4242 4242 4242 4242`; declined `4000 0000 0000 0002`;
+3-D Secure required `4000 0025 0000 3155`. Any future expiry, any CVC, any postcode.
+Accounts: `owner.syn@`, `contrib.syn@`, `viewer.syn@`, `outsider.syn@` `example.test`. The buyer is created at signup.
+
+## 1. Before anyone buys
+- [ ] Signed out, `/academy` and the sales page load (flag on), the buy button shows the test price, the free preview lesson reads without an account, **no paid lesson text** appears in the page source.
+- [ ] `/learn/<course>` signed out sends you to log in.
+- [ ] With the flag off (unset it, redeploy) the same URLs are not found, and `POST /api/academy/checkout` is 404.
+
+## 2. A successful purchase
+- [ ] Sign up a new synthetic buyer, tap Buy: you land on Stripe Checkout in test mode with the right product, price and currency.
+- [ ] Pay with `4242...`. You return to the course with a welcome message.
+- [ ] **Access came from the webhook, not the redirect.** In Stripe > Developers > Webhooks the `checkout.session.completed` delivery is 200, and exactly one row exists in `academy_enrollments` for this user (status `active`, source `purchase`, a payment intent id).
+- [ ] One row exists in `academy_stripe_events` for that event id.
+- [ ] Paid lessons now open; progress saves; "Mark complete" and resume work; the printable schedule prints.
+
+## 3. The redirect proves nothing
+- [ ] As a *different* signed-in synthetic user, open the success URL of someone else's session (`?purchase=success&session_id=...`): you are **not** enrolled and cannot open paid lessons.
+- [ ] Open the success URL without paying (a cancelled or abandoned session): not enrolled.
+- [ ] Cancel at Stripe: you return to the sales page with a "cancelled" notice and no enrollment row.
+
+## 4. Failures and edge cases
+- [ ] Declined card `4000 0000 0000 0002`: no enrollment; a clear message; you can try again.
+- [ ] 3-D Secure card `4000 0025 0000 3155`: completes only after authentication; enrollment appears only after success.
+- [ ] Buy the same course twice (second tab, or after success): no second enrollment row, no second charge (the page says you already own it, or the duplicate is flagged for refund).
+- [ ] Resend the same `checkout.session.completed` event from Stripe: still one enrollment, the event is recorded as already seen.
+- [ ] Tamper check: a checkout for a price or currency that does not match the course row is rejected by fulfilment (`price` / `currency mismatch`) and does not enroll.
+
+## 5. Refunds
+- [ ] **Full refund** from the Stripe dashboard: `charge.refunded` arrives (200); the enrollment becomes `refunded` with `revoke_reason = stripe_full_refund`; the buyer can no longer open paid lessons; their progress rows remain.
+- [ ] **Partial refund**: access is **unchanged** (this is how the code behaves today). Confirm that matches your refund policy.
+- [ ] After a full refund, the buyer can buy again and is enrolled once.
+- [ ] Resend the refund event: nothing changes twice.
+
+## 6. Isolation
+- [ ] A buyer cannot read another buyer's enrollment, progress, or lessons (try the other's URLs and the API).
+- [ ] A contributor/viewer on a BenchCoach team has **no** course access unless they bought it (a team role is not a purchase).
+- [ ] The owner (`ADMIN_EMAIL`) can grant and revoke by hand in `/admin/academy`; a manual grant is recorded with who granted it.
+- [ ] A subscriber to BenchCoach does not get the course free, and a course buyer does not get a subscription.
+
+## 7. Known gaps to decide before launch
+- A **dispute / chargeback** (`charge.dispute.*`) is not handled: access is not revoked automatically. Decide whether to handle it or review disputes by hand.
+- Tax, receipts/invoices, promotion codes and billing-address collection are not set in checkout. Decide each.
+- Partial refunds keep access. Decide whether that is your policy.
+- No real card has ever been charged. This checklist is the first real test of the Stripe side; all earlier payment tests used a local fake.
+
+## 8. Clean up
+- [ ] Delete the test product, price and webhook endpoint if you will not reuse them; delete the preview project and the preview variables.
+
+Run by: ______________  Date: ________  Result: ☐ every box ticked  ☐ exceptions listed: ______________
