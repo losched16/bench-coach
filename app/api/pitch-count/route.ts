@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { writeSession } from '@/lib/pitchCountWrite'
 import { migrationHintFor } from '@/lib/migrationHints'
 import { createClient } from '@supabase/supabase-js'
 import { computePitcherAvailability, PitchCountRuleSet, AppearanceLite } from '@/lib/scouting'
@@ -274,29 +275,13 @@ export async function PATCH(request: NextRequest) {
     // The appearance row is updated rather than duplicated on re-finish.
     if (reopen) update.finished_at = null
 
-    // A tap is read-then-write. Two taps in flight (a thumb is faster than a
-    // phone's network) both read the same count and both wrote count+1, so one
-    // pitch vanished. The write is therefore conditional on the count it was
-    // computed from; if another tap got there first, re-read and try again. A
-    // pitch count undercounts a young arm's workload if it drops a tap.
-    let updated: any = null
-    let error: any = null
-    let base = s.pitches as number | null
-    for (let attempt = 0; attempt < 12; attempt++) {
-      let q = supabaseAdmin.from('pitch_count_sessions').update(update).eq('id', sessionId)
-      if (typeof delta === 'number') q = base === null || base === undefined ? q.is('pitches', null) : q.eq('pitches', base)
-      const r = await q.select('*').maybeSingle()
-      if (r.error) { error = r.error; break }
-      if (r.data) { updated = r.data; break }
-      if (typeof delta !== 'number') break          // nothing to retry: the row is gone
-      const { data: again } = await supabaseAdmin.from('pitch_count_sessions').select('pitches').eq('id', sessionId).maybeSingle()
-      if (!again) break
-      base = (again as any).pitches
-      update.pitches = Math.max(0, (base || 0) + delta)
-    }
-
-    if (error) throw error
-    if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    // See lib/pitchCountWrite.ts: the write is conditional on the count it was
+    // computed from, so two taps in flight cannot overwrite each other.
+    const w = await writeSession(supabaseAdmin, sessionId, update, typeof delta === 'number' ? delta : undefined, s.pitches)
+    if (w.kind === 'error') throw w.error
+    if (w.kind === 'gone') return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (w.kind === 'busy') return NextResponse.json({ error: 'The counter is busy. Tap again.' }, { status: 503 })
+    const updated = w.row
     const u = updated as any
 
     // A counter that was reopened and finished again already has an appearance.

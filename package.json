@@ -127,6 +127,7 @@
     "test:browser": "bash scripts/browser/run.sh",
     "gate": "node scripts/release-gate.mjs",
     "lint:hooks": "eslint --no-eslintrc -c .eslintrc.hooks.cjs --ext .ts,.tsx app components lib",
+    "test:pitch-count-concurrency": "npx --yes tsx --tsconfig tsconfig.json scripts/test-pitch-count-concurrency.ts",
     "test:pitch-count": "npx --yes tsx --tsconfig tsconfig.json scripts/test-pitch-count.ts"
   },
   "dependencies": {
