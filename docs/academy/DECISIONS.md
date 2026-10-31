@@ -7,14 +7,15 @@ feature is built so it stays safely OFF until the decision is made.
 
 | # | Decision | Current behaviour until decided |
 |---|---|---|
-| 1 | **Price** ($19 vs $29 is a test hypothesis in the manuscript) | No price set → the buy button reads "Enrollment opens soon" and checkout refuses (409). |
-| 2 | **Refund policy / guarantee** | No refund or guarantee text anywhere. Technically: a full Stripe refund ends access, a partial one does not. Confirm that is what you want. |
+| 1 | **Price** ($19 vs $29 is a test hypothesis in the manuscript). **Planning input: $29 USD one-time, pending your confirmation.** | No price set → the buy button reads "Enrollment opens soon" and checkout refuses (409). |
+| 2 | **Refund policy / guarantee.** **Planning input: full refunds revoke access; partial refunds keep it** (this is how it already behaves). | No refund or guarantee text anywhere. The policy wording still has to be written and linked at checkout. |
 | 3 | **Terms, privacy and purchase legal copy** | None exist on the site today. Needed before taking payments from the public. |
 | 4 | **Duplicate purchases** (someone pays twice for a course they own) | Access unchanged; the second payment is recorded as `duplicate_purchase` in `academy_stripe_events` for you to refund by hand. |
 | 5 | **Promotion codes** in Checkout | Off. |
 | 6 | **Trial / subscription pricing in handoff copy** ($10/month in the manuscript is "reconfirm before publication") | The handoff mentions the 14-day trial (true in code) but no monthly price. |
 | 7 | **Publish** the course | Imported as `draft`; you publish with one SQL update once 1–3 are done. |
 | 8 | **Subscriber CTA "Create My Swing Development Plan"** | Not shown (the manuscript says not to until built and verified). Subscribers get "Open Development Plans", which exists. Phase 2. |
+| 10 | **Chargebacks** | A dispute does nothing automatically today. A flag-first, revoke-if-lost design is proposed in `CHARGEBACK-PROPOSAL.md`; not built. |
 | 9 | **Analytics consent** | Academy events store no personal data (event name, course, lesson; user id only when signed in). Confirm against your privacy policy once written. |
 
 ## Editorial review (from the import report)

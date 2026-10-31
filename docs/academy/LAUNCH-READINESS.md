@@ -60,7 +60,7 @@ git-ignored files; it is not in this repository.
 
 ## Stripe: exactly what to configure
 
-You decide the price; nothing here sets one.
+The planning price is **$29 USD one-time, pending your confirmation**; nothing here sets it.
 
 1. **Product and price.** One product ("Build a Better Baseball Swing"), one
    **one-time** price (not recurring), in the currency you choose. Copy the
@@ -89,9 +89,9 @@ You decide the price; nothing here sets one.
 
 ## Legal and policy decisions (not mine to make)
 
-- Price and currency.
-- **Refund policy**: window, conditions, and what a refund does (the code revokes
-  access on `charge.refunded`). Must be published and linked at checkout.
+- Confirm the price and currency ($29 USD is the planning figure).
+- **Refund policy wording**: window and conditions. Behavior is decided for planning: a full refund revokes access, a partial refund keeps it. The text must be published and linked at checkout.
+- **Chargebacks**: see `CHARGEBACK-PROPOSAL.md`.
 - **Terms of sale / terms of service** covering a one-time digital course, and a
   **Privacy policy** covering purchasers (name, email, purchase record, progress,
   analytics events).

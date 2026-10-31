@@ -6,8 +6,8 @@ production. Everything below uses fake money and test cards.
 
 Before starting: `PRODUCTION_SUPABASE_REF=<prod ref> node scripts/preview/check-env.mjs` passes in
 the preview environment, `ACADEMY_LAUNCH=1` and `PREVIEW_ALLOW_FLAGS=1` are set for that preview only,
-and the preview course (from the **sample** manuscript) is `published` with `price_cents`, `currency`
-and `stripe_price_id` set to your test product.
+and the preview course (from the **sample** manuscript) is `published` with `price_cents = 2900`, `currency = 'usd'`
+and `stripe_price_id` set to your TEST product ($29.00 is the proposed price, used here only in test mode).
 
 Stripe test cards: success `4242 4242 4242 4242`; declined `4000 0000 0000 0002`;
 3-D Secure required `4000 0025 0000 3155`. Any future expiry, any CVC, any postcode.
@@ -50,9 +50,9 @@ Accounts: `owner.syn@`, `contrib.syn@`, `viewer.syn@`, `outsider.syn@` `example.
 - [ ] A subscriber to BenchCoach does not get the course free, and a course buyer does not get a subscription.
 
 ## 7. Known gaps to decide before launch
-- A **dispute / chargeback** (`charge.dispute.*`) is not handled: access is not revoked automatically. Decide whether to handle it or review disputes by hand.
+- A **dispute / chargeback** (`charge.dispute.*`) is not handled: nothing changes automatically. A proposal is in `CHARGEBACK-PROPOSAL.md`. In test mode you can trigger one with card `4000 0000 0000 0259`; today expect no change, which is the gap.
 - Tax, receipts/invoices, promotion codes and billing-address collection are not set in checkout. Decide each.
-- Partial refunds keep access. Decide whether that is your policy.
+- Partial refunds keep access and full refunds revoke it (your planning decision; matches the code).
 - No real card has ever been charged. This checklist is the first real test of the Stripe side; all earlier payment tests used a local fake.
 
 ## 8. Clean up
