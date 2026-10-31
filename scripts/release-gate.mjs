@@ -43,6 +43,11 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 const CHECKS = [
   {
+    name: 'private files',
+    why: 'the repository is public; course text and private material must never be tracked',
+    run: ['node', ['scripts/verify-no-private-files.mjs']],
+  },
+  {
     name: 'environment',
     why: 'a missing anon key fails as an unreadable prerender trace',
     run: ['node', ['scripts/verify-env.mjs']],
