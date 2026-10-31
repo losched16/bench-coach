@@ -37,6 +37,23 @@ const refs = LEVELS.length && Array.from(new Map(
   SESSION_KEYS.flatMap(k => LEVEL_DEFS.development.sessions[k].items.map(p => EXERCISE_BY_KEY[p.exercise])).map(e => [e.key, e])).values()
 ).map(e => `| ${e.name} | ${e.references.map(r => `${r.creator}: ${r.title} <${r.url}>`).join('<br>') || '—'} | ${e.drillMap.name ? `${e.drillMap.name} (${e.drillMap.match})` : 'none'} |`).join('\n')
 
+const LEDGER = `## 0. What is approved and what is not (read first)
+
+**Approved by a coach today: nothing.** Every row below is waiting for your signature.
+
+| Material | Where it came from | Status |
+|---|---|---|
+| Development level: sets, reps, rest, cues, 10-yard indoor text | The source specification's own numbers | Not yet approved by a coach |
+| Foundation level | **Derived by rule** from the specification's stated adaptations | **DRAFT** |
+| Advanced level | **Derived by rule** from the specification's stated adaptations | **DRAFT** |
+| Falling start, indoor (lean-and-catch, 2 yards, 10 ft clear) | **Assistant proposal**; numbers are mine | **DRAFT** |
+| Skater Step and Stick, Half-Circle Cut write-ups | **Assistant drafts**; not in the library | **DRAFT** |
+| Progression gates, pain rule, one-harder-step rule | Specification's intent, **implemented by the assistant** | Not yet approved by a coach |
+| Video references | Third-party Instagram posts, credited | **Not reviewed.** No reference is marked verified or approved anywhere in the app |
+| Player-metrics bridge (writing timed results into the existing measurements) | - | **Deferred** by decision; not built |
+
+`
+
 const doc = `# Coach sign-off packet: Speed, Agility & Explosiveness
 
 **Generated from the app's template by \`scripts/speed-program/gen-signoff.ts\`. Do not edit by hand.**
@@ -48,7 +65,7 @@ Youth Baseball Development Pathway"). Foundation and Advanced are derived from t
 mechanical steps (listed in COACH-REVIEW.md). Video links are third-party Instagram posts, credited to their
 creators and shown in the app as "not yet reviewed". They are references, not BenchCoach content.
 
-## A. The four weeks
+${LEDGER}## A. The four weeks
 
 ${WEEKS.map(w => `- **Week ${w.week}, ${w.name}.** ${w.focus} ${w.effort}`).join('\n')}
 

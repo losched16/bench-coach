@@ -12,7 +12,7 @@
 | Flag on, full flow in Chromium (`test:speed-program-e2e`) | 56 pass |
 | Flag off, nothing exists (`test:speed-program-flag-off`) | 14 pass |
 | Release gate | pass |
-| CI on the PR (`gate`, `suites`, `browser`) | pass on the first commit; re-check after the latest push |
+| CI on the PR (`gate`, `suites`, `browser`) | all three pass at commit `bb2e12d`; re-check after any later push |
 
 ### What "production-like" means here, and what it does not
 
@@ -59,7 +59,7 @@ they were real.**
 3. A real-device pass with the checklist in `MOBILE-QA.md`, on a test team and a
    made-up player, never a real child's record. No preview exists; see that file.
 4. Every video reference reviewed or removed.
-5. Decide whether timed results should also be written to `player_metrics`.
+5. ~~Decide whether timed results should also be written to `player_metrics`.~~ **Deferred by decision; not built, not a blocker.**
 
 ## Known limits
 

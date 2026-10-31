@@ -2,7 +2,7 @@
 
 Do this on a real phone, outdoors if possible, before anyone says "ready".
 
-> The step-by-step script with exact values is `MOBILE-WALKTHROUGH.md`. The isolated preview is described in `docs/preview/README.md`. Synthetic data only.
+> The step-by-step script with exact values is `MOBILE-WALKTHROUGH.md`. The isolated preview is described in `docs/preview/README.md`; exact setup is in `docs/preview/SETUP-STEPS.md`. Synthetic data only.
 
 ## Where to run it (read first)
 

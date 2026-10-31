@@ -73,6 +73,18 @@ PSQL -v ON_ERROR_STOP=1 -q -f "$ROOT/scripts/preview/seed-synthetic.sql" >"$WORK
 [ "$(PSQL -tAc "select count(*) from public.team_members")" = "3" ] && pass "three staff roles on team one" || fail "staff"
 PSQL -v ON_ERROR_STOP=1 -q -f "$ROOT/scripts/preview/seed-synthetic.sql" >/dev/null 2>"$WORK/seed2.err" && fail "the seed ran twice" || { grep -q "REFUSED" "$WORK/seed2.err" && pass "the seed refuses to run on a project that already has players or teams" || fail "seed refusal text missing"; }
 
+# The synthetic drill-library fixture: placeholders only, resolves the speed-program mapping, refuses a populated library.
+PSQL -v ON_ERROR_STOP=1 -q -f "$ROOT/scripts/preview/seed-drill-fixture.sql" >"$WORK/dr.out" 2>"$WORK/dr.err" && pass "the synthetic drill fixture loads" || { cat "$WORK/dr.err"; fail "drill fixture failed"; }
+[ "$(PSQL -tAc "select count(*) from public.drill_resources where source='synthetic-preview-fixture'")" = "12" ] && pass "12 placeholder drills, all marked synthetic" || fail "fixture count"
+[ "$(PSQL -tAc "select count(*) from public.drill_resources where source='synthetic-preview-fixture' and description not like 'SYNTHETIC TEST FIXTURE%'")" = "0" ] && pass "every fixture row says in words that it is a fixture" || fail "fixture wording"
+[ "$(PSQL -tAc "select count(*) from public.drill_resources where source='synthetic-preview-fixture' and (ai_coaching_notes is not null or safety_notes is not null or reps_guidance is not null or cardinality(coalesce(success_markers,'{}'::text[])) > 0)")" = "0" ] && pass "no coaching text, safety text or reps were copied into the fixture" || fail "fixture carries drill content"
+if [ "$(PSQL -tAc "select to_regclass('public.speed_program_exercise_drills') is not null")" = "t" ]; then
+  [ "$(PSQL -tAc "select count(*) from public.speed_program_exercise_drills where drill_name is not null and drill_id is null")" = "0" ] && pass "every speed-program exercise that names a library drill now resolves to a fixture row" || fail "unresolved mapping"
+  [ "$(PSQL -tAc "select count(*) from public.speed_program_exercise_drills where match='none' and drill_id is not null")" = "0" ] && pass "the exercise with no library drill stays unmapped (nothing invented)" || fail "none-match got a drill"
+  [ "$(PSQL -tAc "select count(distinct drill_id) from public.speed_program_exercise_drills")" = "12" ] && pass "the 14 exercises map onto the 12 fixture drills" || fail "distinct drills"
+fi
+PSQL -v ON_ERROR_STOP=1 -q -f "$ROOT/scripts/preview/seed-drill-fixture.sql" >/dev/null 2>"$WORK/dr2.err" && fail "drill fixture ran twice" || { grep -q REFUSED "$WORK/dr2.err" && pass "the drill fixture refuses to run twice (and on a real library)" || fail "fixture refusal text"; }
+
 CE="$ROOT/scripts/preview/check-env.mjs"
 export NEXT_PUBLIC_SUPABASE_ANON_KEY=anon SUPABASE_SERVICE_ROLE_KEY=svc STRIPE_WEBHOOK_SECRET=whsec_x
 chk() { env "$@" node "$CE" >/dev/null 2>&1 && echo ok || echo refused; }

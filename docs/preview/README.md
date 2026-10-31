@@ -35,18 +35,21 @@ Postgres, runs the synthetic seed, proves the seed refuses a populated project, 
 proves `scripts/preview/check-env.mjs` refuses production, a live Stripe key, a
 missing production reference, `VERCEL_ENV=production`, and a launch flag left on.
 
-Result on this branch: 22 migrations apply, 7 content migrations are skipped because
-they insert drill-library rows that exist only in production's data (they run in one
-transaction, so nothing is left half-applied). The preview therefore has **no drill
-library and no pathway content**: speed-program exercises show their library-drill
-labels by name (the id link stays empty), and the older Development Plans pathways
-are empty. That is fine for testing the program, the Academy and Stripe.
+Result: 22 migrations apply, 7 content migrations are skipped because they insert
+drill-library rows that exist only in production's data (each runs in one transaction, so
+nothing is left half-applied). Two BenchCoach-original drills come in with the migrations.
+The preview has no real drill library and no pathway content; the older Development Plans
+pathways are empty. The synthetic drill fixture (12 placeholders) is what resolves the speed
+program's mapping: every exercise that names a library drill links to a fixture row, and the one
+exercise with no library drill stays unlinked. The test loads the fixture and checks exactly that.
+The app reads the link only for labelling; the exercise text comes from the template.
 
 ## Steps (you, or me after you approve)
 
 ### 1. Create the Supabase project
-Name it `bench-coach-preview`. Any region. Free tier is fine for this. Not in the
-production project. (Organization found: AiMS. I will not create it until you say so.)
+Name it `bench-coach-preview`, region **US East (N. Virginia)**, in the AiMS organization (Pro plan, so
+the project adds compute cost; the exact figure appears on the creation screen). Not in the production
+project. The exact, ordered steps are in `SETUP-STEPS.md`; follow that file.
 
 ### 2. Build the schema
 In that project's SQL editor, run the files in `scripts/preview/migration-order.txt`
@@ -63,7 +66,9 @@ into chat.
 
 ### 4. Seed
 Run `scripts/preview/seed-synthetic.sql` in the SQL editor. Expect `4` synthetic
-players and `0` others. For the Academy, generate the course from the sample text:
+players and `0` others. Then run `scripts/preview/seed-drill-fixture.sql`: twelve placeholder drills
+that carry the real drill names (so the by-name lookup works) and no drill content, which lets the
+speed program's exercise-to-library mapping resolve. Nothing is copied from production. For the Academy, generate the course from the sample text:
 
 ```
 npm run academy:import -- --manuscript scripts/fixtures/academy-sample-manuscript.md --out /tmp/preview-academy

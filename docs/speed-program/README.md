@@ -147,7 +147,7 @@ https Instagram and YouTube. No video has been manually reviewed.
    10-yard acceleration only. The falling start now uses a two-step lean-and-catch
    with a clear run-out (`INDOOR-FALLING-START.md`); the numbers are mine and
    pending approval.
-3. **Assessments are stored in their own table, not `player_metrics`.** Migration
+3. **Assessments are stored in their own table, not `player_metrics`, and the bridge is deferred (decision).** Migration
    073 says no new measurement table is needed, but `player_metrics` has nowhere
    to store the conditions that make two times comparable. The same metric slugs
    (`sprint_10y`, `home_to_first`) are used, so a later bridge is easy. Nothing is
