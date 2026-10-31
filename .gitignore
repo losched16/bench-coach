@@ -45,3 +45,6 @@ pilot/media/**/source.mp4
 pilot/media/**/frames/
 pilot/media/_adhoc/
 .speed-program-e2e/
+
+# Private Academy course content: never commit (the paid lesson text lives here)
+.academy-content/
