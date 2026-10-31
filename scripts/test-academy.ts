@@ -229,6 +229,16 @@ async function main() {
   check('no marketing page links to /academy directly (links go through AcademyNavLink)', !/<Link href="\/academy"/.test(nav) && /AcademyNavLink/.test(nav))
   check('the dashboard Academy entry is hidden until the Academy is on', /g\.label !== 'Learn' \|\| academyOn/.test(rd('app/dashboard/layout.tsx')))
 
+  // ── privacy safeguards: paid text never reaches git, CI artifacts or screenshots ──
+  const wf = rd('.github/workflows/checks.yml')
+  check('CI never points the Academy tests at a real manuscript', !/ACADEMY_MANUSCRIPT/.test(wf))
+  check('the only Academy path CI uploads as an artifact is the sample-text screenshot folder', /\.academy-content\/e2e\/\*\.png/.test(wf) && !/private-e2e/.test(wf))
+  const e2eSrc = rd('scripts/academy/e2e.ts')
+  check('e2e sends real-manuscript screenshots to a private folder CI does not upload', /USING_REAL_MANUSCRIPT \? '\.academy-content\/private-e2e'/.test(e2eSrc))
+  check('.academy-content/ is git-ignored', /^\.academy-content\/$/m.test(rd('.gitignore')))
+  check('the release gate fails if any private file is tracked', /verify-no-private-files/.test(rd('scripts/release-gate.mjs')))
+  check('no migration or seed in the repository sets a price', !/(UPDATE|SET)[^;]*price_cents\s*=\s*\d/i.test(readdirSync('migrations').map(f => rd(path.join('migrations', f))).join('\n') + rd('lib/academy/seed.ts').replace(/^--.*$/gm, '')))
+
   console.log('')
   if (failures) { console.log(`${failures} FAILED`); process.exit(1) }
   console.log('ALL PASS')

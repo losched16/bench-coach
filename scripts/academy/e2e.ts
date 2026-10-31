@@ -23,7 +23,6 @@ import { courseCopy } from '../../lib/academy/catalog'
 const APP = process.env.APP_URL || 'http://127.0.0.1:3200'
 const FIX = process.env.FIXTURE_URL || 'http://127.0.0.1:54322'
 const STRIPE = process.env.FAKE_STRIPE_URL || 'http://127.0.0.1:12111'
-const OUT = process.env.OUT || '.academy-content/e2e'
 const SLUG = 'build-a-better-baseball-swing'
 const COURSE_ID = 'aaaaaaaa-0000-4000-8000-000000000001'
 const COACH = { id: '55555555-5555-4555-8555-555555555555', email: 'coach@example.test', password: 'fixture-password' }
@@ -41,6 +40,11 @@ function check(label: string, ok: boolean, detail = '') {
 
 const manuscriptPath = process.env.ACADEMY_MANUSCRIPT && existsSync(process.env.ACADEMY_MANUSCRIPT)
   ? process.env.ACADEMY_MANUSCRIPT : 'scripts/fixtures/academy-sample-manuscript.md'
+// SAFEGUARD: with the real (paid) manuscript, screenshots and logs show paid lesson text. They go to a
+// private folder that no CI step uploads and git ignores. Only the synthetic sample text may use the
+// folder CI publishes as an artifact.
+const USING_REAL_MANUSCRIPT = manuscriptPath !== 'scripts/fixtures/academy-sample-manuscript.md'
+const OUT = USING_REAL_MANUSCRIPT ? '.academy-content/private-e2e' : (process.env.OUT || '.academy-content/e2e')
 const course = parseManuscript(readFileSync(manuscriptPath, 'utf8'), { slug: SLUG, previewLessonKey: '1-1' })
 const lessons = course.lessons.filter(l => l.kind === 'lesson')
 const paidLesson = lessons[1]   // 1.2 — not the preview
