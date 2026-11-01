@@ -53,21 +53,21 @@ const foundation = level('foundation', [
   'Starts are 2–3 per exercise. Applied to: falling start, 10-yard acceleration, cone reaction chase, shuffle-plant-accelerate, half-circle cut.',
   'Any other rep count above 4 is capped at 4 (the source says 2–4 reps per drill). Example: wall drive 5 per leg becomes 4.',
   'Rest times are unchanged from Development (the source gives none for Foundation). A younger child may need more; the coach can adjust per player.',
-  'Hops are locked at this level and cannot be unlocked here: the skater exercise stays a step-and-stick, and the jump into a sprint stays hidden, until the player is moved to Development. (The source says "a step instead of a hop"; locking the unlocks is my conservative reading.)',
+  'PROVISIONAL SAFETY DEFAULT: hops are locked at this level and cannot be unlocked here. The skater exercise stays a step-and-stick, and the jump into a sprint stays hidden, until the player is moved to Development. (The source says "a step instead of a hop"; locking the unlocks is my conservative reading.)',
   '"Not timed, not a race" is written into the 10-yard note, and timed baselines are refused for Foundation (movement-quality rubric only).',
   'Foundation runs session A plus B or C alternating (two a week). The source says "alternating A and B/C"; the exact alternation (A,B then A,C) is mine.',
   'No age is used to place a child. If a six-year-old is placed in Development, the app allows it. Confirm that is the intent.',
 ])
 
 const advanced = level('advanced', [
-  'Start-type exercises become 4–6 "quality short reps" (source: "4–6 quality short reps and longer recovery"). I did NOT add sets.',
-  'Rest keeps the Development numbers as a floor with the note "coach sets it". The source gives no Advanced rest numbers and I did not invent any. Do you want numbers?',
-  '10-yard acceleration stays 10 yards. The source mentions 10–20-yard accelerations "where there is safe outdoor space"; no 20-yard exercise exists in the app. Add one, or leave it to the coach?',
-  '"Optional supervised resistance work" appears in the source adaptations text and is shown as text only. The app has no resistance exercise. Should it show at all, given liability and age?',
+  'PROPOSED, pending coach approval: Advanced uses Development\'s repetition counts exactly, with more recovery, instead of the source\'s "4–6 quality short reps". The source also says "do not add volume just because the athlete is older"; the owner chose that cautious reading.',
+  'Rest is Development\'s plus 15 seconds on every timed rest (for example the wall drive goes from 30 to 45 sec). The source gives no Advanced rest numbers; 15 seconds is my proposal. A coach sets the final rest per player.',
+  'Progression at this level comes from the unlocks (reactive partner cues, single-leg hops) and one added complexity at a time, never from extra reps.',
+  'I removed two lines from the Advanced text the source mentions: "10–20-yard acceleration" (shown now only as "a coach may extend an outdoor distance; this program does not prescribe it") and "optional supervised resistance work" (removed). No exercise for either exists. Restore, reword or keep removed?',
   'Single-leg hops are an Advanced-only unlock; they appear only as a progression label, not as a prescribed exercise. Which exercise should they replace?',
-  'Varied baseball starting positions and more reactive partner cues are listed as text; the unlock for reactive cues is available from Week 2 at any level.',
+  'Reactive partner cues are open to every level from Week 2 with two clean sessions.',
   'The "do not stack harder jumps, volume and faster cuts in the same week" rule is enforced as one harder step per week (unlock or level), not by tracking volume.',
-  'Level-up needs landing, braking and reaction all observed and all 2 in the last two sessions, and is refused before Week 3 (Learn and Build come first) even with an override. The Week 3 floor is my conservative default, not the source. Is two sessions, from Week 3, enough for a level change?',
+  'Level-up needs landing, braking and reaction all observed and all 2 in the last two sessions, and is refused before Week 3 (Learn and Build come first) even with an override. The Week 3 floor is a provisional safety default of mine, not the source.',
 ])
 
 const progression = `## Progression and safety rules (all levels)

@@ -332,17 +332,23 @@ function foundationFrom(dev: Record<SessionKey, SessionDef>): Record<SessionKey,
   return out
 }
 
-// ── Advanced: Development structure + the page's stated adaptations ────────
-// "4–6 quality short reps and longer recovery". The page gives no rest
-// numbers for Advanced, so rest keeps the Development values as a FLOOR and
-// the coach sets the rest. Nothing here adds volume and speed together.
+// ── Advanced: Development's repetitions, with more recovery and progression through the unlocks ─
+// PROPOSED PRESCRIPTION, pending qualified coach approval. The source says Advanced is "4–6 quality short
+// reps and longer recovery" and, in the same breath, "do not add volume just because the athlete is older".
+// Those pull against each other; the owner chose the cautious reading: start from DEVELOPMENT's repetition
+// counts (no automatic increase in volume), give more recovery, and progress through the unlocks and
+// complexity rather than through reps. The source gives no Advanced rest numbers, so the rest below is
+// Development's plus 15 seconds, a proposal for the coach to set.
+const ADVANCED_REST_EXTRA = 15
 function advancedFrom(dev: Record<SessionKey, SessionDef>): Record<SessionKey, SessionDef> {
   const out = clone(dev)
   for (const k of SESSION_KEYS) {
     for (const it of out[k].items) {
       if (it.exercise === 'warmup') continue
-      if (START_EXERCISES.has(it.exercise)) { it.reps = '4–6'; it.repsLabel = 'quality short reps' }
-      if (it.rest) it.restNote = 'At least this; longer recovery than Development. Coach sets it.'
+      if (it.rest) {
+        it.rest = [it.rest[0] + ADVANCED_REST_EXTRA, it.rest[1] + ADVANCED_REST_EXTRA]
+        it.restNote = `Proposed: Development's rest plus ${ADVANCED_REST_EXTRA} sec. A coach sets the final rest.`
+      }
     }
   }
   return out
@@ -372,15 +378,14 @@ export const LEVEL_DEFS: Record<LevelKey, LevelDef> = {
   },
   advanced: {
     key: 'advanced', label: 'Advanced youth', typicalFit: 'Often ages 13+, or experienced athletes with mature movement skills. Advisory only.',
-    sessionsPerWeek: 3, minutes: 'about 25–35 minutes', review: 'draft',
-    dose: '2–3 sessions a week, about 25–35 minutes, 4–6 quality short reps and longer recovery. Do not add volume just because the athlete is older.',
+    sessionsPerWeek: 3, minutes: 'about 25–35 minutes (the extra time is recovery)', review: 'draft',
+    dose: '2–3 sessions a week, about 25–35 minutes. Same repetitions as Development with more recovery between efforts. Progress through the unlocks and added complexity, not extra reps. (Proposed; pending coach approval.)',
     readiness: 'Can maintain technique under faster or sport-reactive demands.',
     adaptations: [
       'More reactive partner cues once unlocked.',
-      '10–20-yard acceleration where there is safe outdoor space.',
-      'Controlled single-leg hops once unlocked.',
-      'Varied baseball starting positions.',
-      'Optional supervised resistance work. A trained coach individualizes older or advanced players.',
+      'Controlled single-leg hops once unlocked (outdoors-first judgment is the coach\'s).',
+      'Varied baseball starting positions, one change at a time.',
+      'A coach may extend an outdoor acceleration distance; this program does not prescribe it.',
       'Do not stack harder jumps, added volume and faster cuts in the same week.',
     ],
     sessions: advancedFrom(DEVELOPMENT_SESSIONS),

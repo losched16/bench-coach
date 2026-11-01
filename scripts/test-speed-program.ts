@@ -70,8 +70,12 @@ async function main() {
   check('Foundation: no timed or maximal races, low jumps', /Not timed, not a race/.test(fd.A.items.find(i => i.exercise === 'accel_10')!.note!) && /Low, comfortable jumps/.test(fd.C.items.find(i => i.exercise === 'broad_jump_freeze')!.note!))
   check('Foundation: two sessions a week; Development and Advanced three', LEVEL_DEFS.foundation.sessionsPerWeek === 2 && LEVEL_DEFS.development.sessionsPerWeek === 3 && LEVEL_DEFS.advanced.sessionsPerWeek === 3)
   const adv = LEVEL_DEFS.advanced.sessions
-  check('Advanced: 4–6 quality reps, rest is a floor the coach sets (no invented numbers)',
-    adv.A.items.find(i => i.exercise === 'falling_start')!.reps === '4–6' && /Coach sets it/.test(adv.A.items.find(i => i.exercise === 'wall_drive')!.restNote!))
+  const advI = (k: SessionKey, ex: string) => adv[k].items.find(i => i.exercise === ex)!
+  check('Advanced starts from Development\'s repetition counts: no automatic increase in volume',
+    SESSION_KEYS.every(k => adv[k].items.every((p, n) => p.exercise === dev[k].items[n].exercise && p.sets === dev[k].items[n].sets && p.reps === dev[k].items[n].reps && p.repsLabel === dev[k].items[n].repsLabel)))
+  check('Advanced recovery is longer than Development\'s (Development + 15 sec), and labelled a proposal',
+    SESSION_KEYS.every(k => adv[k].items.every((p, n) => !p.rest || (p.rest[0] === dev[k].items[n].rest![0] + 15 && p.rest[1] === dev[k].items[n].rest![1] + 15 && /Proposed/.test(p.restNote || '')))) && advI('A', 'wall_drive').rest!.join() === '45,45')
+  check('Advanced does not carry the old "4–6 reps" dose or the resistance-work line', !/4–6 quality/.test(LEVEL_DEFS.advanced.dose) && !LEVEL_DEFS.advanced.adaptations.some(a => /resistance/i.test(a)))
   check('Foundation and Advanced are marked as unreviewed drafts; Development is the source', LEVEL_DEFS.foundation.review === 'draft' && LEVEL_DEFS.advanced.review === 'draft' && LEVEL_DEFS.development.review === 'source')
   check('guardrails keep the indoor limit and the pain rule', GUARDRAILS.some(g => /20×15 ft/.test(g) && /Not full 10-yard sprints/.test(g)) && GUARDRAILS.some(g => /pain/i.test(g)))
 

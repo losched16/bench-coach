@@ -17,13 +17,27 @@ creators and shown in the app as "not yet reviewed". They are references, not Be
 |---|---|---|
 | Development level: sets, reps, rest, cues, 10-yard indoor text | The source specification's own numbers | Not yet approved by a coach |
 | Foundation level | **Derived by rule** from the specification's stated adaptations | **DRAFT** |
-| Advanced level | **Derived by rule** from the specification's stated adaptations | **DRAFT** |
+| Advanced level | **Proposed prescription** (owner's cautious reading): Development's reps, more recovery (+15 sec), progress through unlocks. Not the source's "4–6 reps" | **DRAFT, pending coach approval** |
 | Falling start, indoor (lean-and-catch, 2 yards, 10 ft clear) | **Assistant proposal**; numbers are mine | **DRAFT** |
 | Skater Step and Stick, Half-Circle Cut write-ups | **Assistant drafts**; not in the library | **DRAFT** |
 | Progression gates, pain rule, one-harder-step rule | Specification's intent, **implemented by the assistant** | Not yet approved by a coach |
-| Week-3 floor for level changes; Foundation cannot unlock hops | **Assistant's conservative defaults**, not in the source | **DRAFT** |
+| Week-3 floor for level changes; Foundation cannot unlock hops | **Provisional safety defaults** (assistant's conservative readings, kept by the owner), not in the source | **PROVISIONAL, pending coach sign-off** |
 | Video references | Third-party Instagram posts, credited | **Not reviewed.** No reference is marked verified or approved anywhere in the app |
 | Player-metrics bridge (writing timed results into the existing measurements) | - | **Deferred** by decision; not built |
+
+## 0b. The decisions I need from you (one page)
+
+| # | Decision | My proposal | Your answer |
+|---|---|---|---|
+| 1 | Advanced prescription | Development's reps, rest + 15 sec, progress by unlocks | ☐ accept ☐ change: ____ |
+| 2 | Foundation rest times (source gives none) | Same as Development; coach adjusts per child | ☐ accept ☐ longer: ____ |
+| 3 | Foundation cannot unlock hops or jump-into-sprint | Provisional default: keep | ☐ keep ☐ drop |
+| 4 | No level change before Week 3 | Provisional default: keep | ☐ keep ☐ change to Week __ |
+| 5 | Pain at the last session blocks every advance, no override | Keep | ☐ keep ☐ change |
+| 6 | Indoor falling start: two-step lean-and-catch, 2 yd, 10 ft clear | Wall-drive fallback at Foundation indoors | ☐ accept ☐ edit numbers: ____ |
+| 7 | Skater Step and Stick and Half-Circle Cut write-ups | Edit, then use; not added to the library until you have watched a child do them | ☐ approve ☐ edit ☐ no |
+| 8 | Seven remaining third-party video posts (unreviewed) | Watch each; keep or remove. None is approved. They are shown only as a collapsed, labelled list and never as a recommendation | ☐ done: ____ |
+| 9 | Reaction cue games open to Foundation from Week 2 | Keep | ☐ keep ☐ not Foundation |
 
 ## A. The four weeks
 
@@ -123,7 +137,7 @@ Ready when: Consistent mechanics, soft landings, plant and cut with knee trackin
 
 ### Advanced youth  (DRAFT, derived; needs your approval)
 
-3 sessions a week · about 25–35 minutes · 2–3 sessions a week, about 25–35 minutes, 4–6 quality short reps and longer recovery. Do not add volume just because the athlete is older.
+3 sessions a week · about 25–35 minutes (the extra time is recovery) · 2–3 sessions a week, about 25–35 minutes. Same repetitions as Development with more recovery between efforts. Progress through the unlocks and added complexity, not extra reps. (Proposed; pending coach approval.)
 Ready when: Can maintain technique under faster or sport-reactive demands.
 
 **Day A — First step and acceleration**
@@ -131,31 +145,31 @@ Ready when: Can maintain technique under faster or sport-reactive demands.
 | Exercise | Sets × reps | Rest | Cue | Notes | OK |
 |---|---|---|---|---|---|
 | Warm-up | 1 × 5 minutes | Coach sets the rest. | Gradual, never maximal. | — | ☐ |
-| Wall drive or standing march | 2 × 5 controlled reps per leg | 30 sec (At least this; longer recovery than Development. Coach sets it.) | Push the ground back. | — | ☐ |
-| Falling-start acceleration (5 yards) | 1 × 4–6 quality short reps | 45–60 sec (At least this; longer recovery than Development. Coach sets it.) | Push, then rise. | outdoor · indoors: Indoors: lean-and-catch. Lean forward from a standing stance, take two quick low steps (about 2 yards) and land balanced on two feet. Use the 20 ft length and keep 10 ft clear past the stop line. Grippy footwear, dry non-slip floor. If the floor is slick or the space is tight, skip it and add one wall-drive set instead. | ☐ |
-| Ten-yard acceleration | 1 × 4–6 quality short reps | 60–90 sec (At least this; longer recovery than Development. Coach sets it.) | Push, push, push. | outdoor · indoors: Indoors: 3 reps of a controlled 2–3-yard takeoff and brake. Not a full sprint. | ☐ |
-| Cone reaction chase | 1 × 4–6 quality short reps | 45–60 sec (At least this; longer recovery than Development. Coach sets it.) | See, push, go. | — | ☐ |
+| Wall drive or standing march | 2 × 5 controlled reps per leg | 45 sec (Proposed: Development's rest plus 15 sec. A coach sets the final rest.) | Push the ground back. | — | ☐ |
+| Falling-start acceleration (5 yards) | 1 × 4 | 60–75 sec (Proposed: Development's rest plus 15 sec. A coach sets the final rest.) | Push, then rise. | outdoor · indoors: Indoors: lean-and-catch. Lean forward from a standing stance, take two quick low steps (about 2 yards) and land balanced on two feet. Use the 20 ft length and keep 10 ft clear past the stop line. Grippy footwear, dry non-slip floor. If the floor is slick or the space is tight, skip it and add one wall-drive set instead. | ☐ |
+| Ten-yard acceleration | 1 × 3 | 75–105 sec (Proposed: Development's rest plus 15 sec. A coach sets the final rest.) | Push, push, push. | outdoor · indoors: Indoors: 3 reps of a controlled 2–3-yard takeoff and brake. Not a full sprint. | ☐ |
+| Cone reaction chase | 1 × 4 | 60–75 sec (Proposed: Development's rest plus 15 sec. A coach sets the final rest.) | See, push, go. | — | ☐ |
 
 **Day B — Lateral agility and deceleration**
 
 | Exercise | Sets × reps | Rest | Cue | Notes | OK |
 |---|---|---|---|---|---|
 | Warm-up | 1 × 5 minutes | Coach sets the rest. | Gradual, never maximal. | — | ☐ |
-| Lateral shuffle and controlled stop | 2 × 2 trips per side (3 yards) | 30 sec (At least this; longer recovery than Development. Coach sets it.) | Brake, plant, push. | — | ☐ |
-| Shuffle, controlled plant, 3-yard acceleration | 1 × 4–6 quality short reps | 45–60 sec (At least this; longer recovery than Development. Coach sets it.) | Brake, plant, push. | — | ☐ |
-| Half-circle cone cut | 1 × 4–6 quality short reps | 45–60 sec (At least this; longer recovery than Development. Coach sets it.) | Feet under hips, eyes up. | — | ☐ |
-| React to a rolled tennis ball and field | 1 × 4 total rounds | 30–45 sec (At least this; longer recovery than Development. Coach sets it.) | Move through the ball. | — | ☐ |
+| Lateral shuffle and controlled stop | 2 × 2 trips per side (3 yards) | 45 sec (Proposed: Development's rest plus 15 sec. A coach sets the final rest.) | Brake, plant, push. | — | ☐ |
+| Shuffle, controlled plant, 3-yard acceleration | 1 × 3 reps each direction | 60–75 sec (Proposed: Development's rest plus 15 sec. A coach sets the final rest.) | Brake, plant, push. | — | ☐ |
+| Half-circle cone cut | 1 × 2 reps each direction | 60–75 sec (Proposed: Development's rest plus 15 sec. A coach sets the final rest.) | Feet under hips, eyes up. | — | ☐ |
+| React to a rolled tennis ball and field | 1 × 4 total rounds | 45–60 sec (Proposed: Development's rest plus 15 sec. A coach sets the final rest.) | Move through the ball. | — | ☐ |
 
 **Day C — Explosive coordination and baseball transfer**
 
 | Exercise | Sets × reps | Rest | Cue | Notes | OK |
 |---|---|---|---|---|---|
 | Warm-up | 1 × 5 minutes | Coach sets the rest. | Gradual, never maximal. | — | ☐ |
-| Low two-foot pogo jumps | 2 × 8 | 45 sec (At least this; longer recovery than Development. Coach sets it.) | Small, quick, quiet. | — | ☐ |
-| Broad jump and freeze | 3 × 2 reps, freeze 2 seconds | 45–60 sec (At least this; longer recovery than Development. Coach sets it.) | Land like a cat. | — | ☐ |
-| Lateral skater step and stick | 2 × 3 each side | 45–60 sec (At least this; longer recovery than Development. Coach sets it.) | Own the landing. | locked until "skater_hop" | ☐ |
-| Infield reaction and throw (controlled pace) | 1 × 4–6 total rounds | 30 sec (At least this; longer recovery than Development. Coach sets it.) | Keep the feet moving through the play. | Controlled pace. | ☐ |
-| Broad jump into 5-yard acceleration | 1 × 2 | 60 sec (At least this; longer recovery than Development. Coach sets it.) | Land, then push. | optional · locked until "broad_jump_to_sprint" · outdoor · Only if time and quality allow. Replace an exercise rather than adding volume. | ☐ |
+| Low two-foot pogo jumps | 2 × 8 | 60 sec (Proposed: Development's rest plus 15 sec. A coach sets the final rest.) | Small, quick, quiet. | — | ☐ |
+| Broad jump and freeze | 3 × 2 reps, freeze 2 seconds | 60–75 sec (Proposed: Development's rest plus 15 sec. A coach sets the final rest.) | Land like a cat. | — | ☐ |
+| Lateral skater step and stick | 2 × 3 each side | 60–75 sec (Proposed: Development's rest plus 15 sec. A coach sets the final rest.) | Own the landing. | locked until "skater_hop" | ☐ |
+| Infield reaction and throw (controlled pace) | 1 × 4–6 total rounds | 45 sec (Proposed: Development's rest plus 15 sec. A coach sets the final rest.) | Keep the feet moving through the play. | Controlled pace. | ☐ |
+| Broad jump into 5-yard acceleration | 1 × 2 | 75 sec (Proposed: Development's rest plus 15 sec. A coach sets the final rest.) | Land, then push. | optional · locked until "broad_jump_to_sprint" · outdoor · Only if time and quality allow. Replace an exercise rather than adding volume. | ☐ |
 
 
 ## D. Assumptions I am asking you to accept or change
@@ -163,7 +177,7 @@ Ready when: Can maintain technique under faster or sport-reactive demands.
 | # | Assumption | Accept | Change |
 |---|---|---|---|
 | 1 | Foundation: one set everywhere, starts 2–3, other reps capped at 4, rest as Development, no timed tests. | ☐ | |
-| 2 | Advanced: start-type exercises 4–6 quality reps, no added sets, rest "at least Development's; coach sets it". | ☐ | |
+| 2 | Advanced: **Development's repetition counts, no increase**; rest = Development's + 15 sec (proposal); progress through the unlocks, not volume. | ☐ | |
 | 3 | Foundation runs two sessions a week (A then B, then A then C). | ☐ | |
 | 4 | Advanced adds no exercise: the source mentions 10–20 yard runs and supervised resistance work, shown as text only. | ☐ | |
 | 5 | Two clean sessions are enough to advance a week or unlock a progression. A level change also needs two clean sessions and is refused before Week 3. | ☐ | |

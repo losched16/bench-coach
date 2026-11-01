@@ -193,18 +193,24 @@ function Program({ s, canDecide, canRecord, reload, setError }: { s: Json; canDe
   )
 }
 
+// Third-party posts, collapsed on purpose. They sit under a label that says BenchCoach has not reviewed them,
+// so they are never mistaken for a recommendation inside the instructions. A coach opens the list deliberately.
 function Refs({ refs }: { refs: Json[] }) {
   if (!refs.length) return null
   return (
-    <ul className="mt-2 space-y-1">
-      {refs.map(r => (
-        <li key={r.url} className="text-xs text-gray-600" data-testid="reference">
-          <a href={r.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-700 underline">{r.title}<ExternalLink size={12} /></a>{' '}
-          <span>by {r.creator}</span>{' '}
-          <span className="rounded bg-gray-100 px-1.5 py-0.5">External reference · not yet reviewed</span>
-        </li>
-      ))}
-    </ul>
+    <details className="mt-2 text-xs text-gray-600" data-testid="references">
+      <summary className="cursor-pointer select-none">Third-party references, not reviewed by BenchCoach ({refs.length})</summary>
+      <p className="mt-1 italic">Not a recommendation and not approved. Watch before you use one.</p>
+      <ul className="mt-1 space-y-1">
+        {refs.map(r => (
+          <li key={r.url} data-testid="reference">
+            <a href={r.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-700 underline">{r.title}<ExternalLink size={12} /></a>{' '}
+            <span>by {r.creator}</span>{' '}
+            <span className="rounded bg-gray-100 px-1.5 py-0.5">External reference · not yet reviewed</span>
+          </li>
+        ))}
+      </ul>
+    </details>
   )
 }
 

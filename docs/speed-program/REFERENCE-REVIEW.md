@@ -7,8 +7,10 @@ to, and whether the title describes something riskier than that exercise allows.
 removed it. Where it plausibly does, I kept it as an "unreviewed" reference, which a person still has
 to watch.
 
-The app shows every kept reference as "External reference · not yet reviewed", credited to its creator,
-and a coach can remove or replace any of them per player.
+The app shows the kept references only inside a collapsed section under each exercise, headed
+"Third-party references, not reviewed by BenchCoach", with "Not a recommendation and not approved. Watch
+before you use one." Each is credited to its creator and tagged "not yet reviewed". They are never inside the
+exercise instructions. A coach can remove or replace any of them per player.
 
 | Exercise | Creator and title (as recorded) | Decision | Reason |
 |---|---|---|---|

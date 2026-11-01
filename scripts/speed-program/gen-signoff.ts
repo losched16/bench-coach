@@ -45,11 +45,11 @@ const LEDGER = `## 0. What is approved and what is not (read first)
 |---|---|---|
 | Development level: sets, reps, rest, cues, 10-yard indoor text | The source specification's own numbers | Not yet approved by a coach |
 | Foundation level | **Derived by rule** from the specification's stated adaptations | **DRAFT** |
-| Advanced level | **Derived by rule** from the specification's stated adaptations | **DRAFT** |
+| Advanced level | **Proposed prescription** (owner's cautious reading): Development's reps, more recovery (+15 sec), progress through unlocks. Not the source's "4–6 reps" | **DRAFT, pending coach approval** |
 | Falling start, indoor (lean-and-catch, 2 yards, 10 ft clear) | **Assistant proposal**; numbers are mine | **DRAFT** |
 | Skater Step and Stick, Half-Circle Cut write-ups | **Assistant drafts**; not in the library | **DRAFT** |
 | Progression gates, pain rule, one-harder-step rule | Specification's intent, **implemented by the assistant** | Not yet approved by a coach |
-| Week-3 floor for level changes; Foundation cannot unlock hops | **Assistant's conservative defaults**, not in the source | **DRAFT** |
+| Week-3 floor for level changes; Foundation cannot unlock hops | **Provisional safety defaults** (assistant's conservative readings, kept by the owner), not in the source | **PROVISIONAL, pending coach sign-off** |
 | Video references | Third-party Instagram posts, credited | **Not reviewed.** No reference is marked verified or approved anywhere in the app |
 | Player-metrics bridge (writing timed results into the existing measurements) | - | **Deferred** by decision; not built |
 
@@ -66,7 +66,21 @@ Youth Baseball Development Pathway"). Foundation and Advanced are derived from t
 mechanical steps (listed in COACH-REVIEW.md). Video links are third-party Instagram posts, credited to their
 creators and shown in the app as "not yet reviewed". They are references, not BenchCoach content.
 
-${LEDGER}## A. The four weeks
+${LEDGER}## 0b. The decisions I need from you (one page)
+
+| # | Decision | My proposal | Your answer |
+|---|---|---|---|
+| 1 | Advanced prescription | Development's reps, rest + 15 sec, progress by unlocks | ☐ accept ☐ change: ____ |
+| 2 | Foundation rest times (source gives none) | Same as Development; coach adjusts per child | ☐ accept ☐ longer: ____ |
+| 3 | Foundation cannot unlock hops or jump-into-sprint | Provisional default: keep | ☐ keep ☐ drop |
+| 4 | No level change before Week 3 | Provisional default: keep | ☐ keep ☐ change to Week __ |
+| 5 | Pain at the last session blocks every advance, no override | Keep | ☐ keep ☐ change |
+| 6 | Indoor falling start: two-step lean-and-catch, 2 yd, 10 ft clear | Wall-drive fallback at Foundation indoors | ☐ accept ☐ edit numbers: ____ |
+| 7 | Skater Step and Stick and Half-Circle Cut write-ups | Edit, then use; not added to the library until you have watched a child do them | ☐ approve ☐ edit ☐ no |
+| 8 | Seven remaining third-party video posts (unreviewed) | Watch each; keep or remove. None is approved. They are shown only as a collapsed, labelled list and never as a recommendation | ☐ done: ____ |
+| 9 | Reaction cue games open to Foundation from Week 2 | Keep | ☐ keep ☐ not Foundation |
+
+## A. The four weeks
 
 ${WEEKS.map(w => `- **Week ${w.week}, ${w.name}.** ${w.focus} ${w.effort}`).join('\n')}
 
@@ -89,7 +103,7 @@ ${LEVELS.map(levelTable).join('\n')}
 | # | Assumption | Accept | Change |
 |---|---|---|---|
 | 1 | Foundation: one set everywhere, starts 2–3, other reps capped at 4, rest as Development, no timed tests. | ☐ | |
-| 2 | Advanced: start-type exercises 4–6 quality reps, no added sets, rest "at least Development's; coach sets it". | ☐ | |
+| 2 | Advanced: **Development's repetition counts, no increase**; rest = Development's + 15 sec (proposal); progress through the unlocks, not volume. | ☐ | |
 | 3 | Foundation runs two sessions a week (A then B, then A then C). | ☐ | |
 | 4 | Advanced adds no exercise: the source mentions 10–20 yard runs and supervised resistance work, shown as text only. | ☐ | |
 | 5 | Two clean sessions are enough to advance a week or unlock a progression. A level change also needs two clean sessions and is refused before Week 3. | ☐ | |

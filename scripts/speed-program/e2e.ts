@@ -145,7 +145,10 @@ async function main() {
       /^.*\b2 × 5\b.*per leg/.test(await line('wall_drive')) && /\b1 × 4\b/.test(await line('falling_start')) && /\b1 × 3\b/.test(await line('accel_10')) && /\b1 × 4\b/.test(await line('cone_reaction_chase')),
       [await line('wall_drive'), await line('falling_start'), await line('accel_10'), await line('cone_reaction_chase')].join(' | '))
     check('rest times shown: 30 sec, 45–60 sec, 60–90 sec', /30 sec/.test(a) && /45–60 sec/.test(a) && /60–90 sec/.test(a))
-    check('every video is an unreviewed external reference with a credit', (await p.getByTestId('reference').count()) >= 4 && (await p.getByTestId('reference').allInnerTexts()).every(x => /by .+/.test(x) && /not yet reviewed/.test(x)))
+    const refTexts = await p.getByTestId('reference').evaluateAll(els => els.map(e => e.textContent || ''))
+    check('every video is an unreviewed external reference with a credit', refTexts.length >= 4 && refTexts.every(x => /by .+/.test(x) && /not yet reviewed/.test(x)))
+    check('references are collapsed under a label that says BenchCoach has not reviewed them', (await p.getByTestId('references').count()) >= 4 && (await p.getByTestId('references').first().evaluate(e => !(e as HTMLDetailsElement).open)) && /not reviewed by BenchCoach/.test(await p.getByTestId('references').first().locator('summary').innerText()))
+    check('the exercise instructions themselves contain no link', (await p.getByTestId('item-A-wall_drive').locator(':scope > div, :scope > p').evaluateAll(els => els.every(e => !e.querySelector('a')))))
     const all = await text(p)
     check('the page never says a video is verified or approved', !/\b(verified|approved)\b/i.test(all))
     check('each exercise names its library drill, or says there is none', /Library drill:/.test(all) && /No library drill yet/.test(all) && /Closest library drill \(not the same exercise\)/.test(all))
