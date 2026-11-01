@@ -109,7 +109,7 @@ The planning price is **$29 USD one-time, pending your confirmation**; nothing h
 ## Preview
 
 There is **no preview deployment** of this branch on Vercel today, and none has been created.
-`docs/preview/README.md` is the runbook for an isolated one: a separate Supabase project, synthetic
+`docs/preview/README.md` is the runbook for an isolated one (not used: the owner chose the live project, test accounts only, see `PHONE-CHECKLIST.md`): a separate Supabase project, synthetic
 players and accounts, Stripe test mode, flags on only inside the preview, a guard script
 (`scripts/preview/check-env.mjs`) that refuses production, and a seed that refuses a populated
 project. `npm run preview:verify` proves the schema build, the seed and the guard locally.

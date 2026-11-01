@@ -1,6 +1,14 @@
 # Chargeback (dispute) handling: proposal
 
-**Status: IMPLEMENTED on this branch, pending your review. Not deployed. Migration 082 is not applied anywhere.**
+**Status: IMPLEMENTED on this branch, pending your review. The code is not deployed. Migration 082 (the `academy_disputes` table) is applied to the live Supabase project; nothing reads or writes it until this branch is merged.**
+
+> **Where things stand (2026-11-01).** The owner chose to use the live Supabase project, not a separate preview project:
+> it holds only test accounts. Migration 080 was found already applied there (course `build-a-better-baseball-swing`
+> is `draft`, 25 lesson bodies, 0 enrollments, row security on for every Academy table). Migration **082 was applied
+> there on 2026-11-01** (verified: row security on, no `anon`/`authenticated` privilege). Migration 081 (speed program) is **not**
+> applied. A placeholder course `academy-test-course` (draft, no price) was added for Stripe test-mode checks. The real
+> course stays `draft`. `ACADEMY_LAUNCH` is off in Production. Nothing is merged; PRs #32 and #33 are drafts.
+
 You asked for handling that allows investigation before final revocation, and for access to be restorable.
 The code is `lib/academy/disputes.ts` (about 90 lines), wired into the existing Stripe webhook after signature
 verification. Tests: unit checks for every transition and edge case, Postgres checks for the new table, and a browser test that opens, loses and then reinstates a dispute.
@@ -42,15 +50,6 @@ the open flag is only informational.
 - Audit: each event writes a row to `academy_stripe_events` naming the dispute and what was done, plus the dispute row.
 - Admin: `/admin/academy` shows open disputes with the response deadline.
 - You can also restore anyone by hand with the existing Grant button.
-
-## What it needed (original sketch, now built)
-
-- Migration 082: `academy_enrollments.dispute_id`, `dispute_status` (`open`/`won`/`lost`),
-  `dispute_opened_at`, `dispute_due_by`; allow `revoke_reason` values above. No change to who can read
-  or write what; enrollments stay server-written only.
-- Webhook: two new cases in `lib/academy/webhook.ts` plus a `handleDispute` in `fulfillment.ts`.
-- Stripe: add the two events to the endpoint.
-- Admin: one list column and one button.
 
 ## Evidence for responding (what you will actually have)
 

@@ -1,7 +1,8 @@
 -- ============================================================================
 -- Migration 082: Academy chargeback (dispute) records
 -- ============================================================================
--- NOT APPLIED to any database yet. Additive and idempotent. Needs review first.
+-- Applied to the live Supabase project on 2026-11-01 (owner-approved; verified RLS on, no client grants).
+-- Additive and idempotent. The application code that uses it is not deployed yet.
 --
 -- One row per Stripe dispute against an Academy payment: what happened, when, and what
 -- the Academy did about access. Server-written only (the webhook, with the service

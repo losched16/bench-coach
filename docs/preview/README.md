@@ -5,7 +5,11 @@ phones and with Stripe test mode **without touching production**: a separate
 Supabase project, synthetic players, Stripe test credentials, launch flags on only
 inside the preview.
 
-**Status: prepared, not created.** Nothing in this runbook has been run against any
+**Status update (2026-11-01):** no separate preview project was created. The owner chose the live Supabase project (test
+accounts only). See `docs/academy/CHARGEBACK-PROPOSAL.md` for what is applied there. The rest of this runbook describes the
+original isolated design and is kept as reference.
+
+**Original status: prepared, not created.** Nothing in this runbook had been run against any
 cloud account. Creating the Supabase project can add to the organization's bill, and
 setting Vercel preview variables changes the project's configuration, so both wait
 for your explicit go-ahead (see "What needs your approval").

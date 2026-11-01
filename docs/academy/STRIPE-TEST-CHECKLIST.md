@@ -1,7 +1,8 @@
 # Academy: real Stripe test-mode purchase and refund checklist
 
-Run only in the **isolated preview** (`docs/preview/README.md`): separate Supabase project,
-synthetic buyers, Stripe in **Test mode**. The public catalog and purchasing stay off in
+Run only with Stripe in **Test mode** and a Vercel **Preview** deployment of this branch (never Production), using the placeholder
+course `academy-test-course` (not the real manuscript course). The database is the live Supabase project, which holds only test accounts
+(see `PHONE-CHECKLIST.md`); the older isolated design is in `docs/preview/README.md`. The public catalog and purchasing stay off in
 production. Everything below uses fake money and test cards.
 
 Before starting: `PRODUCTION_SUPABASE_REF=<prod ref> node scripts/preview/check-env.mjs` passes in

@@ -4,6 +4,19 @@
 decision lists the realistic options, what the code already does, and a blank for your answer. Have a lawyer
 read the Terms, Privacy and refund text before any real sale. Tick one box per decision, sign at the end.
 
+## At a glance (answer these first; everything below is the detail)
+**None of this is legal or tax advice. All of it is UNAPPROVED until you tick it.**
+| # | Decision | My suggestion | Answer |
+|---|---|---|---|
+| 1 | Launch price | $29.00 USD one-time | ☐ yes ☐ other: ____ |
+| 2 | Refund promise | Short money-back window (for example 14 days), asked by email, refunded by you in Stripe | ☐ yes ☐ other: ____ |
+| 3 | Sales tax | Stripe Tax on; ask your accountant if price includes tax | ☐ A ☐ B ☐ C |
+| 4 | Chargebacks | Keep access while open; end only if lost; restore if won (as built) | ☐ approve ☐ change |
+| 5 | Terms of sale | One page, you confirm each line | ☐ drafted ☐ lawyer read |
+| 6 | Privacy policy | Must name Stripe, Supabase, Vercel; no child data | ☐ drafted ☐ lawyer read |
+| 7 | Videos | Launch with none until a person has reviewed each | ☐ none ☐ some |
+| 8 | Instructor sign-off | Required before any real sale | ☐ done |
+
 ## 1. Price
 Planning price: **$29.00 USD one-time** (approved for isolated preview testing only; proposed as the launch price).
 - ☐ Launch at $29.00 USD  ☐ Launch at another price: ________  ☐ Not decided
