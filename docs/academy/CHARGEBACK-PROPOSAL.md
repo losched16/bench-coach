@@ -1,9 +1,11 @@
 # Chargeback (dispute) handling: proposal
 
-**Status: PROPOSAL, not built, not approved.** Today a chargeback does nothing: the webhook
-handles `charge.refunded` only, so a buyer who disputes the charge keeps access until you
-act by hand. You asked for handling that allows investigation before final revocation. This is
-the smallest design that does that. Nothing here changes behavior until you approve it.
+**Status: IMPLEMENTED on this branch, pending your review. Not deployed. Migration 082 is not applied anywhere.**
+You asked for handling that allows investigation before final revocation, and for access to be restorable.
+The code is `lib/academy/disputes.ts` (about 90 lines), wired into the existing Stripe webhook after signature
+verification. Tests: unit checks for every transition and edge case, Postgres checks for the new table, and a browser test that opens, loses and then reinstates a dispute.
+It does nothing in production until the branch is merged, migration 082 is applied and the two dispute events are
+added to the Stripe webhook endpoint.
 
 Already decided for planning: a **full refund revokes** access; a **partial refund keeps** it.
 
@@ -28,7 +30,20 @@ Idempotent through `academy_stripe_events`, like every other Academy event. An e
 out of order (closed before created) is applied correctly because the closing outcome decides, and
 the open flag is only informational.
 
-## What it needs (small, additive)
+## What was built
+
+- Table `academy_disputes` (migration 082): one row per dispute with status open/won/lost, reason, amount, response
+  deadline, and `access_action` (kept / revoked / restored). Server-only: RLS on, no policy, no client privilege.
+- Events handled: `charge.dispute.created`, `charge.dispute.closed`, `charge.dispute.funds_reinstated`.
+- Access: unchanged on open. Ended **only** when a dispute closes as lost (`revoke_reason = stripe_dispute_lost`).
+  Restored when it closes won, warning-closed, or funds are reinstated, but **only** if this module ended it: a
+  refunded enrollment, or one you revoked by hand, is never restored by a dispute.
+- Safe against replays and out-of-order events: a repeated event id is skipped; a late "created" after "lost" is ignored.
+- Audit: each event writes a row to `academy_stripe_events` naming the dispute and what was done, plus the dispute row.
+- Admin: `/admin/academy` shows open disputes with the response deadline.
+- You can also restore anyone by hand with the existing Grant button.
+
+## What it needed (original sketch, now built)
 
 - Migration 082: `academy_enrollments.dispute_id`, `dispute_status` (`open`/`won`/`lost`),
   `dispute_opened_at`, `dispute_due_by`; allow `revoke_reason` values above. No change to who can read
@@ -50,9 +65,9 @@ Created flags and keeps access; closed/lost revokes; closed/won clears; replayed
 out-of-order events; dispute on a refunded enrollment; a dispute on an unknown charge is ignored;
 a dispute on a subscription charge is ignored (not an Academy payment).
 
-## Decisions for you
+## Decisions for you (the defaults below are what is built)
 
-1. Keep access during the investigation (recommended), or suspend on open?
+1. Keep access during the investigation (built), or suspend on open?
 2. Who is notified, and how (email, admin screen)?
 3. Do you want a maximum number of days an open dispute may keep access?
 4. Do you want repeat disputers blocked from buying again?

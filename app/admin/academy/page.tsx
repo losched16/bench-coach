@@ -13,6 +13,7 @@ interface Row { id: string; user_id: string; status: string; source: string; enr
 export default function AcademyAdmin() {
   const [course, setCourse] = useState(COURSES[0]?.slug || '')
   const [rows, setRows] = useState<Row[] | null>(null)
+  const [disputes, setDisputes] = useState<Array<{ dispute_id: string; status: string; reason: string | null; amount: number | null; currency: string | null; due_by: string | null; access_action: string }>>([])
   const [review, setReview] = useState<Array<{ event_id: string; outcome: string; created_at: string }>>([])
   const [error, setError] = useState<string | null>(null)
   const [email, setEmail] = useState('')
@@ -26,6 +27,7 @@ export default function AcademyAdmin() {
     if (!r.ok) { setRows(null); setError(r.status === 404 ? 'Not available (owner only, or the course is not imported yet).' : d.error || 'Could not load.'); return }
     setRows(d.enrollments)
     setReview(d.needsReview || [])
+    setDisputes(d.disputes || [])
   }, [course])
   useEffect(() => { void load() }, [load])
 
@@ -46,6 +48,13 @@ export default function AcademyAdmin() {
           <h2 className="font-semibold text-red-900">Paid, but no access was granted ({review.length})</h2>
           <p className="text-red-900">Stripe took these payments and the Academy refused to enroll the buyer. Look up each in Stripe, then grant access below or refund it.</p>
           <ul className="mt-2 space-y-1 font-mono text-xs text-red-950">{review.map(e => <li key={e.event_id}>{String(e.created_at).slice(0, 16)} · {e.event_id} · {e.outcome.replace(/^NEEDS_REVIEW\s*/, '')}</li>)}</ul>
+        </section>
+      )}
+      {disputes.some(d => d.status === 'open') && (
+        <section role="alert" data-testid="open-disputes" className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4 text-sm">
+          <h2 className="font-semibold text-amber-900">Open disputes ({disputes.filter(d => d.status === 'open').length})</h2>
+          <p className="text-amber-900">A buyer disputed a charge. Their access stays on while you respond in Stripe; it ends only if the dispute is lost and comes back if it is resolved in your favor.</p>
+          <ul className="mt-2 space-y-1 text-xs text-amber-950">{disputes.filter(d => d.status === 'open').map(d => <li key={d.dispute_id} className="font-mono">{d.dispute_id} · {d.reason || 'reason not given'} · {d.amount != null ? `${(d.amount / 100).toFixed(2)} ${String(d.currency || '').toUpperCase()}` : ''} · respond by {d.due_by ? String(d.due_by).slice(0, 10) : 'see Stripe'}</li>)}</ul>
         </section>
       )}
       <label className="block text-sm">Course{' '}

@@ -29,7 +29,9 @@ grant nothing. Each row says where it is tested.
 | Owner grants or revokes by hand | Recorded with who did it | browser e2e: "the owner can revoke an enrollment", "the owner can grant (comp) access"; Postgres policy test: no client can write enrollments |
 | Launch flag off | Checkout, confirm and tracking answer 404 for everyone; existing customers keep access; the owner can preview pages | `test:academy-flag-off` (19 checks) |
 | Unapproved video | Never shown to customers | unit: "no fabricated approved video status anywhere in code"; browser e2e (candidate and broken links hidden) |
-| **Chargeback / dispute** | **Nothing happens automatically today** | **Not covered.** See `CHARGEBACK-PROPOSAL.md` |
+| **Dispute opened** | Recorded; access stays on while the owner investigates | unit: "dispute opened: recorded, and access STAYS ON"; browser e2e |
+| **Dispute lost** | Access ends (`stripe_dispute_lost`) | unit: "dispute LOST"; browser e2e |
+| **Dispute resolved in our favor, or funds reinstated** | Access restored, but only if the dispute ended it | unit: "RESTORED", "funds reinstated", "never restores a refunded enrollment", "never restores access the OWNER ended"; browser e2e |
+| Dispute events out of order or repeated | Harmless | unit: "OUT OF ORDER", "the same event replayed is skipped" |
 
-Gaps, said plainly: no real Stripe account has been used (a local fake Stripe stands in), and the
-chargeback case is not built.
+Gap, said plainly: no real Stripe account has been used yet (a local fake Stripe stands in for every row above).

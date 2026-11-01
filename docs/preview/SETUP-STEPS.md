@@ -74,8 +74,8 @@ or a PR.** Nothing here has been done; I have created nothing and changed no set
 4. **Developers, Webhooks, Add endpoint,** after Step 3 gives you the preview address:
    `https://<academy-preview-host>/api/stripe/webhook`. Events: `checkout.session.completed`,
    `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`,
-   `charge.refunded`. When chargeback handling is built (see `docs/academy/CHARGEBACK-PROPOSAL.md`),
-   add `charge.dispute.created` and `charge.dispute.closed`. Copy the endpoint's **Signing secret**
+   `charge.refunded`, and the three dispute events `charge.dispute.created`, `charge.dispute.closed`,
+   `charge.dispute.funds_reinstated` (see `docs/academy/CHARGEBACK-PROPOSAL.md`). Copy the endpoint's **Signing secret**
    (`whsec_...`) straight into Vercel.
 5. Test cards are in `docs/academy/STRIPE-TEST-CHECKLIST.md`.
 

@@ -305,6 +305,23 @@ async function main() {
     check('PRICE CHANGED MID-CHECKOUT: the buyer who paid is enrolled exactly once', enr2.length === 1 && enr2[0].status === 'active' && enr2[0].source === 'purchase')
     check('...and nothing was left waiting for a person to fix', !t2.academy_stripe_events.some((e: any) => /^NEEDS_REVIEW/.test(e.outcome || '')))
     await fetch(`${FIX}/rest/v1/academy_courses?id=eq.${COURSE_ID}`, { method: 'PATCH', headers: { 'content-type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ stripe_price_id: 'price_test_course' }) })
+
+    // ── a chargeback: investigate first, end access only if lost, restore it if resolved in our favor ──
+    const pi2 = enr2[0].stripe_payment_intent_id
+    const opens = async () => { await page.goto(`${APP}/learn/${SLUG}/${lessons[1].key}`, { waitUntil: 'networkidle' }); return (await page.content()).includes(paidSentence) }
+    const disputeNow = async (type: string) => (await (await fetch(`${STRIPE}/__control/dispute?pi=${pi2}&type=${type}&id=dp_e2e_1`)).json()).status
+    check('a dispute is opened: the webhook accepts it', (await disputeNow('created')) === 200)
+    let td = await state()
+    check('...it is recorded, and the buyer KEEPS access while it is investigated', td.academy_disputes?.length === 1 && td.academy_disputes[0].status === 'open' && td.academy_enrollments.find((e: any) => e.user_id === offeredSess.client_reference_id).status === 'active' && (await opens()))
+    check('the owner\'s admin API lists the open dispute', (await (await fetch(`${FIX}/rest/v1/academy_disputes?status=eq.open`)).json()).length === 1)
+    check('the dispute is lost', (await disputeNow('lost')) === 200)
+    td = await state()
+    check('...access ends, with the reason recorded, and the paid lesson is closed', td.academy_enrollments.find((e: any) => e.user_id === offeredSess.client_reference_id).status === 'revoked' && td.academy_enrollments.find((e: any) => e.user_id === offeredSess.client_reference_id).revoke_reason === 'stripe_dispute_lost' && !(await opens()))
+    check('Stripe resolves it in our favor afterwards', (await disputeNow('reinstated')) === 200)
+    td = await state()
+    check('...access is RESTORED and the paid lesson opens again', td.academy_enrollments.find((e: any) => e.user_id === offeredSess.client_reference_id).status === 'active' && td.academy_disputes[0].access_action === 'restored' && (await opens()))
+    const sameDisputeEvents = td.academy_stripe_events.filter((e: any) => /^dispute dp_e2e_1/.test(e.outcome || '')).length
+    check('every dispute step left one audit row naming the dispute', sameDisputeEvents === 3, String(sameDisputeEvents))
     await ctx.close()
   }
 

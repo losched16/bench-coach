@@ -200,6 +200,78 @@ async function main() {
   check('checkout records the price and currency it OFFERED in the session metadata', /expected_price_id: course\.stripe_price_id/.test(checkoutSrc) && /expected_currency:/.test(checkoutSrc))
   check('the owner\'s admin API lists payments that need review', /NEEDS_REVIEW%/.test(rd('app/api/academy/admin/enrollments/route.ts')))
 
+  // ── chargebacks: flag first, keep access while investigating, end it only if lost, restore if resolved in our favor ──
+  const mkDispDb = () => {
+    const d = mkDb()
+    d.tables.academy_disputes = []
+    return d
+  }
+  const dsp = (over: any = {}) => ({ id: 'dp_1', payment_intent: 'pi_1', status: 'needs_response', reason: 'fraudulent', amount: 1900, currency: 'usd', created: 1793500000, evidence_details: { due_by: 1794100000 }, ...over }) as any
+  const dev = (id: string, type: string, o: any) => ({ id, type, data: { object: o } }) as any
+  const dbWithBuyer = async () => { const d = mkDispDb(); await fulfillCheckoutSession(d, stripe(), session()); return d }
+  let dd = await dbWithBuyer()
+  let dw = await handleAcademyEvent(dd, stripe(), dev('evt_d1', 'charge.dispute.created', dsp()))
+  check('dispute opened: recorded, and access STAYS ON while it is investigated', dw.handled && dw.outcome === 'recorded_open' && dd.tables.academy_enrollments[0].status === 'active' && dd.tables.academy_disputes[0].status === 'open' && dd.tables.academy_disputes[0].access_action === 'kept')
+  check('...with the response deadline and amount recorded for the owner', !!dd.tables.academy_disputes[0].due_by && dd.tables.academy_disputes[0].amount === 1900)
+  dw = await handleAcademyEvent(dd, stripe(), dev('evt_d1', 'charge.dispute.created', dsp()))
+  check('the same event replayed is skipped', dw.replay === true && dd.tables.academy_disputes.length === 1)
+  dw = await handleAcademyEvent(dd, stripe(), dev('evt_d2', 'charge.dispute.closed', dsp({ status: 'lost' })))
+  check('dispute LOST: access ends, with the reason recorded', dw.outcome === 'revoked' && dd.tables.academy_enrollments[0].status === 'revoked' && dd.tables.academy_enrollments[0].revoke_reason === 'stripe_dispute_lost' && !!dd.tables.academy_enrollments[0].revoked_at && dd.tables.academy_disputes[0].status === 'lost' && dd.tables.academy_disputes[0].access_action === 'revoked')
+  dw = await handleAcademyEvent(dd, stripe(), dev('evt_d3', 'charge.dispute.closed', dsp({ status: 'lost' })))
+  check('a second "lost" event (new id) changes nothing', dw.outcome === 'unchanged' && dd.tables.academy_disputes.length === 1)
+  dw = await handleAcademyEvent(dd, stripe(), dev('evt_d4', 'charge.dispute.closed', dsp({ status: 'won' })))
+  check('RESTORED: resolved in our favor after being lost, access comes back', dw.outcome === 'restored' && dd.tables.academy_enrollments[0].status === 'active' && dd.tables.academy_enrollments[0].revoked_at === null && dd.tables.academy_enrollments[0].revoke_reason === null && dd.tables.academy_disputes[0].status === 'won' && dd.tables.academy_disputes[0].access_action === 'restored')
+  check('no dispute event ever touches the coach subscription', dd.queriesOn('coaches').length === 0)
+
+  dd = await dbWithBuyer()
+  await handleAcademyEvent(dd, stripe(), dev('evt_e1', 'charge.dispute.created', dsp()))
+  dw = await handleAcademyEvent(dd, stripe(), dev('evt_e2', 'charge.dispute.closed', dsp({ status: 'won' })))
+  check('dispute WON while access was never ended: recorded, access untouched', dw.outcome === 'recorded_won' && dd.tables.academy_enrollments[0].status === 'active' && dd.tables.academy_disputes[0].status === 'won')
+  dd = await dbWithBuyer()
+  dw = await handleAcademyEvent(dd, stripe(), dev('evt_f1', 'charge.dispute.closed', dsp({ status: 'warning_closed' })))
+  check('an inquiry that closes as a warning is treated as resolved, not lost', dw.outcome === 'recorded_won' && dd.tables.academy_enrollments[0].status === 'active')
+  dd = await dbWithBuyer()
+  dw = await handleAcademyEvent(dd, stripe(), dev('evt_g1', 'charge.dispute.closed', dsp({ status: 'needs_response' })))
+  check('a closed event whose status is not final changes nothing', dw.outcome === 'unchanged' && dd.tables.academy_disputes.length === 0 && dd.tables.academy_enrollments[0].status === 'active')
+
+  dd = await dbWithBuyer()
+  await handleAcademyEvent(dd, stripe(), dev('evt_h1', 'charge.dispute.closed', dsp({ status: 'lost' })))
+  dw = await handleAcademyEvent(dd, stripe(), dev('evt_h2', 'charge.dispute.created', dsp()))
+  check('OUT OF ORDER: a late "created" after "lost" does not reopen it or restore access', dw.outcome === 'ignored_stale' && dd.tables.academy_disputes[0].status === 'lost' && dd.tables.academy_enrollments[0].status === 'revoked')
+  dw = await handleAcademyEvent(dd, stripe(), dev('evt_h3', 'charge.dispute.funds_reinstated', dsp()))
+  check('funds reinstated after a loss restores access', dw.outcome === 'restored' && dd.tables.academy_enrollments[0].status === 'active')
+
+  dd = await dbWithBuyer()
+  await handleRefund(dd, { payment_intent: 'pi_1', refunded: true } as any)
+  dw = await handleAcademyEvent(dd, stripe(), dev('evt_i1', 'charge.dispute.closed', dsp({ status: 'lost' })))
+  check('a dispute lost on an already-refunded enrollment changes nothing about access', dw.outcome === 'already_ended' && dd.tables.academy_enrollments[0].status === 'refunded')
+  dw = await handleAcademyEvent(dd, stripe(), dev('evt_i2', 'charge.dispute.closed', dsp({ status: 'won' })))
+  check('...and winning it never resurrects a refunded enrollment', dd.tables.academy_enrollments[0].status === 'refunded' && dw.outcome === 'recorded_won')
+
+  dd = await dbWithBuyer()
+  dd.tables.academy_enrollments[0].status = 'revoked'; dd.tables.academy_enrollments[0].revoked_at = '2026-11-01T00:00:00Z'; dd.tables.academy_enrollments[0].revoke_reason = 'owner revoked by hand'
+  dw = await handleAcademyEvent(dd, stripe(), dev('evt_j1', 'charge.dispute.closed', dsp({ status: 'won' })))
+  check('winning a dispute never restores access the OWNER ended by hand', dd.tables.academy_enrollments[0].status === 'revoked' && dd.tables.academy_enrollments[0].revoke_reason === 'owner revoked by hand')
+
+  dd = await dbWithBuyer()
+  dw = await handleAcademyEvent(dd, stripe(), dev('evt_k1', 'charge.dispute.created', dsp({ payment_intent: 'pi_a_subscription' })))
+  check('a dispute on a payment that is not a course is not ours (the subscription code still sees it)', dw.handled === false && dd.tables.academy_disputes.length === 0)
+  dw = await handleAcademyEvent(dd, stripe(), dev('evt_k2', 'charge.dispute.created', dsp({ payment_intent: null })))
+  check('a dispute with no payment intent is not ours', dw.handled === false)
+  check('events for payments that are not ours leave no Academy audit row', dd.tables.academy_stripe_events.length === 0)
+  dd = await dbWithBuyer()
+  await handleAcademyEvent(dd, stripe(), dev('evt_l1', 'charge.dispute.created', dsp()))
+  await handleAcademyEvent(dd, stripe(), dev('evt_l2', 'charge.dispute.closed', dsp({ status: 'lost' })))
+  check('the Stripe event audit rows name the dispute and what was done', dd.tables.academy_stripe_events.filter((e: any) => /^dispute dp_1: (recorded_open|revoked)/.test(e.outcome)).length === 2)
+  const dFail = mkDispDb(); await fulfillCheckoutSession(dFail, stripe(), session())
+  const failing: any = new StrictSupabase({ ...dFail.tables }, { failing: ['academy_disputes'] })
+  let disputeThrew = false
+  try { await handleAcademyEvent(failing as any, stripe(), dev('evt_m1', 'charge.dispute.created', dsp())) } catch { disputeThrew = true }
+  check('a database failure while recording a dispute throws, so Stripe retries', disputeThrew)
+  const wsrc = rd('lib/academy/webhook.ts') + rd('lib/academy/disputes.ts')
+  check('dispute handling only changes access on a LOST dispute, and restores only what it revoked', /revoke_reason: DISPUTE_REVOKE_REASON/.test(wsrc) && /enr\.revoke_reason === DISPUTE_REVOKE_REASON/.test(wsrc))
+  check('migration 082 exists, is server-only (RLS on, no policy, no client grant) and is not applied by any script', /ENABLE ROW LEVEL SECURITY/.test(rd('migrations/082_academy_disputes.sql')) && !/CREATE POLICY/.test(rd('migrations/082_academy_disputes.sql')) && !/082_academy_disputes/.test(rd('scripts/academy/import-course.ts')))
+
   // ── webhook routing and replay ──────────────────────────────────────────
   db = mkDb()
   const ev = (id: string, type: string, object: any) => ({ id, type, data: { object } }) as any

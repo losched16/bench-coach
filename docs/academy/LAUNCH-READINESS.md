@@ -72,7 +72,7 @@ The planning price is **$29 USD one-time, pending your confirmation**; nothing h
 3. **Webhook.** The existing endpoint `/api/stripe/webhook` handles the Academy.
    Add these events to it: `checkout.session.completed`,
    `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`,
-   `charge.refunded`. The signing secret is the existing `STRIPE_WEBHOOK_SECRET`.
+   `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`, `charge.dispute.funds_reinstated`. The signing secret is the existing `STRIPE_WEBHOOK_SECRET`.
 4. **Environment** (Vercel, per environment): `STRIPE_SECRET_KEY`,
    `STRIPE_WEBHOOK_SECRET`, `ADMIN_EMAIL`, and `ACADEMY_LAUNCH=1` last.
    Use **test-mode** keys and a test price on a preview first.

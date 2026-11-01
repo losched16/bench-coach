@@ -43,3 +43,4 @@
 079_drill_video_replacements
 080_academy
 081_speed_program
+082_academy_disputes

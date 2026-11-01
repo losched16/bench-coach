@@ -85,6 +85,11 @@ if [ "$(PSQL -tAc "select to_regclass('public.speed_program_exercise_drills') is
 fi
 PSQL -v ON_ERROR_STOP=1 -q -f "$ROOT/scripts/preview/seed-drill-fixture.sql" >/dev/null 2>"$WORK/dr2.err" && fail "drill fixture ran twice" || { grep -q REFUSED "$WORK/dr2.err" && pass "the drill fixture refuses to run twice (and on a real library)" || fail "fixture refusal text"; }
 
+if [ "$(PSQL -tAc "select to_regclass('public.academy_disputes') is not null")" = "t" ]; then
+  [ "$(PSQL -tAc "select count(*) from information_schema.role_table_grants where table_name='academy_disputes' and grantee in ('anon','authenticated')")" = "0" ] && pass "the dispute table gives anon and authenticated no privilege, despite Supabase's default grants" || fail "dispute table grants"
+  [ "$(PSQL -tAc "select relrowsecurity::int::text||(select count(*) from pg_policies where tablename='academy_disputes') from pg_class where relname='academy_disputes'")" = "10" ] && pass "the dispute table has row security on and no policy" || fail "dispute table rls"
+fi
+
 CE="$ROOT/scripts/preview/check-env.mjs"
 export NEXT_PUBLIC_SUPABASE_ANON_KEY=anon SUPABASE_SERVICE_ROLE_KEY=svc STRIPE_WEBHOOK_SECRET=whsec_x
 chk() { env "$@" node "$CE" >/dev/null 2>&1 && echo ok || echo refused; }

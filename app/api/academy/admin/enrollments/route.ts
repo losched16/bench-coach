@@ -37,7 +37,10 @@ export async function GET(request: NextRequest) {
   // Payments Stripe took that granted no access. The owner must resolve each by hand (grant access or refund).
   const { data: review } = await adminDb().from('academy_stripe_events')
     .select('event_id, event_type, outcome, created_at').like('outcome', 'NEEDS_REVIEW%').order('created_at', { ascending: false }).limit(50)
-  return NextResponse.json({ enrollments: data || [], needsReview: review || [] })
+  // Disputes (chargebacks). Before migration 082 is applied the table does not exist: show none, do not fail.
+  const { data: disputes, error: dErr } = await adminDb().from('academy_disputes')
+    .select('dispute_id, enrollment_id, status, reason, amount, currency, due_by, opened_at, closed_at, access_action').order('opened_at', { ascending: false }).limit(50)
+  return NextResponse.json({ enrollments: data || [], needsReview: review || [], disputes: dErr ? [] : disputes || [] })
 }
 
 export async function POST(request: NextRequest) {

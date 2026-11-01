@@ -125,4 +125,23 @@ eq "an approved video needs a reviewer and date" "$(P -tAq -c "INSERT INTO acade
 eq "a non-https video link is refused" "$(P -tAq -c "INSERT INTO academy_video_links (course_id, lesson_key, title, creator, watch_url) VALUES ('$C','1-1','x','y','javascript:alert(1)') RETURNING 1" 2>/dev/null || echo ERR)" "ERR"
 eq "a lesson outside a module must be intro/resource" "$(P -tAq -c "INSERT INTO academy_lessons (course_id, lesson_key, kind, position, title) VALUES ('$C','x','lesson',9,'x') RETURNING 1" 2>/dev/null || echo ERR)" "ERR"
 eq "deleting a user removes their enrollment and progress" "$(P -tAq -c "DELETE FROM auth.users WHERE id='$BUYER'"; P -tAqc "SELECT count(*) FROM academy_enrollments WHERE user_id='$BUYER'")" "0"
+
+echo "-- migration 082: disputes (server-only audit table)"
+P -v ON_ERROR_STOP=1 -q -f migrations/082_academy_disputes.sql >/dev/null 2>&1 || { P -v ON_ERROR_STOP=1 -q -f migrations/082_academy_disputes.sql; fail "082 did not apply"; }
+P -v ON_ERROR_STOP=1 -q -f migrations/082_academy_disputes.sql >/dev/null 2>&1 || fail "082 is not idempotent"
+pass "082 applies, and re-applies"
+E2=$(P -tAq -c "INSERT INTO auth.users (id, email) VALUES ('99999999-0000-4000-8000-000000000009','d@x.test') RETURNING id")
+EN=$(P -tAq -c "INSERT INTO academy_enrollments (user_id, course_id, source, granted_by) VALUES ('$E2','$C','admin_grant','t') RETURNING id")
+eq "a dispute row can be recorded by the server" "$(P -tAq -c "INSERT INTO academy_disputes (dispute_id, enrollment_id, payment_intent, status) VALUES ('dp_1','$EN','pi_1','open') RETURNING 1" 2>/dev/null || echo ERR)" "1"
+eq "a dispute id can only be recorded once" "$(P -tAq -c "INSERT INTO academy_disputes (dispute_id, enrollment_id, payment_intent, status) VALUES ('dp_1','$EN','pi_1','open') RETURNING 1" 2>/dev/null || echo ERR)" "ERR"
+eq "a dispute status must be open, won or lost" "$(P -tAq -c "INSERT INTO academy_disputes (dispute_id, enrollment_id, payment_intent, status) VALUES ('dp_2','$EN','pi_1','pending') RETURNING 1" 2>/dev/null || echo ERR)" "ERR"
+eq "an open dispute cannot carry a close date, a closed one must" "$(P -tAq -c "INSERT INTO academy_disputes (dispute_id, enrollment_id, payment_intent, status, closed_at) VALUES ('dp_3','$EN','pi_1','open', now()) RETURNING 1" 2>/dev/null || echo ERR)$(P -tAq -c "INSERT INTO academy_disputes (dispute_id, enrollment_id, payment_intent, status) VALUES ('dp_4','$EN','pi_1','lost') RETURNING 1" 2>/dev/null || echo ERR)" "ERRERR"
+eq "a dispute must belong to a real enrollment" "$(P -tAq -c "INSERT INTO academy_disputes (dispute_id, enrollment_id, payment_intent, status) VALUES ('dp_5','00000000-0000-4000-8000-000000000000','pi_1','open') RETURNING 1" 2>/dev/null || echo ERR)" "ERR"
+eq "a buyer cannot read dispute records" "$(R authenticated $E2 "SELECT count(*) FROM academy_disputes")" "ERR"
+eq "a buyer cannot write dispute records" "$(R authenticated $E2 "INSERT INTO academy_disputes (dispute_id, enrollment_id, payment_intent, status) VALUES ('dp_6','$EN','pi_1','open') RETURNING 1")" "ERR"
+eq "an anonymous visitor cannot read dispute records" "$(R anon '' "SELECT count(*) FROM academy_disputes")" "ERR"
+eq "the service role can read and change them" "$(R service_role '' "UPDATE academy_disputes SET status='won', closed_at=now() WHERE dispute_id='dp_1' RETURNING 1")" "1"
+eq "row level security is on for the dispute table" "$(P -tAq -c "SELECT relrowsecurity FROM pg_class WHERE relname='academy_disputes'")" "t"
+eq "the dispute table has no policy at all" "$(P -tAq -c "SELECT count(*) FROM pg_policies WHERE tablename='academy_disputes'")" "0"
+eq "082 changed nothing about enrollments" "$(P -tAq -c "SELECT count(*) FROM information_schema.columns WHERE table_name='academy_enrollments' AND column_name LIKE 'dispute%'")" "0"
 echo "ALL PASS"

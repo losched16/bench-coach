@@ -101,6 +101,14 @@ createServer(async (req, res) => {
     const status = await send(event('charge.refunded', { id: `ch_test_${++n}`, object: 'charge', payment_intent: pi, refunded: url.searchParams.get('partial') !== '1' }))
     return json(res, 200, { status })
   }
+  if (p === '/__control/dispute') {
+    // A signed dispute event. ?pi=<payment intent>&type=created|lost|won|reinstated|warning&id=dp_x
+    const kind = url.searchParams.get('type') || 'created'
+    const typeOf = { created: 'charge.dispute.created', lost: 'charge.dispute.closed', won: 'charge.dispute.closed', warning: 'charge.dispute.closed', reinstated: 'charge.dispute.funds_reinstated' }
+    const statusOf = { created: 'needs_response', lost: 'lost', won: 'won', warning: 'warning_closed', reinstated: 'won' }
+    const status = await send(event(typeOf[kind], { id: url.searchParams.get('id') || 'dp_test_1', object: 'dispute', payment_intent: url.searchParams.get('pi'), status: statusOf[kind], reason: 'fraudulent', amount: 1900, currency: 'usd', created: Math.floor(Date.now() / 1000), evidence_details: { due_by: Math.floor(Date.now() / 1000) + 7 * 86400 } }))
+    return json(res, 200, { status })
+  }
   if (p === '/__control/forged') {
     // A completed-checkout event with a bad signature.
     const e = event('checkout.session.completed', { id: 'cs_forged', mode: 'payment', payment_status: 'paid', metadata: { kind: 'academy_course' } })

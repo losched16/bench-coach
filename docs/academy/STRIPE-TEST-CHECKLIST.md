@@ -50,8 +50,17 @@ Accounts: `owner.syn@`, `contrib.syn@`, `viewer.syn@`, `outsider.syn@` `example.
 - [ ] The owner (`ADMIN_EMAIL`) can grant and revoke by hand in `/admin/academy`; a manual grant is recorded with who granted it.
 - [ ] A subscriber to BenchCoach does not get the course free, and a course buyer does not get a subscription.
 
+## 6b. Chargebacks (test mode)
+Add the dispute events to the test webhook first (`charge.dispute.created`, `charge.dispute.closed`, `charge.dispute.funds_reinstated`) and apply migration 082 to the **preview** database.
+- [ ] Buy with the dispute test card `4000 0000 0000 0259`. A dispute opens within moments. In the preview database a row appears in `academy_disputes` with status `open`, and `/admin/academy` shows "Open disputes".
+- [ ] **The buyer still has access** while it is open.
+- [ ] In Stripe, respond to the dispute with the test evidence text `losing_evidence`. When it closes as lost, the enrollment becomes `revoked` with reason `stripe_dispute_lost`, and the paid lessons close.
+- [ ] Repeat with another buyer using `winning_evidence`: the dispute closes as won and access is untouched (or **restored**, if you had revoked it).
+- [ ] Resend any dispute event from Stripe: nothing changes twice.
+- [ ] A dispute on a BenchCoach **subscription** payment is ignored by the Academy.
+
 ## 7. Known gaps to decide before launch
-- A **dispute / chargeback** (`charge.dispute.*`) is not handled: nothing changes automatically. A proposal is in `CHARGEBACK-PROPOSAL.md`. In test mode you can trigger one with card `4000 0000 0000 0259`; today expect no change, which is the gap.
+- **Chargebacks** are handled as described in `CHARGEBACK-PROPOSAL.md` (built, pending your review). Section 6b is the test.
 - Tax, receipts/invoices, promotion codes and billing-address collection are not set in checkout. Decide each.
 - Partial refunds keep access and full refunds revoke it (your planning decision; matches the code).
 - No real card has ever been charged. This checklist is the first real test of the Stripe side; all earlier payment tests used a local fake.

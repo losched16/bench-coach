@@ -11,6 +11,7 @@
 
 import type Stripe from 'stripe'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { handleDispute } from './disputes'
 import { eventSeen, fulfillCheckoutSession, handleRefund, isAcademySession, recordEvent, NEEDS_REVIEW } from './fulfillment'
 
 export interface AcademyWebhookResult {
@@ -44,6 +45,17 @@ export async function handleAcademyEvent(db: SupabaseClient<any>, stripe: Stripe
       const r = await handleRefund(db, event.data.object as Stripe.Charge)
       if (r.outcome === 'not_academy') return { handled: false }
       await recordEvent(db, event, r.detail ? `${r.outcome}: ${r.detail}` : r.outcome)
+      return { handled: true, outcome: r.outcome }
+    }
+    case 'charge.dispute.created':
+    case 'charge.dispute.closed':
+    case 'charge.dispute.funds_reinstated': {
+      // Cheap lookups first: an event we have seen, or a dispute on a charge that is not a course, is not ours.
+      const dispute = event.data.object as Stripe.Dispute
+      if (await eventSeen(db, event.id)) return { handled: true, replay: true, outcome: 'replay' }
+      const r = await handleDispute(db, event.type, dispute)
+      if (r.outcome === 'not_academy') return { handled: false }
+      await recordEvent(db, event, `dispute ${dispute.id}: ${r.outcome}${r.detail ? `: ${r.detail}` : ''}`)
       return { handled: true, outcome: r.outcome }
     }
     default:
