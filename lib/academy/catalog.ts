@@ -74,6 +74,26 @@ export const COURSES: CourseCopy[] = [
       keep: 'The Academy course remains yours whether or not you choose the software.',
     },
   },
+  {
+    // TEST FIXTURE ONLY. Placeholder copy for Stripe test-mode checks in the isolated preview.
+    // It has no manuscript text. The matching database rows come from
+    // scripts/preview/seed-academy-test-course.sql, and the page is hidden unless ACADEMY_LAUNCH=1.
+    slug: 'academy-test-course',
+    previewLessonKey: '1-1',
+    relatedPathwaySlug: null,
+    ages: 'Test course. Not for sale.',
+    headline: 'Academy test course (placeholder)',
+    subheadline: 'Placeholder text used only to test checkout and enrollment in Stripe test mode.',
+    whoFor: 'Internal testing only.',
+    learn: ['Placeholder topic'],
+    getItems: ['Two placeholder lessons'],
+    softwareNote: 'Test course.',
+    notPromised: ['Anything. This is a test.'],
+    credibility: 'Placeholder.',
+    ctaLabel: 'Test purchase',
+    previewLabel: 'Read the free placeholder lesson',
+    handoff: { title: 'Test handoff', body: 'Placeholder.', keep: 'Placeholder.' },
+  },
 ]
 
 export function courseCopy(slug: string): CourseCopy | null {
