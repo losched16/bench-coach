@@ -47,3 +47,4 @@ pilot/media/_adhoc/
 
 # Academy course text generated from the private manuscript (paid content, never commit)
 .academy-content/
+.speed-program-e2e/
