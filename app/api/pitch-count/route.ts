@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { writeSession } from '@/lib/pitchCountWrite'
 import { migrationHintFor } from '@/lib/migrationHints'
 import { createClient } from '@supabase/supabase-js'
 import { computePitcherAvailability, PitchCountRuleSet, AppearanceLite } from '@/lib/scouting'
@@ -235,7 +236,8 @@ export async function POST(request: NextRequest) {
 //
 // delta is the hot path: one tap, one row update. It reads the current value
 // server-side rather than trusting a number from a phone that may have been
-// asleep, so two devices counting the same kid can't clobber each other.
+// asleep, and writes conditionally on that value (retrying if another tap won),
+// so two devices, or two fast taps, counting the same kid can't clobber each other.
 // ---------------------------------------------------------------------------
 export async function PATCH(request: NextRequest) {
   const denied = await guard(request, 'record')
@@ -273,14 +275,13 @@ export async function PATCH(request: NextRequest) {
     // The appearance row is updated rather than duplicated on re-finish.
     if (reopen) update.finished_at = null
 
-    const { data: updated, error } = await supabaseAdmin
-      .from('pitch_count_sessions')
-      .update(update)
-      .eq('id', sessionId)
-      .select('*')
-      .single()
-
-    if (error) throw error
+    // See lib/pitchCountWrite.ts: the write is conditional on the count it was
+    // computed from, so two taps in flight cannot overwrite each other.
+    const w = await writeSession(supabaseAdmin, sessionId, update, typeof delta === 'number' ? delta : undefined, s.pitches)
+    if (w.kind === 'error') throw w.error
+    if (w.kind === 'gone') return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (w.kind === 'busy') return NextResponse.json({ error: 'The counter is busy. Tap again.' }, { status: 503 })
+    const updated = w.row
     const u = updated as any
 
     // A counter that was reopened and finished again already has an appearance.
