@@ -99,6 +99,7 @@ async function main() {
   check('catalog: no invented price, refund or guarantee in public copy', !COURSES.some(({ notPromised: _n, ...c }) => /\$\d|refund|guarantee|money.back/i.test(JSON.stringify(c))))
   check('catalog: slug validation refuses traversal', !isCourseSlug('../x') && !isCourseSlug('A') && !isLessonKey('a/b') && !isLessonKey(''))
 
+  const rd = (f: string) => readFileSync(f, 'utf8')
   // ── fulfilment ───────────────────────────────────────────────────────────
   const USER = '11111111-1111-4111-8111-111111111111'
   const OTHER = '22222222-2222-4222-8222-222222222222'
@@ -158,6 +159,47 @@ async function main() {
   r = await fulfillCheckoutSession(db, stripe(), session({ id: 'cs_test_3', payment_intent: 'pi_3' }))
   check('buying again after a refund reactivates the same enrollment', r.outcome === 'reactivated' && db.tables.academy_enrollments.length === 1 && db.tables.academy_enrollments[0].status === 'active' && db.tables.academy_enrollments[0].revoked_at === null)
 
+  // ── the price changes while someone is mid-checkout: a payment must never strand a customer ──
+  const offered = (over: any = {}) => session({ metadata: { kind: 'academy_course', course_id: COURSE, user_id: USER, course_slug: 'x', expected_price_id: PRICE, expected_currency: 'usd' }, ...over })
+  db = mkDb()
+  db.tables.academy_courses[0].stripe_price_id = 'price_new_2900'   // the owner switched the price after this buyer started checkout
+  r = await fulfillCheckoutSession(db, stripe(PRICE), offered())
+  check('PRICE CHANGED MID-CHECKOUT: a buyer who paid the price they were offered is still enrolled', r.outcome === 'enrolled' && db.tables.academy_enrollments.length === 1 && db.tables.academy_enrollments[0].status === 'active')
+  db = mkDb()
+  db.tables.academy_courses[0].stripe_price_id = 'price_new_2900'
+  r = await fulfillCheckoutSession(db, stripe(PRICE), session())
+  check('...and a LEGACY session (no recorded offer) is held to the course\'s current price, so it is refused, not enrolled by guesswork', r.outcome === 'rejected' && r.needsReview === true && db.tables.academy_enrollments.length === 0)
+  db = mkDb()
+  r = await fulfillCheckoutSession(db, stripe('price_other'), offered())
+  check('a line item different from the price that was offered is refused', r.outcome === 'rejected' && db.tables.academy_enrollments.length === 0)
+  check('...and because the money was taken it is flagged for a person, never silent', r.needsReview === true)
+  db = mkDb()
+  db.tables.academy_courses[0].currency = 'eur'
+  r = await fulfillCheckoutSession(db, stripe(PRICE), offered())
+  check('a currency change after checkout started does not strand a payment made in the offered currency', r.outcome === 'enrolled')
+  db = mkDb()
+  r = await fulfillCheckoutSession(db, stripe(PRICE), offered({ currency: 'eur' }))
+  check('paying in a currency other than the offered one is refused and flagged', r.outcome === 'rejected' && r.needsReview === true)
+  db = mkDb()
+  r = await fulfillCheckoutSession(db, stripe(PRICE), offered({ client_reference_id: '33333333-3333-4333-8333-333333333333', metadata: { kind: 'academy_course', course_id: COURSE, user_id: '33333333-3333-4333-8333-333333333333', expected_price_id: PRICE, expected_currency: 'usd' } }))
+  check('a paid session whose buyer account no longer exists is flagged for a person', r.outcome === 'rejected' && r.needsReview === true && /buyer account/.test(r.detail || ''))
+  db = mkDb()
+  r = await fulfillCheckoutSession(db, stripe(PRICE), offered({ payment_status: 'unpaid' }))
+  check('an unpaid session is simply not paid yet: no flag, no enrollment', r.outcome === 'not_paid' && !r.needsReview)
+  db = mkDb()
+  db.tables.academy_courses[0].stripe_price_id = 'price_new_2900'
+  let wh = await handleAcademyEvent(db, stripe('price_other'), { id: 'evt_pc1', type: 'checkout.session.completed', data: { object: offered() } } as any)
+  check('webhook: a paid-but-refused payment is recorded as NEEDS_REVIEW in the events table', wh.handled && db.tables.academy_stripe_events.some((e: any) => e.event_id === 'evt_pc1' && /^NEEDS_REVIEW rejected:/.test(e.outcome)))
+  wh = await handleAcademyEvent(db, stripe('price_other'), { id: 'evt_pc1', type: 'checkout.session.completed', data: { object: offered() } } as any)
+  check('...and replaying that event does not record it twice', db.tables.academy_stripe_events.filter((e: any) => e.event_id === 'evt_pc1').length === 1)
+  db = mkDb()
+  db.tables.academy_courses[0].stripe_price_id = 'price_new_2900'
+  wh = await handleAcademyEvent(db, stripe(PRICE), { id: 'evt_pc2', type: 'checkout.session.completed', data: { object: offered() } } as any)
+  check('webhook: the price-changed payment enrolls through the real webhook path', wh.outcome === 'enrolled' && db.tables.academy_enrollments.length === 1)
+  const checkoutSrc = rd('app/api/academy/checkout/route.ts')
+  check('checkout records the price and currency it OFFERED in the session metadata', /expected_price_id: course\.stripe_price_id/.test(checkoutSrc) && /expected_currency:/.test(checkoutSrc))
+  check('the owner\'s admin API lists payments that need review', /NEEDS_REVIEW%/.test(rd('app/api/academy/admin/enrollments/route.ts')))
+
   // ── webhook routing and replay ──────────────────────────────────────────
   db = mkDb()
   const ev = (id: string, type: string, object: any) => ({ id, type, data: { object } }) as any
@@ -213,7 +255,6 @@ async function main() {
   check('no fabricated "approved" video status anywhere in code', !academySrc.some(([, src]) => /approval_status:\s*'approved'/.test(src)))
 
   // ── the launch flag: default off, nothing exposed ─────────────────────────
-  const rd = (f: string) => readFileSync(f, 'utf8')
   const flagSrc = rd('lib/academy/flag.ts')
   check('the flag is on only for the exact value "1"', /process\.env\.ACADEMY_LAUNCH === '1'/.test(flagSrc))
   for (const f of ['checkout', 'confirm', 'track']) {
@@ -238,6 +279,11 @@ async function main() {
   check('.academy-content/ is git-ignored', /^\.academy-content\/$/m.test(rd('.gitignore')))
   check('the release gate fails if any private file is tracked', /verify-no-private-files/.test(rd('scripts/release-gate.mjs')))
   check('no migration or seed in the repository sets a price', !/(UPDATE|SET)[^;]*price_cents\s*=\s*\d/i.test(readdirSync('migrations').map(f => rd(path.join('migrations', f))).join('\n') + rd('lib/academy/seed.ts').replace(/^--.*$/gm, '')))
+
+  // ── the sales page cannot promise videos the course does not have ──
+  check('the course copy no longer lists videos as a feature', !COURSES.some(c => c.getItems.some(x => /video/i.test(x))))
+  const salesSrc = rd('app/academy/[slug]/page.tsx')
+  check('the sales page states the video situation from the data: none yet, or "N of M lessons"', /lessonsWithApprovedVideo\(course\.id\)/.test(salesSrc) && /There are no demonstration videos yet/.test(salesSrc) && /of \$\{lessons\.length\} lessons/.test(salesSrc))
 
   console.log('')
   if (failures) { console.log(`${failures} FAILED`); process.exit(1) }

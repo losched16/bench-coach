@@ -11,7 +11,7 @@
 
 import type Stripe from 'stripe'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { eventSeen, fulfillCheckoutSession, handleRefund, isAcademySession, recordEvent } from './fulfillment'
+import { eventSeen, fulfillCheckoutSession, handleRefund, isAcademySession, recordEvent, NEEDS_REVIEW } from './fulfillment'
 
 export interface AcademyWebhookResult {
   handled: boolean
@@ -34,7 +34,9 @@ export async function handleAcademyEvent(db: SupabaseClient<any>, stripe: Stripe
         return { handled: true, outcome: 'payment_failed' }
       }
       const r = await fulfillCheckoutSession(db, stripe, session)
-      await recordEvent(db, event, r.detail ? `${r.outcome}: ${r.detail}` : r.outcome)
+      // A payment that Stripe took but that granted nothing is recorded in a form the owner's admin page lists.
+      if (r.needsReview) console.error(`[academy] PAID BUT NOT ENROLLED, needs review: event ${event.id} session ${session.id}: ${r.detail}`)
+      await recordEvent(db, event, r.needsReview ? `${NEEDS_REVIEW} ${r.outcome}: ${r.detail}` : r.detail ? `${r.outcome}: ${r.detail}` : r.outcome)
       return { handled: true, outcome: r.outcome }
     }
     case 'charge.refunded': {

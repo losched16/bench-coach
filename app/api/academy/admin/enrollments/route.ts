@@ -34,7 +34,10 @@ export async function GET(request: NextRequest) {
   const { data, error } = await adminDb().from('academy_enrollments')
     .select('id, user_id, status, source, enrolled_at, revoked_at, revoke_reason, amount_total, currency, granted_by').eq('course_id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ enrollments: data || [] })
+  // Payments Stripe took that granted no access. The owner must resolve each by hand (grant access or refund).
+  const { data: review } = await adminDb().from('academy_stripe_events')
+    .select('event_id, event_type, outcome, created_at').like('outcome', 'NEEDS_REVIEW%').order('created_at', { ascending: false }).limit(50)
+  return NextResponse.json({ enrollments: data || [], needsReview: review || [] })
 }
 
 export async function POST(request: NextRequest) {

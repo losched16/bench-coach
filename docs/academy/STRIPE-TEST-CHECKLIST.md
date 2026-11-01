@@ -35,7 +35,8 @@ Accounts: `owner.syn@`, `contrib.syn@`, `viewer.syn@`, `outsider.syn@` `example.
 - [ ] 3-D Secure card `4000 0025 0000 3155`: completes only after authentication; enrollment appears only after success.
 - [ ] Buy the same course twice (second tab, or after success): no second enrollment row, no second charge (the page says you already own it, or the duplicate is flagged for refund).
 - [ ] Resend the same `checkout.session.completed` event from Stripe: still one enrollment, the event is recorded as already seen.
-- [ ] Tamper check: a checkout for a price or currency that does not match the course row is rejected by fulfilment (`price` / `currency mismatch`) and does not enroll.
+- [ ] Tamper check: a payment whose price or currency differs from what that checkout offered is refused (`line item does not match the price offered` / `currency mismatch`), does not enroll, and shows up in the red "Paid, but no access was granted" box on `/admin/academy`.
+- [ ] **Price change mid-checkout.** Start a purchase and stop on the Stripe page. In the SQL editor change the course's `stripe_price_id` to another test price. Finish paying. The buyer is enrolled once, and nothing appears in the red box. Put the price back afterwards.
 
 ## 5. Refunds
 - [ ] **Full refund** from the Stripe dashboard: `charge.refunded` arrives (200); the enrollment becomes `refunded` with `revoke_reason = stripe_full_refund`; the buyer can no longer open paid lessons; their progress rows remain.

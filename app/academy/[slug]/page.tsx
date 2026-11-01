@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { ArrowRight, Check, X, Eye, BookOpen } from 'lucide-react'
-import { courseAccess, currentUser, formatPrice, getCourse, getOutline } from '@/lib/academy/server'
+import { courseAccess, currentUser, formatPrice, getCourse, getOutline, lessonsWithApprovedVideo } from '@/lib/academy/server'
 import { courseCopy, SITE_URL } from '@/lib/academy/catalog'
 import BuyButton from '@/components/academy/BuyButton'
 import Track from '@/components/academy/Track'
@@ -32,6 +32,11 @@ export default async function CoursePage({ params, searchParams }: { params: { s
   const price = formatPrice(course.price_cents, course.currency)
   const onSale = course.status === 'published' && !!course.price_cents && !!course.stripe_price_id
   const lessons = outline.lessons.filter(l => l.kind === 'lesson')
+  const videoLessons = await lessonsWithApprovedVideo(course.id)
+  // Stated from the data, never promised in advance: what a buyer reads here is what the course has today.
+  const videoLine = videoLessons === 0
+    ? 'Written lessons and drills only for now. There are no demonstration videos yet; any video link added later is reviewed by the instructor first.'
+    : `Instructor-reviewed external video demonstrations for ${videoLessons} of ${lessons.length} lessons (the rest are written lessons and drills).`
   const preview = outline.lessons.find(l => l.is_preview)
 
   const cta = (autoStart: boolean) => access === 'enrolled' ? (
@@ -124,7 +129,7 @@ export default async function CoursePage({ params, searchParams }: { params: { s
           <div className="rounded-2xl border border-slate-200 bg-white p-6">
             <h2 className="text-xl font-bold text-slate-900">What you get</h2>
             <ul className="mt-3 space-y-2">
-              {copy.getItems.map(x => <li key={x} className="flex gap-2 text-slate-700"><BookOpen className="mt-1 shrink-0 text-slate-400" size={16} />{x}</li>)}
+              {[...copy.getItems.slice(0, 2), videoLine, ...copy.getItems.slice(2)].map(x => <li key={x} className="flex gap-2 text-slate-700" data-testid={x === videoLine ? 'video-disclosure' : undefined}><BookOpen className="mt-1 shrink-0 text-slate-400" size={16} />{x}</li>)}
             </ul>
             <p className="mt-4 text-sm text-slate-600">{copy.softwareNote}</p>
           </div>

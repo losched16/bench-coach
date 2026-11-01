@@ -13,6 +13,7 @@ interface Row { id: string; user_id: string; status: string; source: string; enr
 export default function AcademyAdmin() {
   const [course, setCourse] = useState(COURSES[0]?.slug || '')
   const [rows, setRows] = useState<Row[] | null>(null)
+  const [review, setReview] = useState<Array<{ event_id: string; outcome: string; created_at: string }>>([])
   const [error, setError] = useState<string | null>(null)
   const [email, setEmail] = useState('')
   const [reason, setReason] = useState('')
@@ -24,6 +25,7 @@ export default function AcademyAdmin() {
     const d = await r.json().catch(() => ({}))
     if (!r.ok) { setRows(null); setError(r.status === 404 ? 'Not available (owner only, or the course is not imported yet).' : d.error || 'Could not load.'); return }
     setRows(d.enrollments)
+    setReview(d.needsReview || [])
   }, [course])
   useEffect(() => { void load() }, [load])
 
@@ -39,6 +41,13 @@ export default function AcademyAdmin() {
   return (
     <div className="mx-auto max-w-5xl p-6 space-y-6">
       <div className="flex items-center gap-4"><Link href="/admin" className="text-sm text-slate-600 hover:underline">← Admin</Link><h1 className="text-2xl font-bold">Academy enrollments</h1></div>
+      {review.length > 0 && (
+        <section role="alert" data-testid="needs-review" className="rounded-xl border-2 border-red-300 bg-red-50 p-4 text-sm">
+          <h2 className="font-semibold text-red-900">Paid, but no access was granted ({review.length})</h2>
+          <p className="text-red-900">Stripe took these payments and the Academy refused to enroll the buyer. Look up each in Stripe, then grant access below or refund it.</p>
+          <ul className="mt-2 space-y-1 font-mono text-xs text-red-950">{review.map(e => <li key={e.event_id}>{String(e.created_at).slice(0, 16)} · {e.event_id} · {e.outcome.replace(/^NEEDS_REVIEW\s*/, '')}</li>)}</ul>
+        </section>
+      )}
       <label className="block text-sm">Course{' '}
         <select value={course} onChange={e => setCourse(e.target.value)} className="ml-2 rounded border px-2 py-1">
           {COURSES.map(c => <option key={c.slug} value={c.slug}>{c.slug}</option>)}

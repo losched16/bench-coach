@@ -9,7 +9,11 @@
 //   * Stripe says it is paid;
 //   * the buyer is the signed-in user the session was created for
 //     (client_reference_id, set server-side) and still exists;
-//   * the line item is the course's own Stripe price, in its currency.
+//   * the line item is the price this buyer was OFFERED when checkout started
+//     (metadata.expected_price_id, written by our server), in the currency offered.
+//     Sessions that predate that metadata fall back to the course's current price.
+//     A later price change therefore never strands a payment. Any rejection of a
+//     payment that Stripe reports as PAID is flagged needsReview, never silent.
 // Writes are idempotent: one checkout session can enroll once (unique key),
 // and a user holds at most one enrollment per course.
 //
@@ -19,6 +23,8 @@ import type Stripe from 'stripe'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const ACADEMY_KIND = 'academy_course'
+/** Prefix of an academy_stripe_events.outcome for a payment that was taken but granted nothing. */
+export const NEEDS_REVIEW = 'NEEDS_REVIEW'
 
 export type FulfillOutcome =
   | 'enrolled'
@@ -35,6 +41,8 @@ export interface FulfillResult {
   detail?: string
   userId?: string
   courseId?: string
+  /** Stripe says the money was taken but no access was granted: a person must look at it. */
+  needsReview?: boolean
 }
 
 type StripeLike = {
@@ -58,26 +66,32 @@ export async function fulfillCheckoutSession(
 
   const userId = session.client_reference_id || ''
   const courseId = session.metadata?.course_id || ''
-  if (!UUID.test(userId) || userId !== session.metadata?.user_id) return { outcome: 'rejected', detail: 'buyer identity missing or inconsistent' }
-  if (!UUID.test(courseId)) return { outcome: 'rejected', detail: 'course missing' }
+  // From here on the payment is real money. Every refusal is flagged for a person.
+  const refuse = (detail: string, ids: { userId?: string; courseId?: string } = {}): FulfillResult => ({ outcome: 'rejected', detail, needsReview: true, ...ids })
+  if (!UUID.test(userId) || userId !== session.metadata?.user_id) return refuse('buyer identity missing or inconsistent')
+  if (!UUID.test(courseId)) return refuse('course missing')
 
   const { data: course, error: courseErr } = await db
     .from('academy_courses').select('id, slug, stripe_price_id, currency').eq('id', courseId).maybeSingle()
   if (courseErr) throw new Error(`course lookup failed: ${courseErr.message}`)
-  if (!course) return { outcome: 'rejected', detail: 'course not found', userId, courseId }
+  if (!course) return refuse('course not found', { userId, courseId })
 
-  // The price actually charged must be this course's price.
+  // The price actually charged must be the price this buyer was offered. The offer is recorded in the
+  // session metadata at checkout time; an older session without it is held to the course's current price.
+  const offeredPrice = session.metadata?.expected_price_id || null
+  const offeredCurrency = (session.metadata?.expected_currency || course.currency || 'usd').toLowerCase()
+  const wantPrice = offeredPrice || course.stripe_price_id
   const items = await stripe.checkout.sessions.listLineItems(session.id, { limit: 5 })
   const prices = items.data.map(i => i.price?.id)
-  if (!course.stripe_price_id || prices.length !== 1 || prices[0] !== course.stripe_price_id) {
-    return { outcome: 'rejected', detail: 'line item does not match the course price', userId, courseId }
+  if (!wantPrice || prices.length !== 1 || prices[0] !== wantPrice) {
+    return refuse('line item does not match the price offered', { userId, courseId })
   }
-  if ((session.currency || '').toLowerCase() !== String(course.currency || 'usd').toLowerCase()) {
-    return { outcome: 'rejected', detail: 'currency mismatch', userId, courseId }
+  if ((session.currency || '').toLowerCase() !== offeredCurrency) {
+    return refuse('currency mismatch', { userId, courseId })
   }
 
   const { data: user, error: userErr } = await db.auth.admin.getUserById(userId)
-  if (userErr || !user?.user) return { outcome: 'rejected', detail: 'buyer account not found', userId, courseId }
+  if (userErr || !user?.user) return refuse('buyer account not found', { userId, courseId })
 
   const paymentIntent = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id || null
   const customer = typeof session.customer === 'string' ? session.customer : session.customer?.id || null

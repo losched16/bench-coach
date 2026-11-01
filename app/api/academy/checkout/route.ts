@@ -36,7 +36,10 @@ export async function POST(request: NextRequest) {
   if (!stripe) return stripeUnavailable()
 
   try {
-    const meta = { kind: ACADEMY_KIND, course_id: course.id, course_slug: course.slug, user_id: user.id }
+    // expected_price_id / expected_currency: the price this buyer was OFFERED, written by us with our secret key
+    // (a buyer cannot alter session metadata). Fulfilment checks the payment against THIS, not against whatever the
+    // course row says later, so changing the price while someone is mid-checkout cannot leave them charged and not enrolled.
+    const meta = { kind: ACADEMY_KIND, course_id: course.id, course_slug: course.slug, user_id: user.id, expected_price_id: course.stripe_price_id, expected_currency: String(course.currency || 'usd').toLowerCase() }
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: [{ price: course.stripe_price_id, quantity: 1 }],

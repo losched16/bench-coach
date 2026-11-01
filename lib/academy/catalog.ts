@@ -52,7 +52,6 @@ export const COURSES: CourseCopy[] = [
     getItems: [
       '19 written lessons across six modules',
       'Step-by-step drill assignments',
-      'Vetted external video demonstrations (once approved)',
       'A four-week example program',
       'Printable progress checklists',
       'A straightforward troubleshooting guide',

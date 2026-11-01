@@ -157,6 +157,12 @@ export interface VideoLink {
   link_status: 'unchecked' | 'ok' | 'broken'
 }
 
+/** How many lessons have at least one APPROVED, non-broken video. The sales page states this honestly. */
+export async function lessonsWithApprovedVideo(courseId: string): Promise<number> {
+  const { data } = await adminDb().from('academy_video_links').select('lesson_key, approval_status, link_status, watch_url').eq('course_id', courseId).eq('approval_status', 'approved')
+  return new Set(((data || []) as any[]).filter(v => v.link_status !== 'broken' && /^https:\/\//.test(v.watch_url)).map(v => v.lesson_key)).size
+}
+
 /** Approved demonstrations only — candidates and rejected links are never returned. */
 export async function getVideos(courseId: string, lessonKey: string): Promise<VideoLink[]> {
   const { data } = await adminDb().from('academy_video_links')

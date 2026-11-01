@@ -9,7 +9,9 @@ grant nothing. Each row says where it is tested.
 | A paid Checkout completes | Buyer is enrolled, payment recorded | unit: "a paid course checkout enrolls the buyer", "...and records how it was paid" |
 | The buyer comes back from Stripe before the webhook | The server asks Stripe about the session; the return link alone grants nothing | unit: "an unpaid session grants nothing"; browser e2e: "a made-up return URL grants nothing" |
 | Unpaid or unfinished session | Nothing | unit: "an unpaid session grants nothing" |
-| Different price, currency, buyer, unknown buyer, unknown course | Nothing, and no row left behind | unit: "a different price grants nothing" and the five checks after it, "no rejected attempt left a row behind" |
+| Price or currency differs from what the checkout **offered**, a different buyer, unknown buyer, unknown course | Nothing, no row left behind, and (because money was taken) flagged NEEDS_REVIEW for the owner | unit: "a different price grants nothing" and the five checks after it, "no rejected attempt left a row behind" |
+| **The owner changes the price while a buyer is mid-checkout** | The buyer who paid the price they were shown is enrolled; nothing is dropped | unit: "PRICE CHANGED MID-CHECKOUT", "a currency change after checkout started", "webhook: the price-changed payment enrolls"; browser e2e: "PRICE CHANGED MID-CHECKOUT: the buyer who paid is enrolled exactly once" |
+| A paid payment is refused for any reason | Recorded as NEEDS_REVIEW, shown in `/admin/academy`, never silent | unit: "webhook: a paid-but-refused payment is recorded as NEEDS_REVIEW", "...flagged for a person" |
 | Same webhook delivered twice | One enrollment | unit: "the same session again is a no-op", "two simultaneous deliveries of one payment enroll once", "webhook: the same event replayed is skipped" |
 | Buyer pays twice for a course they own | Access unchanged; flagged `duplicate_purchase` for a manual refund | unit: "a second purchase of an owned course changes nothing" |
 | Delayed payment fails | Nothing granted | unit: "webhook: a failed delayed payment is recorded, grants nothing" |

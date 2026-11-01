@@ -1,7 +1,8 @@
 # Academy price: proposal only
 
-**Proposed: $29.00 USD, one-time, for "Build a Better Baseball Swing".** This is a planning figure
-pending the owner's confirmation. It is not set in any database, migration, seed or environment. The
+**$29.00 USD, one-time, for "Build a Better Baseball Swing": approved by the owner for ISOLATED PREVIEW TESTING ONLY.**
+It is not the production price, and it is not set in any production database, migration, seed or environment. The owner
+confirms (or changes) the production price separately. The
 manuscript itself calls $19 vs $29 a test hypothesis.
 
 ## How the price is configured (nothing here is applied)
@@ -30,12 +31,14 @@ A test in the repository fails if any migration or seed ever sets a price.
 - **Tax.** Decide whether $29 is tax-inclusive or tax-exclusive and whether to collect tax (Stripe Tax).
   Checkout does not set `automatic_tax` today.
 - **Refund policy wording** (behavior is set: full refund revokes, partial keeps access).
-- **Changing the price later has a trap.** Fulfilment accepts a payment only if its Stripe price id equals
-  the course row's *current* `stripe_price_id`. Someone who started checkout on the old price and pays after
-  you switch would be charged but **not enrolled**. To change a price: do it when nobody can be mid-checkout
-  (Stripe checkout sessions expire in 24 hours by default), or enroll the stragglers by hand from
-  `/admin/academy`. A later code change could accept a list of valid price ids; not done.
+- **Changing the price mid-checkout: fixed.** Checkout now records the price and currency it *offered* in the
+  session metadata (written with our secret key; a buyer cannot alter it). Fulfilment holds the payment to that offer,
+  not to whatever the course row says later, so a buyer who paid the price they were shown is always enrolled.
+  Sessions without that record (none exist before launch) fall back to the course's current price. If a paid payment
+  is ever refused for any reason, it is recorded as NEEDS_REVIEW and shown in a red box on `/admin/academy`, never
+  dropped silently. Tested: unit (price and currency changed after checkout started, a tampered line item, a missing
+  buyer account, replay) and a browser test that changes the price while a buyer is on the payment page.
 - **Currency.** One currency only today.
 - **Preview.** The isolated preview uses the same $29.00 in Stripe **test mode** only.
 
-Owner confirmation: ☐ $29 USD  ☐ other: __________   Date: ________
+Production price confirmation (separate from the preview approval): ☐ $29 USD  ☐ other: __________   Date: ________

@@ -113,6 +113,8 @@ async function main() {
     await page.goto(`${APP}/academy/${SLUG}`, { waitUntil: 'networkidle' })
     const sales = await page.content()
     check('sales page shows the curriculum outline', (await page.getByTestId('curriculum').locator('li li').count()) === lessons.length)
+    const videoDisclosure = await page.getByTestId('video-disclosure').innerText()
+    check('the sales page states honestly how many lessons have an approved video (from the data, not a promise)', /Instructor-reviewed external video demonstrations for 1 of \d+ lessons/.test(videoDisclosure), videoDisclosure)
     check('sales page shows the price on the buy button', /\$19\.00/.test(await page.getByTestId('buy').first().innerText()))
     check('sales page has Course structured data and a canonical URL', /"@type":"Course"/.test(sales) && /rel="canonical" href="https:\/\/www\.mybenchcoach\.com\/academy\//.test(sales))
     check('sales page carries no paid lesson text', !!paidSentence && !sales.includes(paidSentence))
@@ -274,6 +276,35 @@ async function main() {
     await page.getByTestId('welcome').waitFor({ timeout: 60000 })
     await fetch(`${STRIPE}/__control/deliver?on=1`)
     check('with no webhook yet, the server-side confirm (asking Stripe) enrolls the payer', (await state()).academy_enrollments.some((e: any) => e.user_id === OTHER.id && e.status === 'active'))
+    await ctx.close()
+  }
+
+  // ── 5b. The owner changes the price while a buyer is mid-checkout: they must still get the course ──
+  {
+    const PARENT2 = { email: 'parent2@example.test', password: 'parent-password-2' }
+    const ctx = await browser.newContext({ viewport: { width: 430, height: 932 } })
+    const page = await ctx.newPage()
+    await page.goto(`${APP}/academy/${SLUG}`, { waitUntil: 'networkidle' })
+    await page.getByTestId('buy').first().click()
+    await page.waitForURL(/\/auth\/signup\?redirect=/, { timeout: 30000 })
+    await page.waitForFunction(() => { const f = document.querySelector('form'); return !!f && !!Object.keys(f).find(k => k.startsWith('__reactProps')) }, null, { timeout: 60000 })
+    await page.fill('#displayName', 'Second Parent')
+    await page.fill('#email', PARENT2.email)
+    await page.fill('#password', PARENT2.password)
+    await page.click('button[type="submit"]')
+    await page.waitForURL(/127\.0\.0\.1:12111\/pay\//, { timeout: 60000 })
+    const offeredSess = (await (await fetch(`${STRIPE}/__control/sessions`)).json()).at(-1)
+    check('the checkout records the price it offered', offeredSess.metadata.expected_price_id === 'price_test_course' && offeredSess.metadata.expected_currency === 'usd')
+    // The owner changes the price now, while this buyer is on the payment page.
+    await fetch(`${FIX}/rest/v1/academy_courses?id=eq.${COURSE_ID}`, { method: 'PATCH', headers: { 'content-type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ stripe_price_id: 'price_changed_mid_checkout' }) })
+    await page.click('#pay')
+    await page.waitForURL(/\/learn\/build-a-better-baseball-swing\?/, { timeout: 60000 })
+    await page.getByTestId('welcome').waitFor({ timeout: 60000 })
+    const t2 = await state()
+    const enr2 = t2.academy_enrollments.filter((e: any) => e.user_id === offeredSess.client_reference_id)
+    check('PRICE CHANGED MID-CHECKOUT: the buyer who paid is enrolled exactly once', enr2.length === 1 && enr2[0].status === 'active' && enr2[0].source === 'purchase')
+    check('...and nothing was left waiting for a person to fix', !t2.academy_stripe_events.some((e: any) => /^NEEDS_REVIEW/.test(e.outcome || '')))
+    await fetch(`${FIX}/rest/v1/academy_courses?id=eq.${COURSE_ID}`, { method: 'PATCH', headers: { 'content-type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ stripe_price_id: 'price_test_course' }) })
     await ctx.close()
   }
 
