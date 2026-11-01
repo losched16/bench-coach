@@ -1,0 +1,45 @@
+# The order that builds a BenchCoach database from this repository, for a NEW,
+# EMPTY Supabase project (the isolated preview). One file per line.
+# Lines starting with # are comments. A file that does not exist on the branch
+# being built is skipped (080 exists only on the Academy branch, 081 only on the
+# speed-program branch).
+#
+# A leading ~ marks CONTENT migrations that insert drill-library or taxonomy rows
+# which only exist in production's data (the baseline is schema, not rows). On an
+# empty project they fail on a foreign key. They run in one transaction, so a
+# failure leaves nothing behind, and the preview simply has no drill library or
+# pathway content. Any other failure is a real error.
+#
+# 000 is the committed export of production's schema (no row data).
+# 037, 039, 045, 051, 056, 058 post-date or sit outside that export (see
+# scripts/verify-baseline-bootstrap.sh). 059-079 are the later migrations.
+000_baseline
+037_journal_into_entries
+039_practice_schedule
+045_seo_editor_role
+051_provision_league_atomically
+056_drill_station_intelligence
+058_drill_calibration
+059_coach_count_throwing_load_calibration
+060_calibrate_the_drills_that_get_selected
+061_roster_archive
+062_resource_kind_and_media
+~063_coverage_rescue_activities
+064_true_duplicates
+~065_missing_activities
+~066_collection_media
+067_instruction_quality
+~068_review_resolution_and_taxonomy
+069_development_pathways
+~070_pathway_content
+~071_pathway_coverage_expansion
+072_player_pathway_progress
+073_speed_metric_presets
+~074_speed_agility_pathway
+075_pathway_notes
+076_user_ui_prefs
+077_practice_plan_pathway_link
+078_drill_video_link_repair
+079_drill_video_replacements
+080_academy
+081_speed_program
