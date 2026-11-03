@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useState } from 'react'
+import AcademyNavLink from '@/components/academy/AcademyNavLink'
 
 // Homepage copy follows the StoryBrand / direct-response rewrite dated
 // 2026-09-21. The structure stays behind the copy: coach as the character,
@@ -60,6 +61,7 @@ export default function LandingPage() {
               {/* /use-cases is an existing indexed route — kept so the rewrite
                   does not quietly drop an SEO destination. */}
               <Link href="/use-cases" className="text-slate-300 hover:text-white font-medium transition-colors">Use Cases</Link>
+              <AcademyNavLink className="text-slate-300 hover:text-white font-medium transition-colors" />
               <Link href="/leagues" className="text-slate-300 hover:text-white font-medium transition-colors">For Leagues</Link>
               <a href="#pricing" className="text-slate-300 hover:text-white font-medium transition-colors">Pricing</a>
             </nav>
@@ -98,6 +100,7 @@ export default function LandingPage() {
                 <a href="#how-it-works" className="text-slate-300 hover:text-white font-medium transition-colors">How It Works</a>
                 <a href="#features" className="text-slate-300 hover:text-white font-medium transition-colors">Features</a>
                 <Link href="/use-cases" className="text-slate-300 hover:text-white font-medium transition-colors">Use Cases</Link>
+                <AcademyNavLink className="text-slate-300 hover:text-white font-medium transition-colors" />
                 <Link href="/leagues" className="text-slate-300 hover:text-white font-medium transition-colors">For Leagues</Link>
                 <a href="#pricing" className="text-slate-300 hover:text-white font-medium transition-colors">Pricing</a>
                 <div className="border-t border-slate-700 pt-4 mt-2 flex flex-col gap-3">
@@ -710,6 +713,7 @@ export default function LandingPage() {
                 <li><a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a></li>
                 <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
                 <li><Link href="/use-cases" className="hover:text-white transition-colors">Use Cases</Link></li>
+                <AcademyNavLink as="li" className="hover:text-white transition-colors" />
                 <li><Link href="/leagues" className="hover:text-white transition-colors">For Leagues</Link></li>
                 <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
               </ul>

@@ -1,5 +1,6 @@
 'use client'
 
+import { useAcademyOn } from '@/components/academy/AcademyNavLink'
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
@@ -9,7 +10,7 @@ import { useLeague } from '@/lib/useLeague'
 import Link from 'next/link'
 import Image from 'next/image'
 import { CaptureMenu } from '@/components/CaptureMenu'
-import { MessageSquare, Users, StickyNote, ClipboardList, Home, Book, LogOut, Plus, UserPlus, Trash2, Settings, Bookmark, HelpCircle, Brain, UsersRound, UserCircle, Menu, X, Calendar, BarChart3, Activity, Target, Search, CalendarCheck, Timer, Building2, Route as RouteIcon } from 'lucide-react'
+import { MessageSquare, Users, StickyNote, ClipboardList, Home, Book, LogOut, Plus, UserPlus, Trash2, Settings, Bookmark, HelpCircle, Brain, UsersRound, UserCircle, Menu, X, Calendar, BarChart3, Activity, Target, Search, CalendarCheck, Timer, Building2, Route as RouteIcon, GraduationCap } from 'lucide-react'
 
 
 interface Team {
@@ -45,6 +46,8 @@ function DashboardContent({
   children: React.ReactNode
 }) {
   const [teams, setTeams] = useState<Team[]>([])
+  // The Academy entry shows only once the Academy is launched (or to its owner).
+  const academyOn = useAcademyOn()
   const [selectedTeamId, setSelectedTeamId] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [showNewMenu, setShowNewMenu] = useState(false)
@@ -288,6 +291,9 @@ function DashboardContent({
       // destination carries. League administration is not scoped to a team —
       // most commissioners do not have one.
       raw?: boolean
+      // One-line tooltip saying what the destination is FOR — used where two
+      // destinations sound alike (Academy / Playbooks / Development Plans).
+      hint?: string
     }>
   }> = [
     {
@@ -332,14 +338,24 @@ function DashboardContent({
         // staff (the API's GET is 'read'), so no capability gate; and not
         // needsTeam, because a Personal-plan coach's workspace has plans too.
         // Starting and advancing one still happen on the player's profile.
-        { label: 'Development Plans', href: '/dashboard/development', icon: RouteIcon },
+        { label: 'Development Plans', href: '/dashboard/development', icon: RouteIcon, hint: "Track this player's growth" },
         // Starting a playbook assigns a multi-week programme to a team or a
         // player, which is 'decide' — the same rung as a practice plan or a
         // lineup. Deliberately NOT needsTeam: a parent on the Personal plan
         // running a programme with their own kid is exactly who this suits,
         // and the page works from any workspace's id.
-        { label: 'Playbooks', href: '/dashboard/playbooks', icon: Book, needs: 'decide' },
+        { label: 'Playbooks', href: '/dashboard/playbooks', icon: Book, needs: 'decide', hint: 'Run a preset program' },
         { label: 'Drill Library', href: '/dashboard/drills', icon: Bookmark },
+      ],
+    },
+    {
+      // BenchCoach Academy: courses the coach has bought (or can buy). Its own
+      // learning surface at /learn, not a team page — raw, so no ?teamId, and
+      // no capability or plan gate: a course is owned by the person, and a
+      // subscription neither includes nor requires one.
+      label: 'Learn',
+      items: [
+        { label: 'Academy', href: '/learn', icon: GraduationCap, raw: true, hint: 'Learn a skill' },
       ],
     },
     {
@@ -364,6 +380,7 @@ function DashboardContent({
       ),
     }))
     .filter(g => g.items.length > 0)
+    .filter(g => g.label !== 'Learn' || academyOn)
 
   // Only for people who actually run a league. A coach whose league PAYS for
   // them is not an administrator and must not see this — useLeague starts
@@ -560,6 +577,7 @@ function DashboardContent({
                       <Link
                         key={item.href}
                         href={item.raw ? item.href : `${item.href}?teamId=${selectedTeamId}`}
+                        title={item.hint}
                         onClick={() => setMobileMenuOpen(false)}
                         className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                           isActive
@@ -569,6 +587,7 @@ function DashboardContent({
                       >
                         <Icon size={20} />
                         <span>{item.label}</span>
+                        {item.hint && <span className="sr-only"> — {item.hint}</span>}
                       </Link>
                     )
                   })}
@@ -626,6 +645,7 @@ function DashboardContent({
                       <Link
                         key={item.href}
                         href={item.raw ? item.href : `${item.href}?teamId=${selectedTeamId}`}
+                        title={item.hint}
                         className={`flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors ${
                           isActive
                             ? 'bg-red-50 text-red-700 font-medium'
@@ -634,6 +654,7 @@ function DashboardContent({
                       >
                         <Icon size={20} />
                         <span>{item.label}</span>
+                        {item.hint && <span className="sr-only"> — {item.hint}</span>}
                       </Link>
                     )
                   })}

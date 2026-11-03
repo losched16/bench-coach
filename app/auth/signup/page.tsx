@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
+import { safeRedirect, isAcademyPath } from '@/lib/safeRedirect'
 
 function SignupForm() {
   const [email, setEmail] = useState('')
@@ -69,8 +70,10 @@ function SignupForm() {
           router.push(`/league/invite/${pendingLeagueInvite}`)
         } else if (pendingInvite) {
           router.push(`/invite/${pendingInvite}`)
-        } else if (redirect) {
-          router.push(redirect)
+        } else if (redirect && safeRedirect(redirect, '') !== '') {
+          // Same-site paths only (lib/safeRedirect). A course buyer goes back
+          // to their course, never to the coach paywall.
+          router.push(safeRedirect(redirect))
         } else {
           // New users without invite go to paywall
           router.push('/subscribe')
@@ -106,10 +109,12 @@ function SignupForm() {
           <div className="bg-white rounded-xl shadow-xl p-8">
             <div className="text-center mb-8">
               <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                Start Coaching Smarter
+                {isAcademyPath(redirect) ? 'Create your Academy account' : 'Start Coaching Smarter'}
               </h1>
               <p className="text-gray-600">
-                Create your free account to get started
+                {isAcademyPath(redirect)
+                  ? 'One BenchCoach login for your courses. No team or subscription needed.'
+                  : 'Create your free account to get started'}
               </p>
             </div>
 

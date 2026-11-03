@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createSupabaseComponentClient } from '@/lib/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
+import { safeRedirect, isAcademyPath } from '@/lib/safeRedirect'
 
 function LoginForm() {
   const [email, setEmail] = useState('')
@@ -32,11 +33,8 @@ function LoginForm() {
       if (data.session) {
         // If there's a redirect (e.g., from invite link), go there
         // Otherwise go to dashboard
-        if (redirect) {
-          router.push(redirect)
-        } else {
-          router.push('/dashboard')
-        }
+        // Same-site paths only (lib/safeRedirect).
+        router.push(safeRedirect(redirect, '/dashboard'))
         router.refresh()
       }
     } catch (error: any) {
@@ -68,7 +66,7 @@ function LoginForm() {
           <div className="bg-white rounded-xl shadow-xl p-8">
             <div className="text-center mb-8">
               <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                Welcome Back, Coach
+                {isAcademyPath(redirect) ? 'Sign in to your course' : 'Welcome Back, Coach'}
               </h1>
               <p className="text-gray-600">
                 Sign in to continue to your dashboard

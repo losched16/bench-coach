@@ -3,7 +3,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/dashboard/', '/onboarding/', '/api/'],
+      disallow: ['/dashboard/', '/onboarding/', '/api/', '/learn/'],
     },
     sitemap: 'https://www.mybenchcoach.com/sitemap.xml', // ← Added www
   }

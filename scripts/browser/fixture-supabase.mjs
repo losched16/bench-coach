@@ -19,6 +19,7 @@
 // missing piece was something for it to talk to.
 
 import { createServer } from 'http'
+import crypto from 'crypto'
 
 const PORT = Number(process.env.FIXTURE_PORT || 54321)
 
@@ -28,6 +29,8 @@ let tables = {}
 /** Table name -> status code, for testing what the app does when reads fail. */
 let failing = {}
 let users = {}
+/** Optional unique keys per table (seed.uniques), enforced on insert. */
+let uniques = {}
 
 // Ids for rows inserted without one. Stable and readable, so a failing test
 // prints `pitch_count_sessions-1` rather than a uuid nobody can place.
@@ -46,6 +49,7 @@ function reset(seed = {}) {
     ...(seed.tables || {}),
   }
   failing = seed.failing || {}
+  uniques = seed.uniques || {}
   idCounters.clear()
   users = seed.users || {
     'coach@example.test': {
@@ -210,6 +214,26 @@ const server = createServer(async (req, res) => {
     return json(res, 200, sessionFor(user).user)
   }
   if (path === '/auth/v1/logout') return json(res, 204, null)
+  // Sign-up with auto-confirm (the Academy buyer flow creates an account).
+  if (path === '/auth/v1/signup' && req.method === 'POST') {
+    const body = await readBody(req) || {}
+    if (!body.email || !body.password) return json(res, 422, { msg: 'email and password required' })
+    if (users[body.email]) return json(res, 422, { code: 'user_already_exists', msg: 'User already registered' })
+    const id = crypto.randomUUID()
+    users[body.email] = { id, email: body.email, password: body.password }
+    return json(res, 200, sessionFor(users[body.email]))
+  }
+  // Service-role user lookups (fulfilment and the admin enrollment tool).
+  {
+    const m = /^\/auth\/v1\/admin\/users\/([^/]+)$/.exec(path)
+    if (m && req.method === 'GET') {
+      const user = Object.values(users).find(u => u.id === m[1])
+      return user ? json(res, 200, sessionFor(user).user) : json(res, 404, { code: 'user_not_found', msg: 'User not found' })
+    }
+    if (path === '/auth/v1/admin/users' && req.method === 'GET') {
+      return json(res, 200, { users: Object.values(users).map(u => sessionFor(u).user), aud: 'authenticated' })
+    }
+  }
   if (path.startsWith('/auth/v1/')) return json(res, 200, {})
 
   // ── data ─────────────────────────────────────────────────────────────────
@@ -259,10 +283,21 @@ const server = createServer(async (req, res) => {
       const incoming = Array.isArray(body) ? body : [body]
       const merge = prefer.includes('merge-duplicates')
       const written = []
+      const onConflict = (url.searchParams.get('on_conflict') || '').split(',').filter(Boolean)
       for (const row of incoming) {
         if (merge && table === 'user_ui_prefs') {
           const i = rows.findIndex(r => r.user_id === row.user_id && r.key === row.key)
           if (i >= 0) { rows[i] = { ...rows[i], ...row }; written.push(rows[i]); continue }
+        }
+        if (merge && onConflict.length) {
+          const i = rows.findIndex(r => onConflict.every(c => String(r[c]) === String(row[c])))
+          if (i >= 0) { rows[i] = { ...rows[i], ...row }; written.push(rows[i]); continue }
+        }
+        for (const key of uniques[table] || []) {
+          if (key.some(c => row[c] == null)) continue
+          if (rows.some(r => key.every(c => String(r[c]) === String(row[c])))) {
+            return json(res, 409, { code: '23505', message: `duplicate key value violates unique constraint (${key.join(', ')})`, details: null, hint: null })
+          }
         }
         // Real tables default their primary key. Code that inserts and then
         // reads `.id` back — the pitch-count route does — needs one here too.

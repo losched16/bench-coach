@@ -128,7 +128,13 @@
     "gate": "node scripts/release-gate.mjs",
     "lint:hooks": "eslint --no-eslintrc -c .eslintrc.hooks.cjs --ext .ts,.tsx app components lib",
     "test:pitch-count-concurrency": "npx --yes tsx --tsconfig tsconfig.json scripts/test-pitch-count-concurrency.ts",
-    "test:pitch-count": "npx --yes tsx --tsconfig tsconfig.json scripts/test-pitch-count.ts"
+    "test:pitch-count": "npx --yes tsx --tsconfig tsconfig.json scripts/test-pitch-count.ts",
+    "test:migration-080": "bash scripts/test-migration-080.sh",
+    "academy:import": "npx --yes tsx --tsconfig tsconfig.json scripts/academy/import-course.ts",
+    "test:academy": "npx --yes tsx --tsconfig tsconfig.json scripts/test-academy.ts",
+    "test:academy-e2e": "bash scripts/academy/run-e2e.sh",
+    "test:academy-flag-off": "MODE=off bash scripts/academy/run-e2e.sh",
+    "preview:verify": "bash scripts/preview/verify-preview-schema.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",
