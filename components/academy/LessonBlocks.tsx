@@ -6,6 +6,8 @@
 
 import type { ReactNode } from 'react'
 import type { Block } from '@/lib/academy/manuscript'
+import { drillLetter, type LessonDrillVideo } from '@/lib/academy/drillVideoRules'
+import { DrillVideo } from '@/components/DrillVideo'
 
 export function Inline({ text }: { text: string }) {
   const parts = text.split(/(\*\*[^*]+\*\*|\*[^*\s][^*]*?\*)/g)
@@ -44,7 +46,7 @@ const P = ({ text, className = '' }: { text: string; className?: string }) => (
   <p className={`text-[17px] leading-relaxed text-slate-700 ${className}`}><Inline text={text} /></p>
 )
 
-function Drill({ b }: { b: Extract<Block, { type: 'drill' }> }) {
+function Drill({ b, video }: { b: Extract<Block, { type: 'drill' }>; video?: LessonDrillVideo }) {
   // Same words, arranged: the equipment sentence and the success line are
   // lifted out of the drill text for scanning at the field.
   let body = b.text
@@ -64,12 +66,24 @@ function Drill({ b }: { b: Extract<Block, { type: 'drill' }> }) {
         {b.success && (
           <p className="rounded-lg bg-emerald-50 px-3 py-2 text-[15px] text-emerald-900"><span className="font-semibold">Success:</span> <Inline text={b.success} /></p>
         )}
+        {video && (
+          <div data-testid="drill-video" data-drill={drillLetter(b.label) ?? ""}>
+            <DrillVideo
+              drillName={b.name}
+              youtubeVideoId={video.youtubeVideoId}
+              thumbnailUrl={video.thumbnailUrl || undefined}
+              channel={video.channel || undefined}
+              startSeconds={video.startSeconds ?? undefined}
+              compact
+            />
+          </div>
+        )}
       </div>
     </article>
   )
 }
 
-export default function LessonBlocks({ blocks, safetyNote }: { blocks: Block[]; safetyNote?: string | null }) {
+export default function LessonBlocks({ blocks, safetyNote, drillVideos }: { blocks: Block[]; safetyNote?: string | null; drillVideos?: Record<string, LessonDrillVideo> }) {
   const firstDrill = blocks.findIndex(b => b.type === 'drill')
   return (
     <div className="space-y-7">
@@ -114,7 +128,7 @@ export default function LessonBlocks({ blocks, safetyNote }: { blocks: Block[]; 
                   )}
                 </Section>
               )
-            case 'drill': return <Drill b={b} />
+            case 'drill': return <Drill b={b} video={drillVideos?.[drillLetter(b.label) ?? '']} />
             case 'labeled':
               switch (b.kind) {
                 case 'cue': return <Section title="Player cue" tone="cue"><p className="text-xl font-semibold leading-snug"><Inline text={b.text} /></p></Section>

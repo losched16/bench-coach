@@ -9,6 +9,7 @@
 //     body is read through with the CALLER'S session — so even a bug in the
 //     first layer cannot hand the text to someone without access.
 
+import { drillLetter } from './drillVideoRules'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { sessionClient } from '@/lib/authz'
 import type { Block } from './manuscript'
@@ -160,7 +161,11 @@ export interface VideoLink {
 /** How many lessons have at least one APPROVED, non-broken video. The sales page states this honestly. */
 export async function lessonsWithApprovedVideo(courseId: string): Promise<number> {
   const { data } = await adminDb().from('academy_video_links').select('lesson_key, approval_status, link_status, watch_url').eq('course_id', courseId).eq('approval_status', 'approved')
-  return new Set(((data || []) as any[]).filter(v => v.link_status !== 'broken' && /^https:\/\//.test(v.watch_url)).map(v => v.lesson_key)).size
+  const lessons = new Set(((data || []) as any[]).filter(v => v.link_status !== 'broken' && /^https:\/\//.test(v.watch_url)).map(v => v.lesson_key))
+  // Lessons whose drills carry an owner-approved library video count too (the table may not exist yet: then none).
+  const { data: dv } = await adminDb().from('academy_drill_videos').select('lesson_key').eq('course_id', courseId).eq('approval_status', 'approved')
+  for (const r of (dv || []) as any[]) lessons.add(r.lesson_key)
+  return lessons.size
 }
 
 /** Approved demonstrations only — candidates and rejected links are never returned. */
@@ -218,4 +223,23 @@ export function neighbours(outline: Outline, key: string) {
 export function appOrigin(requestOrigin: string): string {
   const env = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/+$/, '')
   return /^https?:\/\//.test(env) ? env : requestOrigin
+}
+
+/**
+ * Every drill block in the course with its lesson: the labels a drill video may be attached to.
+ * OWNER-ONLY use (the drill video admin API, behind requireAdmin). It reads lesson bodies on the
+ * service role, so it never goes near a learner page.
+ */
+export async function listLessonDrills(courseId: string) {
+  const db = adminDb()
+  const { data: lessons } = await db.from('academy_lessons').select('lesson_key, number_label, title, position').eq('course_id', courseId)
+  const { data: bodies } = await db.from('academy_lesson_bodies').select('lesson_key, blocks').eq('course_id', courseId)
+  const byKey = new Map(((lessons || []) as any[]).map(l => [l.lesson_key, l]))
+  const out: Array<{ lesson_key: string; number_label: string | null; lesson_title: string; position: number; label: string; name: string }> = []
+  for (const b of (bodies || []) as any[]) {
+    const l = byKey.get(b.lesson_key)
+    if (!l || !Array.isArray(b.blocks)) continue
+    for (const blk of b.blocks) { const letter = drillLetter(blk?.label); if (blk?.type === 'drill' && letter) out.push({ lesson_key: b.lesson_key, number_label: l.number_label, lesson_title: l.title, position: l.position, label: letter, name: String(blk.name || '') }) }
+  }
+  return out.sort((a, b) => a.position - b.position || a.label.localeCompare(b.label))
 }

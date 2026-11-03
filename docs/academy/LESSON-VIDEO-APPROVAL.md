@@ -83,3 +83,10 @@ Lessons with no approved video are not a defect: they ship as written lessons. Y
 Instructor: ____________________ Credentials: ____________________ Date: ____________
 
 ☐ All 19 lessons approved (or the exceptions are listed in the notes) ☐ Videos approved: ___ of 19 ☐ Safety notice approved
+
+## C. Drill videos (from the drill library)
+
+Separate from the lesson links above. Each lesson drill can borrow one video from the BenchCoach drill library
+(`DRILL-VIDEOS.md`). Same standard: **a person watches the whole video before approving**, and nothing is approved until the owner
+does it in `/admin/academy` with a name and date. For each drill, record: lesson and drill · library drill chosen · start second ·
+☐ watched all of it · ☐ matches the lesson's drill · ☐ safe · ☐ right age group · reviewed on ______ by ______.

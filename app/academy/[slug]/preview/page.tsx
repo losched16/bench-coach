@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react'
 import { courseAccess, currentUser, formatPrice, getCourse, getLessonBody, getOutline, getVideos } from '@/lib/academy/server'
 import { courseCopy, SITE_URL } from '@/lib/academy/catalog'
 import LessonBlocks from '@/components/academy/LessonBlocks'
+import { getLessonDrillVideos } from '@/lib/academy/drillVideos'
 import VideoLinks from '@/components/academy/VideoLinks'
 import BuyButton from '@/components/academy/BuyButton'
 import Track from '@/components/academy/Track'
@@ -38,6 +39,7 @@ export default async function PreviewPage({ params }: { params: { slug: string }
   const body = await getLessonBody(course, lesson.lesson_key, owner ? 'owner' : 'session')
   if (!body) notFound()
   const videos = await getVideos(course.id, lesson.lesson_key)
+  const drillVideos = await getLessonDrillVideos(course.id, lesson.lesson_key)
   const access = await courseAccess(user, course)
   const onSale = course.status === 'published' && !!course.price_cents && !!course.stripe_price_id
   const mod = outline.modules.find(m => m.module_key === lesson.module_key)
@@ -53,7 +55,7 @@ export default async function PreviewPage({ params }: { params: { slug: string }
         {lesson.est_minutes && <p className="mt-2 text-sm text-slate-500">About {lesson.est_minutes} min read</p>}
       </header>
       <article className="mt-8" data-testid="lesson-body">
-        <LessonBlocks blocks={body.blocks} safetyNote={course.safety_note} />
+        <LessonBlocks blocks={body.blocks} safetyNote={course.safety_note} drillVideos={drillVideos} />
       </article>
       <div className="mt-8"><VideoLinks videos={videos} /></div>
       <section className="mt-12 rounded-2xl bg-[#0f172a] p-6 sm:p-8 text-white">

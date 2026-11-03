@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { COURSES } from '@/lib/academy/catalog'
+import DrillVideosAdmin from '@/components/academy/DrillVideosAdmin'
 
 interface Row { id: string; user_id: string; status: string; source: string; enrolled_at: string; revoked_at: string | null; revoke_reason: string | null; amount_total: number | null; currency: string | null; granted_by: string | null }
 
@@ -87,6 +88,7 @@ export default function AcademyAdmin() {
           </table>
         </section>
       )}
+      {course && <DrillVideosAdmin course={course} />}
     </div>
   )
 }

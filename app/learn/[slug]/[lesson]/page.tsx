@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { loadShell } from '@/lib/academy/shell'
 import { getLessonBody, getVideos, neighbours } from '@/lib/academy/server'
+import { getLessonDrillVideos } from '@/lib/academy/drillVideos'
 import { courseCopy, isLessonKey } from '@/lib/academy/catalog'
 import CourseNav from '@/components/academy/CourseNav'
 import LessonBlocks, { FieldTest } from '@/components/academy/LessonBlocks'
@@ -30,6 +31,7 @@ export default async function LessonPage({ params }: { params: { slug: string; l
   const body = await getLessonBody(course, lesson.lesson_key, s.access === 'owner_preview' ? 'owner' : 'session')
   if (!body) notFound()
   const videos = lesson.kind === 'lesson' ? await getVideos(course.id, lesson.lesson_key) : []
+  const drillVideos = lesson.kind === 'lesson' ? await getLessonDrillVideos(course.id, lesson.lesson_key) : {}
   const { prev, next } = neighbours(outline, lesson.lesson_key)
   const mod = outline.modules.find(m => m.module_key === lesson.module_key) || null
   const inModule = outline.lessons.filter(l => l.module_key && l.module_key === lesson.module_key)
@@ -63,7 +65,7 @@ export default async function LessonPage({ params }: { params: { slug: string; l
           </header>
 
           <article className="mt-8" data-testid="lesson-body">
-            <LessonBlocks blocks={body.blocks} safetyNote={lesson.kind === 'lesson' ? course.safety_note : null} />
+            <LessonBlocks blocks={body.blocks} safetyNote={lesson.kind === 'lesson' ? course.safety_note : null} drillVideos={drillVideos} />
           </article>
 
           {body.field_test && <div className="mt-8"><FieldTest text={body.field_test} moduleTitle={mod ? `Module ${mod.position}` : undefined} /></div>}

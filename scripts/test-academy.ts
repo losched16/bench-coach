@@ -17,6 +17,7 @@ import { handleAcademyEvent } from '../lib/academy/webhook'
 import { safeRedirect, isAcademyPath } from '../lib/safeRedirect'
 import { testApiTarget } from '../lib/stripe'
 import { StrictSupabase } from './lib/strictSupabase'
+import { approvalError, parseStart, youtubeIdFor, drillLetter } from '../lib/academy/drillVideoRules'
 
 let failures = 0
 function check(label: string, cond: boolean, detail = '') {
@@ -324,7 +325,11 @@ async function main() {
   check('...and the import writer never reads it back', !/from\('academy_lesson_bodies'\)/.test(readFileSync('lib/academy/seed.ts', 'utf8')))
   const pub = academySrc.filter(([f]) => f.startsWith('app/academy'))
   check('public pages read lesson text only for the preview lesson', pub.filter(([, src]) => /getLessonBody/.test(src)).every(([f, src]) => /preview/.test(f) && /is_preview/.test(src)))
-  check('no fabricated "approved" video status anywhere in code', !academySrc.some(([, src]) => /approval_status:\s*'approved'/.test(src)))
+  // The ONLY place code writes an approved status is the owner's drill-video approval, and it must pass approvalError first.
+  const DV_ROUTE = 'app/api/academy/admin/drill-videos/route.ts'
+  check('no fabricated "approved" video status anywhere in code', !academySrc.filter(([f]) => f !== DV_ROUTE).some(([, src]) => /approval_status:\s*'approved'/.test(src)))
+  const dvRoute = readFileSync(DV_ROUTE, 'utf8')
+  check('...and the one deliberate writer refuses unless a named reviewer watched it', dvRoute.indexOf('approvalError(') > -1 && dvRoute.indexOf('approvalError(') < dvRoute.indexOf("approval_status: 'approved'") && /if \(err\) return/.test(dvRoute))
 
   // ── the launch flag: default off, nothing exposed ─────────────────────────
   const flagSrc = rd('lib/academy/flag.ts')
@@ -356,6 +361,28 @@ async function main() {
   check('the course copy no longer lists videos as a feature', !COURSES.some(c => c.getItems.some(x => /video/i.test(x))))
   const salesSrc = rd('app/academy/[slug]/page.tsx')
   check('the sales page states the video situation from the data: none yet, or "N of M lessons"', /lessonsWithApprovedVideo\(course\.id\)/.test(salesSrc) && /There are no demonstration videos yet/.test(salesSrc) && /of \$\{lessons\.length\} lessons/.test(salesSrc))
+
+  // ── drill videos: a lesson drill borrows a library drill's video, approved by a person ──
+  const okApproval = { reviewer: 'Coach Test', watched: true, hasVideo: true, sharedBy: 1, startSeconds: null, acceptCompilation: false }
+  check('drill video: a watched, named, single-drill video may be approved', approvalError(okApproval) === null)
+  check('drill video: approval needs a reviewer name', approvalError({ ...okApproval, reviewer: '' }) !== null && approvalError({ ...okApproval, reviewer: 'x' }) !== null && approvalError({ ...okApproval, reviewer: 42 }) !== null)
+  check('drill video: approval needs the owner to say they watched it (exactly true)', approvalError({ ...okApproval, watched: false }) !== null && approvalError({ ...okApproval, watched: 'true' }) !== null && approvalError({ ...okApproval, watched: undefined }) !== null)
+  check('drill video: a library drill with no YouTube video cannot be approved', approvalError({ ...okApproval, hasVideo: false }) !== null)
+  check('drill video: a compilation with no start time needs an explicit yes', approvalError({ ...okApproval, sharedBy: 4 }) !== null)
+  check('drill video: ...and goes ahead with a start time or the explicit yes', approvalError({ ...okApproval, sharedBy: 4, startSeconds: 95 }) === null && approvalError({ ...okApproval, sharedBy: 4, acceptCompilation: true }) === null)
+  check('drill video: start time 0 counts as a real start, not as unknown', approvalError({ ...okApproval, sharedBy: 4, startSeconds: 0 }) === null)
+  check('drill video: start-time input is whole seconds only', parseStart('') === null && parseStart(null) === null && parseStart('95') === 95 && parseStart('0') === 0 && parseStart('-3') === 'invalid' && parseStart('1.5') === 'invalid' && parseStart('abc') === 'invalid' && parseStart(999999) === 'invalid')
+  check('drill video: the library row\'s own YouTube id wins', youtubeIdFor({ youtube_video_id: 'abcdefghijk' }, []) === 'abcdefghijk')
+  check('drill video: an id is found in a stored URL', youtubeIdFor({ youtube_url: 'https://youtu.be/abcdefghijk' }, []) === 'abcdefghijk')
+  check('drill video: a YouTube media row is the fallback, a rejected or non-YouTube row is not', youtubeIdFor({}, [{ media_type: 'youtube', external_id: 'zzzzzzzzzzz', verification_status: 'unverified' } as any]) === 'zzzzzzzzzzz' && youtubeIdFor({}, [{ media_type: 'youtube', external_id: 'zzzzzzzzzzz', verification_status: 'rejected' } as any]) === null && youtubeIdFor({}, [{ media_type: 'instagram', external_id: 'abc' } as any]) === null)
+  check('drill video: nothing at all means no video', youtubeIdFor(null, null) === null && youtubeIdFor({}, []) === null)
+  check('drill video: a manuscript drill label ("Drill A") maps to its letter, anything else to nothing', drillLetter('Drill A') === 'A' && drillLetter('B') === 'B' && drillLetter(' Drill C ') === 'C' && drillLetter('Drill AB') === null && drillLetter('drill a') === null && drillLetter(undefined) === null)
+  const dvSrc = rd('lib/academy/drillVideos.ts')
+  check('drill video: the learner loader reads approved mappings only and tolerates a missing table', /eq\('approval_status', 'approved'\)/.test(dvSrc) && /if \(error \|\| !maps\?\.length\) return \{\}/.test(dvSrc))
+  check('drill video: only video fields of the library row are read (no drill text is copied)', !/description|ai_coaching_notes|safety_notes/.test(dvSrc.slice(dvSrc.indexOf('.from(\'drill_resources\')'))))
+  const routeSrc = rd('app/api/academy/admin/drill-videos/route.ts')
+  check('drill video: the admin API is owner-only on both GET and POST', (routeSrc.match(/requireAdmin\(\)/g) || []).length >= 2)
+  check('drill video: any remap sends the mapping back to candidate and clears the reviewer', /approval_status: 'candidate', reviewed_by: null, reviewed_at: null/.test(routeSrc))
 
   console.log('')
   if (failures) { console.log(`${failures} FAILED`); process.exit(1) }
