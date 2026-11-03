@@ -67,7 +67,7 @@ function Drill({ b, video }: { b: Extract<Block, { type: 'drill' }>; video?: Les
           <p className="rounded-lg bg-emerald-50 px-3 py-2 text-[15px] text-emerald-900"><span className="font-semibold">Success:</span> <Inline text={b.success} /></p>
         )}
         {video && (
-          <div data-testid="drill-video" data-drill={b.label}>
+          <div data-testid="drill-video" data-drill={drillLetter(b.label) ?? ""}>
             <DrillVideo
               drillName={b.name}
               youtubeVideoId={video.youtubeVideoId}

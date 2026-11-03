@@ -408,7 +408,7 @@ async function main() {
     check('drill videos: changing a mapping sends it back to candidate and clears the reviewer', t.academy_drill_videos.find((r: any) => r.drill_label === L1)?.approval_status === 'candidate' && !t.academy_drill_videos.find((r: any) => r.drill_label === L1)?.reviewed_by)
     await cp.reload({ waitUntil: 'networkidle' })
     await cp.getByTestId('lesson-body').waitFor({ timeout: 60000 })
-    check('drill videos: ...and the video is gone from the lesson until it is approved again', (await cp.getByTestId('drill-video').filter({ has: cp.locator(`[data-drill="${L1}"]`) }).count()) === 0 && (await cp.locator(`[data-testid="drill-video"][data-drill="${L1}"]`).count()) === 0)
+    check('drill videos: ...and the video is gone from the lesson until it is approved again', (await cp.locator(`[data-testid="drill-video"][data-drill="${L1}"]`).count()) === 0 && (!L2 || (await cp.locator(`[data-testid="drill-video"][data-drill="${L2}"]`).count()) === 1))
     await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'approve', reviewer: 'Coach T', watched: true })
     await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'retire' })
     await cp.reload({ waitUntil: 'networkidle' })
