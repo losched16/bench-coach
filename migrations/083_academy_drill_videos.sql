@@ -1,7 +1,8 @@
 -- ============================================================================
 -- Migration 083: Academy drill videos (a lesson drill points at a library drill's video)
 -- ============================================================================
--- NOT APPLIED to any database yet. Additive and idempotent. Needs the owner's review first.
+-- Applied to the live Supabase project on 2026-11-03 (owner-approved; verified: RLS on, 1 read policy, no client write grants, 0 rows).
+-- Additive and idempotent. The app code that uses it ships with the Academy drill videos PR (#35).
 --
 -- An Academy lesson contains drills ("Drill A - ..."). The BenchCoach drill library
 -- (public.drill_resources) already carries a curated YouTube video for most drills, and the

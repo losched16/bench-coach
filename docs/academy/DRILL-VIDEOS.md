@@ -1,6 +1,6 @@
 # Academy drill videos (lesson drills borrow a library video)
 
-**Status: built on branch `claude/academy-drill-videos`, draft PR. Migration 083 is NOT applied anywhere. Nothing is approved.**
+**Status: built on branch `claude/academy-drill-videos` (draft PR #35). Migration 083 is applied to the live database (2026-11-03, verified); the app code is not merged yet. Nothing is approved.**
 
 ## What it does
 Each Academy lesson has drills ("Drill A", "Drill B"). Your BenchCoach drill library already holds a curated YouTube video
@@ -33,6 +33,5 @@ so approved drill videos play in the lesson through YouTube's own player (the sa
 ## Not done / needs you
 - **Approving any video.** I have not approved, matched or chosen any video. The library videos were curated for coaching plans;
   whether each is right for the *course* is your call.
-- **Migration 083** must be applied to the live database before this works. Until then the admin screen says it isn't set up
-  and lessons look exactly as today.
+- **PR #35 must be merged and deployed** before the admin screen appears. Migration 083 is already applied; the table is empty and unused until then.
 - Library coverage: some library videos are compilations with no start time (the app already knows this). Those need a start second.
