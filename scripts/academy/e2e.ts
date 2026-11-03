@@ -59,6 +59,7 @@ async function reset() {
     uniques: {
       academy_enrollments: [['user_id', 'course_id'], ['stripe_checkout_session_id']],
       academy_stripe_events: [['event_id']],
+      academy_drill_videos: [['course_id', 'lesson_key', 'drill_label']],
     },
     tables: {
       academy_courses: [{
@@ -75,6 +76,14 @@ async function reset() {
         { id: 'v-broken', course_id: COURSE_ID, lesson_key: lessons[2].key, kind: 'video', title: 'Removed video', creator: 'Test Creator', watch_url: 'https://www.youtube.com/watch?v=TESTFIXTURE2', approval_status: 'approved', reviewed_by: 'test', reviewed_at: '2026-10-01', link_status: 'broken', position: 1 },
         { id: 'v-candidate', course_id: COURSE_ID, lesson_key: lessons[0].key, kind: 'video', title: 'Unreviewed candidate', creator: 'Someone', watch_url: 'https://www.youtube.com/watch?v=TESTFIXTURE3', approval_status: 'candidate', link_status: 'unchecked', position: 1 },
       ],
+      // The BenchCoach drill library (curated rows) that lesson drills borrow a video from. Synthetic ids and videos.
+      drill_resources: [
+        { id: '10000000-0000-4000-8000-000000000001', drill_name: 'Tee Work Fixture', youtube_video_id: 'FixtureVid1', youtube_url: null, thumbnail_url: null, channel: 'Fixture Channel', youtube_start_seconds: null, status: 'approved', created_by_coach_id: null },
+        { id: '10000000-0000-4000-8000-000000000002', drill_name: 'Compilation Drill One', youtube_video_id: 'SharedVid01', youtube_url: null, thumbnail_url: null, channel: 'Fixture Channel', youtube_start_seconds: null, status: 'approved', created_by_coach_id: null },
+        { id: '10000000-0000-4000-8000-000000000003', drill_name: 'Compilation Drill Two', youtube_video_id: 'SharedVid01', youtube_url: null, thumbnail_url: null, channel: 'Fixture Channel', youtube_start_seconds: null, status: 'approved', created_by_coach_id: null },
+        { id: '10000000-0000-4000-8000-000000000004', drill_name: 'Tee Work Without Video', youtube_video_id: null, youtube_url: null, thumbnail_url: null, channel: null, youtube_start_seconds: null, status: 'approved', created_by_coach_id: null },
+      ],
+      drill_media_resources: [], academy_drill_videos: [],
       academy_enrollments: [{ id: 'enr-coach', user_id: COACH.id, course_id: COURSE_ID, status: 'active', source: 'purchase', stripe_checkout_session_id: 'cs_seed_coach', enrolled_at: '2026-10-01T00:00:00Z', revoked_at: null }],
       academy_lesson_progress: [], academy_stripe_events: [], user_events: [],
       coaches: [{ id: 'coach-1', user_id: COACH.id, is_subscribed: true, subscription_tier: 'coach', display_name: 'Sample Coach' }],
@@ -348,12 +357,72 @@ async function main() {
     res = await post({ course: SLUG, email: PARENT.email, action: 'grant' })
     t = await state()
     check('the owner can grant (comp) access', res.status === 200 && t.academy_enrollments.find((e: any) => e.user_id === parentId)?.status === 'active')
+    // ── drill videos: the owner maps, watches and approves; a learner sees only approved ──
+    const dv = (body: any) => op.evaluate(async b => { const r = await fetch('/api/academy/admin/drill-videos', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(b) }); return { status: r.status, body: await r.json() } }, body)
+    const dvGet = (qs: string) => op.evaluate(async q => { const r = await fetch(`/api/academy/admin/drill-videos?${q}`); return { status: r.status, body: await r.json() } }, qs)
+    const drillLesson = lessons.find(l => l.blocks.some(b => b.type === 'drill'))!
+    const dKey = drillLesson.key
+    const labelOf = (i: number) => (drillLesson.blocks.filter(b => b.type === 'drill')[i] as any)?.label
+    const L1 = labelOf(0), L2 = labelOf(1)
+    const ID1 = '10000000-0000-4000-8000-000000000001', IDC = '10000000-0000-4000-8000-000000000002', IDN = '10000000-0000-4000-8000-000000000004'
+    let g = await dvGet(`course=${SLUG}`)
+    check('drill videos: the owner sees every lesson drill', g.status === 200 && g.body.drills.some((d: any) => d.lesson_key === dKey && d.label === L1) && g.body.migrationApplied === true)
+    g = await dvGet(`course=${SLUG}&q=tee%20work`)
+    check('drill videos: the owner can search the library, and sees which drills have no video', g.body.results.length === 2 && g.body.results.find((r: any) => r.drill_id === IDN)?.hasVideo === false && g.body.results.find((r: any) => r.drill_id === ID1)?.hasVideo === true)
+    check('drill videos: a library drill without a YouTube video cannot be mapped', (await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'map', drill_id: IDN })).status === 400)
+    check('drill videos: a drill that is not on the lesson is refused', (await dv({ course: SLUG, lesson_key: dKey, label: 'Z', action: 'map', drill_id: ID1 })).status === 404)
+    check('drill videos: mapping makes a CANDIDATE, never an approval', (await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'map', drill_id: ID1 })).body.status === 'candidate')
+    const coachCtx = await browser.newContext({ viewport: { width: 430, height: 900 } })
+    const cp = await coachCtx.newPage()
+    await signIn(cp, COACH, `/learn/${SLUG}/${dKey}`)
+    await cp.waitForURL(new RegExp(`/learn/${SLUG}/${dKey}`), { timeout: 60000 })
+    await cp.getByTestId('lesson-body').waitFor({ timeout: 60000 })
+    check('drill videos: a candidate is not shown to a learner', (await cp.getByTestId('drill-video').count()) === 0)
+    check('drill videos: approval is refused without the "I watched it" statement', (await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'approve', reviewer: 'Coach T', watched: false })).status === 400)
+    check('drill videos: approval is refused without a reviewer name', (await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'approve', reviewer: '', watched: true })).status === 400)
+    t = await state()
+    check('drill videos: ...and nothing was approved by those refusals', t.academy_drill_videos.every((r: any) => r.approval_status === 'candidate'))
+    check('drill videos: a named reviewer who watched it can approve', (await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'approve', reviewer: 'Coach T', watched: true })).body.status === 'approved')
+    t = await state()
+    const appr = t.academy_drill_videos.find((r: any) => r.drill_label === L1)
+    check('drill videos: the approval records who and when', appr?.reviewed_by === 'Coach T' && !!appr?.reviewed_at)
+    await cp.reload({ waitUntil: 'networkidle' })
+    await cp.getByTestId('lesson-body').waitFor({ timeout: 60000 })
+    const vids = cp.getByTestId('drill-video')
+    check('drill videos: an approved video shows on that drill, and only that drill', (await vids.count()) === 1 && (await vids.first().getAttribute('data-drill')) === L1)
+    check('drill videos: the lesson page carries the library video id', (await cp.content()).includes('FixtureVid1'))
+    check('drill videos: no horizontal scroll on a phone', await noOverflow(cp))
+    await cp.screenshot({ path: `${OUT}/drill-video-430.png`, fullPage: false })
+    if (L2) {
+      await dv({ course: SLUG, lesson_key: dKey, label: L2, action: 'map', drill_id: IDC })
+      const r1 = await dv({ course: SLUG, lesson_key: dKey, label: L2, action: 'approve', reviewer: 'Coach T', watched: true })
+      check('drill videos: a compilation video with no start time needs an explicit yes', r1.status === 400 && /compilation/.test(r1.body.error))
+      await dv({ course: SLUG, lesson_key: dKey, label: L2, action: 'map', drill_id: IDC, start_seconds: 95 })
+      check('drill videos: ...and goes ahead once the drill\'s start time is given', (await dv({ course: SLUG, lesson_key: dKey, label: L2, action: 'approve', reviewer: 'Coach T', watched: true })).body.status === 'approved')
+      await cp.reload({ waitUntil: 'networkidle' })
+      await cp.getByTestId('lesson-body').waitFor({ timeout: 60000 })
+      check('drill videos: both drills now show their video', (await cp.getByTestId('drill-video').count()) === 2)
+    }
+    await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'map', drill_id: ID1, start_seconds: 10 })
+    t = await state()
+    check('drill videos: changing a mapping sends it back to candidate and clears the reviewer', t.academy_drill_videos.find((r: any) => r.drill_label === L1)?.approval_status === 'candidate' && !t.academy_drill_videos.find((r: any) => r.drill_label === L1)?.reviewed_by)
+    await cp.reload({ waitUntil: 'networkidle' })
+    await cp.getByTestId('lesson-body').waitFor({ timeout: 60000 })
+    check('drill videos: ...and the video is gone from the lesson until it is approved again', (await cp.getByTestId('drill-video').filter({ has: cp.locator(`[data-drill="${L1}"]`) }).count()) === 0 && (await cp.locator(`[data-testid="drill-video"][data-drill="${L1}"]`).count()) === 0)
+    await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'approve', reviewer: 'Coach T', watched: true })
+    await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'retire' })
+    await cp.reload({ waitUntil: 'networkidle' })
+    await cp.getByTestId('lesson-body').waitFor({ timeout: 60000 })
+    check('drill videos: a retired video is no longer shown', (await cp.locator(`[data-testid="drill-video"][data-drill="${L1}"]`).count()) === 0)
+    await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'unmap' })
+    await coachCtx.close()
     await octx.close()
     const nctx = await browser.newContext()
     const np = await nctx.newPage()
     await signIn(np, OTHER)
     await np.waitForURL(/\/(dashboard|subscribe|onboarding)/, { timeout: 60000 })
     check('a non-owner cannot use the admin enrollment API', (await status(np, `/api/academy/admin/enrollments?course=${SLUG}`)) === 404)
+    check('drill videos: a non-owner cannot read or change them', (await status(np, `/api/academy/admin/drill-videos?course=${SLUG}`)) === 404 && (await status(np, '/api/academy/admin/drill-videos', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ course: SLUG, lesson_key: '1-1', label: 'A', action: 'approve', reviewer: 'X Y', watched: true }) })) === 404)
     await nctx.close()
   }
 
