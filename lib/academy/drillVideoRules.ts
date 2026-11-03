@@ -39,3 +39,9 @@ export function parseStart(v: unknown): number | null | 'invalid' {
   return Number.isInteger(n) && n >= 0 && n <= 36000 ? n : 'invalid'
 }
 
+
+/** A lesson's drill label is "Drill A" in the manuscript; mappings key on the letter alone. */
+export function drillLetter(label: unknown): string | null {
+  const m = /^(?:Drill\s+)?([A-Z])$/.exec(String(label ?? '').trim())
+  return m ? m[1] : null
+}

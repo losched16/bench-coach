@@ -17,7 +17,7 @@ import { handleAcademyEvent } from '../lib/academy/webhook'
 import { safeRedirect, isAcademyPath } from '../lib/safeRedirect'
 import { testApiTarget } from '../lib/stripe'
 import { StrictSupabase } from './lib/strictSupabase'
-import { approvalError, parseStart, youtubeIdFor } from '../lib/academy/drillVideoRules'
+import { approvalError, parseStart, youtubeIdFor, drillLetter } from '../lib/academy/drillVideoRules'
 
 let failures = 0
 function check(label: string, cond: boolean, detail = '') {
@@ -376,6 +376,7 @@ async function main() {
   check('drill video: an id is found in a stored URL', youtubeIdFor({ youtube_url: 'https://youtu.be/abcdefghijk' }, []) === 'abcdefghijk')
   check('drill video: a YouTube media row is the fallback, a rejected or non-YouTube row is not', youtubeIdFor({}, [{ media_type: 'youtube', external_id: 'zzzzzzzzzzz', verification_status: 'unverified' } as any]) === 'zzzzzzzzzzz' && youtubeIdFor({}, [{ media_type: 'youtube', external_id: 'zzzzzzzzzzz', verification_status: 'rejected' } as any]) === null && youtubeIdFor({}, [{ media_type: 'instagram', external_id: 'abc' } as any]) === null)
   check('drill video: nothing at all means no video', youtubeIdFor(null, null) === null && youtubeIdFor({}, []) === null)
+  check('drill video: a manuscript drill label ("Drill A") maps to its letter, anything else to nothing', drillLetter('Drill A') === 'A' && drillLetter('B') === 'B' && drillLetter(' Drill C ') === 'C' && drillLetter('Drill AB') === null && drillLetter('drill a') === null && drillLetter(undefined) === null)
   const dvSrc = rd('lib/academy/drillVideos.ts')
   check('drill video: the learner loader reads approved mappings only and tolerates a missing table', /eq\('approval_status', 'approved'\)/.test(dvSrc) && /if \(error \|\| !maps\?\.length\) return \{\}/.test(dvSrc))
   check('drill video: only video fields of the library row are read (no drill text is copied)', !/description|ai_coaching_notes|safety_notes/.test(dvSrc.slice(dvSrc.indexOf('.from(\'drill_resources\')'))))

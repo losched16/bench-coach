@@ -9,6 +9,7 @@
 //     body is read through with the CALLER'S session — so even a bug in the
 //     first layer cannot hand the text to someone without access.
 
+import { drillLetter } from './drillVideoRules'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { sessionClient } from '@/lib/authz'
 import type { Block } from './manuscript'
@@ -238,7 +239,7 @@ export async function listLessonDrills(courseId: string) {
   for (const b of (bodies || []) as any[]) {
     const l = byKey.get(b.lesson_key)
     if (!l || !Array.isArray(b.blocks)) continue
-    for (const blk of b.blocks) if (blk?.type === 'drill' && /^[A-Z]$/.test(blk.label)) out.push({ lesson_key: b.lesson_key, number_label: l.number_label, lesson_title: l.title, position: l.position, label: blk.label, name: String(blk.name || '') })
+    for (const blk of b.blocks) { const letter = drillLetter(blk?.label); if (blk?.type === 'drill' && letter) out.push({ lesson_key: b.lesson_key, number_label: l.number_label, lesson_title: l.title, position: l.position, label: letter, name: String(blk.name || '') }) }
   }
   return out.sort((a, b) => a.position - b.position || a.label.localeCompare(b.label))
 }

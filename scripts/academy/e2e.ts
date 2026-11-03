@@ -362,7 +362,7 @@ async function main() {
     const dvGet = (qs: string) => op.evaluate(async q => { const r = await fetch(`/api/academy/admin/drill-videos?${q}`); return { status: r.status, body: await r.json() } }, qs)
     const drillLesson = lessons.find(l => l.blocks.some(b => b.type === 'drill'))!
     const dKey = drillLesson.key
-    const labelOf = (i: number) => (drillLesson.blocks.filter(b => b.type === 'drill')[i] as any)?.label
+    const labelOf = (i: number) => { const l = (drillLesson.blocks.filter(b => b.type === 'drill')[i] as any)?.label; return l ? String(l).replace(/^Drill\s+/, '') : undefined }
     const L1 = labelOf(0), L2 = labelOf(1)
     const ID1 = '10000000-0000-4000-8000-000000000001', IDC = '10000000-0000-4000-8000-000000000002', IDN = '10000000-0000-4000-8000-000000000004'
     let g = await dvGet(`course=${SLUG}`)

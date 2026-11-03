@@ -6,7 +6,7 @@
 
 import type { ReactNode } from 'react'
 import type { Block } from '@/lib/academy/manuscript'
-import type { LessonDrillVideo } from '@/lib/academy/drillVideoRules'
+import { drillLetter, type LessonDrillVideo } from '@/lib/academy/drillVideoRules'
 import { DrillVideo } from '@/components/DrillVideo'
 
 export function Inline({ text }: { text: string }) {
@@ -128,7 +128,7 @@ export default function LessonBlocks({ blocks, safetyNote, drillVideos }: { bloc
                   )}
                 </Section>
               )
-            case 'drill': return <Drill b={b} video={drillVideos?.[b.label]} />
+            case 'drill': return <Drill b={b} video={drillVideos?.[drillLetter(b.label) ?? '']} />
             case 'labeled':
               switch (b.kind) {
                 case 'cue': return <Section title="Player cue" tone="cue"><p className="text-xl font-semibold leading-snug"><Inline text={b.text} /></p></Section>
