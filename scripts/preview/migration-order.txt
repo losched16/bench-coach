@@ -45,3 +45,4 @@
 081_speed_program
 082_academy_disputes
 083_academy_drill_videos
+084_academy_pasted_videos

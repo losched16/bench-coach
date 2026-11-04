@@ -17,7 +17,7 @@ import { handleAcademyEvent } from '../lib/academy/webhook'
 import { safeRedirect, isAcademyPath } from '../lib/safeRedirect'
 import { testApiTarget } from '../lib/stripe'
 import { StrictSupabase } from './lib/strictSupabase'
-import { approvalError, parseStart, youtubeIdFor, drillLetter } from '../lib/academy/drillVideoRules'
+import { approvalError, parseStart, youtubeIdFor, drillLetter, parseYoutubeInput } from '../lib/academy/drillVideoRules'
 
 let failures = 0
 function check(label: string, cond: boolean, detail = '') {
@@ -383,6 +383,13 @@ async function main() {
   const routeSrc = rd('app/api/academy/admin/drill-videos/route.ts')
   check('drill video: the admin API is owner-only on both GET and POST', (routeSrc.match(/requireAdmin\(\)/g) || []).length >= 2)
   check('drill video: any remap sends the mapping back to candidate and clears the reviewer', /approval_status: 'candidate', reviewed_by: null, reviewed_at: null/.test(routeSrc))
+  // ── pasted YouTube links (migration 084) ──
+  check('pasted link: watch, share, embed and shorts links are read', parseYoutubeInput('https://www.youtube.com/watch?v=abcdefghijk')?.videoId === 'abcdefghijk' && parseYoutubeInput('https://youtu.be/abcdefghijk')?.videoId === 'abcdefghijk' && parseYoutubeInput('https://m.youtube.com/watch?v=abcdefghijk&feature=share')?.videoId === 'abcdefghijk' && parseYoutubeInput('https://www.youtube.com/shorts/abcdefghijk')?.videoId === 'abcdefghijk')
+  check('pasted link: a start time already in the link is kept', parseYoutubeInput('https://youtu.be/abcdefghijk?t=95')?.start === 95 && parseYoutubeInput('https://www.youtube.com/watch?v=abcdefghijk&t=1m30s')?.start === 90 && parseYoutubeInput('https://youtu.be/abcdefghijk')?.start === null)
+  check('pasted link: other sites, scripts, http, plain text and bad ids are refused', parseYoutubeInput('https://vimeo.com/123456789') === null && parseYoutubeInput('javascript:alert(1)') === null && parseYoutubeInput('http://www.youtube.com/watch?v=abcdefghijk') === null && parseYoutubeInput('abcdefghijk') === null && parseYoutubeInput('https://evil.com/?u=https://youtu.be/abcdefghijk') === null && parseYoutubeInput('https://www.youtube.com/watch?v=short') === null && parseYoutubeInput(null) === null)
+  const ytSrc = rd('lib/academy/youtubeCheck.ts')
+  check('pasted link: a video must exist on YouTube (oEmbed) before it can be saved, and again before approval', /oembed/i.test(ytSrc) && (routeSrc.match(/checkYoutubeVideo\(/g) || []).length >= 2)
+  check('pasted link: the loader checks the id shape and falls back when migration 084 is missing', /youtube_video_id && \/\^\[A-Za-z0-9_-\]\{11\}\$\/\.test/.test(dvSrc) && /if \(q\.error\)/.test(dvSrc))
 
   console.log('')
   if (failures) { console.log(`${failures} FAILED`); process.exit(1) }

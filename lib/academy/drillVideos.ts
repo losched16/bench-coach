@@ -17,14 +17,27 @@ import { youtubeIdFor, type LessonDrillVideo } from './drillVideoRules'
 /** Approved video for each drill label in one lesson. Empty object when there is none. */
 export async function getLessonDrillVideos(courseId: string, lessonKey: string): Promise<Record<string, LessonDrillVideo>> {
   const db = adminDb()
-  const { data: maps, error } = await db.from('academy_drill_videos')
-    .select('drill_label, drill_id, start_seconds, approval_status')
+  // Migration 084 adds pasted videos. Until it is applied the new columns do not exist, so fall back to the 083 shape.
+  let q: any = await db.from('academy_drill_videos')
+    .select('drill_label, drill_id, start_seconds, approval_status, youtube_video_id, title, channel')
     .eq('course_id', courseId).eq('lesson_key', lessonKey).eq('approval_status', 'approved')
+  if (q.error) {
+    q = await db.from('academy_drill_videos')
+      .select('drill_label, drill_id, start_seconds, approval_status')
+      .eq('course_id', courseId).eq('lesson_key', lessonKey).eq('approval_status', 'approved')
+  }
+  const { data: maps, error } = q
   if (error || !maps?.length) return {}
   const out: Record<string, LessonDrillVideo> = {}
   const rows = (maps as any[]).filter(m => m.approval_status === 'approved')
   const mediaById = await loadMediaFor(db, rows.map(m => m.drill_id))
   for (const m of rows) {
+    // A pasted YouTube video: the id was checked with YouTube when it was saved and again when approved.
+    if (m.youtube_video_id && /^[A-Za-z0-9_-]{11}$/.test(m.youtube_video_id)) {
+      out[m.drill_label] = { drillName: String(m.title || ''), youtubeVideoId: m.youtube_video_id, thumbnailUrl: null, channel: m.channel || null, startSeconds: m.start_seconds ?? null }
+      continue
+    }
+    if (!m.drill_id) continue
     const { data: drill } = await db.from('drill_resources')
       .select('id, drill_name, youtube_video_id, youtube_url, thumbnail_url, channel, youtube_start_seconds, status')
       .eq('id', m.drill_id).maybeSingle()

@@ -187,6 +187,13 @@ const server = createServer(async (req, res) => {
     reset(await readBody(req) || {})
     return json(res, 200, { ok: true })
   }
+  // A stand-in for YouTube's oEmbed endpoint (the Academy drill-video tests). 'PastedVid01' exists; anything else does not.
+  if (path === '/__oembed') {
+    const u = url.searchParams.get('url') || ''
+    return u.endsWith('v=PastedVid01') || u.endsWith('v=PastedVid02')
+      ? json(res, 200, { title: 'Pasted Fixture Video', author_name: 'Pasted Channel' })
+      : json(res, 404, { message: 'Not Found' })
+  }
   if (path === '/__fixture/state') {
     return json(res, 200, { tables, failing })
   }

@@ -49,6 +49,7 @@ STRIPE_SECRET_KEY=sk_test_fixture \
 STRIPE_WEBHOOK_SECRET="$WEBHOOK_SECRET" \
 STRIPE_API_BASE="http://127.0.0.1:${STRIPE_PORT}" \
 ADMIN_EMAIL=owner@example.test \
+YOUTUBE_OEMBED_BASE="http://127.0.0.1:${FIXTURE_PORT}/__oembed" \
 ACADEMY_LAUNCH="$([ "$MODE" = on ] && echo 1 || echo true)" \
   setsid npx next dev -p "$PORT" > .academy-content/e2e/next.log 2>&1 & pids+=($!)
 

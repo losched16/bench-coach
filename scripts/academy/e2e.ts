@@ -363,7 +363,7 @@ async function main() {
     const drillLesson = lessons.find(l => l.blocks.some(b => b.type === 'drill'))!
     const dKey = drillLesson.key
     const labelOf = (i: number) => { const l = (drillLesson.blocks.filter(b => b.type === 'drill')[i] as any)?.label; return l ? String(l).replace(/^Drill\s+/, '') : undefined }
-    const L1 = labelOf(0), L2 = labelOf(1)
+    const L1 = labelOf(0)!, L2 = labelOf(1)
     const ID1 = '10000000-0000-4000-8000-000000000001', IDC = '10000000-0000-4000-8000-000000000002', IDN = '10000000-0000-4000-8000-000000000004'
     let g = await dvGet(`course=${SLUG}`)
     check('drill videos: the owner sees every lesson drill', g.status === 200 && g.body.drills.some((d: any) => d.lesson_key === dKey && d.label === L1) && g.body.migrationApplied === true)
@@ -414,6 +414,27 @@ async function main() {
     await cp.reload({ waitUntil: 'networkidle' })
     await cp.getByTestId('lesson-body').waitFor({ timeout: 60000 })
     check('drill videos: a retired video is no longer shown', (await cp.locator(`[data-testid="drill-video"][data-drill="${L1}"]`).count()) === 0)
+    // ── pasted YouTube video, for a drill the library has no video for ──
+    const rowOf = async (label: string) => (await state()).academy_drill_videos.find((r: any) => r.drill_label === label)
+    check('pasted: a link that is not YouTube is refused', (await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'map', youtube_url: 'https://vimeo.com/123456789' })).status === 400)
+    const beforeMissing = JSON.stringify(await rowOf(L1))
+    check('pasted: a YouTube video that does not exist is refused (and the mapping is left exactly as it was)', (await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'map', youtube_url: 'https://youtu.be/MissingVid0' })).status === 400 && JSON.stringify(await rowOf(L1)) === beforeMissing)
+    const pasted = await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'map', youtube_url: 'https://youtu.be/PastedVid01?t=42' })
+    const pr = await rowOf(L1)
+    check('pasted: a real video is saved as a CANDIDATE with the title and channel YouTube reports and the start from the link', pasted.body.status === 'candidate' && pr?.youtube_video_id === 'PastedVid01' && pr?.title === 'Pasted Fixture Video' && pr?.channel === 'Pasted Channel' && pr?.start_seconds === 42 && !pr?.drill_id && pr?.approval_status === 'candidate')
+    g = await dvGet(`course=${SLUG}`)
+    check('pasted: the owner screen lists it as a pasted YouTube video', g.body.mappings.some((m: any) => m.drill_label === L1 && m.library?.pasted === true && m.library?.name === 'Pasted Fixture Video') && g.body.pastedReady === true)
+    await cp.reload({ waitUntil: 'networkidle' })
+    await cp.getByTestId('lesson-body').waitFor({ timeout: 60000 })
+    check('pasted: a candidate is not shown to a learner', (await cp.locator(`[data-testid="drill-video"][data-drill="${L1}"]`).count()) === 0)
+    check('pasted: approval still needs a named reviewer who watched it', (await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'approve', reviewer: 'Coach T', watched: false })).status === 400 && (await rowOf(L1))?.approval_status === 'candidate')
+    check('pasted: ...and then approves', (await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'approve', reviewer: 'Coach T', watched: true })).body.status === 'approved')
+    await cp.reload({ waitUntil: 'networkidle' })
+    await cp.getByTestId('lesson-body').waitFor({ timeout: 60000 })
+    check('pasted: the approved video shows on that drill with its id', (await cp.locator(`[data-testid="drill-video"][data-drill="${L1}"]`).count()) === 1 && (await cp.content()).includes('PastedVid01'))
+    await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'map', drill_id: ID1 })
+    const back = await rowOf(L1)
+    check('pasted: switching to a library drill clears the pasted video and goes back to candidate', back?.drill_id === ID1 && !back?.youtube_video_id && !back?.title && back?.approval_status === 'candidate' && !back?.reviewed_by)
     await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'unmap' })
     await coachCtx.close()
     await octx.close()
