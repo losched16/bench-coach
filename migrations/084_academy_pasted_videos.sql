@@ -1,7 +1,8 @@
 -- ============================================================================
 -- Migration 084: Academy drill videos can point at a pasted YouTube video
 -- ============================================================================
--- NOT APPLIED to any database yet. Additive and idempotent. Needs the owner's review first.
+-- Applied to the live Supabase project on 2026-11-04 (owner-approved; the owner reported the check query matched: drill_id optional,
+-- 3 new columns, 2 new constraints, RLS on, 1 policy, no client write grants, empty table). Additive and idempotent.
 --
 -- 083 lets a lesson drill borrow the video of a drill in the BenchCoach library. When the library
 -- has no video for a drill, the owner pastes a YouTube link instead. A mapping now has exactly one

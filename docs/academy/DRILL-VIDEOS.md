@@ -1,6 +1,6 @@
 # Academy drill videos (lesson drills borrow a library video)
 
-**Status: library drill videos are merged (#35, migration 083 applied). Pasted YouTube links are built on branch `claude/academy-pasted-videos` (migration 084 NOT applied). Nothing is approved.**
+**Status: library drill videos are merged (#35, migration 083 applied). Pasted YouTube links are built on branch `claude/academy-pasted-videos` (PR #36). Migration 084 is applied to the live database (2026-11-04, owner-verified); the app code is not merged yet. Nothing is approved.**
 
 ## What it does
 Each Academy lesson has drills ("Drill A", "Drill B"). Your BenchCoach drill library already holds a curated YouTube video
@@ -44,5 +44,5 @@ follows the same rules as a library video: **candidate** until you watch it and 
 - Only `https://youtube.com` / `youtu.be` links are accepted. Other sites and plain text are refused.
 - YouTube is asked again at approval, so a video that was removed in between cannot be approved.
 - Switching a drill to a library video (or another link) clears the old one and returns it to candidate.
-- Migration 084 must be applied before pasting works. Until then the screen says so, and library videos keep working.
+- Migration 084 is applied. Pasting works once PR #36 is merged and deployed; library videos keep working throughout.
 - Nothing is approved for you. The search is yours: I can suggest search phrases but I cannot judge a video.
