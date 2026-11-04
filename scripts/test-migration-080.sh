@@ -165,4 +165,18 @@ eq "a buyer cannot write a mapping" "$(R authenticated $E2 "INSERT INTO academy_
 eq "a buyer cannot approve a mapping" "$(R authenticated $E2 "UPDATE academy_drill_videos SET approval_status='approved', reviewed_by='me', reviewed_at=now() RETURNING 1")" "ERR"
 eq "an anonymous visitor cannot write a mapping" "$(R anon '' "DELETE FROM academy_drill_videos RETURNING 1")" "ERR"
 eq "the service role can manage mappings" "$(R service_role '' "UPDATE academy_drill_videos SET start_seconds=12 WHERE lesson_key='1-1' RETURNING 1")" "1"
+echo "-- migration 084: a mapping can be a pasted YouTube video"
+P -v ON_ERROR_STOP=1 -q -f migrations/084_academy_pasted_videos.sql >/dev/null 2>&1 || { P -v ON_ERROR_STOP=1 -q -f migrations/084_academy_pasted_videos.sql; fail "084 did not apply"; }
+P -v ON_ERROR_STOP=1 -q -f migrations/084_academy_pasted_videos.sql >/dev/null 2>&1 || fail "084 is not idempotent"
+pass "084 applies, and re-applies"
+P -tAq -c "DELETE FROM academy_drill_videos" >/dev/null
+eq "a pasted video is a valid mapping" "$(P -tAq -c "INSERT INTO academy_drill_videos (course_id, lesson_key, drill_label, youtube_video_id, title, channel) VALUES ('$C','1-1','A','abcdefghijk','T','Ch') RETURNING approval_status")" "candidate"
+eq "a mapping needs a source" "$(P -tAq -c "INSERT INTO academy_drill_videos (course_id, lesson_key, drill_label) VALUES ('$C','1-1','B') RETURNING 1" 2>/dev/null || echo ERR)" "ERR"
+eq "a mapping cannot have both a library drill and a pasted video" "$(P -tAq -c "INSERT INTO academy_drill_videos (course_id, lesson_key, drill_label, drill_id, youtube_video_id) VALUES ('$C','1-1','B','$DR','abcdefghijk') RETURNING 1" 2>/dev/null || echo ERR)" "ERR"
+eq "a pasted video id must be 11 safe characters" "$(P -tAq -c "INSERT INTO academy_drill_videos (course_id, lesson_key, drill_label, youtube_video_id) VALUES ('$C','1-1','B','x y') RETURNING 1" 2>/dev/null || echo ERR)" "ERR"
+eq "a library mapping still works" "$(P -tAq -c "INSERT INTO academy_drill_videos (course_id, lesson_key, drill_label, drill_id) VALUES ('$C','1-1','C','$DR') RETURNING approval_status")" "candidate"
+eq "a pasted video still needs a named, dated approval" "$(P -tAq -c "UPDATE academy_drill_videos SET approval_status='approved' WHERE drill_label='A' RETURNING 1" 2>/dev/null || echo ERR)" "ERR"
+eq "an approved pasted video is readable by a buyer with access" "$(P -tAq -c "UPDATE academy_drill_videos SET approval_status='approved', reviewed_by='Coach T', reviewed_at=now() WHERE drill_label='A'" >/dev/null; R authenticated $E2 "SELECT count(*) FROM academy_drill_videos WHERE drill_label='A'")" "1"
+eq "a candidate pasted video is not readable by a client" "$(R authenticated $E2 "SELECT count(*) FROM academy_drill_videos WHERE drill_label='C'")" "0"
+eq "a buyer cannot paste a video" "$(R authenticated $E2 "INSERT INTO academy_drill_videos (course_id, lesson_key, drill_label, youtube_video_id) VALUES ('$C','1-1','D','abcdefghijk') RETURNING 1")" "ERR"
 echo "ALL PASS"

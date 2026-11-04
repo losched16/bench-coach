@@ -1,6 +1,6 @@
 # Academy drill videos (lesson drills borrow a library video)
 
-**Status: built on branch `claude/academy-drill-videos` (draft PR #35). Migration 083 is applied to the live database (2026-11-03, verified); the app code is not merged yet. Nothing is approved.**
+**Status: library drill videos are merged (#35, migration 083 applied). Pasted YouTube links are built on branch `claude/academy-pasted-videos` (migration 084 NOT applied). Nothing is approved.**
 
 ## What it does
 Each Academy lesson has drills ("Drill A", "Drill B"). Your BenchCoach drill library already holds a curated YouTube video
@@ -35,3 +35,14 @@ so approved drill videos play in the lesson through YouTube's own player (the sa
   whether each is right for the *course* is your call.
 - **PR #35 must be merged and deployed** before the admin screen appears. Migration 083 is already applied; the table is empty and unused until then.
 - Library coverage: some library videos are compilations with no start time (the app already knows this). Those need a start second.
+
+## No video in the library? Paste a YouTube link (migration 084)
+If the library has no video for a lesson drill, find one yourself on YouTube (app or browser), copy the link, and paste it into
+the drill's row ("No library video? Paste a YouTube link", then **Use link**). BenchCoach asks YouTube whether the video exists and
+can be played here, and stores the title and channel YouTube reports. A start time inside the link (`?t=95`) is kept. It then
+follows the same rules as a library video: **candidate** until you watch it and approve it with your name and "I watched the whole video".
+- Only `https://youtube.com` / `youtu.be` links are accepted. Other sites and plain text are refused.
+- YouTube is asked again at approval, so a video that was removed in between cannot be approved.
+- Switching a drill to a library video (or another link) clears the old one and returns it to candidate.
+- Migration 084 must be applied before pasting works. Until then the screen says so, and library videos keep working.
+- Nothing is approved for you. The search is yours: I can suggest search phrases but I cannot judge a video.

@@ -1,6 +1,6 @@
 // Pure rules for Academy drill videos (no I/O), so they can be unit tested.
 import type { DrillMedia } from '@/lib/drillMedia'
-import { videoIdFor } from '@/lib/drillVideo'
+import { videoIdFor, parseVideoId, parseStartFromUrl } from '@/lib/drillVideo'
 
 export interface LessonDrillVideo {
   drillName: string
@@ -25,7 +25,7 @@ export function youtubeIdFor(drill: Record<string, any> | null | undefined, medi
 export function approvalError(input: {
   reviewer: unknown; watched: unknown; hasVideo: boolean; sharedBy: number; startSeconds: number | null; acceptCompilation: unknown
 }): string | null {
-  if (!input.hasVideo) return 'That library drill has no YouTube video.'
+  if (!input.hasVideo) return 'That video is not available on YouTube (or the library drill has none).'
   if (typeof input.reviewer !== 'string' || input.reviewer.trim().length < 2) return 'Enter the reviewer’s name.'
   if (input.watched !== true) return 'Approval means a person watched the whole video. Confirm that you did.'
   if (input.sharedBy > 1 && input.startSeconds == null && input.acceptCompilation !== true)
@@ -44,4 +44,18 @@ export function parseStart(v: unknown): number | null | 'invalid' {
 export function drillLetter(label: unknown): string | null {
   const m = /^(?:Drill\s+)?([A-Z])$/.exec(String(label ?? '').trim())
   return m ? m[1] : null
+}
+
+/**
+ * A YouTube link the owner pasted: the video id and any start time already in the link.
+ * Only real YouTube watch / share / embed / shorts links count. Anything else (another site,
+ * a script URL, plain text) returns null, so it can never become a mapping.
+ */
+export function parseYoutubeInput(input: unknown): { videoId: string; start: number | null } | null {
+  const s = String(input ?? '').trim()
+  if (!/^https:\/\/(www\.|m\.)?(youtube\.com|youtu\.be)\//i.test(s)) return null
+  const videoId = parseVideoId(s)
+  if (!videoId) return null
+  const start = parseStartFromUrl(s)
+  return { videoId, start: start > 0 ? start : null }
 }

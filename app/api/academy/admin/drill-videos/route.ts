@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/authz'
 import { adminDb, listLessonDrills } from '@/lib/academy/server'
 import { isCourseSlug, isLessonKey } from '@/lib/academy/catalog'
-import { approvalError, parseStart, youtubeIdFor } from '@/lib/academy/drillVideoRules'
+import { approvalError, parseStart, parseYoutubeInput, youtubeIdFor } from '@/lib/academy/drillVideoRules'
+import { checkYoutubeVideo } from '@/lib/academy/youtubeCheck'
 import { loadMediaFor } from '@/lib/drillMedia'
 
 // The owner's tool for putting a library video under an Academy lesson drill.
@@ -59,14 +60,23 @@ export async function GET(request: NextRequest) {
 
   const drills = await listLessonDrills(id)
   // Before migration 083 is applied the table does not exist: show no mappings, do not fail.
-  const { data: maps, error } = await adminDb().from('academy_drill_videos')
+  // Before 084 the pasted-video columns do not exist: fall back to the 083 shape.
+  let mq: any = await adminDb().from('academy_drill_videos')
+    .select('lesson_key, drill_label, drill_id, start_seconds, approval_status, reviewed_by, reviewed_at, youtube_video_id, title, channel').eq('course_id', id)
+  const pastedReady = !mq.error
+  if (mq.error) mq = await adminDb().from('academy_drill_videos')
     .select('lesson_key, drill_label, drill_id, start_seconds, approval_status, reviewed_by, reviewed_at').eq('course_id', id)
+  const { data: maps, error } = mq
   const mappings: any[] = []
   for (const m of (error ? [] : maps || []) as any[]) {
-    const f = await libraryFacts(m.drill_id)
-    mappings.push({ ...m, library: f ? { name: f.name, videoId: f.videoId, channel: f.channel, libraryStart: f.libraryStart, sharedBy: f.sharedBy, retired: f.retired } : null })
+    if (m.youtube_video_id) {
+      mappings.push({ ...m, library: { name: m.title || 'YouTube video', videoId: m.youtube_video_id, channel: m.channel || null, libraryStart: null, sharedBy: 0, retired: false, pasted: true } })
+      continue
+    }
+    const f = m.drill_id ? await libraryFacts(m.drill_id) : null
+    mappings.push({ ...m, library: f ? { name: f.name, videoId: f.videoId, channel: f.channel, libraryStart: f.libraryStart, sharedBy: f.sharedBy, retired: f.retired, pasted: false } : null })
   }
-  return NextResponse.json({ drills, mappings, migrationApplied: !error })
+  return NextResponse.json({ drills, mappings, migrationApplied: !error, pastedReady })
 }
 
 export async function POST(request: NextRequest) {
@@ -83,7 +93,9 @@ export async function POST(request: NextRequest) {
 
   const db = adminDb()
   const key = { course_id: id, lesson_key, drill_label: label }
-  const { data: existing, error: readErr } = await db.from('academy_drill_videos').select('id, drill_id, start_seconds, approval_status').match(key).maybeSingle()
+  let rd: any = await db.from('academy_drill_videos').select('id, drill_id, start_seconds, approval_status, youtube_video_id').match(key).maybeSingle()
+  if (rd.error) rd = await db.from('academy_drill_videos').select('id, drill_id, start_seconds, approval_status').match(key).maybeSingle()
+  const { data: existing, error: readErr } = rd
   if (readErr) return NextResponse.json({ error: 'Drill videos are not set up yet (migration 083 has not been applied).' }, { status: 503 })
   const row = existing as any
 
@@ -93,25 +105,48 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === 'map') {
-    if (typeof body.drill_id !== 'string' || !UUID.test(body.drill_id)) return NextResponse.json({ error: 'Pick a library drill.' }, { status: 400 })
     const start = parseStart(body.start_seconds)
     if (start === 'invalid') return NextResponse.json({ error: 'Start time must be whole seconds.' }, { status: 400 })
-    const f = await libraryFacts(body.drill_id)
-    if (!f || f.retired) return NextResponse.json({ error: 'That library drill is not available.' }, { status: 404 })
-    if (!f.videoId) return NextResponse.json({ error: 'That library drill has no YouTube video.' }, { status: 400 })
-    // Any change of drill or start time sends the mapping back to candidate: an approval is for one exact video and start.
-    const fields = { drill_id: body.drill_id, start_seconds: start, approval_status: 'candidate', reviewed_by: null, reviewed_at: null, updated_at: new Date().toISOString() }
+    const now = new Date().toISOString()
+    // Any change of video or start time sends the mapping back to candidate: an approval is for one exact video and start.
+    const reset = { approval_status: 'candidate', reviewed_by: null, reviewed_at: null, updated_at: now }
+    let fields: Record<string, unknown>
+
+    if (typeof body.youtube_url === 'string' && body.youtube_url.trim()) {
+      const parsed = parseYoutubeInput(body.youtube_url)
+      if (!parsed) return NextResponse.json({ error: 'Paste a YouTube link (youtube.com or youtu.be).' }, { status: 400 })
+      const facts = await checkYoutubeVideo(parsed.videoId)
+      if (!facts) return NextResponse.json({ error: 'YouTube says that video is not available or cannot be played here. Check the link and try again.' }, { status: 400 })
+      fields = { drill_id: null, youtube_video_id: parsed.videoId, title: facts.title, channel: facts.channel || null, start_seconds: start ?? parsed.start, ...reset }
+    } else {
+      if (typeof body.drill_id !== 'string' || !UUID.test(body.drill_id)) return NextResponse.json({ error: 'Pick a library drill or paste a YouTube link.' }, { status: 400 })
+      const f = await libraryFacts(body.drill_id)
+      if (!f || f.retired) return NextResponse.json({ error: 'That library drill is not available.' }, { status: 404 })
+      if (!f.videoId) return NextResponse.json({ error: 'That library drill has no YouTube video.' }, { status: 400 })
+      fields = { drill_id: body.drill_id, youtube_video_id: null, title: null, channel: null, start_seconds: start, ...reset }
+    }
     const { error } = row ? await db.from('academy_drill_videos').update(fields).eq('id', row.id) : await db.from('academy_drill_videos').insert({ ...key, ...fields })
-    if (error) return NextResponse.json({ error: 'Could not save.' }, { status: 500 })
+    if (error) {
+      const pasted = fields.youtube_video_id != null || row?.youtube_video_id
+      return NextResponse.json({ error: pasted ? 'Pasted videos are not set up on this database yet (migration 084 has not been applied).' : 'Could not save.' }, { status: pasted ? 503 : 500 })
+    }
     return NextResponse.json({ status: 'candidate' })
   }
 
   if (!row) return NextResponse.json({ error: 'Map a library drill first.' }, { status: 404 })
 
   if (action === 'approve') {
-    const f = await libraryFacts(row.drill_id)
-    const start = row.start_seconds ?? f?.libraryStart ?? null
-    const err = approvalError({ reviewer: body.reviewer, watched: body.watched, hasVideo: !!f?.videoId && !f.retired, sharedBy: f?.sharedBy ?? 0, startSeconds: start, acceptCompilation: body.acceptCompilation })
+    let hasVideo = false, sharedByN = 0, start: number | null = row.start_seconds ?? null
+    if (row.youtube_video_id) {
+      // A pasted video is checked with YouTube again at approval: it may have been removed since it was saved.
+      hasVideo = !!(await checkYoutubeVideo(row.youtube_video_id))
+    } else {
+      const f = await libraryFacts(row.drill_id)
+      hasVideo = !!f?.videoId && !f.retired
+      sharedByN = f?.sharedBy ?? 0
+      start = row.start_seconds ?? f?.libraryStart ?? null
+    }
+    const err = approvalError({ reviewer: body.reviewer, watched: body.watched, hasVideo, sharedBy: sharedByN, startSeconds: start, acceptCompilation: body.acceptCompilation })
     if (err) return NextResponse.json({ error: err }, { status: 400 })
     const { error } = await db.from('academy_drill_videos').update({ approval_status: 'approved', reviewed_by: String(body.reviewer).trim().slice(0, 80), reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', row.id)
     if (error) return NextResponse.json({ error: 'Could not approve.' }, { status: 500 })
