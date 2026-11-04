@@ -417,7 +417,8 @@ async function main() {
     // ── pasted YouTube video, for a drill the library has no video for ──
     const rowOf = async (label: string) => (await state()).academy_drill_videos.find((r: any) => r.drill_label === label)
     check('pasted: a link that is not YouTube is refused', (await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'map', youtube_url: 'https://vimeo.com/123456789' })).status === 400)
-    check('pasted: a YouTube video that does not exist is refused (and nothing is saved)', (await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'map', youtube_url: 'https://youtu.be/MissingVid0' })).status === 400 && !(await rowOf(L1)))
+    const beforeMissing = JSON.stringify(await rowOf(L1))
+    check('pasted: a YouTube video that does not exist is refused (and the mapping is left exactly as it was)', (await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'map', youtube_url: 'https://youtu.be/MissingVid0' })).status === 400 && JSON.stringify(await rowOf(L1)) === beforeMissing)
     const pasted = await dv({ course: SLUG, lesson_key: dKey, label: L1, action: 'map', youtube_url: 'https://youtu.be/PastedVid01?t=42' })
     const pr = await rowOf(L1)
     check('pasted: a real video is saved as a CANDIDATE with the title and channel YouTube reports and the start from the link', pasted.body.status === 'candidate' && pr?.youtube_video_id === 'PastedVid01' && pr?.title === 'Pasted Fixture Video' && pr?.channel === 'Pasted Channel' && pr?.start_seconds === 42 && !pr?.drill_id && pr?.approval_status === 'candidate')
