@@ -134,7 +134,11 @@
     "test:academy": "npx --yes tsx --tsconfig tsconfig.json scripts/test-academy.ts",
     "test:academy-e2e": "bash scripts/academy/run-e2e.sh",
     "test:academy-flag-off": "MODE=off bash scripts/academy/run-e2e.sh",
-    "preview:verify": "bash scripts/preview/verify-preview-schema.sh"
+    "preview:verify": "bash scripts/preview/verify-preview-schema.sh",
+    "test:programs": "npx --yes tsx --tsconfig tsconfig.json scripts/test-programs.ts",
+    "test:migration-085": "bash scripts/test-migration-085.sh",
+    "test:programs-browser": "bash scripts/browser/run-programs.sh",
+    "acceptance:programs": "npx --yes tsx --tsconfig tsconfig.json scripts/acceptance-programs.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

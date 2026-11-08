@@ -1,4 +1,5 @@
-import { COACH_VOICE, CHAT_ADDENDUM } from './coachVoice'
+import { COACH_VOICE, CHAT_ADDENDUM, PROGRAM_NOTE_ON, PROGRAM_NOTE_OFF } from './coachVoice'
+import { programsEnabled } from './programs/flag'
 import { textFrom, requireText, requireJson } from './claudeText'
 import { splitMemorySuggestions } from './analysis'
 import { drillMenuLine } from './drills'
@@ -99,6 +100,8 @@ export interface ScoutingContext {
 }
 
 export interface TeamContext {
+  /** What kind of answer the coach wants (lib/programs/intent). Shapes length and depth. */
+  intent?: string
   team: {
     name: string
     age_group: string
@@ -297,6 +300,22 @@ function formatJournalEntry(entry: JournalEntry): string {
   return parts.join('\n')
 }
 
+function intentGuidance(intent?: string): string {
+  switch (intent) {
+    case 'assessment':
+      return `THIS ANSWER IS A PROGRESS REVIEW
+Answer from what was actually recorded: observations, sessions, measurements, development-plan stages. Say what the records show, what they cannot show, and what to focus on next. Never invent improvement percentages, trends or completed work. Fewer than three readings is a direction, not a trend. An unlogged session is unknown, not undone.`
+    case 'explain':
+      return `THIS ANSWER IS INSTRUCTION
+The coach wants to learn to teach this. Give setup, what the player does step by step, repetitions, the one or two cues that matter, the common errors and how to fix each, and which drills from the list below practise it. Be thorough; this is the one place length is welcome.`
+    case 'team_practice':
+      return `THIS ANSWER IS A TEAM PRACTICE
+Lay out the whole practice as time-budgeted blocks that add up to the length they asked for, with what each block is for, the drills from the list below, how to organise the players, and what to watch. The coach can turn it into a saved practice with the practice builder; do not say you cannot make one.`
+    default:
+      return ''
+  }
+}
+
 function buildSystemPrompt(context: TeamContext): string {
   // Build playbook section if there are active playbooks
   let playbookSection = ''
@@ -327,7 +346,7 @@ ${context.activePlaybooks.map(pb => {
 
 HOW A PLAYBOOK RANKS AGAINST A PRIORITY
 
-A playbook is a pre-written program picked off a shelf. A priority under "currently working on" above was diagnosed from this specific player's logged evidence and comes with success criteria and a review date. When the two point in different directions, THE PRIORITY WINS — say so plainly and explain why rather than letting the coach work both.
+A playbook is a pre-written program picked off a shelf. A priority under "currently working on" above was diagnosed from this specific player's logged evidence and comes with success criteria and a review date. When the two point in different directions on the SAME skill, THE PRIORITY WINS — say so plainly and explain why rather than letting the coach work both. A playbook or priority in one skill never gates a different skill: progress on one drill is not a reason to postpone another area the coach asked about.
 
 If they agree, say so and treat the playbook's current session as the vehicle for the priority. If the playbook has drifted onto something the evidence says is no longer the problem, tell them to park it. Do not enumerate a playbook day just because it is next in sequence.
 
@@ -376,6 +395,10 @@ if (p.hitting_level) skillLevels.push(`Hitting: ${getSkillLevelLabel(p.hitting_l
   return `${COACH_VOICE}
 
 ${CHAT_ADDENDUM}
+
+${programsEnabled() ? PROGRAM_NOTE_ON : PROGRAM_NOTE_OFF}
+
+${intentGuidance(context.intent)}
 
 Everything below is what you know about this team and these players. Use it — do not invent details it does not contain, and do not ignore it and answer generically.
 
