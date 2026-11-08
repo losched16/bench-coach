@@ -49,7 +49,7 @@ async function mockApi(context) {
     const method = req.method(); const body = method === 'GET' || method === 'DELETE' ? {} : JSON.parse(req.postData() || '{}')
     state.calls.push(`${method} ${path}`)
     const json = (data, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) })
-    if (path === '/generate') { state.draft = JSON.parse(JSON.stringify(DRAFT)); state.draftVersion = 1; return json({ status: 'ok', draftId: 'draft-1', draft: state.draft }) }
+    if (path === '/generate') { state.lastGenerate = body; state.draft = JSON.parse(JSON.stringify(DRAFT)); state.draftVersion = 1; return json({ status: 'ok', draftId: 'draft-1', draft: state.draft }) }
     if (path === '/draft' && method === 'GET') return json({ draft: state.draft, version: state.draftVersion, status: state.program ? 'saved' : 'draft', playerId: PLAYER, savedProgramId: null })
     if (path === '/draft' && method === 'PATCH') {
       if (body.version !== state.draftVersion) return json({ error: 'This draft changed or was already saved. Reload to see the latest.' }, 409)
@@ -110,11 +110,32 @@ try {
   const q = `?teamId=${TEAM}`
 
   console.log('\nGenerate → review')
-  await page.goto(`${APP}/dashboard/programs${q}`, { waitUntil: 'networkidle' })
-  check('the Programs page loads with the empty state', await page.getByText('No programs yet.').isVisible({ timeout: 30000 }).catch(() => false))
-  check('"Development Programs" is in the navigation when the flag is on', await page.getByRole('link', { name: /Development Programs/ }).first().isVisible({ timeout: 15000 }).catch(() => false) || (await page.getByRole('link', { name: /Development Programs/ }).count()) > 0)
-  await page.getByRole('button', { name: /Create Development Program/ }).click()
+  await page.goto(`${APP}/dashboard/development${q}`, { waitUntil: 'networkidle' })
+  check('the Development page loads with no programs yet', await page.getByText('No training programs yet.').isVisible({ timeout: 30000 }).catch(() => false))
+  check('there is ONE "Development" menu item, not separate Plans and Programs', (await page.getByRole('link', { name: /^Development( —|$)/ }).count()) >= 1 && (await page.getByRole('link', { name: /Development Programs|Development Plans/ }).count()) === 0)
+  check('the page has both halves: training programs and skill paths', await page.getByRole('heading', { name: 'Training programs' }).isVisible() && await page.getByRole('heading', { name: 'Skill paths' }).isVisible())
+  await page.screenshot({ path: 'docs/development-hub/01-hub-desktop.png', fullPage: true })
+  check('the old /programs address still lands on Development', await (async () => { await page.goto(`${APP}/dashboard/programs${q}`); await page.waitForURL(/\/dashboard\/development/, { timeout: 15000 }); return true })().catch(() => false))
+
+  console.log('\nOne skill')
+  await page.getByRole('button', { name: /Work on one skill/ }).click()
   await page.getByLabel('Player').selectOption(PLAYER)
+  await page.screenshot({ path: 'docs/development-hub/02-one-skill-desktop.png', fullPage: true })
+  check('one-skill start offers a self-paced skill path AND a short scheduled program', await page.getByText('Self-paced skill path.', { exact: true }).isVisible() && await page.getByText('Short scheduled program.', { exact: true }).isVisible())
+  check('the skill-path option leads to the player’s skill paths', (await page.getByRole('link', { name: /Open their skill paths/ }).getAttribute('href') || '').includes(`/dashboard/roster/${PLAYER}`))
+  await page.getByLabel('Which skill?').selectOption('hitting')
+  await page.getByLabel(/What do you want out of it/).fill('more power without pulling off the ball')
+  await page.getByText('4 weeks').click()
+  await page.getByRole('button', { name: /Build the program draft/ }).click()
+  await page.waitForURL(/\/programs\/draft\/draft-1/, { timeout: 30000 })
+  const g = state.lastGenerate
+  check('a one-skill request sends exactly that skill, a short length and the coach’s words', JSON.stringify(g.overrides.skills) === '["hitting"]' && g.overrides.weeks === 4 && g.overrides.independentMinutes === 0 && /pulling off the ball/.test(g.message), JSON.stringify(g))
+  await page.goto(`${APP}/dashboard/development${q}`, { waitUntil: 'networkidle' })
+
+  console.log('\nGenerate → review')
+  await page.getByRole('button', { name: /Full development program/ }).click()
+  await page.getByLabel('Player').selectOption(PLAYER)
+  await page.screenshot({ path: 'docs/development-hub/03-full-program-desktop.png', fullPage: true })
   await page.getByRole('button', { name: /Build the program draft/ }).click()
   await page.waitForURL(/\/programs\/draft\/draft-1/, { timeout: 30000 })
   check('building a program opens the editable draft', true)
@@ -203,6 +224,11 @@ try {
   check('a contributor cannot see the approve control', (await viewer.page.getByRole('button', { name: /Approve and save program/ }).count()) === 0 && await viewer.page.getByText(/Only the head coach can approve/).isVisible())
   await viewer.context.close()
   const phone = await signedIn(browser, { viewport: { width: 375, height: 800 } })
+  state.program = true
+  await phone.page.goto(`${APP}/dashboard/development${q}`, { waitUntil: 'networkidle' })
+  await phone.page.getByRole('button', { name: /Work on one skill/ }).click()
+  await phone.page.screenshot({ path: 'docs/development-hub/04-hub-phone.png', fullPage: true })
+  check('the Development page has no sideways scroll at 375px', (await phone.page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)) <= 1)
   for (const [name, url] of [['draft', `${APP}/dashboard/programs/draft/draft-1${q}`], ['program', `${APP}/dashboard/programs/prog-1${q}`]]) {
     state.program = true
     await phone.page.goto(url, { waitUntil: 'networkidle' })

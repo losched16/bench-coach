@@ -221,6 +221,15 @@ async function main() {
   const alloc = allocateBlocks(rotated, 10)
   check('allocation: sums to capacity, strength gets two, nobody gets zero', Object.values(alloc).reduce((a, c) => a + c, 0) === 10 && alloc.strength_athleticism === 2 && Object.values(alloc).every(v => v >= 1), JSON.stringify(alloc))
 
+  // one-skill programs ("just a power hitting plan")
+  const solo = buildBrief({ message: 'more power without pulling off the ball', playerId: PID, playerName: 'Charlie', age: 9, today: TODAY, overrides: { skills: ['hitting'], weeks: 4, supervisedDaysPerWeek: 3, sessionMinutes: 45, independentMinutes: 0 } })
+  check('solo skill: brief builds and keeps the coach’s words with the skill', !!solo.brief && solo.brief!.skills.length === 1 && /pulling off the ball/.test(solo.brief!.concerns[0]?.text || ''))
+  const oneDraft = await generateProgram({ brief: solo.brief!, evidence: CHARLIE_EVIDENCE, pool: DRILL_POOL })
+  check('solo skill: a short, complete, valid program', new Set(oneDraft.sessions.map(s => s.week)).size === 4 && oneDraft.qualityReport!.checks.every(c => c.ok), oneDraft.qualityReport!.checks.filter(c => !c.ok).map(c => c.detail).join('|'))
+  check('solo skill: titled for the skill and has no throwing gate or strength block', /4-week hitting program/.test(oneDraft.title) && oneDraft.throwingGate === null && !oneDraft.sessions.some(s => s.blocks.some(x => x.kind === 'strength')))
+  check('solo skill: no independent routines when none were asked for', !oneDraft.sessions.some(s => s.kind === 'independent'))
+  check('solo skill: every coached session is hitting work', oneDraft.sessions.filter(s => s.kind === 'coached').every(s => s.blocks.some(x => x.skill === 'hitting')))
+
   // ── structured output & integrity ────────────────────────────────────────
   const payload = toSavePayload(draft)
   check('payload: one row per session, no duplicate keys', new Set(payload.sessions.map(s => s.session_key)).size === payload.sessions.length)

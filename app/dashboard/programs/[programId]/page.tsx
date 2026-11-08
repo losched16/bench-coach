@@ -70,7 +70,7 @@ export default function ProgramPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-4 space-y-4">
       <header>
-        <Link href={`/dashboard/programs${q}`} className="text-sm text-gray-600 underline">All programs</Link>
+        <Link href={`/dashboard/development${q}`} className="text-sm text-gray-600 underline">Development</Link>
         <h1 className="text-2xl font-bold text-gray-900">{p.title}</h1>
         <p className="text-sm text-gray-700">{prettyDate(p.start_date)} – {prettyDate(p.end_date)} · version {p.version} · {done} of {trainable.length} sessions done</p>
         <div className="h-2 bg-gray-200 rounded mt-2" role="progressbar" aria-valuemin={0} aria-valuemax={trainable.length} aria-valuenow={done} aria-label="Sessions completed">

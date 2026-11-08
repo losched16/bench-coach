@@ -172,6 +172,13 @@ export function buildBrief(input: BriefInput): BriefResult {
     }
   }
 
+  // A one-skill request ("a power-hitting plan") usually arrives as a short
+  // wish, not a complaint. Keep the coach's own words with the skill so they
+  // show in the editor and reach the coaching text.
+  if (skills.length === 1 && input.message.trim() && concerns.length === 0) {
+    concerns.push({ skill: skills[0], text: input.message.trim().slice(0, 300) })
+  }
+
   const parsed = BriefSchema.safeParse({
     playerId: input.playerId,
     playerName: input.playerName ?? null,
