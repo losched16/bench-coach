@@ -452,7 +452,7 @@ export function composeDraft(input: ComposeInput): ProgramDraft {
   const assumptions = [...brief.assumptions]
   const draft: ProgramDraft = {
     schemaVersion: 1,
-    title: `${brief.playerName ? brief.playerName + ': ' : ''}${brief.weeks}-week development program`,
+    title: `${brief.playerName ? brief.playerName + ': ' : ''}${brief.weeks}-week ${brief.skills.length === 1 ? SKILLS[brief.skills[0]].label.split(/[:,]/)[0].toLowerCase() + ' program' : 'development program'}`,
     summary: summarise(brief, skillPlans, phases, S),
     brief, assessment: buildAssessment(brief, ev, skillPlans),
     skills: skillPlans, phases, sessions, progressionRules, throwingGate: gate, weeklyLoad,

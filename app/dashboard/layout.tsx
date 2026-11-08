@@ -339,10 +339,12 @@ function DashboardContent({
         // staff (the API's GET is 'read'), so no capability gate; and not
         // needsTeam, because a Personal-plan coach's workspace has plans too.
         // Starting and advancing one still happen on the player's profile.
-        { label: 'Development Plans', href: '/dashboard/development', icon: RouteIcon, hint: "Track this player's growth" },
-        // Time-bound, scheduled training built from a player's plans and drills.
-        // Behind NEXT_PUBLIC_DEVELOPMENT_PROGRAMS until migration 085 is applied.
-        ...(programsEnabled() ? [{ label: 'Development Programs', href: '/dashboard/programs', icon: Calendar, hint: 'Weeks of scheduled training' }] : []),
+        // One front door. With Programs on, "Development" holds both the
+        // scheduled training programs and the self-paced skill paths, so a
+        // coach is not asked to learn the difference between two menu items.
+        programsEnabled()
+          ? { label: 'Development', href: '/dashboard/development', icon: RouteIcon, hint: 'Training programs and skill paths' }
+          : { label: 'Development Plans', href: '/dashboard/development', icon: RouteIcon, hint: "Track this player's growth" },
         // Starting a playbook assigns a multi-week programme to a team or a
         // player, which is 'decide' — the same rung as a practice plan or a
         // lineup. Deliberately NOT needsTeam: a parent on the Personal plan

@@ -7,6 +7,8 @@ import { ChevronRight, Loader2 } from 'lucide-react'
 import { useTracker, usePageView } from '@/lib/tracking'
 import { describeDuration, daysSince } from '@/lib/playerPathways'
 import { developmentPlanLink } from '@/lib/programChoice'
+import { programsEnabled } from '@/lib/programs/flag'
+import ProgramsHub from '@/components/programs/ProgramsHub'
 
 // Every Development Plan on the team, in one place.
 //
@@ -80,15 +82,30 @@ function DevelopmentPlansContent() {
   }
 
   const start = developmentPlanLink(teamId)
+  const hub = programsEnabled()
+  const initialPlayerId = useSearchParams().get('playerId')
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Development Plans</h2>
+        <h2 className="text-2xl font-bold text-gray-900">{hub ? 'Development' : 'Development Plans'}</h2>
         <p className="text-sm text-gray-600 mt-1">
-          One player, stage by stage. Plans are started and coached from each player&apos;s profile.
+          {hub
+            ? 'Everything about helping a player improve, in one place.'
+            : 'One player, stage by stage. Plans are started and coached from each player\u2019s profile.'}
         </p>
       </div>
+
+      {hub && teamId && <ProgramsHub teamId={teamId} initialPlayerId={initialPlayerId} />}
+
+      {hub && (
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Skill paths</h3>
+          <p className="text-sm text-gray-600 mt-1">
+            One skill, stage by stage, at the player&apos;s own pace. You decide when to move on. Started and coached from each player&apos;s profile.
+          </p>
+        </div>
+      )}
 
       {!teamId ? (
         <p className="text-sm text-gray-600">Choose a team to see its Development Plans.</p>
@@ -100,9 +117,9 @@ function DevelopmentPlansContent() {
         <p className="text-sm text-gray-600">{message}</p>
       ) : rows.length === 0 ? (
         <div className="bg-white rounded-lg border border-gray-200 p-6 text-center space-y-3">
-          <p className="text-gray-700">No Development Plans on this team yet.</p>
+          <p className="text-gray-700">{hub ? 'No skill paths on this team yet.' : 'No Development Plans on this team yet.'}</p>
           <Link href={start.href} className="inline-block text-sm font-medium text-blue-600 hover:underline">
-            {start.label}
+            {hub ? 'Pick a player to start a skill path' : start.label}
           </Link>
         </div>
       ) : (

@@ -82,7 +82,7 @@ export default function DraftPage() {
     if (!teamId || !confirm('Discard this draft? Nothing has been saved, so nothing else is affected.')) return
     setBusy('discard')
     await fetch(`/api/development-program/draft?teamId=${teamId}&draftId=${draftId}`, { method: 'DELETE' })
-    router.push(`/dashboard/programs?teamId=${teamId}`)
+    router.push(`/dashboard/development?teamId=${teamId}`)
   }
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-gray-400" size={32} aria-label="Loading" /></div>
