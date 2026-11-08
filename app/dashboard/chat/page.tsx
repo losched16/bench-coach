@@ -29,7 +29,7 @@ interface Message {
   created_at?: string | null
   // Set on the analysis written into the thread when a priority is committed,
   // so it renders as a decision rather than another chat reply.
-  meta?: { kind?: string; prescriptionId?: string | null; playerName?: string | null } | null
+  meta?: { kind?: string; prescriptionId?: string | null; playerName?: string | null; draftId?: string | null } | null
 }
 
 interface RosterPlayer {
@@ -676,6 +676,7 @@ export default function ChatPage() {
         role: 'assistant',
         content: data.message,
         memory_suggestions: data.memory_suggestions,
+        meta: data.meta || null,
       }
 
       setMessages(prev => [
@@ -941,6 +942,18 @@ export default function ChatPage() {
                           coachId={coachId}
                         />
                       </div>
+                    )}
+
+                    {/* The structured program CoachAI just built. It opens the
+                        real, editable draft — not a practice builder, and
+                        nothing is saved until the coach approves it there. */}
+                    {message.meta?.kind === 'program_draft' && message.meta.draftId && (
+                      <Link
+                        href={`/dashboard/programs/draft/${message.meta.draftId}?teamId=${teamId}`}
+                        className="mt-3 inline-flex items-center gap-2 px-4 min-h-[44px] rounded-lg bg-red-700 text-white text-sm font-medium hover:bg-red-800"
+                      >
+                        Review &amp; Create Development Program <ExternalLink size={14} />
+                      </Link>
                     )}
 
                     {isPriority && message.meta?.prescriptionId && (

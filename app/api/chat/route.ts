@@ -18,6 +18,9 @@ import { retrieveDrills, RetrievalResult, describeRetrieval } from '@/lib/drillR
 import { constraintsFromText, ageFromText } from '@/lib/drillConstraints'
 import { checkGrounding, stripUngroundedVideos } from '@/lib/drillGrounding'
 import { migrationHintFor } from '@/lib/migrationHints'
+import { programsEnabled } from '@/lib/programs/flag'
+import { handleProgramTurn } from '@/lib/programs/chat'
+import { classifyIntent } from '@/lib/programs/intent'
 
 // Never prerendered. This route reads the session cookie to decide who is
 // calling, which is only meaningful per-request — and Next's build-time
@@ -966,8 +969,44 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
-    // Generate response
-    let response = await generateChatResponse(message, context, conversationHistory)
+    // Is this a request for a multi-week development program (or an edit to
+    // the one already open)? Those do not go through the one-answer chat path:
+    // that path is what narrowed a six-skill, eight-week request to a single
+    // hitting priority. They build a structured, editable draft instead.
+    //
+    // A failure here is reported as a failure. It is NEVER quietly answered as
+    // a short chat reply, because that is the substitution this exists to stop.
+    let assistantMeta: any = null
+    let response: Awaited<ReturnType<typeof generateChatResponse>> | null = null
+    if (programsEnabled()) {
+      try {
+        const turn = await handleProgramTurn({
+          db: supabaseAdmin, teamId, coachId: team.coach_id, userId: (await authorizeTeam(teamId, 'ask')).userId,
+          threadId: thread.id, message, history: conversationHistory,
+          playerId: playerId || thread.player_id || null,
+          roster: (teamPlayers || []).map((tp: any) => ({ playerId: tp.player?.id, name: tp.player?.name })).filter((r: any) => r.playerId && r.name),
+        })
+        if (turn) {
+          response = { message: turn.message, memory_suggestions: {} as any }
+          assistantMeta = turn.meta
+        }
+      } catch (e: any) {
+        console.error('Program turn failed:', e?.message)
+        const unavailable = /does not exist|schema cache|not set up/i.test(String(e?.message))
+        response = {
+          message: unavailable
+            ? 'Development Programs are not set up on this account yet, so I could not build the program. Nothing was changed.'
+            : 'I started building that program but it did not finish, so nothing was saved and I did not swap in a shorter answer. Please send the request again.',
+          memory_suggestions: {} as any,
+        }
+      }
+    }
+    if (!response) {
+      // Short guidance, assessment, explanation and team-practice requests keep
+      // the conversational path, told which kind of answer is wanted.
+      context.intent = classifyIntent(message).intent
+      response = await generateChatResponse(message, context, conversationHistory)
+    }
 
     // Did it stay inside the library it was given?
     //
@@ -1001,6 +1040,7 @@ export async function POST(request: NextRequest) {
         role: 'assistant',
         content: response.message,
         memory_suggestions: response.memory_suggestions,
+        ...(assistantMeta ? { meta: assistantMeta } : {}),
       })
       .select()
       .single()
@@ -1051,6 +1091,7 @@ export async function POST(request: NextRequest) {
       message: response.message,
       memory_suggestions: response.memory_suggestions,
       id: assistantMsg.id,
+      meta: assistantMeta,
       user_message_id: userMsg.id,
       threadId: thread.id,
       threadTitle,
@@ -1134,7 +1175,7 @@ export async function GET(request: NextRequest) {
     // Load messages for this thread
     const { data: messages } = await supabaseAdmin
       .from('chat_messages')
-      .select('id, role, content, memory_suggestions, created_at')
+      .select('id, role, content, memory_suggestions, meta, created_at')
       .eq('thread_id', thread.id)
       .order('created_at', { ascending: true })
 

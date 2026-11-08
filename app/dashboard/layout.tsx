@@ -1,5 +1,6 @@
 'use client'
 
+import { programsEnabled } from '@/lib/programs/flag'
 import { useAcademyOn } from '@/components/academy/AcademyNavLink'
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
@@ -339,6 +340,9 @@ function DashboardContent({
         // needsTeam, because a Personal-plan coach's workspace has plans too.
         // Starting and advancing one still happen on the player's profile.
         { label: 'Development Plans', href: '/dashboard/development', icon: RouteIcon, hint: "Track this player's growth" },
+        // Time-bound, scheduled training built from a player's plans and drills.
+        // Behind NEXT_PUBLIC_DEVELOPMENT_PROGRAMS until migration 085 is applied.
+        ...(programsEnabled() ? [{ label: 'Development Programs', href: '/dashboard/programs', icon: Calendar, hint: 'Weeks of scheduled training' }] : []),
         // Starting a playbook assigns a multi-week programme to a team or a
         // player, which is 'decide' — the same rung as a practice plan or a
         // lineup. Deliberately NOT needsTeam: a parent on the Personal plan
