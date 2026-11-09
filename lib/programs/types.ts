@@ -46,6 +46,15 @@ export const BriefSchema = z.object({
   skillLevel: z.enum(['beginner', 'developing', 'advanced']).nullable().default(null),
   /** In the order the coach listed them. Order is a priority signal, not a filter. */
   skills: z.array(z.enum(SKILL_KEYS)).min(1),
+  /**
+   * Who decides how training time is split:
+   *   ai       — CoachAI, from the coach's order, recorded notes and active plans (default)
+   *   balanced — every skill gets the same share
+   *   custom   — the coach: skillWeights says more / normal / less per skill
+   * Whatever the mode, no requested skill is removed.
+   */
+  priorityMode: z.enum(['ai', 'balanced', 'custom']).default('ai'),
+  skillWeights: z.record(z.enum(SKILL_KEYS), z.enum(['more', 'normal', 'less'])).default({}),
   /** Skill → what the coach said is wrong, in their words. */
   concerns: z.array(z.object({ skill: z.enum(SKILL_KEYS), text: text(300) })).default([]),
   startDate: ymd,
@@ -182,6 +191,8 @@ export const SkillPlanSchema = z.object({
   /** 1 = most training time. Priorities shape time; they never remove a goal. */
   priority: z.number().int().min(1).max(10),
   rationale: text(400),
+  /** Relative training share used to allocate blocks. Null = derive from priority. */
+  weight: z.number().min(0.1).max(10).nullable().default(null),
   baseline: text(300).nullable().default(null),
   target: text(300).nullable().default(null),
   /** Existing development plan this skill continues, when one exists. */

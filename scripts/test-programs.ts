@@ -23,6 +23,8 @@ import { resolvePlayer, renderProgramMessage } from '@/lib/programs/chat'
 import { programsEnabled } from '@/lib/programs/flag'
 import { DraftSchema, SKILL_KEYS } from '@/lib/programs/types'
 import { EXERCISES } from '@/lib/programs/exercises'
+import { matchable, matchRelatedVideos } from '@/lib/programs/media'
+import { candidatesFor } from '@/lib/programs/select'
 import { DRILL_POOL } from './fixtures/drill-pool'
 import { CHARLIE_MESSAGE, CHARLIE_EVIDENCE } from './fixtures/charlie'
 
@@ -229,6 +231,51 @@ async function main() {
   check('solo skill: titled for the skill and has no throwing gate or strength block', /4-week hitting program/.test(oneDraft.title) && oneDraft.throwingGate === null && !oneDraft.sessions.some(s => s.blocks.some(x => x.kind === 'strength')))
   check('solo skill: no independent routines when none were asked for', !oneDraft.sessions.some(s => s.kind === 'independent'))
   check('solo skill: every coached session is hitting work', oneDraft.sessions.filter(s => s.kind === 'coached').every(s => s.blocks.some(x => x.skill === 'hitting')))
+
+  // priority modes: the coach can decide, or let CoachAI
+  const countBlocks = (d: typeof draft, k: string) => d.sessions.filter(x => x.kind === 'coached' || x.kind === 'assessment').flatMap(x => x.blocks).filter(x => x.skill === k && x.kind !== 'warmup' && x.kind !== 'cooldown').length
+  const baseSkills = ['first_step', 'acceleration', 'outfield_tracking', 'infield_fundamentals', 'hitting']
+  const bal = await gen({ priorityMode: 'balanced', skillWeights: {} })
+  const balCounts = baseSkills.map(k => countBlocks(bal, k))
+  check('balanced: baseball skills get the same time (within one block)', Math.max(...balCounts) - Math.min(...balCounts) <= 2, balCounts.join(','))
+  check('balanced: spread is no wider than CoachAI’s own split', Math.max(...balCounts) - Math.min(...balCounts) <= Math.max(...baseSkills.map(k => countBlocks(det, k))) - Math.min(...baseSkills.map(k => countBlocks(det, k))))
+  check('balanced: every priority is equal, evidence still cited for reference', bal.skills.every(x => x.priority === 1 && x.weight === 1) && /For reference/.test(bal.skills.find(x => x.skill === 'hitting')!.rationale))
+  check('balanced: still complete and valid, summary says so', bal.qualityReport!.checks.every(c => c.ok) && /split evenly/.test(bal.summary))
+  const cus = await gen({ priorityMode: 'custom', skillWeights: { outfield_tracking: 'more', infield_fundamentals: 'less', hitting: 'normal', first_step: 'normal', acceleration: 'normal', strength_athleticism: 'normal', pitching_readiness: 'less' } })
+  check('custom: "more" gets more blocks than "less"', countBlocks(cus, 'outfield_tracking') > countBlocks(cus, 'infield_fundamentals'), `${countBlocks(cus, 'outfield_tracking')} vs ${countBlocks(cus, 'infield_fundamentals')}`)
+  check('custom: the coach’s order wins over the October hitting observation', cus.skills[0].skill === 'outfield_tracking' && cus.skills.find(x => x.skill === 'hitting')!.priority === 2)
+  check('custom: "less" never removes a skill', b.skills.every(sk => countBlocks(cus, sk) >= 8 || sk === 'strength_athleticism') && cus.qualityReport!.checks.every(c => c.ok), b.skills.map(sk => countBlocks(cus, sk)).join(','))
+  const cusAll = await gen({ priorityMode: 'custom', skillWeights: Object.fromEntries(b.skills.map(k => [k, 'less'])) as any })
+  check('custom: all "less" is just balanced and valid', cusAll.qualityReport!.checks.every(c => c.ok))
+  check('ai: default is CoachAI deciding, from evidence', det.brief.priorityMode === 'ai' && /based on your goals and what is recorded/.test(det.summary) && det.skills.find(x => x.skill === 'hitting')!.priority <= 3)
+  const balText = buildBrief({ message: 'Build an eight-week program for outfield, hitting and speed. Keep it balanced.', playerId: PID, age: 9, today: TODAY })
+  eq('words: "balanced" is understood', balText.brief!.priorityMode, 'balanced')
+  const priText = buildBrief({ message: 'Build an eight-week program for outfield, hitting and speed. Prioritize outfield tracking.', playerId: PID, age: 9, today: TODAY })
+  check('words: "prioritize outfield" becomes custom with outfield on top', priText.brief!.priorityMode === 'custom' && priText.brief!.skillWeights.outfield_tracking === 'more')
+  eq('words: nothing said -> CoachAI decides', buildBrief({ message: 'Build an eight-week program for outfield, hitting and speed.', playerId: PID, age: 9, today: TODAY }).brief!.priorityMode, 'ai')
+  const moreOf = briefForEdit({ ...b, priorityMode: 'balanced' }, { kind: 'more_skill', skill: 'hitting' })!
+  check('edit: "add more hitting" on a balanced plan makes hitting "more" and keeps all skills', moreOf.priorityMode === 'custom' && moreOf.skillWeights.hitting === 'more' && moreOf.skills.length === 7)
+
+  // ── videos: library only, related ones labelled, none invented ─────────────
+  const vid = (name: string, cat: string, extra: any = {}) => ({ id: `00000000-0000-4000-8000-${String(Math.abs(name.length * 7919)).padStart(12, '0')}`, drill_name: name, skill_category: cat, youtube_video_id: 'abcdefghijk', status: 'approved', ...extra })
+  const mb = vid('Medicine Ball Rotational Throws', 'Athletic Development', { mechanic_focus: ['rotation', 'power'], description: 'Rotational throws into a wall.' })
+  const mbNoVid = { ...mb, id: 'x1', youtube_video_id: null, youtube_url: null }
+  const wrongCat = { ...mb, id: 'x2', skill_category: 'Pitching' }
+  const unrelated = vid('Bunt Defense Rotations', 'Athletic Development')
+  const builtinRefs = matchable(draft.sessions.flatMap(s => s.blocks.flatMap(x => x.drills)))
+  check('media: only strength/skill built-ins are matchable — never warm-ups, cool-downs, throwing or library drills', builtinRefs.length > 0 && builtinRefs.every(r => !['dynamic_warmup', 'cooldown_mobility', 'readiness_check', 'arm_care_bands'].includes(r.key)) && builtinRefs.every(r => EXERCISES.some(e => e.key === r.key)))
+  const rel = matchRelatedVideos(builtinRefs, [mb as any, unrelated as any])
+  check('media: a clearly related library video is matched to the built-in exercise', rel.med_ball_rotational?.drill_name === 'Medicine Ball Rotational Throws', JSON.stringify(Object.keys(rel)))
+  check('media: it is not matched to a different exercise by accident', !rel.balance_landing && !rel.band_pull_apart)
+  eq('media: a drill with no video is never offered', Object.keys(matchRelatedVideos(builtinRefs, [mbNoVid as any])), [])
+  eq('media: a drill in the wrong skill area is never offered', Object.keys(matchRelatedVideos(builtinRefs, [wrongCat as any])), [])
+  eq('media: an unrelated drill is never offered', Object.keys(matchRelatedVideos(builtinRefs, [unrelated as any])), [])
+  eq('media: no library at all -> no videos, no error', Object.keys(matchRelatedVideos(builtinRefs, [])), [])
+  const twin = (hasV: boolean, id: string) => ({ id, drill_name: 'Tee Drill ' + id.slice(-1), skill_category: 'Hitting', mechanic_focus: ['stride'], progression_level: 1, status: 'approved', min_age: 6, max_age: 12, youtube_video_id: hasV ? 'abcdefghijk' : null })
+  const tw = candidatesFor('hitting', [twin(false, '00000000-0000-4000-8000-00000000000a'), twin(true, '00000000-0000-4000-8000-00000000000b')] as any, b)
+  check('media: with equal fit, the drill that has a video is preferred', tw[0].drill.id.endsWith('b'))
+  check('media: a video never outranks a clearly better-matched drill', (() => { const better = { ...twin(false, '00000000-0000-4000-8000-00000000000c'), drill_name: 'Hitting stride sequencing tee', mechanic_focus: ['stride', 'sequencing', 'hitting', 'hands stay back'] }; return candidatesFor('hitting', [twin(true, '00000000-0000-4000-8000-00000000000b'), better] as any, { ...b, equipment: [] })[0].drill.id.endsWith('c') })())
+  check('media: program rows only carry a flag, never a URL', !/youtube|https?:/i.test(JSON.stringify(draft.sessions)))
 
   // ── structured output & integrity ────────────────────────────────────────
   const payload = toSavePayload(draft)

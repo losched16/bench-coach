@@ -40,9 +40,15 @@ function buildProgram() {
   return {
     program: { id: 'prog-1', team_id: TEAM, player_id: PLAYER, title: PAYLOAD.program.title, summary: PAYLOAD.program.summary, start_date: PAYLOAD.program.start_date, end_date: PAYLOAD.program.end_date, status: 'active', version: 1 + state.revisions.filter(r => r.status === 'applied').length, source: PAYLOAD.program.source },
     phases: PAYLOAD.phases.map(p => ({ ...p, id: p.phase_key, start_date: p.start_date, end_date: p.end_date })),
-    skills: PAYLOAD.skills.map((s, i) => ({ ...s, id: `sk${i}` })), sessions, revisions: state.revisions, readings: [], drillMedia: {}, assessments: lines, metricTypes: types,
+    skills: PAYLOAD.skills.map((s, i) => ({ ...s, id: `sk${i}` })), sessions, revisions: state.revisions, readings: [], drillMedia: MEDIA, related: RELATED, assessments: lines, metricTypes: types,
   }
 }
+// Videos: the one library drill that has a video, plus a related video for one
+// built-in exercise. Everything else has none, as in the real library.
+const ALL_DRILLS = DRAFT.sessions.flatMap(x => x.blocks.flatMap(b => b.drills))
+const TEE = ALL_DRILLS.find(d => d.name === 'Tee Work: Stay Back Stride')
+const MEDIA = { [TEE.drillId]: { id: TEE.drillId, drill_name: TEE.name, youtube_video_id: 'abcdefghijk', channel: 'Fixture Channel' }, 'rel-1': { id: 'rel-1', drill_name: 'Medicine Ball Rotational Throws', youtube_video_id: 'zyxwvutsrqp', channel: 'Fixture Channel' } }
+const RELATED = { med_ball_rotational: { drillId: 'rel-1', name: 'Medicine Ball Rotational Throws' } }
 async function mockApi(context) {
   await context.route(/\/api\/development-program/, async route => {
     const req = route.request(); const url = new URL(req.url()); const path = url.pathname.replace('/api/development-program', '') || '/'
@@ -50,7 +56,7 @@ async function mockApi(context) {
     state.calls.push(`${method} ${path}`)
     const json = (data, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) })
     if (path === '/generate') { state.lastGenerate = body; state.draft = JSON.parse(JSON.stringify(DRAFT)); state.draftVersion = 1; return json({ status: 'ok', draftId: 'draft-1', draft: state.draft }) }
-    if (path === '/draft' && method === 'GET') return json({ draft: state.draft, version: state.draftVersion, status: state.program ? 'saved' : 'draft', playerId: PLAYER, savedProgramId: null })
+    if (path === '/draft' && method === 'GET') return json({ drillMedia: MEDIA, related: RELATED, draft: state.draft, version: state.draftVersion, status: state.program ? 'saved' : 'draft', playerId: PLAYER, savedProgramId: null })
     if (path === '/draft' && method === 'PATCH') {
       if (body.version !== state.draftVersion) return json({ error: 'This draft changed or was already saved. Reload to see the latest.' }, 409)
       state.draft = body.draft; state.draftVersion++; return json({ version: state.draftVersion, qualityReport: state.draft.qualityReport, draft: state.draft })
@@ -135,12 +141,19 @@ try {
   console.log('\nGenerate → review')
   await page.getByRole('button', { name: /Full development program/ }).click()
   await page.getByLabel('Player').selectOption(PLAYER)
+  check('time split defaults to "Let CoachAI decide"', await page.getByRole('radio', { name: /Let CoachAI decide/ }).isChecked())
+  await page.getByText('Outfield tracking', { exact: true }).click()
+  await page.getByText('Hitting', { exact: true }).click()
+  await page.getByText('I’ll set the priorities').click()
+  await page.getByRole('radiogroup', { name: /Time for Outfield tracking/ }).getByText('More').click()
+  await page.getByRole('radiogroup', { name: /Time for Hitting/ }).getByText('Less').click()
   await page.screenshot({ path: 'docs/development-hub/03-full-program-desktop.png', fullPage: true })
   await page.getByRole('button', { name: /Build the program draft/ }).click()
   await page.waitForURL(/\/programs\/draft\/draft-1/, { timeout: 30000 })
   check('building a program opens the editable draft', true)
   await page.getByRole('heading', { level: 1 }).waitFor()
   check('the draft says it is NOT saved', await page.getByText('Draft — not saved').isVisible())
+  check('chosen priorities are sent: custom, outfield more, hitting less', state.lastGenerate.overrides.priorityMode === 'custom' && state.lastGenerate.overrides.skillWeights.outfield_tracking === 'more' && state.lastGenerate.overrides.skillWeights.hitting === 'less', JSON.stringify(state.lastGenerate.overrides))
   check('nothing was saved by generating', state.saved === 0 && !state.calls.includes('POST /draft/save'))
   check('all seven requested skills are listed with priorities', (await page.locator('#priorities ~ ul li, section[aria-labelledby="priorities"] li').count()) === 7)
   check('every week 1–8 can be opened', (await page.getByRole('navigation', { name: 'Weeks' }).getByRole('button').count()) === 8)
@@ -154,6 +167,25 @@ try {
   check('a full session opens with its blocks', (await page.locator('details[open] h4').count()) >= 3)
   await page.locator('details[open] li button[aria-expanded]').first().click()
   check('a drill opens to show instructions', await page.locator('details[open] ol li').first().isVisible())
+
+  console.log('\nVideos')
+  await page.getByRole('button', { name: 'Week 1' }).click()
+  const teeRow = page.locator('details li button[aria-expanded]', { hasText: 'Tee Work: Stay Back Stride' }).first()
+  await page.locator('details summary', { hasText: 'Open the full session' }).evaluateAll(els => els.forEach(e => e.parentElement.open = true))
+  await teeRow.click()
+  check('a library drill that has a video shows a "Watch" control', await page.getByRole('button', { name: /Watch: Tee Work: Stay Back Stride/ }).first().isVisible())
+  await page.getByRole('button', { name: /Watch: Tee Work: Stay Back Stride/ }).first().click()
+  check('opening it embeds that library video and nothing else', (await page.locator('iframe[src*="abcdefghijk"]').count()) === 1)
+  await page.screenshot({ path: 'docs/development-hub/05-draft-drill-video.png', fullPage: false })
+  const noVid = page.locator('details li button[aria-expanded]', { hasText: 'Drop Step Fly Ball Reads' }).first()
+  if (await noVid.count()) { await noVid.click(); check('a library drill with no video says so and keeps its written steps', await page.getByText(/No approved video for this drill yet/).first().isVisible()) }
+  await page.getByRole('button', { name: 'Week 3' }).click()
+  await page.locator('details summary', { hasText: 'Open the full session' }).evaluateAll(els => els.forEach(e => e.parentElement.open = true))
+  const mbRow = page.locator('details li button[aria-expanded]', { hasText: 'Medicine ball rotational throws' }).first()
+  if (await mbRow.count()) { await mbRow.click(); check('a built-in exercise shows a related library video, labelled as related', await page.getByText(/Related video from the drill library: Medicine Ball Rotational Throws/).first().isVisible()) }
+  else check('(medicine-ball row not in week 3 of this draft)', true)
+  await page.getByRole('button', { name: 'Week 4' }).click()
+  await page.locator('details summary', { hasText: 'Open the full session' }).first().click()
 
   console.log('\nEdit → save')
   const minutes = page.locator('details[open] input[type="number"]').first()
@@ -196,6 +228,7 @@ try {
   await page.getByText(/Recorded\. Nice work/).waitFor({ timeout: 15000 })
   const done = Object.values(state.completions)[0]
   check('completion records drills done, ratings, notes and conditions', done && done.drills_done.some(d => d.done) && Object.keys(done.ratings).length >= 1 && state.readings[0]?.conditions === 'grass, same shoes')
+  await page.getByRole('button', { name: /Re-open this session/ }).waitFor({ timeout: 15000 }).catch(() => {})
   check('the page now shows the session as done and offers re-open to the coach', await page.getByText('Done').first().isVisible() && await page.getByRole('button', { name: /Re-open this session/ }).isVisible())
   check('a completed session’s controls are locked', await page.getByRole('radio').first().isDisabled())
 

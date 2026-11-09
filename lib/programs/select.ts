@@ -60,7 +60,9 @@ export function candidatesFor(skill: SkillKey, pool: DrillRecord[], brief: Progr
       if (!fit.ok) continue
       // A partner is a person standing next to the player: a parent. Allowed
       // for supervised sessions (selection is only used for those).
-      const score = rel + (categoryHit ? 8 : 0) + (d.created_by_coach_id ? 2 : 0)
+      // A small nudge toward drills a coach can also watch. Never enough to
+      // outrank a clearly better-matched drill.
+      const score = rel + (categoryHit ? 8 : 0) + (d.created_by_coach_id ? 2 : 0) + (hasVideo(d as any) ? 3 : 0)
       out.push({ drill: d, score, stage: stageOf(d as any), substitutions: fit.substitutions })
     }
     return out
