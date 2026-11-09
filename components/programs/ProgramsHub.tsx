@@ -39,6 +39,8 @@ export default function ProgramsHub({ teamId, initialPlayerId }: { teamId: strin
   const [playerId, setPlayerId] = useState(initialPlayerId || '')
   const [skills, setSkills] = useState<string[]>([])
   const [oneSkill, setOneSkill] = useState('hitting')
+  const [priorityMode, setPriorityMode] = useState<'ai' | 'balanced' | 'custom'>('ai')
+  const [weights, setWeights] = useState<Record<string, 'more' | 'normal' | 'less'>>({})
   const [weeks, setWeeks] = useState('8')
   const [startDate, setStartDate] = useState('')
   const [days, setDays] = useState('4')
@@ -90,6 +92,10 @@ export default function ProgramsHub({ teamId, initialPlayerId }: { teamId: strin
     const overrides: any = {}
     const chosen = mode === 'one' ? [oneSkill] : skills
     if (chosen.length) overrides.skills = chosen
+    if (mode === 'full') {
+      overrides.priorityMode = priorityMode
+      if (priorityMode === 'custom') overrides.skillWeights = Object.fromEntries(chosen.map(k => [k, weights[k] || 'normal']))
+    }
     if (weeks) overrides.weeks = Number(weeks)
     if (startDate) overrides.startDate = startDate
     overrides.supervisedDaysPerWeek = Number(days); overrides.sessionMinutes = Number(minutes); overrides.independentMinutes = Number(indep)
@@ -163,6 +169,32 @@ export default function ProgramsHub({ teamId, initialPlayerId }: { teamId: strin
                 <fieldset><legend className="font-medium">Skills to develop (all of them are kept)</legend><div className="flex flex-wrap gap-2 mt-1">{SKILL_KEYS.map(k => (
                   <label key={k} className={`px-3 min-h-[44px] inline-flex items-center rounded-lg border cursor-pointer ${skills.includes(k) ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-300'}`}>
                     <input type="checkbox" className="sr-only" checked={skills.includes(k)} onChange={e => setSkills(s => e.target.checked ? [...s, k] : s.filter(x => x !== k))} />{SKILL_LABEL[k]}</label>))}</div></fieldset>
+                <fieldset>
+                  <legend className="font-medium">How should training time be split?</legend>
+                  <div className="space-y-1 mt-1">
+                    {([['ai', 'Let CoachAI decide', 'Uses the order you listed, your notes, recorded observations and active skill paths. Recommended.'],
+                       ['balanced', 'Keep it balanced', 'Every skill gets about the same time.'],
+                       ['custom', 'I’ll set the priorities', 'Choose more, normal or less time for each skill.']] as const).map(([v, label, hint]) => (
+                      <label key={v} className={`flex items-start gap-2 rounded-lg border p-3 min-h-[44px] cursor-pointer ${priorityMode === v ? 'border-gray-900 bg-gray-50' : 'border-gray-200'}`}>
+                        <input type="radio" name="prio" className="mt-1 h-5 w-5" checked={priorityMode === v} onChange={() => setPriorityMode(v)} />
+                        <span><span className="block font-medium text-gray-900">{label}</span><span className="block text-gray-600">{hint}</span></span>
+                      </label>))}
+                  </div>
+                  {priorityMode === 'custom' && (
+                    <div className="mt-2 space-y-2">
+                      {skills.length === 0 && <p className="text-gray-600">Pick the skills above first.</p>}
+                      {skills.map(k => (
+                        <div key={k} className="flex flex-wrap items-center gap-2">
+                          <span className="w-48 text-gray-900">{SKILL_LABEL[k]}</span>
+                          <div className="flex gap-1" role="radiogroup" aria-label={`Time for ${SKILL_LABEL[k]}`}>
+                            {([['more', 'More'], ['normal', 'Normal'], ['less', 'Less']] as const).map(([v, l]) => (
+                              <label key={v} className={`px-3 min-h-[44px] inline-flex items-center rounded-lg border cursor-pointer ${(weights[k] || 'normal') === v ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-300'}`}>
+                                <input type="radio" className="sr-only" name={`w-${k}`} checked={(weights[k] || 'normal') === v} onChange={() => setWeights(w => ({ ...w, [k]: v }))} />{l}</label>))}
+                          </div>
+                        </div>))}
+                      <p className="text-xs text-gray-600">No skill is dropped: “less” still trains it every week it fits.</p>
+                    </div>)}
+                </fieldset>
                 <div className="grid grid-cols-2 gap-3">
                   <label>Weeks<input inputMode="numeric" className={field} value={weeks} onChange={e => setWeeks(e.target.value)} /></label>
                   <label>Start date<input type="date" className={field} value={startDate} onChange={e => setStartDate(e.target.value)} /></label>

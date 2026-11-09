@@ -86,7 +86,12 @@ export function briefForEdit(brief: ProgramBrief, op: EditOp): ProgramBrief | nu
   }
   if (op.kind === 'more_skill') {
     const skills = [op.skill, ...brief.skills.filter(s => s !== op.skill)]
-    return { ...brief, skills, assumptions: [...brief.assumptions, `${SKILLS[op.skill].label} moved to top priority at your request.`] }
+    // Asking for "more" of a skill is a coach decision: from here the split is
+    // the coach's, with that skill marked "more" and everything else as it was.
+    const weights = brief.priorityMode === 'custom' ? { ...brief.skillWeights } : {}
+    weights[op.skill] = 'more'
+    return { ...brief, skills, priorityMode: 'custom' as const, skillWeights: weights,
+      assumptions: [...brief.assumptions, `${SKILLS[op.skill].label} gets more time at your request.`] }
   }
   return null
 }

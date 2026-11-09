@@ -20,6 +20,8 @@ export default function DraftPage() {
   const router = useRouter()
   const { can } = useRole(teamId)
   const [draft, setDraft] = useState<ProgramDraft | null>(null)
+  const [media, setMedia] = useState<Record<string, any>>({})
+  const [related, setRelated] = useState<Record<string, { drillId: string; name: string }>>({})
   const [version, setVersion] = useState(1)
   const [status, setStatus] = useState('draft')
   const [week, setWeek] = useState(1)
@@ -34,7 +36,7 @@ export default function DraftPage() {
     const res = await fetch(`/api/development-program/draft?teamId=${teamId}&draftId=${draftId}`)
     const data = await res.json().catch(() => ({}))
     if (!res.ok) { setError(data.error || 'Could not load the draft.'); setLoading(false); return }
-    setDraft(data.draft); setVersion(data.version); setStatus(data.status); setLoading(false)
+    setDraft(data.draft); setVersion(data.version); setStatus(data.status); setMedia(data.drillMedia || {}); setRelated(data.related || {}); setLoading(false)
     if (data.status === 'saved' && data.savedProgramId) router.replace(`/dashboard/programs/${data.savedProgramId}?teamId=${teamId}`)
   }, [teamId, draftId, router])
   useEffect(() => { load() }, [load])
@@ -104,11 +106,15 @@ export default function DraftPage() {
 
       <section aria-labelledby="priorities" className="bg-white border border-gray-200 rounded-xl p-4">
         <h2 id="priorities" className="font-semibold text-gray-900 mb-2">Priorities</h2>
-        <p className="text-xs text-gray-600 mb-2">Priority decides how much time a skill gets. No requested skill was removed.</p>
+        <p className="text-xs text-gray-600 mb-2">
+          {draft.brief.priorityMode === 'balanced' ? 'You chose an even split, so every skill gets about the same time.'
+            : draft.brief.priorityMode === 'custom' ? 'You set the priorities. “1” means more time; no requested skill was removed.'
+            : 'CoachAI set these from your goals, notes and records. Priority decides how much time a skill gets; no requested skill was removed.'}
+        </p>
         <ul className="space-y-2">
           {draft.skills.map(s => (
             <li key={s.skill} className="text-sm">
-              <span className="font-medium">{s.priority}. {s.label}</span>
+              <span className="font-medium">{draft.brief.priorityMode === 'balanced' ? '•' : `${s.priority}.`} {s.label}</span>
               <span className="text-gray-600"> — {s.rationale}</span>
               {s.baseline && <div className="text-xs text-gray-600">Baseline: {s.baseline}</div>}
             </li>
@@ -190,7 +196,7 @@ export default function DraftPage() {
                         <h4 className="text-sm font-semibold text-gray-900">{b.title} <span className="font-normal text-gray-600">· {b.minutes} min</span></h4>
                         <ul className="space-y-1 mt-1">{b.drills.map((d, di) => (
                           <div key={di}>
-                            <DrillRow d={d as any} />
+                            <DrillRow d={d as any} media={media} related={related} />
                             {coachCan && (
                               <div className="flex items-center gap-3 text-xs text-gray-700 px-1 py-1">
                                 <label>Minutes <input type="number" min={1} max={60} className="w-16 border border-gray-300 rounded px-1 min-h-[36px]" value={d.minutes}

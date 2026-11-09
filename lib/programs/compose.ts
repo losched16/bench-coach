@@ -33,17 +33,61 @@ const BLOCK_ORDER: Record<SkillKey, number> = {
 
 // ── priorities ───────────────────────────────────────────────────────────────
 
+const EMPHASIS_WEIGHT = { more: 3, normal: 2, less: 1 } as const
+const EMPHASIS_PRIORITY = { more: 1, normal: 2, less: 3 } as const
+
+/** Training share for a skill: an explicit weight, else derived from its rank. */
+export function weightOf(s: SkillPlan, n: number): number {
+  return s.weight ?? 1 + (n - s.priority) * 0.35
+}
+
 export function rankSkills(brief: ProgramBrief, ev: PlayerEvidence): SkillPlan[] {
   const n = brief.skills.length
+  const evidenceFor = (skill: SkillKey) => {
+    const parts: string[] = []
+    const obs = ev.items.filter(e => e.skill === skill && (e.source === 'coach_observation' || e.source === 'recorded') && (e.bucket === 'needs' || e.bucket === 'concerns'))
+    if (obs.length) parts.push(`a recorded observation points here (${obs[0].text.slice(0, 80)})`)
+    if (brief.concerns.some(c => c.skill === skill)) parts.push('you flagged it as a concern')
+    const path = ev.pathways.find(p => p.skill === skill && p.status === 'active')
+    if (path) parts.push(`an active skill path (${path.pathwayName}) already covers it`)
+    return { parts, obs, path }
+  }
+  const base = (skill: SkillKey) => {
+    const path = ev.pathways.find(p => p.skill === skill)
+    const metric = SKILLS[skill].metrics.map(m => ev.metrics.find(r => r.slug === m.metricSlug)).find(Boolean)
+    return {
+      skill, label: SKILLS[skill].label, target: SKILLS[skill].targetPhrase,
+      baseline: metric ? `${metric.label}: ${metric.value}${metric.unit ? ' ' + metric.unit : ''} on ${metric.on} (recorded)` : null,
+      progressId: path?.progressId ?? null, pathwayName: path?.pathwayName ?? null, currentStage: path?.stageName ?? null,
+    }
+  }
+
+  // The coach decides: equal shares. The records still inform the notes, never the split.
+  if (brief.priorityMode === 'balanced') {
+    return brief.skills.map(skill => {
+      const { parts } = evidenceFor(skill)
+      return { ...base(skill), priority: 1, weight: 1,
+        rationale: `Equal share, as you asked.${parts.length ? ` For reference: ${parts.join('; ')}.` : ''}` } as SkillPlan
+    })
+  }
+  // The coach decides: more / normal / less for each skill, listed order breaks ties.
+  if (brief.priorityMode === 'custom') {
+    return brief.skills.map((skill, i) => {
+      const level = brief.skillWeights[skill] ?? 'normal'
+      const { parts } = evidenceFor(skill)
+      return { ...base(skill), priority: EMPHASIS_PRIORITY[level], weight: EMPHASIS_WEIGHT[level],
+        rationale: `You chose ${level === 'normal' ? 'a normal' : level} share of time.${parts.length ? ` For reference: ${parts.join('; ')}.` : ''}`, _i: i } as any
+    }).sort((a: any, b: any) => a.priority - b.priority || a._i - b._i).map(({ _i, ...rest }: any) => rest as SkillPlan)
+  }
+
+  // CoachAI decides, from the coach's order, recorded evidence and active plans.
   const scored = brief.skills.map((skill, i) => {
     let score = (n - i) * 1.0
     const reasons: string[] = []
     if (i < 3) reasons.push('listed among the first goals')
-    const obs = ev.items.filter(e => e.skill === skill && (e.source === 'coach_observation' || e.source === 'recorded') && (e.bucket === 'needs' || e.bucket === 'concerns'))
-    if (obs.length) { score += 2; reasons.push(`a recorded observation points here (${obs[0].text.slice(0, 80)})`) }
-    const concern = brief.concerns.filter(c => c.skill === skill)
-    if (concern.length) { score += 1.5; reasons.push('you flagged it as a concern') }
-    const path = ev.pathways.find(p => p.skill === skill && p.status === 'active')
+    const { parts, obs, path } = evidenceFor(skill)
+    if (obs.length) { score += 2; reasons.push(parts[0]) }
+    if (brief.concerns.some(c => c.skill === skill)) { score += 1.5; reasons.push('you flagged it as a concern') }
     if (path) { score += 1; reasons.push(`an active development plan (${path.pathwayName}) already covers it`) }
     // Throwing is capped: it can matter to the family and still be the wrong
     // thing to push while the arm status is unknown.
@@ -53,17 +97,10 @@ export function rankSkills(brief: ProgramBrief, ev: PlayerEvidence): SkillPlan[]
     return { skill, score, reasons }
   })
   const sorted = [...scored].sort((a, b) => b.score - a.score || brief.skills.indexOf(a.skill) - brief.skills.indexOf(b.skill))
-  return sorted.map((s, rank) => {
-    const path = ev.pathways.find(p => p.skill === s.skill)
-    const metric = SKILLS[s.skill].metrics.map(m => ev.metrics.find(r => r.slug === m.metricSlug)).find(Boolean)
-    return {
-      skill: s.skill, label: SKILLS[s.skill].label, priority: rank + 1,
-      rationale: s.reasons.length ? `Priority ${rank + 1}: ${s.reasons.join('; ')}.` : `Priority ${rank + 1}: requested; no recorded evidence yet, so week 1 measures it.`,
-      baseline: metric ? `${metric.label}: ${metric.value}${metric.unit ? ' ' + metric.unit : ''} on ${metric.on} (recorded)` : null,
-      target: SKILLS[s.skill].targetPhrase,
-      progressId: path?.progressId ?? null, pathwayName: path?.pathwayName ?? null, currentStage: path?.stageName ?? null,
-    }
-  })
+  return sorted.map((s, rank) => ({
+    ...base(s.skill), priority: rank + 1, weight: null,
+    rationale: s.reasons.length ? `Priority ${rank + 1}: ${s.reasons.join('; ')}.` : `Priority ${rank + 1}: requested; no recorded evidence yet, so week 1 measures it.`,
+  } as SkillPlan))
 }
 
 // ── block allocation ─────────────────────────────────────────────────────────
@@ -90,7 +127,7 @@ export function allocateBlocks(skills: SkillPlan[], capacity: number, credits?: 
     // and pay for them. Higher priorities come round more often; nobody is
     // starved, which is what "never silently drop a requested skill" requires.
     const cr = credits ?? {}
-    const w = (s: SkillPlan) => 1 + (n - s.priority) * 0.35
+    const w = (s: SkillPlan) => weightOf(s, n)
     const total = rest.reduce((a, s) => a + w(s), 0)
     rest.forEach(s => { cr[s.skill] = (cr[s.skill] ?? 0) + w(s) })
     const chosen = [...rest].sort((a, b) => (cr[b.skill] - cr[a.skill]) || a.priority - b.priority).slice(0, left)
@@ -98,16 +135,23 @@ export function allocateBlocks(skills: SkillPlan[], capacity: number, credits?: 
     chosen.forEach(s => { cr[s.skill] -= total / Math.max(1, left) })
     return out
   }
-  const weights = rest.map(s => 1 + (n - s.priority) * 0.35)
+  const weights = rest.map(s => weightOf(s, n))
   const total = weights.reduce((a, b) => a + b, 0)
   const raw = weights.map(w => (w / total) * left)
   const base = raw.map(r => Math.max(1, Math.floor(r)))
   let used = base.reduce((a, b) => a + b, 0)
-  const order = raw.map((r, i) => ({ i, frac: r - Math.floor(r) })).sort((a, b) => b.frac - a.frac || a.i - b.i)
+  // Remainders are measured against what each skill already got: a skill lifted to
+  // the one-block floor is already over its share and must not win the leftovers.
+  // Carried credit makes the leftovers rotate week to week: a skill that was
+  // rounded down last week is first in line this week, so over a program each
+  // skill gets its true share instead of the first-listed ones always winning.
+  const cr = credits ?? {}
+  const order = raw.map((r, i) => ({ i, frac: r - base[i] + (cr[rest[i].skill] ?? 0) })).sort((a, b) => b.frac - a.frac || a.i - b.i)
   for (let k = 0; used < left && k < order.length * 3; k++, used++) base[order[k % order.length].i]++
   while (used > left) { // trim the largest
     const j = base.indexOf(Math.max(...base)); if (base[j] <= 1) break; base[j]--; used--
   }
+  rest.forEach((s, i) => { cr[s.skill] = (cr[s.skill] ?? 0) + raw[i] - base[i] })
   rest.forEach((s, i) => { out[s.skill] = base[i] })
   return out
 }
@@ -473,10 +517,14 @@ export function longestRun(all: ProgramSession[], moved: ProgramSession, target:
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 function summarise(brief: ProgramBrief, skills: SkillPlan[], phases: ProgramPhase[], s: number): string {
-  const top = skills.slice(0, 3).map(x => x.label).join(', ')
+  const split = brief.priorityMode === 'balanced'
+    ? 'Time is split evenly across the skills, as you asked.'
+    : brief.priorityMode === 'custom'
+      ? `Most time goes to ${skills.filter(x => x.priority === 1).map(x => x.label).join(', ') || 'the skills you marked "more"'}, as you set it.`
+      : `Most time goes to ${skills.slice(0, 3).map(x => x.label).join(', ')}, based on your goals and what is recorded.`
   return `${brief.weeks} weeks starting ${brief.startDate}: ${s} supervised sessions a week` +
     `${brief.independentMinutes ? ` plus a ${brief.independentMinutes}-minute independent routine on those days` : ''}, and at least one rest day every week. ` +
-    `Most time goes to ${top}. Every requested skill is trained every week${skills.length > s * 2 ? ' or rotated across weeks' : ''}. ` +
+    `${split} Every requested skill is kept${skills.length > s * 2 ? ' (rotated across weeks)' : ''}. ` +
     `${phases.length} phases (${phases.map(p => p.name.toLowerCase()).join(' → ')}), with baseline, ${brief.weeks >= 4 ? 'midpoint and ' : ''}final checkpoints. ` +
     `Nothing is saved until you review and approve it.`
 }

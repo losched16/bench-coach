@@ -179,7 +179,22 @@ export function buildBrief(input: BriefInput): BriefResult {
     concerns.push({ skill: skills[0], text: input.message.trim().slice(0, 300) })
   }
 
+  // Priority mode from the coach's words. The form sends it explicitly.
+  let priorityMode = o.priorityMode ?? null
+  let skillWeights: ProgramBrief['skillWeights'] = { ...(o.skillWeights || {}) }
+  if (!priorityMode) {
+    if (/\b(balanced|evenly|equal(?:ly)? (?:time|focus|weight)|same (?:time|focus) on (?:each|every|all))\b/i.test(text)) priorityMode = 'balanced'
+    else {
+      const m = /\b(?:prioriti[sz]e|focus (?:the )?most on|spend (?:the )?most time on|emphasi[sz]e|main focus (?:is|on))\s+([^.;\n]{3,120})/i.exec(text)
+      const named = m ? detectSkills(m[1]).filter(k => skills.includes(k)) : []
+      if (named.length) { priorityMode = 'custom'; for (const k of named) skillWeights[k] = 'more' }
+    }
+  }
+  if (priorityMode === 'balanced') assumptions.push('Training time is split evenly across the skills, as you asked.')
+  if (priorityMode === 'custom') assumptions.push('Training time follows the priorities you set.')
+
   const parsed = BriefSchema.safeParse({
+    priorityMode: priorityMode ?? 'ai', skillWeights,
     playerId: input.playerId,
     playerName: input.playerName ?? null,
     age: input.age,

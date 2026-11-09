@@ -5,8 +5,8 @@
 // HTML injection, and links only for library videos resolved by id.
 
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, Play } from 'lucide-react'
-import { watchUrl } from '@/lib/drillVideo'
+import { ChevronDown, ChevronRight } from 'lucide-react'
+import { DrillVideo } from '@/components/DrillVideo'
 
 export const KIND_LABEL: Record<string, string> = {
   coached: 'Coached session', independent: 'Independent routine', strength: 'Strength', throwing: 'Throwing',
@@ -39,11 +39,19 @@ export interface DrillLike {
   name: string; minutes: number; sets?: number | null; reps?: string | null; rest?: string | null; intensity?: string
   instructions?: string[]; cues?: string[]; success?: string[]; modification?: string | null
   drillId?: string | null; drill_id?: string | null; skill?: string | null
+  exerciseKey?: string | null; exercise_key?: string | null
 }
 
-export function DrillBody({ d, media, kid }: { d: DrillLike; media?: Record<string, any>; kid?: boolean }) {
+export type RelatedMap = Record<string, { drillId: string; name: string }>
+
+export function DrillBody({ d, media, related, kid }: { d: DrillLike; media?: Record<string, any>; related?: RelatedMap; kid?: boolean }) {
   const id = d.drillId ?? d.drill_id ?? null
-  const url = id && media?.[id] ? watchUrl(media[id]) : null
+  const key = d.exerciseKey ?? d.exercise_key ?? null
+  // The drill's own library video first; for a built-in exercise, a related one
+  // (labelled as related) when the library has it. Nothing else is ever shown.
+  const rel = !id && key ? related?.[key] : undefined
+  const m = id ? media?.[id] : rel ? media?.[rel.drillId] : null
+  const hasVid = !!(m && (m.youtube_video_id || m.youtube_url))
   const dose = [d.sets ? `${d.sets} sets` : null, d.reps || null, d.rest ? `rest ${d.rest}` : null].filter(Boolean).join(' · ')
   return (
     <div className="text-sm text-gray-800 space-y-2">
@@ -54,17 +62,19 @@ export function DrillBody({ d, media, kid }: { d: DrillLike; media?: Record<stri
       {d.cues && d.cues.length > 0 && <p><span className="font-medium">{kid ? 'Remember:' : 'Say:'}</span> {d.cues.join(' · ')}</p>}
       {!kid && d.success && d.success.length > 0 && <p><span className="font-medium">Good looks like:</span> {d.success.join('; ')}</p>}
       {!kid && d.modification && <p><span className="font-medium">Too hard or too easy?</span> {d.modification}</p>}
-      {url ? (
-        <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-red-700 hover:text-red-800 min-h-[44px]">
-          <Play size={14} aria-hidden /> Watch the video
-        </a>
+      {hasVid ? (
+        <div>
+          {rel && <p className="text-xs text-gray-600 mb-1">Related video from the drill library: {rel.name}</p>}
+          <DrillVideo drillName={rel ? rel.name : d.name} youtubeVideoId={m.youtube_video_id || undefined} youtubeUrl={m.youtube_url || undefined}
+            thumbnailUrl={m.thumbnail_url || undefined} channel={m.channel || undefined} startSeconds={m.youtube_start_seconds ?? undefined} compact />
+        </div>
       ) : id ? <p className="text-xs text-gray-500">No approved video for this drill yet — the written steps are enough to run it.</p> : null}
     </div>
   )
 }
 
 /** A drill row that opens to show its instructions. Used read-only in the editor and the saved calendar. */
-export function DrillRow({ d, media }: { d: DrillLike; media?: Record<string, any> }) {
+export function DrillRow({ d, media, related }: { d: DrillLike; media?: Record<string, any>; related?: RelatedMap }) {
   const [open, setOpen] = useState(false)
   return (
     <li className="border border-gray-200 rounded-lg bg-white">
@@ -74,7 +84,7 @@ export function DrillRow({ d, media }: { d: DrillLike; media?: Record<string, an
         <span className="flex-1 font-medium text-gray-900">{d.name}</span>
         <span className="text-xs text-gray-600">{d.minutes} min</span>
       </button>
-      {open && <div className="px-4 pb-3"><DrillBody d={d} media={media} /></div>}
+      {open && <div className="px-4 pb-3"><DrillBody d={d} media={media} related={related} /></div>}
     </li>
   )
 }

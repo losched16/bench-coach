@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { guard } from '@/lib/authz'
 import { admin, fail, flagOff } from '@/lib/programs/api'
-import { visibleDrills } from '@/lib/drills'
+import { resolveMedia } from '@/lib/programs/media'
 import { listOpenDrafts, listPrograms, loadProgram } from '@/lib/programs/store'
 import { SKILLS } from '@/lib/programs/skills'
 import { summariseAssessment, type MetricDef, type ProgramReading } from '@/lib/programs/progress'
@@ -24,16 +24,12 @@ export async function GET(request: NextRequest) {
     }
     const view = await loadProgram(db, programId, teamId)
 
-    // Library videos come from the library, by id — never stored on the program.
-    const ids = Array.from(new Set(view.sessions.flatMap(s => s.drills.map((d: any) => d.drill_id).filter(Boolean))))
-    let drillMedia: Record<string, any> = {}
-    if (ids.length) {
-      // visibleDrills, not a bare read: a drill a coach wrote privately is
-      // resolvable by id only for that coach's own team.
-      const { data: team } = await db.from('teams').select('coach_id').eq('id', teamId).single()
-      const { data } = await visibleDrills(db, (team as any)?.coach_id, 'id, youtube_video_id, youtube_url, youtube_start_seconds, channel').in('id', ids)
-      drillMedia = Object.fromEntries((data || []).map((d: any) => [d.id, d]))
-    }
+    // Videos come from the drill library, by id, at read time — never stored on
+    // the program. Built-in exercises get a clearly-labelled related video when
+    // the library has one (lib/programs/media.ts).
+    const { data: owner } = await db.from('teams').select('coach_id').eq('id', teamId).single()
+    const media = await resolveMedia(db, (owner as any)?.coach_id, view.sessions.flatMap((s: any) => s.drills.map((d: any) => ({ drillId: d.drill_id, exerciseKey: d.exercise_key, name: d.name, skill: d.skill }))))
+    const drillMedia = media.drillMedia
 
     // Assessment comparison per metric: baseline vs latest under the recorded conditions.
     const { data: types } = await db.from('metric_types').select('id, slug, label, unit, shape, direction').is('coach_id', null)
@@ -46,6 +42,6 @@ export async function GET(request: NextRequest) {
       wanted.set(m.metricSlug, { slug: m.metricSlug, label: t?.label ?? m.label, unit: t?.unit ?? m.unit, direction: t?.direction ?? m.direction, shape: t?.shape ?? m.shape })
     }
     const assessments = Array.from(wanted.values()).map(def => summariseAssessment(def, readings))
-    return NextResponse.json({ ...view, drillMedia, assessments, metricTypes: Object.fromEntries(Array.from(bySlug.entries()).map(([k, v]) => [k, { id: v.id, shape: v.shape, unit: v.unit, label: v.label }])) })
+    return NextResponse.json({ ...view, drillMedia, related: media.related, assessments, metricTypes: Object.fromEntries(Array.from(bySlug.entries()).map(([k, v]) => [k, { id: v.id, shape: v.shape, unit: v.unit, label: v.label }])) })
   } catch (e) { return fail(e) }
 }

@@ -20,7 +20,7 @@ export CHROMIUM_PATH
 pids=(); cleanup(){ for p in "${pids[@]:-}"; do kill "$p" 2>/dev/null || true; done; }; trap cleanup EXIT
 
 W="$(mktemp -d)"
-npx --yes tsx --tsconfig tsconfig.json scripts/emit-program-fixture.ts "$W/payload.json" "$W/draft.json"
+WITH_LIBRARY=1 npx --yes tsx --tsconfig tsconfig.json scripts/emit-program-fixture.ts "$W/payload.json" "$W/draft.json"
 export PROGRAM_DRAFT_JSON="$W/draft.json" PROGRAM_PAYLOAD_JSON="$W/payload.json"
 
 node scripts/browser/fixture-supabase.mjs >/tmp/bc-fixture-programs.log 2>&1 & pids+=($!)

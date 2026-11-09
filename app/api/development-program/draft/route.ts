@@ -6,6 +6,7 @@ import { refreshDerived } from '@/lib/programs/edits'
 import { repairDraft, validateDraft } from '@/lib/programs/validate'
 import { loadPool } from '@/lib/programs/service'
 import { DraftSchema } from '@/lib/programs/types'
+import { drillRows, resolveMedia } from '@/lib/programs/media'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +18,9 @@ export async function GET(request: NextRequest) {
     const sp = new URL(request.url).searchParams
     const db = admin()
     const row = await getDraft(db, String(sp.get('draftId')), String(sp.get('teamId')))
-    return NextResponse.json({ draft: row.payload, version: row.version, status: row.status, playerId: row.player_id, savedProgramId: row.saved_program_id })
+    const { data: owner } = await db.from('teams').select('coach_id').eq('id', String(sp.get('teamId'))).single()
+    const media = await resolveMedia(db, (owner as any)?.coach_id, drillRows(row.payload))
+    return NextResponse.json({ drillMedia: media.drillMedia, related: media.related, draft: row.payload, version: row.version, status: row.status, playerId: row.player_id, savedProgramId: row.saved_program_id })
   } catch (e) { return fail(e) }
 }
 

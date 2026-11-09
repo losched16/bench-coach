@@ -107,7 +107,7 @@ export default function SessionPage() {
                 <input type="checkbox" className="h-6 w-6 mt-0.5" checked={!!checked[d.position]} disabled={done} onChange={e => setChecked(c => ({ ...c, [d.position]: e.target.checked }))} />
                 <span className="flex-1"><span className="font-medium text-gray-900 text-base">{d.name}</span> <span className="text-sm text-gray-600">· {d.minutes} min</span></span>
               </label>
-              <div className="pl-9 mt-1"><DrillBody d={d} media={data.drillMedia} kid={kid} /></div>
+              <div className="pl-9 mt-1"><DrillBody d={d} media={data.drillMedia} related={data.related} kid={kid} /></div>
             </div>
           ))}
         </section>
